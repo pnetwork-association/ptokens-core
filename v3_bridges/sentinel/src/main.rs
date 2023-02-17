@@ -17,11 +17,14 @@ async fn main() {
     let url = "ws://162.19.83.219:8546";
     let ws_client = get_rpc_client(url).await.unwrap();
 
-    for i in 0..1 {
-        let block = get_block(&ws_client, 16640611 + i).await.unwrap();
+    for i in 0..10 {
+        let block = get_block(&ws_client, 16640614 + i).await.unwrap();
         let sub_mat = get_receipts(&ws_client, block).await.unwrap();
         let receipts_are_valid = sub_mat.receipts_are_valid().unwrap();
-        println!("Receipts are valid: {receipts_are_valid}")
+        warn!(
+            "[+] {} receipts are valid: {receipts_are_valid}",
+            sub_mat.receipts.len()
+        )
     }
 }
 // TODO use https://crates.io/crates/async-log for async logging when we have > 1 thread
