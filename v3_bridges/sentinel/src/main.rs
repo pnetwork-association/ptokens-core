@@ -1,21 +1,28 @@
 mod get_block;
+mod get_config;
 mod get_receipts;
 mod get_rpc_client;
 
 use get_block::get_block;
+use get_config::Config;
 use get_receipts::get_receipts;
 use get_rpc_client::get_rpc_client;
 
 #[macro_use]
 extern crate log;
 
+#[macro_use]
+extern crate lazy_static;
+
 #[tokio::main]
 async fn main() {
-    use simple_logger; // FIXME rm!
-    simple_logger::init_with_level(log::Level::Info).unwrap(); // FIXME rm!
+    let config = Config::new().unwrap();
+    println!("config: {config:?}");
 
-    let url = "ws://162.19.83.219:8546";
-    let ws_client = get_rpc_client(url).await.unwrap();
+    use simple_logger; // FIXME rm!
+    simple_logger::init_with_level(config.get_log_level()).unwrap(); // FIXME rm!
+
+    let ws_client = get_rpc_client(&config.endpoints.host[0]).await.unwrap();
 
     for i in 0..10 {
         let block = get_block(&ws_client, 16640614 + i).await.unwrap();

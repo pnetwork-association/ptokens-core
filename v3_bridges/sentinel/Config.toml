@@ -1,0 +1,6 @@
+[endpoints]
+host = [ "ws://162.19.83.219:8546" ]
+native = []
+
+[log]
+level = "info"
