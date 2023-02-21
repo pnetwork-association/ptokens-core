@@ -2,10 +2,8 @@ use anyhow::Result;
 use clap::Args;
 use serde_json::json;
 
-use crate::{
-    cli::write_file,
-    lib::{get_config::Endpoints, get_rpc_client, get_sub_mat},
-};
+use crate::cli::write_file;
+use lib::{get_config::Endpoints, get_rpc_client, get_sub_mat};
 
 #[derive(Debug, Subcommand)]
 pub enum GetSubMatSubCommand {

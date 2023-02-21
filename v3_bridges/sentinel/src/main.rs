@@ -1,5 +1,4 @@
 mod cli;
-mod lib;
 
 #[macro_use]
 extern crate anyhow;
