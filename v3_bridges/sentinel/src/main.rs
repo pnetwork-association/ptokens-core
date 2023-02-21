@@ -20,32 +20,17 @@ async fn main() {
     let config = Config::new().unwrap();
     println!("config: {config:?}");
 
+    let ws_client = get_rpc_client(&config.endpoints.host[0]).await.unwrap();
+
     use simple_logger; // FIXME rm!
     simple_logger::init_with_level(config.get_log_level()).unwrap(); // FIXME rm!
 
     let cli_args = CliArgs::parse();
 
     match cli_args.get_sub_mat {
-        GetSubMatSubCommand::GetHostSubMat(_args) => {
-            get_host_sub_mat().unwrap();
-        },
-        GetSubMatSubCommand::GetNativeSubMat(_args) => {
-            get_native_sub_mat().unwrap();
-        },
+        GetSubMatSubCommand::GetHostSubMat(ref args) => get_host_sub_mat(&ws_client, args).await.unwrap(),
+        GetSubMatSubCommand::GetNativeSubMat(ref args) => get_native_sub_mat(&ws_client, args).await.unwrap(),
     };
-
-    /*
-    let ws_client = get_rpc_client(&config.endpoints.host[0]).await.unwrap();
-    for i in 0..10 {
-        let block = get_block(&ws_client, 16640614 + i).await.unwrap();
-        let sub_mat = get_receipts(&ws_client, block).await.unwrap();
-        let receipts_are_valid = sub_mat.receipts_are_valid().unwrap();
-        warn!(
-            "[+] {} receipts are valid: {receipts_are_valid}",
-            sub_mat.receipts.len()
-        )
-    }
-    */
 }
 
 // TODO use https://crates.io/crates/async-log for async logging when we have > 1 thread
