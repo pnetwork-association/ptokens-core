@@ -15,7 +15,7 @@ use cli::{
     get_sub_mat::{get_host_sub_mat, get_native_sub_mat, GetSubMatSubCommand},
     CliArgs,
 };
-use lib::{get_config::Config};
+use lib::get_config::Config;
 use serde_json::json;
 
 #[tokio::main]
@@ -37,7 +37,7 @@ async fn main() {
 
     match r {
         Ok(res) => println!("{res}"),
-        Err(err) => println!("{}", json!({"jsonrpc": "2.0", "error": err.to_string()}).to_string()),
+        Err(err) => println!("{}", json!({"jsonrpc": "2.0", "error": err.to_string()})),
     };
 }
 

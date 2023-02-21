@@ -1,4 +1,4 @@
-use clap::{Parser};
+use clap::Parser;
 
 use crate::cli::get_sub_mat::GetSubMatSubCommand;
 

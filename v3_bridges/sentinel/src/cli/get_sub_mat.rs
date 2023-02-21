@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::Args;
-
 use serde_json::json;
 
 use crate::{
@@ -38,12 +37,10 @@ async fn get_sub_mat_cli(endpoints: &Endpoints, args: &SubMatGetterArgs, is_nati
     let sub_mat = get_sub_mat(&ws_client, args.block_num).await?;
     let block_num = sub_mat.get_block_number()?;
     let s = serde_json::to_string(&sub_mat)?;
-    let path = args
-        .path
-        .clone()
-        .unwrap_or_else(|| format!("./{sub_mat_type}-sub-mat-num-{block_num}.json"));
-    write_file(&s, &path)?;
-    Ok(json!({ "jsonrpc": "2.0", "result": path }).to_string())
+    let path = args.path.clone().unwrap_or_else(|| ".".into());
+    let full_path = format!("{path}/{sub_mat_type}-sub-mat-num-{block_num}.json");
+    write_file(&s, &full_path)?;
+    Ok(json!({ "jsonrpc": "2.0", "result": full_path }).to_string())
 }
 
 pub async fn get_native_sub_mat(endpoints: &Endpoints, args: &SubMatGetterArgs) -> Result<String> {
