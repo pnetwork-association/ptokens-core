@@ -1,6 +1,6 @@
 use anyhow::Result;
-use common_eth::{EthBlockJsonFromRpc, EthSubmissionMaterial as EthSubMat, EthSubmissionMaterial};
-use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
+use common_eth::{EthSubmissionMaterial as EthSubMat};
+use jsonrpsee::{ws_client::WsClient};
 
 use crate::lib::{get_block::get_block, get_receipts::get_receipts};
 

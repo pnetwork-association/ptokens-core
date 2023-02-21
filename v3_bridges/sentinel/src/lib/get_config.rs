@@ -3,20 +3,36 @@ use log::Level as LogLevel;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
-#[allow(unused)]
 pub struct Endpoints {
-    pub host: Vec<String>,
-    pub native: Vec<String>,
+    host: Vec<String>,
+    native: Vec<String>,
+}
+
+impl Endpoints {
+    pub fn get_first_endpoint(&self, is_native: bool) -> Result<String> {
+        let endpoint_type = if is_native { "native" } else { "host" };
+        info!("Getting first {endpoint_type} endpoint...");
+        let err = format!("No {endpoint_type} endpoints in config file!");
+        if is_native {
+            if self.native.is_empty() {
+                Err(anyhow!(err))
+            } else {
+                Ok(self.native[0].clone())
+            }
+        } else if self.host.is_empty() {
+            Err(anyhow!(err))
+        } else {
+            Ok(self.host[0].clone())
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[allow(unused)]
 pub struct Log {
     pub level: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[allow(unused)]
 pub struct Config {
     pub log: Log,
     pub endpoints: Endpoints,
