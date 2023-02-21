@@ -1,6 +1,6 @@
 use clap::{Args, Parser, Subcommand};
 
-use crate::cli::get_submission_material::GetSubmissionMaterialSubCommand;
+use crate::cli::get_sub_mat::GetSubMatSubCommand;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
@@ -8,5 +8,5 @@ use crate::cli::get_submission_material::GetSubmissionMaterialSubCommand;
 pub struct CliArgs {
     /// Get submission material.
     #[clap(subcommand)]
-    pub get_submission_material: GetSubmissionMaterialSubCommand,
+    pub get_sub_mat: GetSubMatSubCommand,
 }

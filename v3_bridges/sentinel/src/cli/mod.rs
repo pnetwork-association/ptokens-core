@@ -1,7 +1,7 @@
 mod cli_args;
-pub(crate) mod get_submission_material;
+pub(crate) mod get_sub_mat;
 
 pub(crate) use self::{
     cli_args::CliArgs,
-    get_submission_material::{get_host_submission_material, get_native_submission_material},
+    get_sub_mat::{get_host_sub_mat, get_native_sub_mat},
 };

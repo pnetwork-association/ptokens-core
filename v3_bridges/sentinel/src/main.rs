@@ -10,11 +10,7 @@ extern crate clap;
 
 use clap::Parser;
 use cli::{
-    get_submission_material::{
-        get_host_submission_material,
-        get_native_submission_material,
-        GetSubmissionMaterialSubCommand,
-    },
+    get_sub_mat::{get_host_sub_mat, get_native_sub_mat, GetSubMatSubCommand},
     CliArgs,
 };
 use lib::{get_block::get_block, get_config::Config, get_receipts::get_receipts, get_rpc_client::get_rpc_client};
@@ -29,12 +25,12 @@ async fn main() {
 
     let cli_args = CliArgs::parse();
 
-    match cli_args.get_submission_material {
-        GetSubmissionMaterialSubCommand::GetHostSubmissionMaterial(_args) => {
-            get_host_submission_material().unwrap();
+    match cli_args.get_sub_mat {
+        GetSubMatSubCommand::GetHostSubMat(_args) => {
+            get_host_sub_mat().unwrap();
         },
-        GetSubmissionMaterialSubCommand::GetNativeSubmissionMaterial(_args) => {
-            get_native_submission_material().unwrap();
+        GetSubMatSubCommand::GetNativeSubMat(_args) => {
+            get_native_sub_mat().unwrap();
         },
     };
 

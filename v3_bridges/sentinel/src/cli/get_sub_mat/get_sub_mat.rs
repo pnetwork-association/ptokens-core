@@ -1,16 +1,16 @@
 use clap::Args;
 
 #[derive(Debug, Subcommand)]
-pub enum GetSubmissionMaterialSubCommand {
+pub enum GetSubMatSubCommand {
     /// Get HOST submission material.
-    GetHostSubmissionMaterial(GetSubmissionMaterialCommand),
+    GetHostSubMat(GetSubMatCommand),
 
     /// Get NATIVE submission material.
-    GetNativeSubmissionMaterial(GetSubmissionMaterialCommand),
+    GetNativeSubMat(GetSubMatCommand),
 }
 
 #[derive(Debug, Args)]
-pub struct GetSubmissionMaterialCommand {
+pub struct GetSubMatCommand {
     /// Block number to create the submission material for.
     pub block_num: u64,
 
