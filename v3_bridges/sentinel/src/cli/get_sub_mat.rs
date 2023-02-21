@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::Args;
 use jsonrpsee::ws_client::WsClient;
+use serde_json::json;
 
 use crate::{cli::write_file, lib::get_sub_mat};
 
@@ -23,7 +24,7 @@ pub struct SubMatGetterArgs {
     pub path: Option<String>,
 }
 
-async fn get_sub_mat_cli(ws_client: &WsClient, args: &SubMatGetterArgs, is_native: bool) -> Result<()> {
+async fn get_sub_mat_cli(ws_client: &WsClient, args: &SubMatGetterArgs, is_native: bool) -> Result<String> {
     let sub_mat_type = if is_native { "native" } else { "host" };
     info!("[+] Getting {sub_mat_type} submission material...");
     let sub_mat = get_sub_mat(ws_client, args.block_num).await?;
@@ -34,13 +35,13 @@ async fn get_sub_mat_cli(ws_client: &WsClient, args: &SubMatGetterArgs, is_nativ
         .clone()
         .unwrap_or_else(|| format!("./{sub_mat_type}-sub-mat-num-{block_num}.json"));
     write_file(&s, &path)?;
-    Ok(())
+    Ok(json!({ "jsonrpc": "2.0", "result": path }).to_string())
 }
 
-pub async fn get_native_sub_mat(ws_client: &WsClient, args: &SubMatGetterArgs) -> Result<()> {
+pub async fn get_native_sub_mat(ws_client: &WsClient, args: &SubMatGetterArgs) -> Result<String> {
     get_sub_mat_cli(ws_client, args, true).await
 }
 
-pub async fn get_host_sub_mat(ws_client: &WsClient, args: &SubMatGetterArgs) -> Result<()> {
+pub async fn get_host_sub_mat(ws_client: &WsClient, args: &SubMatGetterArgs) -> Result<String> {
     get_sub_mat_cli(ws_client, args, false).await
 }

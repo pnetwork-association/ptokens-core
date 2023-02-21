@@ -14,22 +14,28 @@ use cli::{
     CliArgs,
 };
 use lib::{get_block::get_block, get_config::Config, get_receipts::get_receipts, get_rpc_client::get_rpc_client};
+use serde_json::json;
 
 #[tokio::main]
 async fn main() {
     let config = Config::new().unwrap();
-    println!("config: {config:?}");
+    //println!("config: {config:?}");
 
     let ws_client = get_rpc_client(&config.endpoints.host[0]).await.unwrap();
 
-    use simple_logger; // FIXME rm!
-    simple_logger::init_with_level(config.get_log_level()).unwrap(); // FIXME rm!
+    //use simple_logger; // FIXME rm!
+    //simple_logger::init_with_level(config.get_log_level()).unwrap(); // FIXME rm!
 
     let cli_args = CliArgs::parse();
 
-    match cli_args.get_sub_mat {
-        GetSubMatSubCommand::GetHostSubMat(ref args) => get_host_sub_mat(&ws_client, args).await.unwrap(),
-        GetSubMatSubCommand::GetNativeSubMat(ref args) => get_native_sub_mat(&ws_client, args).await.unwrap(),
+    let r = match cli_args.get_sub_mat {
+        GetSubMatSubCommand::GetHostSubMat(ref args) => get_host_sub_mat(&ws_client, args).await,
+        GetSubMatSubCommand::GetNativeSubMat(ref args) => get_native_sub_mat(&ws_client, args).await,
+    };
+
+    match r {
+        Ok(res) => println!("{res}"),
+        Err(err) => println!("{}", json!({ "jsonrpc": "2.0", "error": err.to_string() }).to_string()),
     };
 }
 
