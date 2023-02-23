@@ -57,3 +57,14 @@ impl Config {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_get_config() {
+        let result = Config::new();
+        assert!(result.is_ok());
+    }
+}

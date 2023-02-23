@@ -27,21 +27,36 @@ fn get_receipt_futures<'a>(
     stream::iter(tx_hashes).then(|tx_hash| get_receipt_future(ws_client, tx_hash))
 }
 
-pub async fn get_receipts(ws_client: &WsClient, eth_sub_mat: EthSubmissionMaterial) -> Result<EthSubmissionMaterial> {
+pub async fn get_receipts(ws_client: &WsClient, tx_hashes: &[EthHash]) -> Result<EthReceipts> {
     // TODO can I unwrap the future stream via try stream?
     // https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.4/futures/stream/trait.TryStreamExt.html
-    let jsons = get_receipt_futures(ws_client, &eth_sub_mat.get_tx_hashes()?)
+    let jsons = get_receipt_futures(ws_client, tx_hashes)
         .buffered(MAX_CONCURRENT_REQUESTS)
         .collect::<Vec<_>>()
         .await;
 
-    let receipts = EthReceipts::new(
+    Ok(EthReceipts::new(
         jsons
             .into_iter()
             .map(|a| Ok(EthReceipt::from_json_rpc(&serde_json::from_value(a?)?)?))
             .collect::<Result<Vec<_>>>()?,
-    );
+    ))
+}
 
-    let result = eth_sub_mat.add_receipts(receipts)?;
-    Ok(result)
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{get_block, get_latest_block_number, test_utils::get_test_ws_client};
+
+    #[tokio::test]
+    async fn should_get_receipts() {
+        let ws_client = get_test_ws_client().await.unwrap();
+        let block_num = get_latest_block_number(&ws_client).await.unwrap();
+        let block = get_block(&ws_client, block_num).await.unwrap();
+        let tx_hashes = block.transactions;
+        let result = get_receipts(&ws_client, &tx_hashes).await;
+        assert!(result.is_ok());
+        let receipts_root = result.unwrap().get_merkle_root().unwrap();
+        assert_eq!(receipts_root, block.receipts_root);
+    }
 }
