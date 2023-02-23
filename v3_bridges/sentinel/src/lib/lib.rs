@@ -1,6 +1,7 @@
 mod constants;
 mod get_block;
 mod get_config;
+mod get_latest_block_number;
 mod get_receipts;
 mod get_rpc_client;
 mod get_sub_mat;
@@ -8,6 +9,7 @@ mod test_utils;
 
 pub use self::{
     get_config::{Config, Endpoints},
+    get_latest_block_number::get_latest_block_number,
     get_rpc_client::get_rpc_client,
     get_sub_mat::get_sub_mat,
 };
