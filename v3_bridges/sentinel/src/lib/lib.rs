@@ -1,5 +1,6 @@
 mod check_endpoint;
 mod constants;
+mod errors;
 mod get_block;
 mod get_config;
 mod get_latest_block_number;
@@ -10,6 +11,7 @@ mod test_utils;
 
 pub use self::{
     check_endpoint::check_endpoint,
+    errors::SentinelError,
     get_block::get_block,
     get_config::{Config, Endpoints},
     get_latest_block_number::get_latest_block_number,
