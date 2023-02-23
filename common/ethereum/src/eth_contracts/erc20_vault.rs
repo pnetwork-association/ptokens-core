@@ -258,6 +258,8 @@ impl Erc20VaultPegInEventParams {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use common::errors::AppError;
 
     use super::*;

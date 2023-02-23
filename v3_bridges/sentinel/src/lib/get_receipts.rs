@@ -1,5 +1,5 @@
 use anyhow::Result;
-use common_eth::{EthReceipt, EthReceipts, EthSubmissionMaterial};
+use common_eth::{EthReceipt, EthReceipts};
 use ethereum_types::H256 as EthHash;
 use futures::{stream, Future, Stream, StreamExt};
 use jsonrpsee::{

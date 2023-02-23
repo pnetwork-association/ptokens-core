@@ -1,4 +1,9 @@
+#[cfg(test)]
+use std::str::FromStr;
+
 use common::types::{Bytes, Result};
+#[cfg(test)]
+use common::AppError;
 use derive_more::{Constructor, Deref};
 use ethereum_types::{Address as EthAddress, Bloom, BloomInput, H256 as EthHash};
 use rlp::{Encodable, RlpStream};
@@ -18,8 +23,10 @@ pub struct EthLogJson {
 }
 
 #[cfg(test)]
-impl EthLogJson {
-    pub fn from_str(s: &str) -> Result<Self> {
+impl FromStr for EthLogJson {
+    type Err = AppError;
+
+    fn from_str(s: &str) -> Result<Self> {
         Ok(serde_json::from_str::<EthLogJson>(s)?)
     }
 }
@@ -45,12 +52,16 @@ impl EthLogExt for EthLog {
     }
 }
 
-impl EthLog {
-    #[cfg(test)]
-    pub fn from_str(s: &str) -> Result<Self> {
+#[cfg(test)]
+impl FromStr for EthLog {
+    type Err = AppError;
+
+    fn from_str(s: &str) -> Result<Self> {
         EthLogJson::from_str(s).and_then(|ref json| Self::from_json(json))
     }
+}
 
+impl EthLog {
     pub fn from_json(log_json: &EthLogJson) -> Result<Self> {
         Ok(EthLog {
             data: convert_hex_to_bytes(&log_json.data)?,

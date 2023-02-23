@@ -315,6 +315,10 @@ impl Erc777RedeemEvent {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
+    use common::errors::AppError;
+
     use super::*;
     use crate::{
         eth_log::EthLog,

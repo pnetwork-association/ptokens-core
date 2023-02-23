@@ -22,7 +22,3 @@ pub use self::{
 extern crate anyhow;
 #[macro_use]
 extern crate log;
-#[macro_use]
-extern crate lazy_static;
-#[macro_use]
-extern crate clap;

@@ -1,5 +1,4 @@
 use anyhow::Result;
-use common_eth::{EthBlockJsonFromRpc, EthSubmissionMaterial};
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
 
 use crate::constants::HEX_RADIX;

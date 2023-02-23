@@ -95,12 +95,16 @@ impl RelayTransactions {
     }
 }
 
-impl RelayTransaction {
-    #[cfg(test)]
-    pub fn from_str(s: &str) -> Result<Self> {
+#[cfg(test)]
+impl FromStr for RelayTransaction {
+    type Err = AppError;
+
+    fn from_str(s: &str) -> Result<Self> {
         RelayTransactionJson::from_str(s).and_then(Self::from_json)
     }
+}
 
+impl RelayTransaction {
     #[cfg(test)]
     pub fn from_json(json: RelayTransactionJson) -> Result<Self> {
         json.to_relay_transaction()
@@ -113,6 +117,7 @@ impl RelayTransaction {
 
     /// Creates a new signed relay transaction.
     #[cfg(test)]
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         from: EthAddress,
         chain_id: &EthChainId,

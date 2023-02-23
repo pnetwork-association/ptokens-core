@@ -1,5 +1,5 @@
 use anyhow::Result;
-use common_eth::{EthBlock, EthBlockJsonFromRpc, EthSubmissionMaterial};
+use common_eth::{EthBlock, EthBlockJsonFromRpc};
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
 
 const GET_FULL_TRANSACTION: bool = false;
