@@ -14,7 +14,7 @@ use cli::{
     get_sub_mat::{get_host_sub_mat, get_native_sub_mat, GetSubMatSubCommand},
     CliArgs,
 };
-use lib::get_config::Config;
+use lib::Config;
 use serde_json::json;
 
 #[tokio::main]
