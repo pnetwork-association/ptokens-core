@@ -1,11 +1,12 @@
-use anyhow::Result;
 use common_eth::{EthBlock, EthBlockJsonFromRpc};
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
+
+use crate::SentinelError;
 
 const GET_FULL_TRANSACTION: bool = false;
 const GET_BLOCK_BY_NUMBER_RPC_CMD: &str = "eth_getBlockByNumber";
 
-pub async fn get_block(ws_client: &WsClient, block_num: u64) -> Result<EthBlock> {
+pub async fn get_block(ws_client: &WsClient, block_num: u64) -> Result<EthBlock, SentinelError> {
     info!("[+] Getting block num: {block_num}...");
     let res: jsonrpsee::core::RpcResult<EthBlockJsonFromRpc> = ws_client
         .request(GET_BLOCK_BY_NUMBER_RPC_CMD, rpc_params![
@@ -14,13 +15,11 @@ pub async fn get_block(ws_client: &WsClient, block_num: u64) -> Result<EthBlock>
         ])
         .await;
     match res {
-        Err(err) => {
-            // FIXME need better error handling here to get the correct error, ie the null, and
-            // return an error of our own!
-            //println!("the actual error: {err}");
-            Err(anyhow!("Could not get block number {block_num}!"))
-        },
         Ok(ref json) => Ok(EthBlock::from_json_rpc(json)?),
+        Err(jsonrpsee::core::Error::ParseError(err)) if err.to_string().contains("null") => {
+            Err(SentinelError::NoBlock(block_num))
+        },
+        Err(err) => Err(SentinelError::JsonRpcError(err)),
     }
 }
 
@@ -35,5 +34,16 @@ mod tests {
         let block_num = get_latest_block_number(&ws_client).await.unwrap();
         let result = get_block(&ws_client, block_num).await;
         assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn should_fail_to_get_block_with_correct_error() {
+        let ws_client = get_test_ws_client().await.unwrap();
+        let block_num = i64::MAX as u64;
+        match get_block(&ws_client, block_num).await {
+            Err(SentinelError::NoBlock(num)) => assert_eq!(num, block_num),
+            Ok(_) => panic!("Should not have succeeded!"),
+            Err(e) => panic!("Wrong error received: {e}"),
+        }
     }
 }
