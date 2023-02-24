@@ -1,14 +1,71 @@
+use std::str::FromStr;
+
 use anyhow::Result;
+use common_metadata::MetadataChainId;
 use log::Level as LogLevel;
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
+struct EndpointsToml {
+    host: Vec<String>,
+    native: Vec<String>,
+    host_chain_id: String,
+    native_chain_id: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct LogToml {
+    pub level: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct ConfigToml {
+    pub log: LogToml,
+    pub endpoints: EndpointsToml,
+}
+
+const CONFIG_FILE_PATH: &str = "Config";
+
+impl ConfigToml {
+    pub fn new() -> Result<Self> {
+        Ok(config::Config::builder()
+            .add_source(config::File::with_name(CONFIG_FILE_PATH))
+            .build()?
+            .try_deserialize()?)
+    }
+}
+
 pub struct Endpoints {
     host: Vec<String>,
     native: Vec<String>,
+    host_chain_id: MetadataChainId,
+    native_chain_id: MetadataChainId,
 }
 
 impl Endpoints {
+    fn from_toml(toml: &EndpointsToml) -> Self {
+        Self {
+            host: toml.host.clone(),
+            native: toml.host.clone(),
+            host_chain_id: match MetadataChainId::from_str(&toml.host_chain_id) {
+                Ok(id) => id,
+                Err(e) => {
+                    warn!("Could not parse `host_chain_id` from config, defaulting to `EthereumMainnet`");
+                    warn!("{e}");
+                    MetadataChainId::EthereumMainnet
+                },
+            },
+            native_chain_id: match MetadataChainId::from_str(&toml.native_chain_id) {
+                Ok(id) => id,
+                Err(e) => {
+                    warn!("Could not parse `native_chain_id` from config, defaulting to `EthereumMainnet`");
+                    warn!("{e}");
+                    MetadataChainId::EthereumMainnet
+                },
+            },
+        }
+    }
+
     pub fn get_first_endpoint(&self, is_native: bool) -> Result<String> {
         let endpoint_type = if is_native { "native" } else { "host" };
         info!("Getting first {endpoint_type} endpoint...");
@@ -27,34 +84,38 @@ impl Endpoints {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
 pub struct Log {
-    pub level: String,
+    pub level: LogLevel,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+impl Log {
+    fn from_toml(toml: &LogToml) -> Result<Self> {
+        Ok(Self {
+            level: match toml.level.to_lowercase().as_str() {
+                "warn" => LogLevel::Warn,
+                "debug" => LogLevel::Debug,
+                "trace" => LogLevel::Trace,
+                _ => LogLevel::Info,
+            },
+        })
+    }
+}
+
 pub struct Config {
     pub log: Log,
     pub endpoints: Endpoints,
 }
 
-const CONFIG_FILE_PATH: &str = "Config";
-
 impl Config {
     pub fn new() -> Result<Self> {
-        Ok(config::Config::builder()
-            .add_source(config::File::with_name(CONFIG_FILE_PATH))
-            .build()?
-            .try_deserialize()?)
+        Self::from_toml(&ConfigToml::new()?)
     }
 
-    pub fn get_log_level(&self) -> LogLevel {
-        match self.log.level.to_lowercase().as_str() {
-            "warn" => LogLevel::Warn,
-            "debug" => LogLevel::Debug,
-            "trace" => LogLevel::Trace,
-            _ => LogLevel::Info,
-        }
+    fn from_toml(toml: &ConfigToml) -> Result<Self> {
+        Ok(Self {
+            log: Log::from_toml(&toml.log)?,
+            endpoints: Endpoints::from_toml(&toml.endpoints),
+        })
     }
 }
 
@@ -65,6 +126,7 @@ mod tests {
     #[test]
     fn should_get_config() {
         let result = Config::new();
-        assert!(result.is_ok());
+        //assert!(result.is_ok());
+        result.unwrap();
     }
 }

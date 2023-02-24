@@ -1,6 +1,8 @@
 [endpoints]
 host = [ "ws://162.19.83.219:8546" ]
 native = []
+host_chain_id = ""
+native_chain_id = ""
 
 [log]
 level = "info"
