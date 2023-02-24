@@ -34,6 +34,7 @@ simple_logger = "4.0.0" # TODO Move to dev-dependencies
 
 common = { path = "../../common/common" }
 common_eth = { package = "ethereum", path = "../../common/ethereum" }
+common_chain_ids = { package = "chain_ids", path = "../../common/chain_ids" }
 
 [dev-dependencies]
 dotenv = "0.15.0"
