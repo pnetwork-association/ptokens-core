@@ -6,7 +6,7 @@ use serde_json::json;
 use crate::cli::write_file;
 
 #[derive(Debug, Subcommand)]
-pub enum GetSubMatSubCommand {
+pub enum GetSubMatSubCmd {
     /// Get HOST submission material.
     GetHostSubMat(SubMatGetterArgs),
 

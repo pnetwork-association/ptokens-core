@@ -3,12 +3,11 @@ use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
 
 use crate::constants::HEX_RADIX;
 
-const GET_LATEST_BLOCK_NUMBER_RPC_CMD: &str = "eth_blockNumber";
+const GET_LATEST_BLOCK_NUM_RPC_CMD: &str = "eth_blockNumber";
 
-pub async fn get_latest_block_number(ws_client: &WsClient) -> Result<u64> {
+pub async fn get_latest_block_num(ws_client: &WsClient) -> Result<u64> {
     info!("[+] Getting latest block number...");
-    let res: jsonrpsee::core::RpcResult<String> =
-        ws_client.request(GET_LATEST_BLOCK_NUMBER_RPC_CMD, rpc_params![]).await;
+    let res: jsonrpsee::core::RpcResult<String> = ws_client.request(GET_LATEST_BLOCK_NUM_RPC_CMD, rpc_params![]).await;
     match res {
         Err(err) => {
             // FIXME  This should return some error about checking the config etc
@@ -25,9 +24,9 @@ mod tests {
     use crate::test_utils::get_test_ws_client;
 
     #[tokio::test]
-    async fn should_get_latest_block_number() {
+    async fn should_get_latest_block_num() {
         let ws_client = get_test_ws_client().await.unwrap();
-        let result = get_latest_block_number(&ws_client).await;
+        let result = get_latest_block_num(&ws_client).await;
         assert!(result.is_ok());
         assert!(result.unwrap() > 0);
     }

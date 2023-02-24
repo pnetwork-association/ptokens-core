@@ -46,7 +46,7 @@ impl Endpoints {
     fn from_toml(toml: &EndpointsToml) -> Self {
         Self {
             host: toml.host.clone(),
-            native: toml.host.clone(),
+            native: toml.native.clone(),
             host_chain_id: match MetadataChainId::from_str(&toml.host_chain_id) {
                 Ok(id) => id,
                 Err(e) => {
@@ -116,6 +116,10 @@ impl Config {
             log: Log::from_toml(&toml.log)?,
             endpoints: Endpoints::from_toml(&toml.endpoints),
         })
+    }
+
+    pub fn get_log_level(&self) -> LogLevel {
+        self.log.level
     }
 }
 

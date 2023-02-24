@@ -1,12 +1,24 @@
 use clap::Parser;
 
-use crate::cli::get_sub_mat::GetSubMatSubCommand;
+use crate::cli::get_sub_mat::SubMatGetterArgs;
 
 #[derive(Debug, Parser)]
-#[command(author, version, about, long_about = None)]
-#[command(propagate_version = true)]
 pub struct CliArgs {
-    /// Get submission material.
-    #[clap(subcommand)]
-    pub get_sub_mat: GetSubMatSubCommand,
+    #[command(subcommand)]
+    pub sub_commands: SubCommands,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum SubCommands {
+    /// Get HOST latest block number.
+    GetHostLatestBlockNum,
+
+    /// Get NATIVE latest block number.
+    GetNativeLatestBlockNum,
+
+    /// Get HOST submission material.
+    GetHostSubMat(SubMatGetterArgs),
+
+    /// Get NATIVE submission material.
+    GetNativeSubMat(SubMatGetterArgs),
 }

@@ -1,11 +1,11 @@
 use anyhow::Result;
 use jsonrpsee::ws_client::WsClient;
 
-use crate::get_latest_block_number;
+use crate::get_latest_block_num;
 
 pub async fn check_endpoint(ws_client: &WsClient) -> Result<()> {
     info!("Checking endpoint is working...");
-    if get_latest_block_number(ws_client).await.is_ok() {
+    if get_latest_block_num(ws_client).await.is_ok() {
         info!("Endpoint check passed!");
         Ok(())
     } else {
