@@ -9,8 +9,8 @@ extern crate clap;
 
 use clap::Parser;
 use cli::{
-    get_latest_block_num::{get_host_latest_block_num, get_native_latest_block_num, GetLatestBlockNumCmd},
-    get_sub_mat::{get_host_sub_mat, get_native_sub_mat, GetSubMatSubCmd},
+    get_latest_block_num::{get_host_latest_block_num, get_native_latest_block_num},
+    get_sub_mat::{get_host_sub_mat, get_native_sub_mat},
     CliArgs,
     SubCommands,
 };
@@ -34,7 +34,10 @@ async fn main() {
 
     match r {
         Ok(res) => println!("{res}"),
-        Err(err) => println!("{}", json!({"jsonrpc": "2.0", "error": err.to_string()})),
+        Err(err) => {
+            println!("{}", json!({"jsonrpc": "2.0", "error": err.to_string()}));
+            std::process::exit(1)
+        },
     };
 }
 
