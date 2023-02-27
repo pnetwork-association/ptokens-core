@@ -4,5 +4,11 @@ native = []
 host_chain_id = ""
 native_chain_id = ""
 
+[batching]
+host_batch_size = 50 # Max number of host blocks to batch before submission
+native_batch_size = 50 # Max number of native blocks to batch before submission
+host_batch_duration = 300 # Max amount of time between batch submission in seconds
+native_batch_duration = 300 # Max amount of time between batch submission in seconds
+
 [log]
 level = "info"
