@@ -7,6 +7,7 @@ mod get_latest_block_num;
 mod get_receipts;
 mod get_rpc_client;
 mod get_sub_mat;
+mod sub_mat_batch;
 mod test_utils;
 
 pub use self::{
@@ -18,6 +19,7 @@ pub use self::{
     get_receipts::get_receipts,
     get_rpc_client::get_rpc_client,
     get_sub_mat::get_sub_mat,
+    sub_mat_batch::SubMatBatch,
 };
 
 #[macro_use]
