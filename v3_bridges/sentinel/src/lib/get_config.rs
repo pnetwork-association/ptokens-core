@@ -86,6 +86,30 @@ impl Batching {
             )))
         }
     }
+
+    pub fn get_batch_size(&self, is_native: bool) -> usize {
+        info!(
+            "Getting {} batch size from config",
+            if is_native { "naive" } else { "host" }
+        );
+        if is_native {
+            self.native_batch_size
+        } else {
+            self.host_batch_size
+        }
+    }
+
+    pub fn get_batch_duration(&self, is_native: bool) -> usize {
+        info!(
+            "Getting {} batch duration from config",
+            if is_native { "naive" } else { "host" }
+        );
+        if is_native {
+            self.native_batch_duration
+        } else {
+            self.host_batch_duration
+        }
+    }
 }
 
 const CONFIG_FILE_PATH: &str = "Config";
