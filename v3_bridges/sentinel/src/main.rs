@@ -14,12 +14,12 @@ use cli::{
     CliArgs,
     SubCommands,
 };
-use lib::Config;
+use lib::SentinelConfig;
 use serde_json::json;
 
 #[tokio::main]
 async fn main() {
-    let config = Config::new().unwrap();
+    let config = SentinelConfig::new().unwrap();
     use simple_logger; // FIXME rm!
     simple_logger::init_with_level(config.get_log_level()).unwrap(); // FIXME rm!
 

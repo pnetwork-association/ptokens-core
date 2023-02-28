@@ -2,7 +2,7 @@ use std::time::{Duration, SystemTime};
 
 use common_eth::EthSubmissionMaterial;
 
-use crate::Config;
+use crate::config::BatchingConfig;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct SubMatBatch {
@@ -67,16 +67,16 @@ impl SubMatBatch {
         self.batch.len()
     }
 
-    pub fn is_ready_to_submit(&self, config: &Config, is_native: bool) -> bool {
+    pub fn is_ready_to_submit(&self, batching_config: &BatchingConfig, is_native: bool) -> bool {
         if self.is_empty() {
             // NOTE: There's nothing to submit.
             return false;
-        } else if self.size_in_blocks() >= config.batching.get_batch_size(is_native) {
+        } else if self.size_in_blocks() >= batching_config.get_batch_size(is_native) {
             // NOTE: We've reached the max allowable batch size for submissions...
             return true;
         }
         if let Ok(t) = self.last_submitted.elapsed() {
-            return t.as_secs() >= config.batching.get_batch_duration(is_native) as u64;
+            return t.as_secs() >= batching_config.get_batch_duration(is_native) as u64;
         } else {
             // NOTE: If there's some error figuring out the elapsed time, let's assume it's ready...
             warn!("Could not ascertain elapsed time since last submission, so assuming it's ready!");
