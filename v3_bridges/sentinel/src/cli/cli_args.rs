@@ -10,6 +10,9 @@ pub struct CliArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum SubCommands {
+    /// Start the Sentinel
+    Start,
+
     /// Get HOST latest block number.
     GetHostLatestBlockNum,
 

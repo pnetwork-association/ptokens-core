@@ -16,7 +16,7 @@ async fn get_receipt_future<'a>(
     ws_client: &'a WsClient,
     tx_hash: &'a EthHash,
 ) -> impl Future<Output = std::result::Result<JsonValue, JsonRpseeError>> + 'a {
-    debug!("[+] Getting receipts for tx hash: 0x{tx_hash:x}...");
+    trace!("[+] Getting receipts for tx hash: 0x{tx_hash:x}...");
     ws_client.request(GET_RECEIPT_RPC_CMD, rpc_params![format!("0x{tx_hash:x}")])
 }
 

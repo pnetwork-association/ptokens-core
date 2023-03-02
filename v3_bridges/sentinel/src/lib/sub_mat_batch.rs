@@ -1,11 +1,17 @@
+use anyhow::Result;
 use std::time::{Duration, SystemTime};
+use jsonrpsee::ws_client::WsClient;
 
 use common_eth::EthSubmissionMaterial;
 
-use crate::config::BatchingConfig;
+use crate::config::{Endpoints, Config};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct SubMatBatch {
+    is_native: bool,
+    batch_size: u64,
+    batch_duration: u64,
+    endpoints: Endpoints,
     batching_is_disabled: bool,
     last_submitted: SystemTime,
     batch: Vec<EthSubmissionMaterial>,
@@ -15,7 +21,11 @@ impl Default for SubMatBatch {
     fn default() -> Self {
         Self {
             batch: vec![],
+            batch_size: 1,
+            is_native: true,
+            batch_duration: 300, // NOTE: 5mins
             batching_is_disabled: false,
+            endpoints: Endpoints::default(),
             last_submitted: SystemTime::now(),
         }
     }
@@ -23,10 +33,33 @@ impl Default for SubMatBatch {
 
 impl SubMatBatch {
     pub fn new() -> Self {
-        Self {
-            batch: vec![],
-            batching_is_disabled: false,
-            last_submitted: SystemTime::now(),
+        Self::default()
+    }
+
+    pub async fn get_rpc_client(&self) -> Result<WsClient> {
+        Ok(self.endpoints.get_rpc_client().await?)
+    }
+
+    pub fn is_native(&self) -> bool {
+        self.is_native
+    }
+
+    pub fn is_host(&self) -> bool {
+        !self.is_native
+    }
+
+    pub fn new_from_config(is_native: bool, config: &Config,) -> Result<Self> {
+        let res = Self {
+            is_native,
+            endpoints: config.endpoints.get_endpoints(is_native),
+            batch_size: config.batching.get_batch_size(is_native),
+            batch_duration: config.batching.get_batch_duration(is_native),
+            ..Default::default()
+        };
+        if res.endpoints.is_empty() {
+            Err(anyhow!(format!("Cannot create {} sub mat batch - no endpoints!", if is_native { "native" } else { "host" })))
+        } else {
+            Ok(res)
         }
     }
 
@@ -63,23 +96,30 @@ impl SubMatBatch {
         self.set_time_of_last_submission()
     }
 
-    pub fn size_in_blocks(&self) -> usize {
-        self.batch.len()
+    pub fn size_in_blocks(&self) -> u64 {
+        self.batch.len() as u64
     }
 
-    pub fn is_ready_to_submit(&self, batching_config: &BatchingConfig, is_native: bool) -> bool {
+    pub fn is_ready_to_submit(&self) -> bool {
         if self.is_empty() {
             // NOTE: There's nothing to submit.
             return false;
-        } else if self.size_in_blocks() >= batching_config.get_batch_size(is_native) {
+        } else if self.size_in_blocks() >= self.batch_size {
             // NOTE: We've reached the max allowable batch size for submissions...
+            info!("[+] Ready to submit because batch has sufficient blocks! (Num blocks: {}, limit: {})", self.size_in_blocks(), self.batch_size);
             return true;
         }
         if let Ok(t) = self.last_submitted.elapsed() {
-            return t.as_secs() >= batching_config.get_batch_duration(is_native) as u64;
+            let res = t.as_secs() >= self.batch_duration;
+            if res {
+                info!("[+] Ready to submit because enough time has elapsed");
+                return true
+            } else {
+                return false
+            }
         } else {
             // NOTE: If there's some error figuring out the elapsed time, let's assume it's ready...
-            warn!("Could not ascertain elapsed time since last submission, so assuming it's ready!");
+            warn!("[!] Could not ascertain elapsed time since last submission, so assuming it's ready!");
             return true;
         }
         // NOTE: Can't think of anything else to check, so let's assume it's ready by default.

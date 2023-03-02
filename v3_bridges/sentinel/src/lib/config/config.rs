@@ -34,7 +34,9 @@ pub struct Config {
 
 impl Config {
     pub fn new() -> Result<Self> {
-        Self::from_toml(&ConfigToml::new()?)
+        let res = Self::from_toml(&ConfigToml::new()?)?;
+        debug!("res {:?}", res);
+        Ok(res)
     }
 
     fn from_toml(toml: &ConfigToml) -> Result<Self> {

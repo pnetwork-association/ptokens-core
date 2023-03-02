@@ -9,18 +9,18 @@ use crate::errors::SentinelError;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct BatchingToml {
-    pub host_batch_size: usize,
-    pub native_batch_size: usize,
-    pub host_batch_duration: usize,
-    pub native_batch_duration: usize,
+    pub host_batch_size: u64,
+    pub native_batch_size: u64,
+    pub host_batch_duration: u64,
+    pub native_batch_duration: u64,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct BatchingConfig {
-    pub host_batch_size: usize,
-    pub native_batch_size: usize,
-    pub host_batch_duration: usize,
-    pub native_batch_duration: usize,
+    pub host_batch_size: u64,
+    pub native_batch_size: u64,
+    pub host_batch_duration: u64,
+    pub native_batch_duration: u64,
 }
 
 impl Default for BatchingToml {
@@ -44,7 +44,7 @@ impl BatchingConfig {
         })
     }
 
-    fn sanity_check_batch_size(batch_size: usize) -> std::result::Result<usize, SentinelError> {
+    fn sanity_check_batch_size(batch_size: u64) -> std::result::Result<u64, SentinelError> {
         info!("Sanity checking batch size...");
         if batch_size > 0 && batch_size <= 1000 {
             Ok(batch_size)
@@ -55,7 +55,7 @@ impl BatchingConfig {
         }
     }
 
-    fn sanity_check_batch_duration(batch_duration: usize) -> std::result::Result<usize, SentinelError> {
+    fn sanity_check_batch_duration(batch_duration: u64) -> std::result::Result<u64, SentinelError> {
         info!("Sanity checking batch duration...");
         // NOTE: A batch duration of 0 means we submit material one at a time...
         if batch_duration <= 60 * 10 {
@@ -67,10 +67,10 @@ impl BatchingConfig {
         }
     }
 
-    pub fn get_batch_size(&self, is_native: bool) -> usize {
-        info!(
+    pub fn get_batch_size(&self, is_native: bool) -> u64 {
+        debug!(
             "Getting {} batch size from config",
-            if is_native { "naive" } else { "host" }
+            if is_native { "native" } else { "host" }
         );
         if is_native {
             self.native_batch_size
@@ -79,10 +79,10 @@ impl BatchingConfig {
         }
     }
 
-    pub fn get_batch_duration(&self, is_native: bool) -> usize {
-        info!(
+    pub fn get_batch_duration(&self, is_native: bool) -> u64 {
+        debug!(
             "Getting {} batch duration from config",
-            if is_native { "naive" } else { "host" }
+            if is_native { "native" } else { "host" }
         );
         if is_native {
             self.native_batch_duration
@@ -99,7 +99,7 @@ mod tests {
     #[test]
     fn should_fail_batch_size_sanity_check() {
         let mut toml = BatchingToml::default();
-        let batch_size = usize::MAX;
+        let batch_size = u64::MAX;
         toml.host_batch_size = batch_size;
         let expected_error = format!("Batch size of {batch_size} is unacceptable");
         match BatchingConfig::from_toml(&toml) {
@@ -112,7 +112,7 @@ mod tests {
     #[test]
     fn should_fail_batch_duration_sanity_check() {
         let mut toml = BatchingToml::default();
-        let duration = usize::MAX;
+        let duration = u64::MAX;
         toml.host_batch_duration = duration;
         let expected_error = format!("Batch duration of {duration} is unacceptable");
         match BatchingConfig::from_toml(&toml) {

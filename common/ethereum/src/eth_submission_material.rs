@@ -67,7 +67,7 @@ pub struct EthSubmissionMaterial {
 impl EthSubmissionMaterial {
     pub fn add_block(mut self, block: EthBlock) -> Result<Self> {
         if self.block.is_none() {
-            info!("Adding bloc to ETH submission material...");
+            info!("Adding block to ETH submission material...");
             self.hash = Some(block.hash);
             self.block_number = Some(block.number);
             self.parent_hash = Some(block.parent_hash);
