@@ -12,6 +12,7 @@ mod sub_mat_batch;
 mod test_utils;
 
 pub use self::{
+    logging::init_logger,
     check_endpoint::check_endpoint,
     config::{Config as SentinelConfig, Endpoints},
     errors::SentinelError,
