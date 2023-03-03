@@ -7,6 +7,7 @@ mod get_latest_block_num;
 mod get_receipts;
 mod get_rpc_client;
 mod get_sub_mat;
+mod logging;
 mod sub_mat_batch;
 mod test_utils;
 

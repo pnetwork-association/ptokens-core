@@ -39,10 +39,6 @@ async fn do_thing(mut batch: SubMatBatch) -> Result<String> {
 
 #[tokio::main]
 async fn main() {
-    use simple_logger; // FIXME rm!
-                       //simple_logger::init_with_level(config.get_log_level()).unwrap(); // FIXME rm!
-    simple_logger::init_with_level(log::Level::Debug).unwrap(); // FIXME rm!
-
     let config = SentinelConfig::new().unwrap();
 
     let cli_args = CliArgs::parse();
