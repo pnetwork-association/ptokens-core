@@ -1,7 +1,9 @@
-use derive_more::{Constructor, Deref};
-use jsonrpsee::ws_client::WsClient;
-use crate::get_rpc_client;
 use anyhow::Result;
+use derive_more::{Constructor, Deref};
+use futures::{stream, Future, Stream, StreamExt};
+use jsonrpsee::ws_client::WsClient;
+
+use crate::get_rpc_client;
 
 #[derive(Debug, Default, Clone, Eq, PartialEq, Constructor)]
 pub struct Endpoints {
@@ -29,4 +31,3 @@ impl Endpoints {
         self.endpoints.is_empty()
     }
 }
-

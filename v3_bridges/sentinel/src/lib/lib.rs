@@ -12,7 +12,7 @@ mod test_utils;
 
 pub use self::{
     check_endpoint::check_endpoint,
-    config::{Config as SentinelConfig, EndpointsConfig},
+    config::{Config as SentinelConfig, Endpoints},
     errors::SentinelError,
     get_block::get_block,
     get_latest_block_num::get_latest_block_num,

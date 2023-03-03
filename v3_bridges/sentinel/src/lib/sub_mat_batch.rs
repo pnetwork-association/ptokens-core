@@ -1,10 +1,10 @@
-use anyhow::Result;
 use std::time::{Duration, SystemTime};
+
+use anyhow::Result;
+use common_eth::EthSubmissionMaterial;
 use jsonrpsee::ws_client::WsClient;
 
-use common_eth::EthSubmissionMaterial;
-
-use crate::config::{Endpoints, Config};
+use crate::config::{Config, Endpoints};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct SubMatBatch {
@@ -48,16 +48,23 @@ impl SubMatBatch {
         !self.is_native
     }
 
-    pub fn new_from_config(is_native: bool, config: &Config,) -> Result<Self> {
+    pub fn new_from_config(is_native: bool, config: &Config) -> Result<Self> {
         let res = Self {
             is_native,
-            endpoints: config.endpoints.get_endpoints(is_native),
+            endpoints: if is_native {
+                config.native.get_endpoints()
+            } else {
+                config.host.get_endpoints()
+            },
             batch_size: config.batching.get_batch_size(is_native),
             batch_duration: config.batching.get_batch_duration(is_native),
             ..Default::default()
         };
         if res.endpoints.is_empty() {
-            Err(anyhow!(format!("Cannot create {} sub mat batch - no endpoints!", if is_native { "native" } else { "host" })))
+            Err(anyhow!(format!(
+                "Cannot create {} sub mat batch - no endpoints!",
+                if is_native { "native" } else { "host" }
+            )))
         } else {
             Ok(res)
         }
@@ -106,16 +113,20 @@ impl SubMatBatch {
             return false;
         } else if self.size_in_blocks() >= self.batch_size {
             // NOTE: We've reached the max allowable batch size for submissions...
-            info!("[+] Ready to submit because batch has sufficient blocks! (Num blocks: {}, limit: {})", self.size_in_blocks(), self.batch_size);
+            info!(
+                "[+] Ready to submit because batch has sufficient blocks! (Num blocks: {}, limit: {})",
+                self.size_in_blocks(),
+                self.batch_size
+            );
             return true;
         }
         if let Ok(t) = self.last_submitted.elapsed() {
             let res = t.as_secs() >= self.batch_duration;
             if res {
                 info!("[+] Ready to submit because enough time has elapsed");
-                return true
+                return true;
             } else {
-                return false
+                return false;
             }
         } else {
             // NOTE: If there's some error figuring out the elapsed time, let's assume it's ready...

@@ -1,13 +1,15 @@
 mod batching_config;
-mod endpoints;
 mod config;
-mod endpoints_config;
+mod endpoints;
+mod host_config;
 mod log_config;
+mod native_config;
 
 pub use self::{
     batching_config::{BatchingConfig, BatchingToml},
     config::Config,
-    endpoints_config::{EndpointsConfig, EndpointsToml},
     endpoints::Endpoints,
+    host_config::{HostConfig, HostToml},
     log_config::{LogConfig, LogToml},
+    native_config::{NativeConfig, NativeToml},
 };

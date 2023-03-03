@@ -1,8 +1,12 @@
-[endpoints]
-host = [ "ws://162.19.83.219:8546" ]
-native = [ "ws://162.19.83.219:8546" ]
-host_chain_id = ""
-native_chain_id = ""
+[native]
+chain_id = "EthereumMainnet"
+endpoints = [ "ws://162.19.83.219:8546" ]
+sleep_time = 15 # How long to wait before trying to get the next host block (in seconds)
+
+[host]
+chain_id = "EthereumMainnet"
+endpoints = [ "ws://162.19.83.219:8546" ]
+sleep_time = 15 # How long to wait before trying to get the next native block (in seconds)
 
 [batching]
 host_batch_size = 5 # Max number of host blocks to batch before submission

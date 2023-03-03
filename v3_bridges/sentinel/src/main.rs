@@ -40,7 +40,7 @@ async fn do_thing(mut batch: SubMatBatch) -> Result<String> {
 #[tokio::main]
 async fn main() {
     use simple_logger; // FIXME rm!
-    //simple_logger::init_with_level(config.get_log_level()).unwrap(); // FIXME rm!
+                       //simple_logger::init_with_level(config.get_log_level()).unwrap(); // FIXME rm!
     simple_logger::init_with_level(log::Level::Debug).unwrap(); // FIXME rm!
 
     let config = SentinelConfig::new().unwrap();
@@ -54,12 +54,8 @@ async fn main() {
             assert!(batch_1.is_native(), "Batch 1 is NOT native!");
             assert!(batch_2.is_host(), "Batch 2 is NOT host!");
 
-            let thread_1 = tokio::spawn(async move {
-                do_thing(batch_1).await
-            });
-            let thread_2 = tokio::spawn(async move {
-                do_thing(batch_2).await
-            });
+            let thread_1 = tokio::spawn(async move { do_thing(batch_1).await });
+            let thread_2 = tokio::spawn(async move { do_thing(batch_2).await });
 
             use futures::try_join; // NOTE: Use me to end early on an Err in one of the threads! Or
                                    // look into JoinSet which allows tasks to be aborted
@@ -72,13 +68,14 @@ async fn main() {
                     "thread_1": thread_1_result,
                     "thread_2": thread_2_result,
                 },
-            }).to_string();
+            })
+            .to_string();
             Ok(res)
         },
-        SubCommands::GetHostSubMat(ref args) => get_host_sub_mat(&config.endpoints, args).await,
-        SubCommands::GetNativeSubMat(ref args) => get_native_sub_mat(&config.endpoints, args).await,
-        SubCommands::GetHostLatestBlockNum => get_host_latest_block_num(&config.endpoints).await,
-        SubCommands::GetNativeLatestBlockNum => get_native_latest_block_num(&config.endpoints).await,
+        SubCommands::GetHostSubMat(ref args) => get_host_sub_mat(&config.host.get_endpoints(), args).await,
+        SubCommands::GetNativeSubMat(ref args) => get_native_sub_mat(&config.native.get_endpoints(), args).await,
+        SubCommands::GetHostLatestBlockNum => get_host_latest_block_num(&config.host.get_endpoints()).await,
+        SubCommands::GetNativeLatestBlockNum => get_native_latest_block_num(&config.native.get_endpoints()).await,
     };
 
     match r {

@@ -8,12 +8,19 @@ use serde::Deserialize;
 use crate::{config::Endpoints, errors::SentinelError};
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct EndpointsToml {
-    host: Vec<String>,
-    native: Vec<String>,
-    host_chain_id: String,
-    native_chain_id: String,
+pub struct NativeToml {
+    sleep_time: u64,
+    chain_id: String,
+    endpoints: Vec<String>,
 }
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct HostToml {
+    sleep_time: u64,
+    chain_id: String,
+    endpoints: Vec<String>,
+}
+
 
 #[derive(Debug, Clone)]
 pub struct EndpointsConfig {
