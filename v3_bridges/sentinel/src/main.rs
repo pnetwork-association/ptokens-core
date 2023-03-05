@@ -34,16 +34,16 @@ async fn do_thing(mut batch: SubMatBatch) -> Result<String> {
 }
 
 #[tokio::main]
-async fn main() {
-    let config = SentinelConfig::new().unwrap();
-    init_logger(&config.log_config).unwrap();
+async fn main() -> Result<()> {
+    let config = SentinelConfig::new()?;
+    init_logger(&config.log_config)?;
 
     let cli_args = CliArgs::parse();
 
     let r = match cli_args.sub_commands {
         SubCommands::Start => {
-            let batch_1 = SubMatBatch::new_from_config(true, &config).unwrap();
-            let batch_2 = SubMatBatch::new_from_config(false, &config).unwrap();
+            let batch_1 = SubMatBatch::new_from_config(true, &config)?;
+            let batch_2 = SubMatBatch::new_from_config(false, &config)?;
             assert!(batch_1.is_native(), "Batch 1 is NOT native!");
             assert!(batch_2.is_host(), "Batch 2 is NOT host!");
 
@@ -51,8 +51,8 @@ async fn main() {
             let thread_2 = tokio::spawn(async move { do_thing(batch_2).await });
 
             let (res_1, res_2) = join!(thread_1, thread_2);
-            let thread_1_result = res_1.unwrap().unwrap();
-            let thread_2_result = res_2.unwrap().unwrap();
+            let thread_1_result = res_1??;
+            let thread_2_result = res_2??;
             let res = json!({
                 "jsonrpc": "2.0",
                 "result": {
@@ -72,12 +72,18 @@ async fn main() {
     };
 
     match r {
-        Ok(res) => println!("{res}"),
+        Ok(s) => {
+            println!("{s}");
+            info!("{s}");
+            Ok(())
+        },
         Err(err) => {
-            println!("{}", json!({"jsonrpc": "2.0", "error": err.to_string()}));
+            let s = format!("{}", json!({"jsonrpc": "2.0", "error": err.to_string()}));
+            println!("{s}");
+            info!("{s}");
             std::process::exit(1)
         },
-    };
+    }
 }
 
 // TODO use https://crates.io/crates/async-log for async logging when we have > 1 thread (flexi
