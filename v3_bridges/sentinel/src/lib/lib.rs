@@ -12,7 +12,6 @@ mod sub_mat_batch;
 mod test_utils;
 
 pub use self::{
-    logging::init_logger,
     check_endpoint::check_endpoint,
     config::{Config as SentinelConfig, Endpoints},
     errors::SentinelError,
@@ -21,6 +20,7 @@ pub use self::{
     get_receipts::get_receipts,
     get_rpc_client::get_rpc_client,
     get_sub_mat::get_sub_mat,
+    logging::init_logger,
     sub_mat_batch::SubMatBatch,
 };
 

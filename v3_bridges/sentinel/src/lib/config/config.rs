@@ -28,10 +28,10 @@ impl ConfigToml {
 
 #[derive(Debug, Clone)]
 pub struct Config {
-    pub log: LogConfig,
-    pub host: HostConfig,
-    pub native: NativeConfig,
-    pub batching: BatchingConfig,
+    pub log_config: LogConfig,
+    pub host_config: HostConfig,
+    pub native_config: NativeConfig,
+    pub batching_config: BatchingConfig,
 }
 
 impl Config {
@@ -43,15 +43,15 @@ impl Config {
 
     fn from_toml(toml: &ConfigToml) -> Result<Self> {
         Ok(Self {
-            log: LogConfig::from_toml(&toml.log)?,
-            host: HostConfig::from_toml(&toml.host),
-            native: NativeConfig::from_toml(&toml.native),
-            batching: BatchingConfig::from_toml(&toml.batching)?,
+            log_config: LogConfig::from_toml(&toml.log)?,
+            host_config: HostConfig::from_toml(&toml.host),
+            native_config: NativeConfig::from_toml(&toml.native),
+            batching_config: BatchingConfig::from_toml(&toml.batching)?,
         })
     }
 
     pub fn get_log_level(&self) -> LogLevel {
-        self.log.level
+        self.log_config.level
     }
 }
 

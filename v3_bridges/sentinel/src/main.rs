@@ -1,8 +1,6 @@
 mod cli;
 
 #[macro_use]
-extern crate anyhow;
-#[macro_use]
 extern crate log;
 #[macro_use]
 extern crate clap;
@@ -18,7 +16,7 @@ use cli::{
     SubCommands,
 };
 use futures::join;
-use lib::{get_rpc_client, get_sub_mat, SentinelConfig, SubMatBatch};
+use lib::{get_rpc_client, get_sub_mat, init_logger, SentinelConfig, SubMatBatch};
 use serde_json::json;
 
 async fn do_thing(mut batch: SubMatBatch) -> Result<String> {
@@ -40,6 +38,7 @@ async fn do_thing(mut batch: SubMatBatch) -> Result<String> {
 #[tokio::main]
 async fn main() {
     let config = SentinelConfig::new().unwrap();
+    init_logger(&config.log_config).unwrap();
 
     let cli_args = CliArgs::parse();
 
@@ -68,10 +67,12 @@ async fn main() {
             .to_string();
             Ok(res)
         },
-        SubCommands::GetHostSubMat(ref args) => get_host_sub_mat(&config.host.get_endpoints(), args).await,
-        SubCommands::GetNativeSubMat(ref args) => get_native_sub_mat(&config.native.get_endpoints(), args).await,
-        SubCommands::GetHostLatestBlockNum => get_host_latest_block_num(&config.host.get_endpoints()).await,
-        SubCommands::GetNativeLatestBlockNum => get_native_latest_block_num(&config.native.get_endpoints()).await,
+        SubCommands::GetHostSubMat(ref args) => get_host_sub_mat(&config.host_config.get_endpoints(), args).await,
+        SubCommands::GetNativeSubMat(ref args) => get_native_sub_mat(&config.native_config.get_endpoints(), args).await,
+        SubCommands::GetHostLatestBlockNum => get_host_latest_block_num(&config.host_config.get_endpoints()).await,
+        SubCommands::GetNativeLatestBlockNum => {
+            get_native_latest_block_num(&config.native_config.get_endpoints()).await
+        },
     };
 
     match r {

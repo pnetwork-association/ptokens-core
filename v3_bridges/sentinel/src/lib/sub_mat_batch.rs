@@ -52,12 +52,12 @@ impl SubMatBatch {
         let res = Self {
             is_native,
             endpoints: if is_native {
-                config.native.get_endpoints()
+                config.native_config.get_endpoints()
             } else {
-                config.host.get_endpoints()
+                config.host_config.get_endpoints()
             },
-            batch_size: config.batching.get_batch_size(is_native),
-            batch_duration: config.batching.get_batch_duration(is_native),
+            batch_size: config.batching_config.get_batch_size(is_native),
+            batch_duration: config.batching_config.get_batch_duration(is_native),
             ..Default::default()
         };
         if res.endpoints.is_empty() {
