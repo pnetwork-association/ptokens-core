@@ -1,5 +1,5 @@
 use anyhow::Result;
-use flexi_logger::{Cleanup, Criterion, FileSpec, Logger, Naming};
+use flexi_logger::Logger;
 
 use crate::config::LogConfig;
 

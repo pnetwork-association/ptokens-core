@@ -1,4 +1,4 @@
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 
 use anyhow::Result;
 use common_eth::EthSubmissionMaterial;
@@ -133,8 +133,6 @@ impl SubMatBatch {
             warn!("[!] Could not ascertain elapsed time since last submission, so assuming it's ready!");
             return true;
         }
-        // NOTE: Can't think of anything else to check, so let's assume it's ready by default.
-        return true;
     }
 }
 

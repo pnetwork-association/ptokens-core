@@ -2,8 +2,6 @@ use anyhow::Result;
 use lib::{get_latest_block_num, get_rpc_client, Endpoints};
 use serde_json::json;
 
-use crate::cli::write_file;
-
 #[derive(Debug, Subcommand)]
 pub enum GetLatestBlockNumCmd {
     /// Get HOST latest block number.

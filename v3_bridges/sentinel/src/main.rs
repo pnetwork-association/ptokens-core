@@ -4,8 +4,6 @@ mod cli;
 extern crate log;
 #[macro_use]
 extern crate clap;
-#[macro_use]
-extern crate lazy_static;
 
 use anyhow::Result;
 use clap::Parser;
@@ -16,7 +14,7 @@ use cli::{
     SubCommands,
 };
 use futures::join;
-use lib::{get_rpc_client, get_sub_mat, init_logger, SentinelConfig, SubMatBatch};
+use lib::{get_sub_mat, init_logger, SentinelConfig, SubMatBatch};
 use serde_json::json;
 
 async fn do_thing(mut batch: SubMatBatch) -> Result<String> {
@@ -32,7 +30,7 @@ async fn do_thing(mut batch: SubMatBatch) -> Result<String> {
             block_num += 1;
         }
     }
-    Ok(format!("{}_success", if batch.is_native() { "native" } else { "host" }).into())
+    Ok(format!("{}_success", if batch.is_native() { "native" } else { "host" }))
 }
 
 #[tokio::main]
@@ -52,8 +50,6 @@ async fn main() {
             let thread_1 = tokio::spawn(async move { do_thing(batch_1).await });
             let thread_2 = tokio::spawn(async move { do_thing(batch_2).await });
 
-            use futures::try_join; // NOTE: Use me to end early on an Err in one of the threads! Or
-                                   // look into JoinSet which allows tasks to be aborted
             let (res_1, res_2) = join!(thread_1, thread_2);
             let thread_1_result = res_1.unwrap().unwrap();
             let thread_2_result = res_2.unwrap().unwrap();
@@ -87,3 +83,5 @@ async fn main() {
 // TODO use https://crates.io/crates/async-log for async logging when we have > 1 thread (flexi
 // logger can do it apparently)
 // JSON-RPC spec:https://www.jsonrpc.org/specificationhttps://www.jsonrpc.org/specification https://www.jsonrpc.org/specification
+// use futures::try_join; // NOTE: Use me to end early on an Err in one of the threads! Or look into JoinSet which
+// allows tasks to be aborted

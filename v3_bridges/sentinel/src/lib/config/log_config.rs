@@ -1,11 +1,6 @@
-use std::str::FromStr;
-
 use anyhow::Result;
-use common_metadata::MetadataChainId;
 use log::Level as LogLevel;
 use serde::Deserialize;
-
-use crate::errors::SentinelError;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct LogToml {

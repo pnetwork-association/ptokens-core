@@ -1,7 +1,4 @@
-use std::str::FromStr;
-
 use anyhow::Result;
-use common_metadata::MetadataChainId;
 use log::Level as LogLevel;
 use serde::Deserialize;
 
@@ -55,6 +52,7 @@ impl Config {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 

@@ -1,6 +1,5 @@
 use anyhow::Result;
-use derive_more::{Constructor, Deref};
-use futures::{stream, Future, Stream, StreamExt};
+use derive_more::Constructor;
 use jsonrpsee::ws_client::WsClient;
 
 use crate::get_rpc_client;
