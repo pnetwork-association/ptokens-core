@@ -4,7 +4,7 @@ use anyhow::Result;
 use common_metadata::MetadataChainId;
 use serde::Deserialize;
 
-use crate::config::Endpoints;
+use crate::{config::Endpoints, constants::MILLISECONDS_MULTIPLIER};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct HostToml {
@@ -22,9 +22,10 @@ pub struct HostConfig {
 
 impl HostConfig {
     pub fn from_toml(toml: &HostToml) -> Self {
+        let sleep_time = toml.sleep_time * MILLISECONDS_MULTIPLIER;
         Self {
-            sleep_time: toml.sleep_time,
-            endpoints: Endpoints::new(false, toml.endpoints.clone()),
+            sleep_time,
+            endpoints: Endpoints::new(false, sleep_time, toml.endpoints.clone()),
             chain_id: match MetadataChainId::from_str(&toml.chain_id) {
                 Ok(id) => id,
                 Err(e) => {

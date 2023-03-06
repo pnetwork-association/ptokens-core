@@ -11,6 +11,9 @@ pub enum SentinelError {
 
     /// Represents an error originating from configuration file.
     ConfigError(String),
+
+    /// Represents an error due to something timing out.
+    TimeoutError(String),
 }
 
 impl std::fmt::Display for SentinelError {
@@ -18,6 +21,7 @@ impl std::fmt::Display for SentinelError {
         match *self {
             Self::CommonError(ref err) => write!(f, "{err}"),
             Self::JsonRpcError(ref err) => write!(f, "{err}"),
+            Self::TimeoutError(ref err) => write!(f, "Timeout error: {err}"),
             Self::NoBlock(num) => write!(f, "Cannot get block {num} from rpc"),
             Self::ConfigError(ref err) => write!(f, "Configuration error: {err}"),
         }
@@ -29,6 +33,7 @@ impl std::error::Error for SentinelError {
         match *self {
             Self::NoBlock(_) => None,
             Self::ConfigError(_) => None,
+            Self::TimeoutError(_) => None,
             Self::CommonError(ref err) => Some(err),
             Self::JsonRpcError(ref err) => Some(err),
         }
@@ -38,5 +43,11 @@ impl std::error::Error for SentinelError {
 impl From<common::errors::AppError> for SentinelError {
     fn from(err: common::errors::AppError) -> Self {
         Self::CommonError(err)
+    }
+}
+
+impl From<tokio::time::error::Elapsed> for SentinelError {
+    fn from(err: tokio::time::error::Elapsed) -> Self {
+        Self::TimeoutError(err.to_string())
     }
 }

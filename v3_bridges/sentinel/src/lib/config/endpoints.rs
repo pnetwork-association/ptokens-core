@@ -2,11 +2,12 @@ use anyhow::Result;
 use derive_more::Constructor;
 use jsonrpsee::ws_client::WsClient;
 
-use crate::get_rpc_client;
+use crate::{check_endpoint, get_rpc_client};
 
 #[derive(Debug, Default, Clone, Eq, PartialEq, Constructor)]
 pub struct Endpoints {
     is_native: bool,
+    sleep_time: u64,
     endpoints: Vec<String>,
 }
 
@@ -23,7 +24,9 @@ impl Endpoints {
 
     pub async fn get_rpc_client(&self) -> Result<WsClient> {
         let endpoint = self.get_first_endpoint()?;
-        Ok(get_rpc_client(&endpoint).await?)
+        let rpc_client = get_rpc_client(&endpoint).await?;
+        check_endpoint(&rpc_client, self.sleep_time).await?;
+        Ok(rpc_client)
     }
 
     pub fn is_empty(&self) -> bool {
