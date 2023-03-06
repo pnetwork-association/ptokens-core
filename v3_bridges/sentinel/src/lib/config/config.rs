@@ -2,16 +2,28 @@ use anyhow::Result;
 use log::Level as LogLevel;
 use serde::Deserialize;
 
-use crate::config::{BatchingConfig, BatchingToml, HostConfig, HostToml, LogConfig, LogToml, NativeConfig, NativeToml};
+use crate::config::{
+    BatchingConfig,
+    BatchingToml,
+    HostConfig,
+    HostToml,
+    LogConfig,
+    LogToml,
+    MongoConfig,
+    MongoToml,
+    NativeConfig,
+    NativeToml,
+};
 
-const CONFIG_FILE_PATH: &str = "Config";
+const CONFIG_FILE_PATH: &str = "config";
 
 #[derive(Debug, Clone, Deserialize)]
 struct ConfigToml {
-    pub log: LogToml,
-    pub host: HostToml,
-    pub native: NativeToml,
-    pub batching: BatchingToml,
+    log: LogToml,
+    host: HostToml,
+    mongo: MongoToml,
+    native: NativeToml,
+    batching: BatchingToml,
 }
 
 impl ConfigToml {
@@ -27,6 +39,7 @@ impl ConfigToml {
 pub struct Config {
     pub log_config: LogConfig,
     pub host_config: HostConfig,
+    pub mongo_config: MongoConfig,
     pub native_config: NativeConfig,
     pub batching_config: BatchingConfig,
 }
@@ -42,6 +55,7 @@ impl Config {
         Ok(Self {
             log_config: LogConfig::from_toml(&toml.log)?,
             host_config: HostConfig::from_toml(&toml.host),
+            mongo_config: MongoConfig::from_toml(&toml.mongo)?,
             native_config: NativeConfig::from_toml(&toml.native),
             batching_config: BatchingConfig::from_toml(&toml.batching)?,
         })
@@ -59,6 +73,6 @@ mod tests {
     #[test]
     fn should_get_config() {
         let result = Config::new();
-        assert!(result.is_ok());
+        result.unwrap();
     }
 }

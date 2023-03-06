@@ -20,3 +20,8 @@ use_file_logging = false # If false, logs are written to stderr, if true, logs a
 path = "./" # Path to write logs to. Defaults to "./"
 max_num_logs = 10 # Maximum number of logs to maintain. The oldest half are compressed.
 max_log_size = 1_000_000 # Maximum size of a single log in bytes. Defalt is 10mb
+
+[mongo]
+database = "database"
+collection = "reports"
+uri = "mongodb://127.0.0.1:27017"
