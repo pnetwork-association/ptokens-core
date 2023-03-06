@@ -79,7 +79,7 @@ async fn main() -> Result<()> {
         },
         Err(err) => {
             let s = format!("{}", json!({"jsonrpc": "2.0", "error": err.to_string()}));
-            println!("{s}");
+            eprintln!("{s}");
             info!("{s}");
             std::process::exit(1)
         },
