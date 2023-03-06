@@ -1,22 +1,38 @@
 use std::str::FromStr;
 
 use anyhow::Result;
+use mongodb::{
+    bson::{doc, Document},
+    options::ClientOptions,
+    Client,
+    Collection,
+};
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct MongoToml {
+pub struct MongoConfig {
     uri: String,
     database: String,
     collection: String,
 }
 
-#[derive(Debug, Clone)]
-pub struct MongoConfig {
-    // TODO save & instantiate the connection here!
+impl MongoConfig {
+    pub async fn get_collection(&self) -> Result<Collection<Document>> {
+        info!("Getting mongo collection '{}'...", self.collection);
+        let client = Client::with_options(ClientOptions::parse(&self.uri).await?)?;
+        let db = client.database(&self.database);
+        Ok(db.collection::<Document>(&self.collection))
+    }
 }
 
-impl MongoConfig {
-    pub fn from_toml(toml: &MongoToml) -> Result<Self> {
-        Ok(Self {})
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+
+    #[tokio::test]
+    async fn should_get_collection() {
+        let mongo_config = Config::new().unwrap().mongo_config;
+        mongo_config.get_collection().await.unwrap();
     }
 }

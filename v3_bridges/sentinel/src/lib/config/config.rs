@@ -10,7 +10,6 @@ use crate::config::{
     LogConfig,
     LogToml,
     MongoConfig,
-    MongoToml,
     NativeConfig,
     NativeToml,
 };
@@ -21,8 +20,8 @@ const CONFIG_FILE_PATH: &str = "config";
 struct ConfigToml {
     log: LogToml,
     host: HostToml,
-    mongo: MongoToml,
     native: NativeToml,
+    mongo: MongoConfig,
     batching: BatchingToml,
 }
 
@@ -53,9 +52,9 @@ impl Config {
 
     fn from_toml(toml: &ConfigToml) -> Result<Self> {
         Ok(Self {
+            mongo_config: toml.mongo.clone(),
             log_config: LogConfig::from_toml(&toml.log)?,
             host_config: HostConfig::from_toml(&toml.host),
-            mongo_config: MongoConfig::from_toml(&toml.mongo)?,
             native_config: NativeConfig::from_toml(&toml.native),
             batching_config: BatchingConfig::from_toml(&toml.batching)?,
         })

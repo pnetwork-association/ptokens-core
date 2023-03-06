@@ -12,6 +12,6 @@ pub use self::{
     endpoints::Endpoints,
     host_config::{HostConfig, HostToml},
     log_config::{LogConfig, LogToml},
-    mongo_config::{MongoConfig, MongoToml},
+    mongo_config::MongoConfig,
     native_config::{NativeConfig, NativeToml},
 };
