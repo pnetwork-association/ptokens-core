@@ -151,8 +151,10 @@ impl SubMatBatch {
     pub fn check_is_chained(self) -> std::result::Result<Self, SentinelError> {
         let num_blocks_in_batch = self.size_in_blocks() as usize;
         if num_blocks_in_batch < 2 {
+            info!("No need to check batch chaining - it contains too few blocks to matter!");
             Ok(self)
         } else {
+            info!("Checking batch is chained correctly...");
             let mut i = num_blocks_in_batch - 1;
             while i > 0 {
                 if self.batch[i].get_parent_hash()? != self.batch[i - 1].get_block_hash()? {
@@ -165,12 +167,13 @@ impl SubMatBatch {
                 }
                 i -= 1;
             }
+            info!("Batch is chained correctly!");
             Ok(self)
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
     /// Two blocks in the batch whose parent_hash & hash do not match.
     UnchainedBlocks { block_num: U256, parent_block_num: U256 },
@@ -202,6 +205,7 @@ mod tests {
     use common_eth::{convert_hex_to_eth_address, EthLog, EthLogs, EthReceipt, EthReceipts};
 
     use super::*;
+    use crate::test_utils::get_sample_batch;
 
     #[test]
     fn should_enable_batching() {
@@ -291,5 +295,43 @@ mod tests {
         batch.contract_addresses = vec![other_address];
         batch.push(sub_mat);
         assert!(batch.batch[0].receipts.is_empty());
+    }
+
+    #[test]
+    fn should_pass_is_chained_check_if_batch_is_empty() {
+        let batch = SubMatBatch::new();
+        assert!(batch.check_is_chained().is_ok())
+    }
+
+    #[test]
+    fn should_pass_is_chained_check_if_batch_has_one_member() {
+        let mut batch = SubMatBatch::new();
+        let sub_mat = EthSubmissionMaterial::default();
+        batch.push(sub_mat);
+        assert_eq!(batch.size_in_blocks(), 1);
+        assert!(batch.check_is_chained().is_ok())
+    }
+
+    #[test]
+    fn should_pass_is_chained_check_if_is_chained_correctly() {
+        let batch = get_sample_batch();
+        assert!(batch.check_is_chained().is_ok());
+    }
+
+    #[test]
+    fn should_fail_is_chained_check_if_is_not_chained_correctly() {
+        let mut batch = get_sample_batch();
+        batch.batch.swap(0, 1);
+        let block_1_number = batch.batch[2].get_block_number().unwrap();
+        let block_2_number = batch.batch[1].get_block_number().unwrap();
+        let expected_error = Error::UnchainedBlocks {
+            block_num: block_1_number,
+            parent_block_num: block_2_number,
+        };
+        match batch.check_is_chained() {
+            Ok(_) => panic!("Should not have succeeded!"),
+            Err(SentinelError::BatchingError(e)) => assert_eq!(e, expected_error),
+            Err(e) => panic!("Wrong error received: {e}"),
+        }
     }
 }
