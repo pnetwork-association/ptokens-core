@@ -4,6 +4,8 @@ mod cli;
 extern crate log;
 #[macro_use]
 extern crate clap;
+#[macro_use]
+extern crate anyhow;
 
 use anyhow::Result;
 use clap::Parser;
@@ -14,22 +16,36 @@ use cli::{
     SubCommands,
 };
 use futures::join;
-use lib::{get_sub_mat, init_logger, SentinelConfig, SubMatBatch};
+use lib::{get_sub_mat, init_logger, EndpointError, SentinelConfig, SentinelError, SubMatBatch};
 use serde_json::json;
+use tokio::time::{sleep, Duration};
 
-async fn do_thing(mut batch: SubMatBatch) -> Result<String> {
+async fn syncer_loop(mut batch: SubMatBatch) -> Result<String> {
     let ws_client = batch.get_rpc_client().await?;
-    let mut block_num = 16742150;
-    loop {
-        let block = get_sub_mat(&ws_client, block_num).await?;
-        batch.push(block);
-        if batch.is_ready_to_submit() {
-            info!("Batch is ready to submit!");
-            break;
-        } else {
-            block_num += 1;
+    let sleep_duration = batch.get_sleep_duration();
+    let mut block_num = 16778065;
+
+    'main: loop {
+        let maybe_block = get_sub_mat(&ws_client, block_num).await;
+
+        if let Ok(block) = maybe_block {
+            batch.push(block);
+            if batch.is_ready_to_submit() {
+                info!("Batch is ready to submit!");
+                break 'main;
+            } else {
+                block_num += 1;
+                continue 'main;
+            }
+        } else if let Err(SentinelError::EndpointError(EndpointError::NoBlock(_))) = maybe_block {
+            info!("No next block yet - sleeping for {sleep_duration}ms...");
+            sleep(Duration::from_millis(sleep_duration)).await;
+            continue 'main;
+        } else if let Err(e) = maybe_block {
+            return Err(anyhow!(e.to_string()));
         }
     }
+
     Ok(format!("{}_success", if batch.is_native() { "native" } else { "host" }))
 }
 
@@ -47,8 +63,8 @@ async fn main() -> Result<()> {
             assert!(batch_1.is_native(), "Batch 1 is NOT native!");
             assert!(batch_2.is_host(), "Batch 2 is NOT host!");
 
-            let thread_1 = tokio::spawn(async move { do_thing(batch_1).await });
-            let thread_2 = tokio::spawn(async move { do_thing(batch_2).await });
+            let thread_1 = tokio::spawn(async move { syncer_loop(batch_1).await });
+            let thread_2 = tokio::spawn(async move { syncer_loop(batch_2).await });
 
             let (res_1, res_2) = join!(thread_1, thread_2);
             let thread_1_result = res_1??;
