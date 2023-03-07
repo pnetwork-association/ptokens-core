@@ -1,10 +1,11 @@
-use anyhow::Result;
+use std::result::Result;
+
 use common_eth::EthSubmissionMaterial;
 use jsonrpsee::ws_client::WsClient;
 
-use crate::{get_block, get_receipts};
+use crate::{get_block, get_receipts, SentinelError};
 
-pub async fn get_sub_mat(ws_client: &WsClient, block_num: u64) -> Result<EthSubmissionMaterial> {
+pub async fn get_sub_mat(ws_client: &WsClient, block_num: u64) -> Result<EthSubmissionMaterial, SentinelError> {
     let block = get_block(ws_client, block_num).await?;
     let receipts = get_receipts(ws_client, &block.transactions).await?;
     Ok(EthSubmissionMaterial::default()

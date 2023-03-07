@@ -1,19 +1,16 @@
-use anyhow::Result;
+use std::result::Result;
+
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
 
-use crate::constants::HEX_RADIX;
+use crate::{constants::HEX_RADIX, endpoints::Error, SentinelError};
 
 const GET_LATEST_BLOCK_NUM_RPC_CMD: &str = "eth_blockNumber";
 
-pub async fn get_latest_block_num(ws_client: &WsClient) -> Result<u64> {
+pub async fn get_latest_block_num(ws_client: &WsClient) -> Result<u64, SentinelError> {
     info!("[+] Getting latest block number...");
     let res: jsonrpsee::core::RpcResult<String> = ws_client.request(GET_LATEST_BLOCK_NUM_RPC_CMD, rpc_params![]).await;
     match res {
-        Err(err) => {
-            // FIXME  This should return some error about checking the config etc
-            println!("the actual error: {err}");
-            Err(anyhow!("Could not get latest block number - please check your config!"))
-        },
+        Err(_) => Err(SentinelError::EndpointError(Error::NoLatestBlock)),
         Ok(ref s) => Ok(u64::from_str_radix(&s.replace("0x", ""), HEX_RADIX)?),
     }
 }

@@ -1,4 +1,5 @@
-use anyhow::Result;
+use std::result::Result;
+
 use common_eth::{EthReceipt, EthReceipts};
 use ethereum_types::H256 as EthHash;
 use futures::{stream, Future, Stream, StreamExt};
@@ -9,13 +10,15 @@ use jsonrpsee::{
 };
 use serde_json::Value as JsonValue;
 
+use crate::SentinelError;
+
 const MAX_CONCURRENT_REQUESTS: usize = 250;
 const GET_RECEIPT_RPC_CMD: &str = "eth_getTransactionReceipt";
 
 async fn get_receipt_future<'a>(
     ws_client: &'a WsClient,
     tx_hash: &'a EthHash,
-) -> impl Future<Output = std::result::Result<JsonValue, JsonRpseeError>> + 'a {
+) -> impl Future<Output = Result<JsonValue, JsonRpseeError>> + 'a {
     trace!("[+] Getting receipts for tx hash: 0x{tx_hash:x}...");
     ws_client.request(GET_RECEIPT_RPC_CMD, rpc_params![format!("0x{tx_hash:x}")])
 }
@@ -27,7 +30,7 @@ fn get_receipt_futures<'a>(
     stream::iter(tx_hashes).then(|tx_hash| get_receipt_future(ws_client, tx_hash))
 }
 
-pub async fn get_receipts(ws_client: &WsClient, tx_hashes: &[EthHash]) -> Result<EthReceipts> {
+pub async fn get_receipts(ws_client: &WsClient, tx_hashes: &[EthHash]) -> Result<EthReceipts, SentinelError> {
     // TODO can I unwrap the future stream via try stream?
     // https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.4/futures/stream/trait.TryStreamExt.html
     let jsons = get_receipt_futures(ws_client, tx_hashes)
@@ -39,7 +42,7 @@ pub async fn get_receipts(ws_client: &WsClient, tx_hashes: &[EthHash]) -> Result
         jsons
             .into_iter()
             .map(|a| Ok(EthReceipt::from_json_rpc(&serde_json::from_value(a?)?)?))
-            .collect::<Result<Vec<_>>>()?,
+            .collect::<Result<Vec<_>, SentinelError>>()?,
     ))
 }
 

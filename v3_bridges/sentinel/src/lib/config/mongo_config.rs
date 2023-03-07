@@ -1,4 +1,4 @@
-use std::{result::Result, str::FromStr};
+use std::result::Result;
 
 use mongodb::{
     bson::{doc, Document},
@@ -28,7 +28,6 @@ impl MongoConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::config::Config;
 
     #[tokio::test]

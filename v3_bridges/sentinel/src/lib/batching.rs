@@ -1,14 +1,10 @@
-use std::time::SystemTime;
+use std::{result::Result, time::SystemTime};
 
-use anyhow::Result;
 use common_eth::EthSubmissionMaterial;
 use ethereum_types::{Address as EthAddress, U256};
 use jsonrpsee::ws_client::WsClient;
 
-use crate::{
-    config::{Config, Endpoints},
-    SentinelError,
-};
+use crate::{config::Config, endpoints::Endpoints, SentinelError};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct SubMatBatch {
@@ -42,8 +38,8 @@ impl SubMatBatch {
         Self::default()
     }
 
-    pub async fn get_rpc_client(&self) -> Result<WsClient> {
-        Ok(self.endpoints.get_rpc_client().await?)
+    pub async fn get_rpc_client(&self) -> Result<WsClient, SentinelError> {
+        self.endpoints.get_rpc_client().await
     }
 
     pub fn is_native(&self) -> bool {
@@ -54,7 +50,7 @@ impl SubMatBatch {
         !self.is_native
     }
 
-    pub fn new_from_config(is_native: bool, config: &Config) -> std::result::Result<Self, SentinelError> {
+    pub fn new_from_config(is_native: bool, config: &Config) -> Result<Self, SentinelError> {
         info!("Getting SubMatBatch from config...");
         let res = Self {
             is_native,
@@ -145,7 +141,7 @@ impl SubMatBatch {
         }
     }
 
-    pub fn check_is_chained(self) -> std::result::Result<Self, SentinelError> {
+    pub fn check_is_chained(self) -> Result<Self, SentinelError> {
         let num_blocks_in_batch = self.size_in_blocks() as usize;
         if num_blocks_in_batch < 2 {
             info!("No need to check batch chaining - it contains too few blocks to matter!");

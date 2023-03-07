@@ -5,7 +5,7 @@ use common_metadata::MetadataChainId;
 use ethereum_types::Address as EthAddress;
 use serde::Deserialize;
 
-use crate::{config::Endpoints, constants::MILLISECONDS_MULTIPLIER, SentinelError};
+use crate::{constants::MILLISECONDS_MULTIPLIER, Endpoints, SentinelError};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct NativeToml {

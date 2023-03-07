@@ -1,7 +1,7 @@
 mod batching;
-mod check_endpoint;
 mod config;
 mod constants;
+mod endpoints;
 mod error;
 mod get_block;
 mod get_latest_block_num;
@@ -13,9 +13,9 @@ mod test_utils;
 
 pub use self::{
     batching::SubMatBatch,
-    check_endpoint::check_endpoint,
-    config::{Config as SentinelConfig, Endpoints},
+    config::Config as SentinelConfig,
     constants::MILLISECONDS_MULTIPLIER,
+    endpoints::{check_endpoint, Endpoints},
     error::SentinelError,
     get_block::get_block,
     get_latest_block_num::get_latest_block_num,
@@ -25,7 +25,5 @@ pub use self::{
     logging::init_logger,
 };
 
-#[macro_use]
-extern crate anyhow;
 #[macro_use]
 extern crate log;

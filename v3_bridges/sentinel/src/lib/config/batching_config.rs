@@ -1,6 +1,5 @@
 use std::result::Result;
 
-use ethereum_types::{Address as EthAddress, H256};
 use serde::Deserialize;
 
 use crate::{config::Error, SentinelError};
