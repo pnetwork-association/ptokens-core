@@ -1,9 +1,10 @@
-use anyhow::Result;
+use std::result::Result;
+
 use flexi_logger::{Cleanup, Criterion, FileSpec, Logger, Naming};
 
-use crate::config::LogConfig;
+use crate::{config::LogConfig, SentinelError};
 
-pub fn initialize_file_logger(config: &LogConfig) -> Result<()> {
+pub fn initialize_file_logger(config: &LogConfig) -> Result<(), SentinelError> {
     let num_logs_to_keep = config.max_num_logs / 2; // NOTE: We'll keep half of them compressed.
 
     Logger::try_with_str(config.level.as_str()).and_then(|logger| {

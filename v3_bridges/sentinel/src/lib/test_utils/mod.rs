@@ -1,7 +1,6 @@
 #![cfg(test)]
 use std::{env, fs::read_to_string, str::FromStr};
 
-use anyhow::Result;
 use common_eth::EthSubmissionMaterial;
 use dotenv::dotenv;
 use jsonrpsee::ws_client::WsClient;
@@ -10,13 +9,15 @@ use crate::{check_endpoint, get_rpc_client, SubMatBatch};
 
 const ENV_VAR: &str = "TEST_ENDPOINT";
 
-pub async fn get_test_ws_client() -> Result<WsClient> {
+pub async fn get_test_ws_client() -> WsClient {
     dotenv().ok();
     let time_limit = 5000; // NOTE: 5s
-    let url = env::var(ENV_VAR).map_err(|_| anyhow!("Please set env var '{ENV_VAR}' to a working endpoint!"))?;
-    let ws_client = get_rpc_client(&url).await?;
-    check_endpoint(&ws_client, time_limit).await?;
-    Ok(ws_client)
+    let url = env::var(ENV_VAR)
+        .map_err(|_| anyhow!("Please set env var '{ENV_VAR}' to a working endpoint!"))
+        .unwrap();
+    let ws_client = get_rpc_client(&url).await.unwrap();
+    check_endpoint(&ws_client, time_limit).await.unwrap();
+    ws_client
 }
 
 pub fn get_sample_sub_mat_n(n: usize) -> EthSubmissionMaterial {
@@ -47,7 +48,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_get_test_ws_client() {
-        get_test_ws_client().await.unwrap();
+        get_test_ws_client().await;
     }
 
     #[test]

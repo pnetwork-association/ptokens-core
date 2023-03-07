@@ -50,7 +50,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_get_receipts() {
-        let ws_client = get_test_ws_client().await.unwrap();
+        let ws_client = get_test_ws_client().await;
         let block_num = get_latest_block_num(&ws_client).await.unwrap();
         let block = get_block(&ws_client, block_num).await.unwrap();
         let tx_hashes = block.transactions;

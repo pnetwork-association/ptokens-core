@@ -30,7 +30,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_get_block() {
-        let ws_client = get_test_ws_client().await.unwrap();
+        let ws_client = get_test_ws_client().await;
         let block_num = get_latest_block_num(&ws_client).await.unwrap();
         let result = get_block(&ws_client, block_num).await;
         assert!(result.is_ok());
@@ -38,7 +38,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_fail_to_get_block_with_correct_error() {
-        let ws_client = get_test_ws_client().await.unwrap();
+        let ws_client = get_test_ws_client().await;
         let block_num = i64::MAX as u64;
         match get_block(&ws_client, block_num).await {
             Err(SentinelError::NoBlock(num)) => assert_eq!(num, block_num),

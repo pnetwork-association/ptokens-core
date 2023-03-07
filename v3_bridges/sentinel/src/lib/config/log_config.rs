@@ -1,6 +1,9 @@
-use anyhow::Result;
+use std::result::Result;
+
 use log::Level as LogLevel;
 use serde::Deserialize;
+
+use crate::{config::Error, SentinelError};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct LogToml {
@@ -21,7 +24,7 @@ pub struct LogConfig {
 }
 
 impl LogConfig {
-    pub fn from_toml(toml: &LogToml) -> Result<Self> {
+    pub fn from_toml(toml: &LogToml) -> Result<Self, SentinelError> {
         Ok(Self {
             path: toml.path.clone(),
             use_file_logging: toml.use_file_logging,
@@ -36,25 +39,31 @@ impl LogConfig {
         })
     }
 
-    fn sanity_check_max_num_logs(n: usize) -> Result<usize> {
+    fn sanity_check_max_num_logs(n: usize) -> Result<usize, SentinelError> {
         const MIN: usize = 1;
         const MAX: usize = 1_000_000;
         if n >= MIN && n <= MAX {
             Ok(n)
         } else {
-            let e = format!("`max_num_logs` should be > {MIN} & < ${MAX} - please check your config!");
-            Err(anyhow!(e))
+            Err(SentinelError::ConfigError(Error::LogNumError {
+                size: n,
+                max: MAX,
+                min: MIN,
+            }))
         }
     }
 
-    fn sanity_check_max_log_size(n: u64) -> Result<u64> {
+    fn sanity_check_max_log_size(n: u64) -> Result<u64, SentinelError> {
         const MIN: u64 = 1_000_000; // NOTE: 1mb
         const MAX: u64 = 1_000_000_000_000; // NOTE: 1 tb
         if n >= MIN && n <= MAX {
             Ok(n)
         } else {
-            let e = format!("`max_log_size` should be > {MIN} & < ${MAX} - please check your config!");
-            Err(anyhow!(e))
+            Err(SentinelError::ConfigError(Error::LogSizeError {
+                size: n,
+                max: MAX,
+                min: MIN,
+            }))
         }
     }
 }

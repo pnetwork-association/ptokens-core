@@ -1,7 +1,9 @@
+use std::result::Result;
+
 use ethereum_types::{Address as EthAddress, H256};
 use serde::Deserialize;
 
-use crate::errors::SentinelError;
+use crate::{config::Error, SentinelError};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct BatchingToml {
@@ -31,7 +33,7 @@ impl Default for BatchingToml {
 }
 
 impl BatchingConfig {
-    pub fn from_toml(toml: &BatchingToml) -> std::result::Result<Self, SentinelError> {
+    pub fn from_toml(toml: &BatchingToml) -> Result<Self, SentinelError> {
         Ok(Self {
             host_batch_size: Self::sanity_check_batch_size(toml.host_batch_size)?,
             native_batch_size: Self::sanity_check_batch_size(toml.native_batch_size)?,
@@ -40,26 +42,32 @@ impl BatchingConfig {
         })
     }
 
-    fn sanity_check_batch_size(batch_size: u64) -> std::result::Result<u64, SentinelError> {
+    fn sanity_check_batch_size(batch_size: u64) -> Result<u64, SentinelError> {
         info!("Sanity checking batch size...");
-        if batch_size > 0 && batch_size <= 1000 {
+        const MIN: u64 = 0;
+        const MAX: u64 = 1000;
+        if batch_size > MIN && batch_size <= MAX {
             Ok(batch_size)
         } else {
-            Err(SentinelError::ConfigError(format!(
-                "Batch size of {batch_size} is unacceptable"
-            )))
+            Err(SentinelError::ConfigError(Error::BatchSizeError {
+                size: batch_size,
+                min: MIN,
+                max: MAX,
+            }))
         }
     }
 
-    fn sanity_check_batch_duration(batch_duration: u64) -> std::result::Result<u64, SentinelError> {
+    fn sanity_check_batch_duration(batch_duration: u64) -> Result<u64, SentinelError> {
         info!("Sanity checking batch duration...");
         // NOTE: A batch duration of 0 means we submit material one at a time...
-        if batch_duration <= 60 * 10 {
+        const MAX: u64 = 60 * 10; // NOTE: Ten mins
+        if batch_duration <= MAX {
             Ok(batch_duration)
         } else {
-            Err(SentinelError::ConfigError(format!(
-                "Batch duration of {batch_duration} is unacceptable"
-            )))
+            Err(SentinelError::ConfigError(Error::BatchDurationError {
+                max: MAX,
+                size: batch_duration,
+            }))
         }
     }
 
@@ -97,10 +105,14 @@ mod tests {
         let mut toml = BatchingToml::default();
         let batch_size = u64::MAX;
         toml.host_batch_size = batch_size;
-        let expected_error = format!("Batch size of {batch_size} is unacceptable");
+        let expected_error = Error::BatchSizeError {
+            size: batch_size,
+            min: 0,
+            max: 1000,
+        };
         match BatchingConfig::from_toml(&toml) {
             Ok(_) => panic!("Should not have succeeded!"),
-            Err(SentinelError::ConfigError(error)) => assert_eq!(error, expected_error),
+            Err(SentinelError::ConfigError(e)) => assert_eq!(e, expected_error),
             Err(error) => panic!("Wrong error received: {error}!"),
         }
     }
@@ -110,10 +122,13 @@ mod tests {
         let mut toml = BatchingToml::default();
         let duration = u64::MAX;
         toml.host_batch_duration = duration;
-        let expected_error = format!("Batch duration of {duration} is unacceptable");
+        let expected_error = Error::BatchDurationError {
+            size: duration,
+            max: 600,
+        };
         match BatchingConfig::from_toml(&toml) {
             Ok(_) => panic!("Should not have succeeded!"),
-            Err(SentinelError::ConfigError(error)) => assert_eq!(error, expected_error),
+            Err(SentinelError::ConfigError(e)) => assert_eq!(e, expected_error),
             Err(error) => panic!("Wrong error received: {error}!"),
         }
     }

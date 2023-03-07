@@ -25,7 +25,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_get_latest_block_num() {
-        let ws_client = get_test_ws_client().await.unwrap();
+        let ws_client = get_test_ws_client().await;
         let result = get_latest_block_num(&ws_client).await;
         assert!(result.is_ok());
         assert!(result.unwrap() > 0);

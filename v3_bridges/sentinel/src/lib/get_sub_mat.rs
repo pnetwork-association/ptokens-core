@@ -19,7 +19,7 @@ mod tests {
 
     #[tokio::test]
     async fn should_get_sub_mat() {
-        let ws_client = get_test_ws_client().await.unwrap();
+        let ws_client = get_test_ws_client().await;
         let block_num = get_latest_block_num(&ws_client).await.unwrap();
         let result = get_sub_mat(&ws_client, block_num).await;
         assert!(result.is_ok())

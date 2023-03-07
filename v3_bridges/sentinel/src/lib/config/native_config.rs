@@ -1,12 +1,11 @@
-use std::str::FromStr;
+use std::{result::Result, str::FromStr};
 
-use anyhow::Result;
 use common_eth::convert_hex_strings_to_eth_addresses;
 use common_metadata::MetadataChainId;
 use ethereum_types::Address as EthAddress;
 use serde::Deserialize;
 
-use crate::{config::Endpoints, constants::MILLISECONDS_MULTIPLIER};
+use crate::{config::Endpoints, constants::MILLISECONDS_MULTIPLIER, SentinelError};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct NativeToml {
@@ -25,7 +24,7 @@ pub struct NativeConfig {
 }
 
 impl NativeConfig {
-    pub fn from_toml(toml: &NativeToml) -> Result<Self> {
+    pub fn from_toml(toml: &NativeToml) -> Result<Self, SentinelError> {
         let sleep_time = toml.sleep_time * MILLISECONDS_MULTIPLIER;
         Ok(Self {
             sleep_time,
@@ -42,7 +41,7 @@ impl NativeConfig {
         })
     }
 
-    pub fn get_first_endpoint(&self) -> Result<String> {
+    pub fn get_first_endpoint(&self) -> Result<String, SentinelError> {
         info!("Getting first native endpoint");
         self.endpoints.get_first_endpoint()
     }

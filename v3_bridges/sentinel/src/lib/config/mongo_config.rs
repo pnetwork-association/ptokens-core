@@ -1,6 +1,5 @@
-use std::str::FromStr;
+use std::{result::Result, str::FromStr};
 
-use anyhow::Result;
 use mongodb::{
     bson::{doc, Document},
     options::ClientOptions,
@@ -8,6 +7,8 @@ use mongodb::{
     Collection,
 };
 use serde::Deserialize;
+
+use crate::SentinelError;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct MongoConfig {
@@ -17,7 +18,7 @@ pub struct MongoConfig {
 }
 
 impl MongoConfig {
-    pub async fn get_collection(&self) -> Result<Collection<Document>> {
+    pub async fn get_collection(&self) -> Result<Collection<Document>, SentinelError> {
         info!("Getting mongo collection '{}'...", self.collection);
         let client = Client::with_options(ClientOptions::parse(&self.uri).await?)?;
         let db = client.database(&self.database);

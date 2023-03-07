@@ -24,7 +24,7 @@ mod tests {
     #[tokio::test]
     async fn working_endpoint_should_pass_endpoint_check() {
         let time_limit = 5000;
-        let ws_client = get_test_ws_client().await.unwrap();
+        let ws_client = get_test_ws_client().await;
         let result = check_endpoint(&ws_client, time_limit).await;
         assert!(result.is_ok());
     }

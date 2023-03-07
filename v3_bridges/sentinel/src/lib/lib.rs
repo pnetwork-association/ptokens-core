@@ -2,7 +2,7 @@ mod batching;
 mod check_endpoint;
 mod config;
 mod constants;
-mod errors;
+mod error;
 mod get_block;
 mod get_latest_block_num;
 mod get_receipts;
@@ -16,7 +16,7 @@ pub use self::{
     check_endpoint::check_endpoint,
     config::{Config as SentinelConfig, Endpoints},
     constants::MILLISECONDS_MULTIPLIER,
-    errors::SentinelError,
+    error::SentinelError,
     get_block::get_block,
     get_latest_block_num::get_latest_block_num,
     get_receipts::get_receipts,
