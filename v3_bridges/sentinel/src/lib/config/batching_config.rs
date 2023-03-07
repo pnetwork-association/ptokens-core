@@ -1,13 +1,19 @@
+use common_eth::{convert_hex_strings_to_eth_addresses, convert_hex_strings_to_h256s};
+use ethereum_types::{Address as EthAddress, H256};
 use serde::Deserialize;
 
 use crate::errors::SentinelError;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct BatchingToml {
-    pub host_batch_size: u64,
-    pub native_batch_size: u64,
-    pub host_batch_duration: u64,
-    pub native_batch_duration: u64,
+    host_batch_size: u64,
+    native_batch_size: u64,
+    host_batch_duration: u64,
+    native_batch_duration: u64,
+    host_topics: Vec<String>,
+    native_topics: Vec<String>,
+    host_addresses: Vec<String>,
+    native_addresses: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -16,6 +22,10 @@ pub struct BatchingConfig {
     pub native_batch_size: u64,
     pub host_batch_duration: u64,
     pub native_batch_duration: u64,
+    pub host_topics: Vec<H256>,
+    pub native_topics: Vec<H256>,
+    pub host_addresses: Vec<EthAddress>,
+    pub native_addresses: Vec<EthAddress>,
 }
 
 impl Default for BatchingToml {
@@ -25,6 +35,10 @@ impl Default for BatchingToml {
             native_batch_size: 1,
             host_batch_duration: 0,
             native_batch_duration: 0,
+            host_topics: vec![],
+            native_topics: vec![],
+            host_addresses: vec![],
+            native_addresses: vec![],
         }
     }
 }
@@ -36,6 +50,10 @@ impl BatchingConfig {
             native_batch_size: Self::sanity_check_batch_size(toml.native_batch_size)?,
             host_batch_duration: Self::sanity_check_batch_duration(toml.host_batch_duration)?,
             native_batch_duration: Self::sanity_check_batch_duration(toml.native_batch_duration)?,
+            host_topics: convert_hex_strings_to_h256s(&toml.host_topics)?,
+            native_topics: convert_hex_strings_to_h256s(&toml.native_topics)?,
+            host_addresses: convert_hex_strings_to_eth_addresses(&toml.host_addresses)?,
+            native_addresses: convert_hex_strings_to_eth_addresses(&toml.native_addresses)?,
         })
     }
 
