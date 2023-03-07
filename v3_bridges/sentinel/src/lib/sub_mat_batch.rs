@@ -2,6 +2,7 @@ use std::time::SystemTime;
 
 use anyhow::Result;
 use common_eth::EthSubmissionMaterial;
+use ethereum_types::Address as EthAddress;
 use jsonrpsee::ws_client::WsClient;
 
 use crate::config::{Config, Endpoints};
@@ -15,6 +16,7 @@ pub struct SubMatBatch {
     batching_is_disabled: bool,
     last_submitted: SystemTime,
     batch: Vec<EthSubmissionMaterial>,
+    contract_addresses: Vec<EthAddress>,
 }
 
 impl Default for SubMatBatch {
@@ -24,6 +26,7 @@ impl Default for SubMatBatch {
             batch_size: 1,
             is_native: true,
             batch_duration: 300, // NOTE: 5mins
+            contract_addresses: vec![],
             batching_is_disabled: false,
             endpoints: Endpoints::default(),
             last_submitted: SystemTime::now(),
@@ -58,6 +61,11 @@ impl SubMatBatch {
             },
             batch_size: config.batching_config.get_batch_size(is_native),
             batch_duration: config.batching_config.get_batch_duration(is_native),
+            contract_addresses: if is_native {
+                config.native_config.get_contract_addresses()
+            } else {
+                config.host_config.get_contract_addresses()
+            },
             ..Default::default()
         };
         if res.endpoints.is_empty() {
@@ -91,7 +99,8 @@ impl SubMatBatch {
     }
 
     pub fn push(&mut self, sub_mat: EthSubmissionMaterial) {
-        self.batch.push(sub_mat);
+        self.batch
+            .push(sub_mat.remove_receipts_if_no_logs_from_addresses(&self.contract_addresses));
     }
 
     pub fn is_empty(&self) -> bool {
@@ -138,6 +147,8 @@ impl SubMatBatch {
 
 #[cfg(test)]
 mod tests {
+    use common_eth::{convert_hex_to_eth_address, EthLog, EthLogs, EthReceipt, EthReceipts};
+
     use super::*;
 
     #[test]
@@ -193,5 +204,40 @@ mod tests {
         let sub_mat = EthSubmissionMaterial::default();
         batch.push(sub_mat);
         assert_eq!(batch.size_in_blocks(), 1);
+    }
+
+    #[test]
+    fn pushed_block_should_have_receipts_if_they_contain_pertinent_logs() {
+        let address = convert_hex_to_eth_address("0xfEDFe2616EB3661CB8FEd2782F5F0cC91D59DCaC").unwrap();
+        let mut log = EthLog::default();
+        log.address = address;
+        let logs = EthLogs::new(vec![log]);
+        let mut receipt = EthReceipt::default();
+        receipt.logs = logs;
+        let receipts = EthReceipts::new(vec![receipt]);
+        let mut sub_mat = EthSubmissionMaterial::default();
+        sub_mat.receipts = receipts.clone();
+        let mut batch = SubMatBatch::new();
+        batch.contract_addresses = vec![address];
+        batch.push(sub_mat);
+        assert_eq!(batch.batch[0].receipts, receipts);
+    }
+
+    #[test]
+    fn pushed_block_should_not_have_receipts_if_they_contain_pertinent_logs() {
+        let address = convert_hex_to_eth_address("0xfEDFe2616EB3661CB8FEd2782F5F0cC91D59DCaC").unwrap();
+        let other_address = convert_hex_to_eth_address("0x690b9a9e9aa1c9db991c7721a92d351db4fac990").unwrap();
+        let mut log = EthLog::default();
+        log.address = address;
+        let logs = EthLogs::new(vec![log]);
+        let mut receipt = EthReceipt::default();
+        receipt.logs = logs;
+        let receipts = EthReceipts::new(vec![receipt]);
+        let mut sub_mat = EthSubmissionMaterial::default();
+        sub_mat.receipts = receipts.clone();
+        let mut batch = SubMatBatch::new();
+        batch.contract_addresses = vec![other_address];
+        batch.push(sub_mat);
+        assert!(batch.batch[0].receipts.is_empty());
     }
 }
