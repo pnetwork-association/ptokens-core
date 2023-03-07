@@ -54,8 +54,8 @@ impl SubMatBatch {
         !self.is_native
     }
 
-    pub fn new_from_config(is_native: bool, config: &Config) -> Result<Self> {
-        // FIXME sentinel error
+    pub fn new_from_config(is_native: bool, config: &Config) -> std::result::Result<Self, SentinelError> {
+        info!("Getting SubMatBatch from config...");
         let res = Self {
             is_native,
             endpoints: if is_native {
@@ -73,10 +73,7 @@ impl SubMatBatch {
             ..Default::default()
         };
         if res.endpoints.is_empty() {
-            Err(anyhow!(format!(
-                "Cannot create {} sub mat batch - no endpoints!",
-                if is_native { "native" } else { "host" }
-            )))
+            Err(SentinelError::BatchingError(Error::NoEndpoint(is_native)))
         } else {
             Ok(res)
         }
@@ -177,6 +174,9 @@ impl SubMatBatch {
 pub enum Error {
     /// Two blocks in the batch whose parent_hash & hash do not match.
     UnchainedBlocks { block_num: U256, parent_block_num: U256 },
+
+    /// No endpoint error
+    NoEndpoint(bool),
 }
 
 impl std::fmt::Display for Error {
@@ -186,6 +186,11 @@ impl std::fmt::Display for Error {
                 block_num: ref b,
                 parent_block_num: ref p,
             } => write!(f, "block num {b} is not chained correctly to {p}"),
+            Self::NoEndpoint(ref is_native) => write!(
+                f,
+                "Cannot create {} sub mat batch - no endpoints!",
+                if is_native == &true { "native" } else { "host" },
+            ),
         }
     }
 }
@@ -195,7 +200,7 @@ impl std::error::Error for Error {
         use self::Error::*;
 
         match self {
-            UnchainedBlocks { .. } => None,
+            UnchainedBlocks { .. } | NoEndpoint(_) => None,
         }
     }
 }
