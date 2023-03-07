@@ -9,7 +9,7 @@ pub fn initialize_file_logger(config: &LogConfig) -> Result<(), SentinelError> {
 
     Logger::try_with_str(config.level.as_str()).and_then(|logger| {
         logger
-            .format(flexi_logger::with_thread) // NOTE: This adds more detail to log entries, timestamp, file-path & thread etc.
+            .format(flexi_logger::colored_opt_format) // NOTE: This adds more detail to log entries, timestamp, file-path etc.
             .log_to_file(FileSpec::default().directory(&config.path))
             .rotate(
                 Criterion::Size(config.max_log_size),
