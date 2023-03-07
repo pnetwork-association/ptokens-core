@@ -54,8 +54,8 @@ impl Config {
         Ok(Self {
             mongo_config: toml.mongo.clone(),
             log_config: LogConfig::from_toml(&toml.log)?,
-            host_config: HostConfig::from_toml(&toml.host),
-            native_config: NativeConfig::from_toml(&toml.native),
+            host_config: HostConfig::from_toml(&toml.host)?,
+            native_config: NativeConfig::from_toml(&toml.native)?,
             batching_config: BatchingConfig::from_toml(&toml.batching)?,
         })
     }

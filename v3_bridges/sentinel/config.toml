@@ -2,21 +2,19 @@
 chain_id = "EthereumMainnet"
 endpoints = [ "ws://162.19.83.219:8546" ]
 sleep_time = 15 # How long to wait before trying to get the next host block (in seconds)
+contract_addresses = [] # Used to prefilter submission material to reduce total batch size.
 
 [host]
 chain_id = "EthereumMainnet"
 endpoints = [ "ws://162.19.83.219:8546" ]
 sleep_time = 15 # How long to wait before trying to get the next native block (in seconds)
+contract_addresses = [] # Used to prefilter submission material to reduce total batch size.
 
 [batching]
 host_batch_size = 5 # Max number of host blocks to batch before submission
 native_batch_size = 10 # Max number of native blocks to batch before submission
 host_batch_duration = 300 # Max amount of time between batch submission in seconds
 native_batch_duration = 300 # Max amount of time between batch submission in seconds
-host_topics = [] # Used to prefilter submission material to reduce total batch size.
-native_topics = [] # Ibid
-host_addresses = [] # Ibid
-native_addresses = [] # Ibid
 
 [log]
 level = "debug"
