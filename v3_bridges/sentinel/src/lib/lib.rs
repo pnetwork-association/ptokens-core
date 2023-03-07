@@ -15,7 +15,7 @@ pub use self::{
     batching::SubMatBatch,
     config::Config as SentinelConfig,
     constants::MILLISECONDS_MULTIPLIER,
-    endpoints::{check_endpoint, Endpoints},
+    endpoints::{check_endpoint, Endpoints, Error as EndpointError},
     error::SentinelError,
     get_block::get_block,
     get_latest_block_num::get_latest_block_num,

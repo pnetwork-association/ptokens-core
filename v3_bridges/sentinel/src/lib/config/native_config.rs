@@ -9,15 +9,15 @@ use crate::{constants::MILLISECONDS_MULTIPLIER, Endpoints, SentinelError};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct NativeToml {
-    sleep_time: u64,
     chain_id: String,
+    sleep_duration: u64,
     endpoints: Vec<String>,
     contract_addresses: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
 pub struct NativeConfig {
-    sleep_time: u64,
+    sleep_duration: u64,
     endpoints: Endpoints,
     chain_id: MetadataChainId,
     contract_addresses: Vec<EthAddress>,
@@ -25,10 +25,10 @@ pub struct NativeConfig {
 
 impl NativeConfig {
     pub fn from_toml(toml: &NativeToml) -> Result<Self, SentinelError> {
-        let sleep_time = toml.sleep_time * MILLISECONDS_MULTIPLIER;
+        let sleep_duration = toml.sleep_duration * MILLISECONDS_MULTIPLIER;
         Ok(Self {
-            sleep_time,
-            endpoints: Endpoints::new(false, sleep_time, toml.endpoints.clone()),
+            sleep_duration,
+            endpoints: Endpoints::new(false, sleep_duration, toml.endpoints.clone()),
             contract_addresses: convert_hex_strings_to_eth_addresses(&toml.contract_addresses)?,
             chain_id: match MetadataChainId::from_str(&toml.chain_id) {
                 Ok(id) => id,
@@ -53,5 +53,9 @@ impl NativeConfig {
 
     pub fn get_contract_addresses(&self) -> Vec<EthAddress> {
         self.contract_addresses.clone()
+    }
+
+    pub fn get_sleep_duration(&self) -> u64 {
+        self.sleep_duration
     }
 }

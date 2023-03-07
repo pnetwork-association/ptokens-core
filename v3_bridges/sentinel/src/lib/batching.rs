@@ -10,6 +10,7 @@ use crate::{config::Config, endpoints::Endpoints, SentinelError};
 pub struct SubMatBatch {
     is_native: bool,
     batch_size: u64,
+    sleep_duration: u64,
     batch_duration: u64,
     endpoints: Endpoints,
     batching_is_disabled: bool,
@@ -24,6 +25,7 @@ impl Default for SubMatBatch {
             batch: vec![],
             batch_size: 1,
             is_native: true,
+            sleep_duration: 0,
             batch_duration: 300, // NOTE: 5mins
             contract_addresses: vec![],
             batching_is_disabled: false,
@@ -50,10 +52,19 @@ impl SubMatBatch {
         !self.is_native
     }
 
+    pub fn get_sleep_duration(&self) -> u64 {
+        self.sleep_duration
+    }
+
     pub fn new_from_config(is_native: bool, config: &Config) -> Result<Self, SentinelError> {
         info!("Getting SubMatBatch from config...");
         let res = Self {
             is_native,
+            sleep_duration: if is_native {
+                config.native_config.get_sleep_duration()
+            } else {
+                config.host_config.get_sleep_duration()
+            },
             endpoints: if is_native {
                 config.native_config.get_endpoints()
             } else {
