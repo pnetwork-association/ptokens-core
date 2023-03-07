@@ -1,5 +1,6 @@
 #[derive(Debug)]
 pub enum SentinelError {
+    Custom(String),
     TimeoutError(String),
     CommonError(common::AppError),
     ConfigError(crate::config::Error),
@@ -15,6 +16,7 @@ pub enum SentinelError {
 impl std::fmt::Display for SentinelError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
+            Self::Custom(ref e) => write!(f, "{e}"),
             Self::CommonError(ref err) => write!(f, "{err}"),
             Self::JsonRpcError(ref err) => write!(f, "{err}"),
             Self::LoggerError(ref err) => write!(f, "logger error: {err}"),
@@ -32,6 +34,7 @@ impl std::fmt::Display for SentinelError {
 impl std::error::Error for SentinelError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
+            Self::Custom(_) => None,
             Self::ConfigError(_) => None,
             Self::TimeoutError(_) => None,
             Self::EndpointError(_) => None,

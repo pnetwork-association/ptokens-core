@@ -41,7 +41,7 @@ mod tests {
         let ws_client = get_test_ws_client().await;
         let block_num = i64::MAX as u64;
         match get_block(&ws_client, block_num).await {
-            Err(SentinelError::NoBlock(num)) => assert_eq!(num, block_num),
+            Err(SentinelError::EndpointError(Error::NoBlock(num))) => assert_eq!(num, block_num),
             Ok(_) => panic!("Should not have succeeded!"),
             Err(e) => panic!("Wrong error received: {e}"),
         }
