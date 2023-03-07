@@ -1,3 +1,4 @@
+mod batching;
 mod check_endpoint;
 mod config;
 mod constants;
@@ -8,10 +9,10 @@ mod get_receipts;
 mod get_rpc_client;
 mod get_sub_mat;
 mod logging;
-mod sub_mat_batch;
 mod test_utils;
 
 pub use self::{
+    batching::SubMatBatch,
     check_endpoint::check_endpoint,
     config::{Config as SentinelConfig, Endpoints},
     constants::MILLISECONDS_MULTIPLIER,
@@ -22,7 +23,6 @@ pub use self::{
     get_rpc_client::get_rpc_client,
     get_sub_mat::get_sub_mat,
     logging::init_logger,
-    sub_mat_batch::SubMatBatch,
 };
 
 #[macro_use]

@@ -14,6 +14,9 @@ pub enum SentinelError {
 
     /// Represents an error due to something timing out.
     TimeoutError(String),
+
+    /// Represents a batching error.
+    BatchingError(crate::batching::Error),
 }
 
 impl std::fmt::Display for SentinelError {
@@ -22,6 +25,7 @@ impl std::fmt::Display for SentinelError {
             Self::CommonError(ref err) => write!(f, "{err}"),
             Self::JsonRpcError(ref err) => write!(f, "{err}"),
             Self::TimeoutError(ref err) => write!(f, "Timeout error: {err}"),
+            Self::BatchingError(ref err) => write!(f, "Batching error: {err}"),
             Self::NoBlock(num) => write!(f, "Cannot get block {num} from rpc"),
             Self::ConfigError(ref err) => write!(f, "Configuration error: {err}"),
         }
@@ -34,6 +38,7 @@ impl std::error::Error for SentinelError {
             Self::NoBlock(_) => None,
             Self::ConfigError(_) => None,
             Self::TimeoutError(_) => None,
+            Self::BatchingError(_) => None,
             Self::CommonError(ref err) => Some(err),
             Self::JsonRpcError(ref err) => Some(err),
         }

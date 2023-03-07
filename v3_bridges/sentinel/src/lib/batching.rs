@@ -2,10 +2,13 @@ use std::time::SystemTime;
 
 use anyhow::Result;
 use common_eth::EthSubmissionMaterial;
-use ethereum_types::Address as EthAddress;
+use ethereum_types::{Address as EthAddress, U256};
 use jsonrpsee::ws_client::WsClient;
 
-use crate::config::{Config, Endpoints};
+use crate::{
+    config::{Config, Endpoints},
+    SentinelError,
+};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct SubMatBatch {
@@ -52,6 +55,7 @@ impl SubMatBatch {
     }
 
     pub fn new_from_config(is_native: bool, config: &Config) -> Result<Self> {
+        // FIXME sentinel error
         let res = Self {
             is_native,
             endpoints: if is_native {
@@ -141,6 +145,54 @@ impl SubMatBatch {
             // NOTE: If there's some error figuring out the elapsed time, let's assume it's ready...
             warn!("[!] Could not ascertain elapsed time since last submission, so assuming it's ready!");
             return true;
+        }
+    }
+
+    pub fn check_is_chained(self) -> std::result::Result<Self, SentinelError> {
+        let num_blocks_in_batch = self.size_in_blocks() as usize;
+        if num_blocks_in_batch < 2 {
+            Ok(self)
+        } else {
+            let mut i = num_blocks_in_batch - 1;
+            while i > 0 {
+                if self.batch[i].get_parent_hash()? != self.batch[i - 1].get_block_hash()? {
+                    let n_1 = self.batch[i].get_block_number()?;
+                    let n_2 = self.batch[i - 1].get_block_number()?;
+                    return Err(SentinelError::BatchingError(Error::UnchainedBlocks {
+                        block_num: n_1,
+                        parent_block_num: n_2,
+                    }));
+                }
+                i -= 1;
+            }
+            Ok(self)
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum Error {
+    /// Two blocks in the batch whose parent_hash & hash do not match.
+    UnchainedBlocks { block_num: U256, parent_block_num: U256 },
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match *self {
+            Self::UnchainedBlocks {
+                block_num: ref b,
+                parent_block_num: ref p,
+            } => write!(f, "block num {b} is not chained correctly to {p}"),
+        }
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        use self::Error::*;
+
+        match self {
+            UnchainedBlocks { .. } => None,
         }
     }
 }
