@@ -1,6 +1,6 @@
 use std::{result::Result, time::SystemTime};
 
-use common_eth::EthSubmissionMaterial;
+use common_eth::{EthSubmissionMaterial, EthSubmissionMaterials};
 use ethereum_types::{Address as EthAddress, U256};
 use jsonrpsee::ws_client::WsClient;
 
@@ -15,14 +15,13 @@ pub struct Batch {
     endpoints: Endpoints,
     batching_is_disabled: bool,
     last_submitted: SystemTime,
-    batch: Vec<EthSubmissionMaterial>,
+    batch: EthSubmissionMaterials,
     contract_addresses: Vec<EthAddress>,
 }
 
 impl Default for Batch {
     fn default() -> Self {
         Self {
-            batch: vec![],
             batch_size: 1,
             is_native: true,
             sleep_duration: 0,
@@ -31,6 +30,7 @@ impl Default for Batch {
             batching_is_disabled: false,
             endpoints: Endpoints::default(),
             last_submitted: SystemTime::now(),
+            batch: EthSubmissionMaterials::new(vec![]),
         }
     }
 }
@@ -116,7 +116,7 @@ impl Batch {
     }
 
     pub fn drain(&mut self) {
-        self.batch = vec![];
+        self.batch = EthSubmissionMaterials::new(vec![]);
         self.set_time_of_last_submission()
     }
 
