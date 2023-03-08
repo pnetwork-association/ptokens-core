@@ -1,14 +1,14 @@
 mod cli;
+mod syncer;
 
 #[macro_use]
 extern crate log;
 #[macro_use]
 extern crate clap;
-#[macro_use]
-extern crate anyhow;
 
 use anyhow::Result;
 use clap::Parser;
+use syncer::syncer_loop;
 use cli::{
     get_latest_block_num::{get_host_latest_block_num, get_native_latest_block_num},
     get_sub_mat::{get_host_sub_mat, get_native_sub_mat},
@@ -16,39 +16,8 @@ use cli::{
     SubCommands,
 };
 use futures::join;
-use lib::{get_sub_mat, init_logger, EndpointError, SentinelConfig, SentinelError, SubMatBatch};
+use lib::{init_logger, SentinelConfig, SubMatBatch};
 use serde_json::json;
-use tokio::time::{sleep, Duration};
-
-async fn syncer_loop(mut batch: SubMatBatch) -> Result<String> {
-    let ws_client = batch.get_rpc_client().await?;
-    let sleep_duration = batch.get_sleep_duration();
-    let log_prefix = format!("{}-syncer: ", if batch.is_native() { "native" } else { "host" });
-    let mut block_num = 16778137;
-
-    'main: loop {
-        let maybe_block = get_sub_mat(&ws_client, block_num).await;
-
-        if let Ok(block) = maybe_block {
-            batch.push(block);
-            if batch.is_ready_to_submit() {
-                info!("{log_prefix} Batch is ready to submit!");
-                break 'main;
-            } else {
-                block_num += 1;
-                continue 'main;
-            }
-        } else if let Err(SentinelError::EndpointError(EndpointError::NoBlock(_))) = maybe_block {
-            info!("{log_prefix} No next block yet - sleeping for {sleep_duration}ms...");
-            sleep(Duration::from_millis(sleep_duration)).await;
-            continue 'main;
-        } else if let Err(e) = maybe_block {
-            return Err(anyhow!(e.to_string()));
-        }
-    }
-
-    Ok(format!("{}_success", if batch.is_native() { "native" } else { "host" }))
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -102,9 +71,6 @@ async fn main() -> Result<()> {
         },
     }
 }
-
-// TODO use https://crates.io/crates/async-log for async logging when we have > 1 thread (flexi
-// logger can do it apparently)
 // JSON-RPC spec:https://www.jsonrpc.org/specificationhttps://www.jsonrpc.org/specification https://www.jsonrpc.org/specification
 // use futures::try_join; // NOTE: Use me to end early on an Err in one of the threads! Or look into JoinSet which
 // allows tasks to be aborted
