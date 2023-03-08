@@ -1,14 +1,14 @@
 use std::result::Result;
+
 use futures::join;
-use lib::{SentinelConfig, SubMatBatch};
+use lib::{Batch, SentinelConfig, SentinelError};
 use serde_json::json;
 
-use lib::SentinelError;
 use crate::syncer::syncer_loop;
 
 pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelError> {
-    let batch_1 = SubMatBatch::new_from_config(true, &config)?;
-    let batch_2 = SubMatBatch::new_from_config(false, &config)?;
+    let batch_1 = Batch::new_from_config(true, &config)?;
+    let batch_2 = Batch::new_from_config(false, &config)?;
     let thread_1 = tokio::spawn(async move { syncer_loop(batch_1).await });
     let thread_2 = tokio::spawn(async move { syncer_loop(batch_2).await });
     let (res_1, res_2) = join!(thread_1, thread_2);

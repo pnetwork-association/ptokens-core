@@ -1,9 +1,9 @@
 use std::result::Result;
+
 use log::Level as LogLevel;
 use serde::Deserialize;
 
 use crate::{
-    SentinelError,
     config::{
         BatchingConfig,
         BatchingToml,
@@ -15,6 +15,7 @@ use crate::{
         NativeConfig,
         NativeToml,
     },
+    SentinelError,
 };
 
 const CONFIG_FILE_PATH: &str = "config";

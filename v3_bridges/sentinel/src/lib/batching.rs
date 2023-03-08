@@ -7,7 +7,7 @@ use jsonrpsee::ws_client::WsClient;
 use crate::{config::Config, endpoints::Endpoints, SentinelError};
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct SubMatBatch {
+pub struct Batch {
     is_native: bool,
     batch_size: u64,
     sleep_duration: u64,
@@ -19,7 +19,7 @@ pub struct SubMatBatch {
     contract_addresses: Vec<EthAddress>,
 }
 
-impl Default for SubMatBatch {
+impl Default for Batch {
     fn default() -> Self {
         Self {
             batch: vec![],
@@ -35,7 +35,7 @@ impl Default for SubMatBatch {
     }
 }
 
-impl SubMatBatch {
+impl Batch {
     pub fn new() -> Self {
         Self::default()
     }
@@ -57,7 +57,7 @@ impl SubMatBatch {
     }
 
     pub fn new_from_config(is_native: bool, config: &Config) -> Result<Self, SentinelError> {
-        info!("Getting SubMatBatch from config...");
+        info!("Getting Batch from config...");
         let res = Self {
             is_native,
             sleep_duration: if is_native {
@@ -221,7 +221,7 @@ mod tests {
 
     #[test]
     fn should_enable_batching() {
-        let mut batch = SubMatBatch::new();
+        let mut batch = Batch::new();
         batch.disable_batching();
         assert!(!batch.batching_is_enabled());
         batch.enable_batching();
@@ -231,7 +231,7 @@ mod tests {
 
     #[test]
     fn should_disable_batching() {
-        let mut batch = SubMatBatch::new();
+        let mut batch = Batch::new();
         batch.disable_batching();
         let result = batch.batching_is_enabled();
         assert!(!result);
@@ -239,7 +239,7 @@ mod tests {
 
     #[test]
     fn should_set_time_of_last_submission() {
-        let mut batch = SubMatBatch::new();
+        let mut batch = Batch::new();
         let timestamp_before = batch.get_time_of_last_submission();
         batch.set_time_of_last_submission();
         let result = batch.get_time_of_last_submission();
@@ -248,7 +248,7 @@ mod tests {
 
     #[test]
     fn should_push_to_batch() {
-        let mut batch = SubMatBatch::new();
+        let mut batch = Batch::new();
         assert!(batch.is_empty());
         let sub_mat = EthSubmissionMaterial::default();
         batch.push(sub_mat);
@@ -257,7 +257,7 @@ mod tests {
 
     #[test]
     fn should_drain_batch() {
-        let mut batch = SubMatBatch::new();
+        let mut batch = Batch::new();
         let sub_mat = EthSubmissionMaterial::default();
         batch.push(sub_mat);
         assert!(!batch.is_empty());
@@ -267,7 +267,7 @@ mod tests {
 
     #[test]
     fn should_get_size_in_blocks_of_batch() {
-        let mut batch = SubMatBatch::new();
+        let mut batch = Batch::new();
         assert_eq!(batch.size_in_blocks(), 0);
         let sub_mat = EthSubmissionMaterial::default();
         batch.push(sub_mat);
@@ -285,7 +285,7 @@ mod tests {
         let receipts = EthReceipts::new(vec![receipt]);
         let mut sub_mat = EthSubmissionMaterial::default();
         sub_mat.receipts = receipts.clone();
-        let mut batch = SubMatBatch::new();
+        let mut batch = Batch::new();
         batch.contract_addresses = vec![address];
         batch.push(sub_mat);
         assert_eq!(batch.batch[0].receipts, receipts);
@@ -303,7 +303,7 @@ mod tests {
         let receipts = EthReceipts::new(vec![receipt]);
         let mut sub_mat = EthSubmissionMaterial::default();
         sub_mat.receipts = receipts.clone();
-        let mut batch = SubMatBatch::new();
+        let mut batch = Batch::new();
         batch.contract_addresses = vec![other_address];
         batch.push(sub_mat);
         assert!(batch.batch[0].receipts.is_empty());
@@ -311,13 +311,13 @@ mod tests {
 
     #[test]
     fn should_pass_is_chained_check_if_batch_is_empty() {
-        let batch = SubMatBatch::new();
+        let batch = Batch::new();
         assert!(batch.check_is_chained().is_ok())
     }
 
     #[test]
     fn should_pass_is_chained_check_if_batch_has_one_member() {
-        let mut batch = SubMatBatch::new();
+        let mut batch = Batch::new();
         let sub_mat = EthSubmissionMaterial::default();
         batch.push(sub_mat);
         assert_eq!(batch.size_in_blocks(), 1);

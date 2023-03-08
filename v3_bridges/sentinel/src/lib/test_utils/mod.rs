@@ -5,7 +5,7 @@ use common_eth::EthSubmissionMaterial;
 use dotenv::dotenv;
 use jsonrpsee::ws_client::WsClient;
 
-use crate::{check_endpoint, get_rpc_client, SentinelError, SubMatBatch};
+use crate::{check_endpoint, get_rpc_client, Batch, SentinelError};
 
 const ENV_VAR: &str = "TEST_ENDPOINT";
 
@@ -37,8 +37,8 @@ pub fn get_sample_sub_mat_n(n: usize) -> EthSubmissionMaterial {
     EthSubmissionMaterial::from_str(&read_to_string(path).unwrap()).unwrap()
 }
 
-pub fn get_sample_batch() -> SubMatBatch {
-    let mut batch = SubMatBatch::default();
+pub fn get_sample_batch() -> Batch {
+    let mut batch = Batch::default();
     (1..10).for_each(|i| batch.push(get_sample_sub_mat_n(i)));
     batch
 }

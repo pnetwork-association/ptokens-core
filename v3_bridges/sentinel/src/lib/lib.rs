@@ -12,7 +12,7 @@ mod logging;
 mod test_utils;
 
 pub use self::{
-    batching::SubMatBatch,
+    batching::Batch,
     config::Config as SentinelConfig,
     constants::MILLISECONDS_MULTIPLIER,
     endpoints::{check_endpoint, Endpoints, Error as EndpointError},

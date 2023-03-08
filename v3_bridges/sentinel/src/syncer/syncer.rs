@@ -1,9 +1,9 @@
 use std::result::Result;
 
-use lib::{get_sub_mat, EndpointError, SentinelError, SubMatBatch};
+use lib::{get_sub_mat, Batch, EndpointError, SentinelError};
 use tokio::time::{sleep, Duration};
 
-pub async fn syncer_loop(mut batch: SubMatBatch) -> Result<String, SentinelError> {
+pub async fn syncer_loop(mut batch: Batch) -> Result<String, SentinelError> {
     let ws_client = batch.get_rpc_client().await?;
     let sleep_duration = batch.get_sleep_duration();
     let log_prefix = format!("{}-syncer: ", if batch.is_native() { "native" } else { "host" });
