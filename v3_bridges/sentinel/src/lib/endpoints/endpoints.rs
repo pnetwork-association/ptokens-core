@@ -17,7 +17,7 @@ impl Endpoints {
         let endpoint_type = if self.is_native { "native" } else { "host" };
         info!("[+] Getting first {endpoint_type} endpoint...");
         if self.endpoints.is_empty() {
-            Err(SentinelError::ConfigError(Error::NoEndpoints(self.is_native)))
+            Err(SentinelError::SentinelConfigError(Error::NoEndpoints(self.is_native)))
         } else {
             Ok(self.endpoints[0].clone())
         }

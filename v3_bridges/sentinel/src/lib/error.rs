@@ -3,12 +3,14 @@ pub enum SentinelError {
     Custom(String),
     TimeoutError(String),
     CommonError(common::AppError),
-    ConfigError(crate::config::Error),
+    ConfigError(config::ConfigError),
     SerdeJsonError(serde_json::Error),
     MongoDbError(mongodb::error::Error),
     BatchingError(crate::batching::Error),
     ParseIntError(std::num::ParseIntError),
     EndpointError(crate::endpoints::Error),
+    TokioJoinError(tokio::task::JoinError),
+    SentinelConfigError(crate::config::Error),
     LoggerError(flexi_logger::FlexiLoggerError),
     JsonRpcError(jsonrpsee::core::error::Error),
 }
@@ -19,14 +21,16 @@ impl std::fmt::Display for SentinelError {
             Self::Custom(ref e) => write!(f, "{e}"),
             Self::CommonError(ref err) => write!(f, "{err}"),
             Self::JsonRpcError(ref err) => write!(f, "{err}"),
+            Self::ConfigError(ref err) => write!(f, "config error: {err}"),
             Self::LoggerError(ref err) => write!(f, "logger error: {err}"),
             Self::TimeoutError(ref err) => write!(f, "timeout error: {err}"),
             Self::MongoDbError(ref err) => write!(f, "mongodb error: {err}"),
             Self::EndpointError(ref err) => write!(f, "endpoint error: {err}"),
             Self::BatchingError(ref err) => write!(f, "batching error: {err}"),
             Self::ParseIntError(ref err) => write!(f, "parse int error: {err}"),
-            Self::ConfigError(ref err) => write!(f, "configuration error: {err}"),
             Self::SerdeJsonError(ref err) => write!(f, "serde json error: {err}"),
+            Self::TokioJoinError(ref err) => write!(f, "tokio join error: {err}"),
+            Self::SentinelConfigError(ref err) => write!(f, "sentinel configuration error: {err}"),
         }
     }
 }
@@ -35,16 +39,18 @@ impl std::error::Error for SentinelError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
             Self::Custom(_) => None,
-            Self::ConfigError(_) => None,
             Self::TimeoutError(_) => None,
             Self::EndpointError(_) => None,
             Self::BatchingError(_) => None,
             Self::CommonError(ref err) => Some(err),
+            Self::ConfigError(ref err) => Some(err),
             Self::LoggerError(ref err) => Some(err),
             Self::JsonRpcError(ref err) => Some(err),
             Self::MongoDbError(ref err) => Some(err),
             Self::ParseIntError(ref err) => Some(err),
+            Self::TokioJoinError(ref err) => Some(err),
             Self::SerdeJsonError(ref err) => Some(err),
+            Self::SentinelConfigError(ref err) => Some(err),
         }
     }
 }
@@ -88,5 +94,23 @@ impl From<serde_json::Error> for SentinelError {
 impl From<std::num::ParseIntError> for SentinelError {
     fn from(err: std::num::ParseIntError) -> Self {
         Self::ParseIntError(err)
+    }
+}
+
+impl From<tokio::task::JoinError> for SentinelError {
+    fn from(err: tokio::task::JoinError) -> Self {
+        Self::TokioJoinError(err)
+    }
+}
+
+impl From<crate::config::Error> for SentinelError {
+    fn from(err: crate::config::Error) -> Self {
+        Self::SentinelConfigError(err)
+    }
+}
+
+impl From<config::ConfigError> for SentinelError {
+    fn from(err: config::ConfigError) -> Self {
+        Self::ConfigError(err)
     }
 }

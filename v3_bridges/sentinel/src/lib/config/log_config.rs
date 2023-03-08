@@ -45,7 +45,7 @@ impl LogConfig {
         if n >= MIN && n <= MAX {
             Ok(n)
         } else {
-            Err(SentinelError::ConfigError(Error::LogNumError {
+            Err(SentinelError::SentinelConfigError(Error::LogNumError {
                 size: n,
                 max: MAX,
                 min: MIN,
@@ -59,7 +59,7 @@ impl LogConfig {
         if n >= MIN && n <= MAX {
             Ok(n)
         } else {
-            Err(SentinelError::ConfigError(Error::LogSizeError {
+            Err(SentinelError::SentinelConfigError(Error::LogSizeError {
                 size: n,
                 max: MAX,
                 min: MIN,

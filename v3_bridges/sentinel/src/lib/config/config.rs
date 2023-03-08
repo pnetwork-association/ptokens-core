@@ -1,17 +1,20 @@
-use anyhow::Result;
+use std::result::Result;
 use log::Level as LogLevel;
 use serde::Deserialize;
 
-use crate::config::{
-    BatchingConfig,
-    BatchingToml,
-    HostConfig,
-    HostToml,
-    LogConfig,
-    LogToml,
-    MongoConfig,
-    NativeConfig,
-    NativeToml,
+use crate::{
+    SentinelError,
+    config::{
+        BatchingConfig,
+        BatchingToml,
+        HostConfig,
+        HostToml,
+        LogConfig,
+        LogToml,
+        MongoConfig,
+        NativeConfig,
+        NativeToml,
+    },
 };
 
 const CONFIG_FILE_PATH: &str = "config";
@@ -26,7 +29,7 @@ struct ConfigToml {
 }
 
 impl ConfigToml {
-    pub fn new() -> Result<Self> {
+    pub fn new() -> Result<Self, SentinelError> {
         Ok(config::Config::builder()
             .add_source(config::File::with_name(CONFIG_FILE_PATH))
             .build()?
@@ -44,13 +47,13 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new() -> Result<Self> {
+    pub fn new() -> Result<Self, SentinelError> {
         let res = Self::from_toml(&ConfigToml::new()?)?;
         debug!("Config {:?}", res);
         Ok(res)
     }
 
-    fn from_toml(toml: &ConfigToml) -> Result<Self> {
+    fn from_toml(toml: &ConfigToml) -> Result<Self, SentinelError> {
         Ok(Self {
             mongo_config: toml.mongo.clone(),
             log_config: LogConfig::from_toml(&toml.log)?,

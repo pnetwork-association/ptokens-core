@@ -48,7 +48,7 @@ impl BatchingConfig {
         if batch_size > MIN && batch_size <= MAX {
             Ok(batch_size)
         } else {
-            Err(SentinelError::ConfigError(Error::BatchSizeError {
+            Err(SentinelError::SentinelConfigError(Error::BatchSizeError {
                 size: batch_size,
                 min: MIN,
                 max: MAX,
@@ -63,7 +63,7 @@ impl BatchingConfig {
         if batch_duration <= MAX {
             Ok(batch_duration)
         } else {
-            Err(SentinelError::ConfigError(Error::BatchDurationError {
+            Err(SentinelError::SentinelConfigError(Error::BatchDurationError {
                 max: MAX,
                 size: batch_duration,
             }))
@@ -111,7 +111,7 @@ mod tests {
         };
         match BatchingConfig::from_toml(&toml) {
             Ok(_) => panic!("Should not have succeeded!"),
-            Err(SentinelError::ConfigError(e)) => assert_eq!(e, expected_error),
+            Err(SentinelError::SentinelConfigError(e)) => assert_eq!(e, expected_error),
             Err(error) => panic!("Wrong error received: {error}!"),
         }
     }
@@ -127,7 +127,7 @@ mod tests {
         };
         match BatchingConfig::from_toml(&toml) {
             Ok(_) => panic!("Should not have succeeded!"),
-            Err(SentinelError::ConfigError(e)) => assert_eq!(e, expected_error),
+            Err(SentinelError::SentinelConfigError(e)) => assert_eq!(e, expected_error),
             Err(error) => panic!("Wrong error received: {error}!"),
         }
     }
