@@ -1,22 +1,22 @@
 use std::result::Result;
 
 use common_eth::{EthSubmissionMaterial, EthSubmissionMaterials};
-use lib::{BroadcastMessages, SentinelError};
+use lib::SentinelError;
 
-fn process_native_material_single(material: &EthSubmissionMaterial) -> Result<(), SentinelError> {
+fn process_host(material: &EthSubmissionMaterial) -> Result<(), SentinelError> {
     // TODO Real pipeline
     let n = material.get_block_number()?;
-    info!("Finished processing native block {n}!");
+    debug!("Finished processing host block {n}!");
     Ok(())
 }
 
-fn process_native_material(batch: &EthSubmissionMaterials) -> Result<Vec<()>, SentinelError> {
-    info!("Processing native submission material...");
+pub fn process_host_batch(batch: &EthSubmissionMaterials) -> Result<Vec<()>, SentinelError> {
+    info!("Processing host batch of submission material...");
     let r = batch
         .iter()
-        .map(process_native_material_single)
+        .map(process_host)
         .collect::<Result<Vec<()>, SentinelError>>();
-    info!("Finished processing native submission material!");
+    info!("Finished processing host submission material!");
     r
 }
 
@@ -41,30 +41,30 @@ fn process_native_material(batch: &EthSubmissionMaterials) -> Result<Vec<()>, Se
 /*
 pipeline from int side of int-on-evm:
 
-fn submit_int_block<D: DatabaseInterface>(db: &D, json: &EthSubmissionMaterialJson) -> Result<IntOutput> {
+fn submit_evm_block<D: DatabaseInterface>(db: &D, json: &EthSubmissionMaterialJson) -> Result<EvmOutput> {
     parse_eth_submission_material_json_and_put_in_state(json, EthState::init(db))
-        .and_then(validate_eth_block_in_state)
+        .and_then(validate_evm_block_in_state)
         .and_then(|state| state.get_eth_evm_token_dictionary_and_add_to_state())
-        .and_then(check_for_parent_of_eth_block_in_state)
+        .and_then(check_for_parent_of_evm_block_in_state)
         .and_then(validate_receipts_in_state)
-        .and_then(filter_submission_material_for_peg_in_events_in_state)
-        .and_then(maybe_add_eth_block_and_receipts_to_db_and_return_state)
-        .and_then(maybe_update_latest_eth_block_hash_and_return_state)
-        .and_then(maybe_update_eth_canon_block_hash_and_return_state)
-        .and_then(maybe_update_eth_tail_block_hash_and_return_state)
-        .and_then(maybe_update_eth_linker_hash_and_return_state)
+        .and_then(filter_submission_material_for_redeem_events_in_state)
+        .and_then(maybe_add_evm_block_and_receipts_to_db_and_return_state)
+        .and_then(maybe_update_latest_evm_block_hash_and_return_state)
+        .and_then(maybe_update_evm_canon_block_hash_and_return_state)
+        .and_then(maybe_update_evm_tail_block_hash_and_return_state)
+        .and_then(maybe_update_evm_linker_hash_and_return_state)
         .and_then(maybe_parse_tx_info_from_canon_block_and_add_to_state)
-        .and_then(filter_out_zero_value_evm_tx_infos_from_state)
+        .and_then(filter_out_zero_value_eth_tx_infos_from_state)
         .and_then(filter_tx_info_with_no_erc20_transfer_event)
         .and_then(divert_tx_infos_to_safe_address_if_destination_is_zero_address)
         .and_then(divert_tx_infos_to_safe_address_if_destination_is_vault_address)
         .and_then(divert_tx_infos_to_safe_address_if_destination_is_token_address)
         .and_then(divert_tx_infos_to_safe_address_if_destination_is_router_address)
         .and_then(maybe_account_for_fees)
-        .and_then(maybe_sign_evm_txs_and_add_to_eth_state)
-        .and_then(maybe_increment_evm_account_nonce_and_return_eth_state)
-        .and_then(maybe_remove_old_eth_tail_block_and_return_state)
-        .and_then(maybe_remove_receipts_from_eth_canon_block_and_return_state)
-        .and_then(get_int_output_json)
+        .and_then(maybe_sign_eth_txs_and_add_to_evm_state)
+        .and_then(maybe_increment_int_account_nonce_and_return_eth_state)
+        .and_then(maybe_remove_old_evm_tail_block_and_return_state)
+        .and_then(maybe_remove_receipts_from_evm_canon_block_and_return_state)
+        .and_then(get_evm_output_json)
 }
  */

@@ -1,1 +1,3 @@
-mod submission_pipeline;
+mod process_native_batch;
+
+pub(crate) use self::process_native_batch::process_native_batch;

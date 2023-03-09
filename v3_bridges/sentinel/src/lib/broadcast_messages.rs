@@ -1,8 +1,8 @@
-use crate::Batch;
+use common_eth::EthSubmissionMaterials;
 
 #[derive(Debug, Clone)]
 pub enum BroadcastMessages {
     Shutdown,
-    ProcessHost(Batch),
-    ProcessNative(Batch),
+    ProcessHost(EthSubmissionMaterials),
+    ProcessNative(EthSubmissionMaterials),
 }

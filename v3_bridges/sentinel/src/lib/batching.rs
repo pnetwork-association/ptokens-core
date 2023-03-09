@@ -175,6 +175,12 @@ impl Batch {
             Ok(self)
         }
     }
+
+    pub fn to_submission_material(mut self) -> EthSubmissionMaterials {
+        let res = self.batch.clone();
+        self.drain();
+        res
+    }
 }
 
 #[derive(Debug, PartialEq)]

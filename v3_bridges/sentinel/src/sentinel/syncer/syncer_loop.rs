@@ -6,7 +6,7 @@ use tokio::{
     time::{sleep, Duration},
 };
 
-async fn main_loop(mut batch: Batch, log_prefix: &str) -> Result<String, SentinelError> {
+async fn main_loop(log_prefix: &str, mut batch: Batch, tx: Sender<BroadcastMessages>) -> Result<String, SentinelError> {
     let ws_client = batch.get_rpc_client().await?;
     let sleep_duration = batch.get_sleep_duration();
 
@@ -19,6 +19,12 @@ async fn main_loop(mut batch: Batch, log_prefix: &str) -> Result<String, Sentine
             batch.push(block);
             if batch.is_ready_to_submit() {
                 info!("{log_prefix} Batch is ready to submit!");
+                if batch.is_native() {
+                    tx.send(BroadcastMessages::ProcessNative(batch.to_submission_material()))?;
+                } else {
+                    tx.send(BroadcastMessages::ProcessHost(batch.to_submission_material()))?;
+                }
+                // TODO drain batch and start again?
                 break 'main;
             } else {
                 block_num += 1;
@@ -45,7 +51,7 @@ pub async fn syncer_loop(
     let log_prefix = format!("{syncer_type}_syncer:");
 
     tokio::select! {
-        res = main_loop(batch, &log_prefix) => res,
+        res = main_loop(&log_prefix, batch, tx) => res,
         _ = handle_sigint(&log_prefix, rx) => Ok(format!("{log_prefix} shutdown received!")),
     }
 }
