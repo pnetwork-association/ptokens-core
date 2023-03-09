@@ -48,7 +48,7 @@ impl BatchingConfig {
         if batch_size > MIN && batch_size <= MAX {
             Ok(batch_size)
         } else {
-            Err(SentinelError::SentinelConfigError(Error::BatchSizeError {
+            Err(SentinelError::SentinelConfig(Error::BatchSize {
                 size: batch_size,
                 min: MIN,
                 max: MAX,
@@ -63,7 +63,7 @@ impl BatchingConfig {
         if batch_duration <= MAX {
             Ok(batch_duration)
         } else {
-            Err(SentinelError::SentinelConfigError(Error::BatchDurationError {
+            Err(SentinelError::SentinelConfig(Error::BatchDuration {
                 max: MAX,
                 size: batch_duration,
             }))

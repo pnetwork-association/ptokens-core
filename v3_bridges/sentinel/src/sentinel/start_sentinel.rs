@@ -45,7 +45,7 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
         },
     }?;
 
-    let (res_1, res_2, res_3) = join!(thread_1, thread_2, thread_3);
+    let (res_1, res_2, _res_3) = join!(thread_1, thread_2, thread_3);
     let thread_1_result = res_1??;
     let thread_2_result = res_2??;
     let res = json!({

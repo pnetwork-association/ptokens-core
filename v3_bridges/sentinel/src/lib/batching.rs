@@ -80,7 +80,7 @@ impl Batch {
             ..Default::default()
         };
         if res.endpoints.is_empty() {
-            Err(SentinelError::BatchingError(Error::NoEndpoint(is_native)))
+            Err(SentinelError::Batching(Error::NoEndpoint(is_native)))
         } else {
             Ok(res)
         }
@@ -164,7 +164,7 @@ impl Batch {
                 if self.batch[i].get_parent_hash()? != self.batch[i - 1].get_block_hash()? {
                     let n_1 = self.batch[i].get_block_number()?;
                     let n_2 = self.batch[i - 1].get_block_number()?;
-                    return Err(SentinelError::BatchingError(Error::UnchainedBlocks {
+                    return Err(SentinelError::Batching(Error::UnchainedBlocks {
                         block_num: n_1,
                         parent_block_num: n_2,
                     }));

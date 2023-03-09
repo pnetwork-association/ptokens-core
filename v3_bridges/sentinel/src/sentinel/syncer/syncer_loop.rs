@@ -38,7 +38,7 @@ pub async fn syncer_loop(mut batch: Batch, mut rx: Receiver<bool>) -> Result<Str
                 block_num += 1;
                 continue 'main;
             }
-        } else if let Err(SentinelError::EndpointError(EndpointError::NoBlock(_))) = maybe_block {
+        } else if let Err(SentinelError::Endpoint(EndpointError::NoBlock(_))) = maybe_block {
             info!("{log_prefix} No next block yet - sleeping for {sleep_duration}ms...");
             sleep(Duration::from_millis(sleep_duration)).await;
             continue 'main;

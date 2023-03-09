@@ -42,10 +42,10 @@ impl LogConfig {
     fn sanity_check_max_num_logs(n: usize) -> Result<usize, SentinelError> {
         const MIN: usize = 1;
         const MAX: usize = 1_000_000;
-        if n >= MIN && n <= MAX {
+        if (MIN..=MAX).contains(&n) {
             Ok(n)
         } else {
-            Err(SentinelError::SentinelConfigError(Error::LogNumError {
+            Err(SentinelError::SentinelConfig(Error::LogNum {
                 size: n,
                 max: MAX,
                 min: MIN,
@@ -56,10 +56,10 @@ impl LogConfig {
     fn sanity_check_max_log_size(n: u64) -> Result<u64, SentinelError> {
         const MIN: u64 = 1_000_000; // NOTE: 1mb
         const MAX: u64 = 1_000_000_000_000; // NOTE: 1 tb
-        if n >= MIN && n <= MAX {
+        if (MIN..=MAX).contains(&n) {
             Ok(n)
         } else {
-            Err(SentinelError::SentinelConfigError(Error::LogSizeError {
+            Err(SentinelError::SentinelConfig(Error::LogSize {
                 size: n,
                 max: MAX,
                 min: MIN,

@@ -4,36 +4,36 @@ pub enum Error {
     NoEndpoints(bool),
 
     /// Batching size is out of bounds
-    BatchSizeError { size: u64, min: u64, max: u64 },
+    BatchSize { size: u64, min: u64, max: u64 },
 
     /// Batch duration is out of bounds
-    BatchDurationError { size: u64, max: u64 },
+    BatchDuration { size: u64, max: u64 },
 
     /// Log number is out of bounds
-    LogNumError { size: usize, min: usize, max: usize },
+    LogNum { size: usize, min: usize, max: usize },
 
     /// Log size is out of bounds
-    LogSizeError { size: u64, min: u64, max: u64 },
+    LogSize { size: u64, min: u64, max: u64 },
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
-            Self::BatchSizeError {
+            Self::BatchSize {
                 size: ref a,
                 min: ref b,
                 max: ref c,
             } => write!(f, "batch size of {a} is not between min of {b} and max of {c}"),
-            Self::BatchDurationError {
+            Self::BatchDuration {
                 size: ref a,
                 max: ref b,
             } => write!(f, "batch duration of {a} is greater than max of {b}"),
-            Self::LogNumError {
+            Self::LogNum {
                 size: ref a,
                 min: ref b,
                 max: ref c,
             } => write!(f, "number of logs of {a} is not between min of {b} and max of {c}"),
-            Self::LogSizeError {
+            Self::LogSize {
                 size: ref a,
                 min: ref b,
                 max: ref c,
@@ -52,11 +52,7 @@ impl std::error::Error for Error {
         use self::Error::*;
 
         match self {
-            LogSizeError { .. }
-            | LogNumError { .. }
-            | BatchDurationError { .. }
-            | BatchSizeError { .. }
-            | NoEndpoints(_) => None,
+            LogSize { .. } | LogNum { .. } | BatchSize { .. } | BatchDuration { .. } | NoEndpoints(_) => None,
         }
     }
 }
