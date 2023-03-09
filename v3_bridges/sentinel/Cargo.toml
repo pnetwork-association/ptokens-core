@@ -14,6 +14,9 @@ path = "src/lib/lib.rs"
 name = "sentinel"
 path = "src/main.rs"
 
+[features]
+non-validating = ["common/non-validating"] # NOTE: Disables block & recepit validation
+
 [dependencies]
 log = "0.4.17"
 config = "0.13.3"
