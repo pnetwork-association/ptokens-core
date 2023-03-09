@@ -1,32 +1,18 @@
 use std::result::Result;
 
-use lib::{get_sub_mat, Batch, EndpointError, SentinelError};
+use lib::{get_sub_mat, handle_sigint, Batch, EndpointError, SentinelError};
 use tokio::{
     sync::broadcast::Receiver,
     time::{sleep, Duration},
 };
 
-// TODO use try_recv on each loop, if Err, there are no messages from the broadcast pipeline to
-// receive
-// TODO use a message struct/enum with stuff in it to pass more message types.
-
-pub async fn syncer_loop(mut batch: Batch, mut rx: Receiver<bool>) -> Result<String, SentinelError> {
+async fn main_loop(mut batch: Batch, log_prefix: &str) -> Result<String, SentinelError> {
     let ws_client = batch.get_rpc_client().await?;
     let sleep_duration = batch.get_sleep_duration();
-    let syncer_type = if batch.is_native() { "native" } else { "host" };
-    let log_prefix = format!("{syncer_type}-syncer:");
 
     let mut block_num = 16778137;
 
     'main: loop {
-        if let Ok(boolean) = rx.try_recv() {
-            info!("{log_prefix} broadcast message received!");
-            if boolean == true {
-                warn!("{log_prefix} syncer shutting down!");
-                return Ok(format!("{log_prefix} ctrl-c caught"));
-            }
-        }
-
         let maybe_block = get_sub_mat(&ws_client, block_num).await;
 
         if let Ok(block) = maybe_block {
@@ -47,5 +33,15 @@ pub async fn syncer_loop(mut batch: Batch, mut rx: Receiver<bool>) -> Result<Str
         }
     }
 
-    Ok(format!("{syncer_type}_success"))
+    Ok(format!("{log_prefix}_success"))
+}
+
+pub async fn syncer_loop(batch: Batch, rx: Receiver<bool>) -> Result<String, SentinelError> {
+    let syncer_type = if batch.is_native() { "native" } else { "host" };
+    let log_prefix = format!("{syncer_type}_syncer:");
+
+    tokio::select! {
+        res = main_loop(batch, &log_prefix) => res,
+        _ = handle_sigint(&log_prefix, rx) => Ok(format!("{log_prefix} shutdown received!")),
+    }
 }

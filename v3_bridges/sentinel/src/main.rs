@@ -6,8 +6,6 @@ mod sentinel;
 extern crate log;
 #[macro_use]
 extern crate clap;
-#[macro_use]
-extern crate tokio;
 
 use serde_json::json;
 

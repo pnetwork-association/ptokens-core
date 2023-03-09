@@ -8,6 +8,7 @@ mod get_latest_block_num;
 mod get_receipts;
 mod get_rpc_client;
 mod get_sub_mat;
+mod handle_sigint;
 mod logging;
 mod test_utils;
 
@@ -22,6 +23,7 @@ pub use self::{
     get_receipts::get_receipts,
     get_rpc_client::get_rpc_client,
     get_sub_mat::get_sub_mat,
+    handle_sigint::handle_sigint,
     logging::init_logger,
 };
 
