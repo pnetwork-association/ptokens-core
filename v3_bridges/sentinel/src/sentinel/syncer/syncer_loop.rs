@@ -2,7 +2,7 @@ use std::result::Result;
 
 use lib::{get_sub_mat, handle_sigint, Batch, BroadcastMessages, EndpointError, SentinelError};
 use tokio::{
-    sync::broadcast::Receiver,
+    sync::broadcast::{Receiver, Sender},
     time::{sleep, Duration},
 };
 
@@ -36,7 +36,11 @@ async fn main_loop(mut batch: Batch, log_prefix: &str) -> Result<String, Sentine
     Ok(format!("{log_prefix}_success"))
 }
 
-pub async fn syncer_loop(batch: Batch, rx: Receiver<BroadcastMessages>) -> Result<String, SentinelError> {
+pub async fn syncer_loop(
+    batch: Batch,
+    tx: Sender<BroadcastMessages>,
+    rx: Receiver<BroadcastMessages>,
+) -> Result<String, SentinelError> {
     let syncer_type = if batch.is_native() { "native" } else { "host" };
     let log_prefix = format!("{syncer_type}_syncer:");
 

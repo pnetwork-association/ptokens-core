@@ -6,23 +6,29 @@ use tokio::{
     time::{sleep, Duration},
 };
 
-async fn main_loop(_log_prefix: &str) -> Result<(), SentinelError> {
-    let mut i = 0;
-
-    'main: loop {
-        info!("Processor loop #{i}");
-        sleep(Duration::from_millis(10_000)).await;
-        i += 1;
-        continue 'main;
-    }
-}
-
-pub async fn processor_loop(rx: Receiver<BroadcastMessages>) -> Result<(), SentinelError> {
+pub async fn processor_loop(mut rx: Receiver<BroadcastMessages>) -> Result<(), SentinelError> {
     info!("Starting processor loop...");
-    let log_prefix = "processor";
 
-    tokio::select! {
-        _ = main_loop(log_prefix) => Ok(()),
-        _ = handle_sigint(log_prefix, rx) => Ok(())
+    'processor_loop: loop {
+        match rx.recv().await {
+            Ok(BroadcastMessages::ProcessNative(batch)) => {
+                debug!("processing native batch...");
+                // process it...
+                continue 'processor_loop;
+            },
+            Ok(BroadcastMessages::ProcessHost(batch)) => {
+                debug!("processing host batch...");
+                // process it...
+                continue 'processor_loop;
+            },
+            Ok(BroadcastMessages::Shutdown) => {
+                warn!("Processor gracefully shutting down!");
+                return Ok::<(), SentinelError>(());
+            },
+            Err(e) => {
+                warn!("Processor reciver error: {e}!");
+                return Err(e.into());
+            },
+        }
     }
 }

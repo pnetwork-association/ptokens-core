@@ -13,35 +13,32 @@ use tokio::{
 
 use crate::sentinel::{processor_loop, syncer_loop};
 
-// TODO need a broadcast channel sending to all threads to allow graceful shutdown etc
-// TODO need mspc chennel for processor so syncers can send batches to it for processsing.
-
 pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelError> {
-    let (tx, rx_1): (Sender<BroadcastMessages>, Receiver<BroadcastMessages>) = broadcast::channel(1337);
-    let rx_2 = tx.subscribe();
-    let rx_3 = tx.subscribe();
+    // NOTE: Set up our channels...
+    let (tx_1, rx_1): (Sender<BroadcastMessages>, Receiver<BroadcastMessages>) = broadcast::channel(1337);
+    let tx_2 = tx_1.clone();
+    let tx_3 = tx_1.clone();
+    let rx_2 = tx_1.subscribe();
+    let rx_3 = tx_1.subscribe();
 
+    // NOTE: Set up our batches...
     let batch_1 = Batch::new_from_config(true, &config)?;
     let batch_2 = Batch::new_from_config(false, &config)?;
 
-    let thread_1 = tokio::spawn(async move { syncer_loop(batch_1, rx_1).await });
-    let thread_2 = tokio::spawn(async move { syncer_loop(batch_2, rx_2).await });
+    // NOTE: Hand everything off to async threads...
+    let thread_1 = tokio::spawn(async move { syncer_loop(batch_1, tx_1, rx_1).await });
+    let thread_2 = tokio::spawn(async move { syncer_loop(batch_2, tx_2, rx_2).await });
     let thread_3 = tokio::spawn(async move { processor_loop(rx_3).await });
 
     // NOTE: Graceful shutdown upon ctrl-c...
     match signal::ctrl_c().await {
         Ok(()) => {
             warn!("ctrl-c caught, shutting down gracefully, please wait...");
-            tx.send(BroadcastMessages::Shutdown)
-            // TODO send shutdown signal to application and wait
+            tx_3.send(BroadcastMessages::Shutdown)
         },
         Err(err) => {
-            warn!(
-                "Unable to listen for shutdown signal: {} - shutting down as a precaution!",
-                err
-            );
-            tx.send(BroadcastMessages::Shutdown)
-            // NOTE: We also shut down in case of error
+            warn!("Unable to listen for shutdown signal: {err} - shutting down as a precaution!");
+            tx_3.send(BroadcastMessages::Shutdown)
         },
     }?;
 

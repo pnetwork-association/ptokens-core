@@ -6,7 +6,7 @@ use jsonrpsee::ws_client::WsClient;
 
 use crate::{config::Config, endpoints::Endpoints, SentinelError};
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Batch {
     is_native: bool,
     batch_size: u64,
