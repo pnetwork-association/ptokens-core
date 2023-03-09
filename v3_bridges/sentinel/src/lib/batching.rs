@@ -346,7 +346,7 @@ mod tests {
         };
         match batch.check_is_chained() {
             Ok(_) => panic!("Should not have succeeded!"),
-            Err(SentinelError::BatchingError(e)) => assert_eq!(e, expected_error),
+            Err(SentinelError::Batching(e)) => assert_eq!(e, expected_error),
             Err(e) => panic!("Wrong error received: {e}"),
         }
     }

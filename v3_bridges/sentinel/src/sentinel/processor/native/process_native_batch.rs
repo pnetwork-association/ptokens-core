@@ -4,10 +4,16 @@ use common_eth::{EthSubmissionMaterial, EthSubmissionMaterials};
 use lib::SentinelError;
 
 fn process_native(material: &EthSubmissionMaterial) -> Result<(), SentinelError> {
-    // TODO Real pipeline
     let n = material.get_block_number()?;
-    debug!("Finished processing native block {n}!");
-    Ok(())
+    if material.receipts.is_empty() {
+        // TODO still need to do some chain stuff!
+        warn!("Native block {n} had no receipts to process!");
+        Ok(())
+    } else {
+        // TODO Real! pipeline
+        debug!("Finished processing native block {n}!");
+        Ok(())
+    }
 }
 
 pub fn process_native_batch(batch: &EthSubmissionMaterials) -> Result<Vec<()>, SentinelError> {
