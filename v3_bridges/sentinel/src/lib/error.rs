@@ -16,7 +16,7 @@ pub enum SentinelError {
     Logger(flexi_logger::FlexiLoggerError),
     JsonRpc(jsonrpsee::core::error::Error),
     Receiver(tokio::sync::broadcast::error::RecvError),
-    Broadcast(tokio::sync::broadcast::error::SendError<BroadcastMessages>),
+    Broadcast(Box<tokio::sync::broadcast::error::SendError<BroadcastMessages>>),
 }
 
 impl std::fmt::Display for SentinelError {
@@ -125,7 +125,7 @@ impl From<config::ConfigError> for SentinelError {
 
 impl From<tokio::sync::broadcast::error::SendError<BroadcastMessages>> for SentinelError {
     fn from(err: tokio::sync::broadcast::error::SendError<BroadcastMessages>) -> Self {
-        Self::Broadcast(err)
+        Self::Broadcast(Box::new(err))
     }
 }
 
