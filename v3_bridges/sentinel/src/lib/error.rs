@@ -1,3 +1,5 @@
+use crate::BroadcastMessages;
+
 #[derive(Debug)]
 pub enum SentinelError {
     Custom(String),
@@ -13,7 +15,8 @@ pub enum SentinelError {
     SentinelConfig(crate::config::Error),
     Logger(flexi_logger::FlexiLoggerError),
     JsonRpc(jsonrpsee::core::error::Error),
-    Broadcast(tokio::sync::broadcast::error::SendError<bool>), // FIXME Use message type once we've defined it
+    Receiver(tokio::sync::broadcast::error::RecvError),
+    Broadcast(tokio::sync::broadcast::error::SendError<BroadcastMessages>),
 }
 
 impl std::fmt::Display for SentinelError {
@@ -31,6 +34,7 @@ impl std::fmt::Display for SentinelError {
             Self::ParseInt(ref err) => write!(f, "parse int error: {err}"),
             Self::SerdeJson(ref err) => write!(f, "serde json error: {err}"),
             Self::TokioJoin(ref err) => write!(f, "tokio join error: {err}"),
+            Self::Receiver(ref err) => write!(f, "tokio receive error: {err}"),
             Self::Broadcast(ref err) => write!(f, "tokio broadcast error: {err}"),
             Self::SentinelConfig(ref err) => write!(f, "sentinel configuration error: {err}"),
         }
@@ -49,6 +53,7 @@ impl std::error::Error for SentinelError {
             Self::Logger(ref err) => Some(err),
             Self::JsonRpc(ref err) => Some(err),
             Self::MongoDb(ref err) => Some(err),
+            Self::Receiver(ref err) => Some(err),
             Self::ParseInt(ref err) => Some(err),
             Self::Broadcast(ref err) => Some(err),
             Self::TokioJoin(ref err) => Some(err),
@@ -118,8 +123,14 @@ impl From<config::ConfigError> for SentinelError {
     }
 }
 
-impl From<tokio::sync::broadcast::error::SendError<bool>> for SentinelError {
-    fn from(err: tokio::sync::broadcast::error::SendError<bool>) -> Self {
+impl From<tokio::sync::broadcast::error::SendError<BroadcastMessages>> for SentinelError {
+    fn from(err: tokio::sync::broadcast::error::SendError<BroadcastMessages>) -> Self {
         Self::Broadcast(err)
+    }
+}
+
+impl From<tokio::sync::broadcast::error::RecvError> for SentinelError {
+    fn from(err: tokio::sync::broadcast::error::RecvError) -> Self {
+        Self::Receiver(err)
     }
 }

@@ -1,7 +1,7 @@
 use std::result::Result;
 
 use futures::join;
-use lib::{Batch, SentinelConfig, SentinelError};
+use lib::{Batch, BroadcastMessages, SentinelConfig, SentinelError};
 use serde_json::json;
 use tokio::{
     signal,
@@ -17,7 +17,7 @@ use crate::sentinel::{processor_loop, syncer_loop};
 // TODO need mspc chennel for processor so syncers can send batches to it for processsing.
 
 pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelError> {
-    let (tx, rx_1): (Sender<bool>, Receiver<bool>) = broadcast::channel(1337);
+    let (tx, rx_1): (Sender<BroadcastMessages>, Receiver<BroadcastMessages>) = broadcast::channel(1337);
     let rx_2 = tx.subscribe();
     let rx_3 = tx.subscribe();
 
@@ -32,7 +32,7 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
     match signal::ctrl_c().await {
         Ok(()) => {
             warn!("ctrl-c caught, shutting down gracefully, please wait...");
-            tx.send(true)
+            tx.send(BroadcastMessages::Shutdown)
             // TODO send shutdown signal to application and wait
         },
         Err(err) => {
@@ -40,8 +40,8 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
                 "Unable to listen for shutdown signal: {} - shutting down as a precaution!",
                 err
             );
-            tx.send(true)
-            // we also shut down in case of error
+            tx.send(BroadcastMessages::Shutdown)
+            // NOTE: We also shut down in case of error
         },
     }?;
 

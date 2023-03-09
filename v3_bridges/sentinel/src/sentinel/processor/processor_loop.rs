@@ -1,6 +1,6 @@
 use std::result::Result;
 
-use lib::{handle_sigint, SentinelError};
+use lib::{handle_sigint, BroadcastMessages, SentinelError};
 use tokio::{
     sync::broadcast::Receiver,
     time::{sleep, Duration},
@@ -17,7 +17,7 @@ async fn main_loop(_log_prefix: &str) -> Result<(), SentinelError> {
     }
 }
 
-pub async fn processor_loop(rx: Receiver<bool>) -> Result<(), SentinelError> {
+pub async fn processor_loop(rx: Receiver<BroadcastMessages>) -> Result<(), SentinelError> {
     info!("Starting processor loop...");
     let log_prefix = "processor";
 

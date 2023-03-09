@@ -1,4 +1,5 @@
 mod batching;
+mod broadcast_messages;
 mod config;
 mod constants;
 mod endpoints;
@@ -14,6 +15,7 @@ mod test_utils;
 
 pub use self::{
     batching::Batch,
+    broadcast_messages::BroadcastMessages,
     config::Config as SentinelConfig,
     constants::MILLISECONDS_MULTIPLIER,
     endpoints::{check_endpoint, Endpoints, Error as EndpointError},
