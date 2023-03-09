@@ -13,6 +13,7 @@ pub enum SentinelError {
     SentinelConfigError(crate::config::Error),
     LoggerError(flexi_logger::FlexiLoggerError),
     JsonRpcError(jsonrpsee::core::error::Error),
+    BroadcastError(tokio::sync::broadcast::error::SendError<bool>), // FIXME Use message type once we've defined it
 }
 
 impl std::fmt::Display for SentinelError {
@@ -30,6 +31,7 @@ impl std::fmt::Display for SentinelError {
             Self::ParseIntError(ref err) => write!(f, "parse int error: {err}"),
             Self::SerdeJsonError(ref err) => write!(f, "serde json error: {err}"),
             Self::TokioJoinError(ref err) => write!(f, "tokio join error: {err}"),
+            Self::BroadcastError(ref err) => write!(f, "tokio broadcast error: {err}"),
             Self::SentinelConfigError(ref err) => write!(f, "sentinel configuration error: {err}"),
         }
     }
@@ -48,6 +50,7 @@ impl std::error::Error for SentinelError {
             Self::JsonRpcError(ref err) => Some(err),
             Self::MongoDbError(ref err) => Some(err),
             Self::ParseIntError(ref err) => Some(err),
+            Self::BroadcastError(ref err) => Some(err),
             Self::TokioJoinError(ref err) => Some(err),
             Self::SerdeJsonError(ref err) => Some(err),
             Self::SentinelConfigError(ref err) => Some(err),
@@ -112,5 +115,11 @@ impl From<crate::config::Error> for SentinelError {
 impl From<config::ConfigError> for SentinelError {
     fn from(err: config::ConfigError) -> Self {
         Self::ConfigError(err)
+    }
+}
+
+impl From<tokio::sync::broadcast::error::SendError<bool>> for SentinelError {
+    fn from(err: tokio::sync::broadcast::error::SendError<bool>) -> Self {
+        Self::BroadcastError(err)
     }
 }

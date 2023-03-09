@@ -141,14 +141,14 @@ impl Batch {
             let res = t.as_secs() >= self.batch_duration;
             if res {
                 info!("[+] Ready to submit because enough time has elapsed");
-                return true;
+                true
             } else {
-                return false;
+                false
             }
         } else {
             // NOTE: If there's some error figuring out the elapsed time, let's assume it's ready...
             warn!("[!] Could not ascertain elapsed time since last submission, so assuming it's ready!");
-            return true;
+            true
         }
     }
 

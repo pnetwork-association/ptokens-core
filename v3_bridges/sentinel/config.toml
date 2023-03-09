@@ -11,8 +11,8 @@ sleep_duration = 15 # How long to wait before trying to get the next native bloc
 contract_addresses = [] # Used to prefilter submission material to reduce total batch size.
 
 [batching]
-host_batch_size = 5 # Max number of host blocks to batch before submission
-native_batch_size = 10 # Max number of native blocks to batch before submission
+host_batch_size = 3 # Max number of host blocks to batch before submission
+native_batch_size = 5 # Max number of native blocks to batch before submission
 host_batch_duration = 300 # Max amount of time between batch submission in seconds
 native_batch_duration = 300 # Max amount of time between batch submission in seconds
 

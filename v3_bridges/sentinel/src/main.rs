@@ -1,7 +1,6 @@
 mod cli;
 mod handle_cli;
 mod sentinel;
-mod syncer;
 
 #[macro_use]
 extern crate log;
