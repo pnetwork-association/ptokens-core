@@ -33,7 +33,7 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
     // NOTE: Graceful shutdown upon ctrl-c...
     match signal::ctrl_c().await {
         Ok(()) => {
-            warn!("ctrl-c caught, shutting down gracefully, please wait...");
+            warn!("Sigint caught, shutting down gracefully...");
             tx_3.send(BroadcastMessages::Shutdown)
         },
         Err(err) => {
