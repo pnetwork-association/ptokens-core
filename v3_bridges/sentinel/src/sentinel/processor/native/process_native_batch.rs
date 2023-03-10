@@ -11,6 +11,21 @@ fn process_native(material: &EthSubmissionMaterial) -> Result<(), SentinelError>
         Ok(())
     } else {
         // TODO Real! pipeline
+        // check it's the next block to whatever is in the db
+        // validate block
+        // validate receipts
+        // filter receipts down to only ones we care about
+        // add block to db (here we KNOW it's subsequent, so no maybe needed!)
+        // update latest eth block hash
+        // update eth canon block hash
+        // update eth tail block hash
+        // update eth linker hash
+        //
+        // TODO the stuff we care about!! parse txs, save stuff in db(s)! (this could be where the
+        // maybe stuff happens
+        //
+        // remove_old_eth_tail_block
+        // remove_receipts_from_eth_canon_block
         debug!("Finished processing native block {n}!");
         Ok(())
     }

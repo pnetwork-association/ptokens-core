@@ -1,4 +1,4 @@
-use crate::BroadcastMessages;
+use crate::{BroadcastMessages, ProcessorMessages, SyncerMessages};
 
 #[derive(Debug)]
 pub enum SentinelError {
@@ -16,7 +16,9 @@ pub enum SentinelError {
     Logger(flexi_logger::FlexiLoggerError),
     JsonRpc(jsonrpsee::core::error::Error),
     Receiver(tokio::sync::broadcast::error::RecvError),
-    Broadcast(Box<tokio::sync::broadcast::error::SendError<BroadcastMessages>>),
+    SyncerChannel(Box<tokio::sync::broadcast::error::SendError<SyncerMessages>>),
+    ProcessorChannel(Box<tokio::sync::broadcast::error::SendError<ProcessorMessages>>),
+    BroadcastChannel(Box<tokio::sync::broadcast::error::SendError<BroadcastMessages>>),
 }
 
 impl std::fmt::Display for SentinelError {
@@ -35,7 +37,9 @@ impl std::fmt::Display for SentinelError {
             Self::SerdeJson(ref err) => write!(f, "serde json error: {err}"),
             Self::TokioJoin(ref err) => write!(f, "tokio join error: {err}"),
             Self::Receiver(ref err) => write!(f, "tokio receive error: {err}"),
-            Self::Broadcast(ref err) => write!(f, "tokio broadcast error: {err}"),
+            Self::SyncerChannel(ref err) => write!(f, "syncer channel error: {err}"),
+            Self::BroadcastChannel(ref err) => write!(f, "broadcast channe error: {err}"),
+            Self::ProcessorChannel(ref err) => write!(f, "processor channel error: {err}"),
             Self::SentinelConfig(ref err) => write!(f, "sentinel configuration error: {err}"),
         }
     }
@@ -55,10 +59,12 @@ impl std::error::Error for SentinelError {
             Self::MongoDb(ref err) => Some(err),
             Self::Receiver(ref err) => Some(err),
             Self::ParseInt(ref err) => Some(err),
-            Self::Broadcast(ref err) => Some(err),
             Self::TokioJoin(ref err) => Some(err),
             Self::SerdeJson(ref err) => Some(err),
+            Self::SyncerChannel(ref err) => Some(err),
             Self::SentinelConfig(ref err) => Some(err),
+            Self::BroadcastChannel(ref err) => Some(err),
+            Self::ProcessorChannel(ref err) => Some(err),
         }
     }
 }
@@ -125,12 +131,24 @@ impl From<config::ConfigError> for SentinelError {
 
 impl From<tokio::sync::broadcast::error::SendError<BroadcastMessages>> for SentinelError {
     fn from(err: tokio::sync::broadcast::error::SendError<BroadcastMessages>) -> Self {
-        Self::Broadcast(Box::new(err))
+        Self::BroadcastChannel(Box::new(err))
     }
 }
 
 impl From<tokio::sync::broadcast::error::RecvError> for SentinelError {
     fn from(err: tokio::sync::broadcast::error::RecvError) -> Self {
         Self::Receiver(err)
+    }
+}
+
+impl From<tokio::sync::broadcast::error::SendError<SyncerMessages>> for SentinelError {
+    fn from(err: tokio::sync::broadcast::error::SendError<SyncerMessages>) -> Self {
+        Self::SyncerChannel(Box::new(err))
+    }
+}
+
+impl From<tokio::sync::broadcast::error::SendError<ProcessorMessages>> for SentinelError {
+    fn from(err: tokio::sync::broadcast::error::SendError<ProcessorMessages>) -> Self {
+        Self::ProcessorChannel(Box::new(err))
     }
 }

@@ -11,6 +11,8 @@ mod get_rpc_client;
 mod get_sub_mat;
 mod handle_sigint;
 mod logging;
+mod processor_messages;
+mod syncer_messages;
 mod test_utils;
 
 pub use self::{
@@ -27,6 +29,8 @@ pub use self::{
     get_sub_mat::get_sub_mat,
     handle_sigint::handle_sigint,
     logging::init_logger,
+    processor_messages::ProcessorMessages,
+    syncer_messages::SyncerMessages,
 };
 
 #[macro_use]
