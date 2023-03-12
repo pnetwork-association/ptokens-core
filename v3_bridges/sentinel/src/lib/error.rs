@@ -38,7 +38,7 @@ impl std::fmt::Display for SentinelError {
             Self::TokioJoin(ref err) => write!(f, "tokio join error: {err}"),
             Self::Receiver(ref err) => write!(f, "tokio receive error: {err}"),
             Self::SyncerChannel(ref err) => write!(f, "syncer channel error: {err}"),
-            Self::BroadcastChannel(ref err) => write!(f, "broadcast channe error: {err}"),
+            Self::BroadcastChannel(ref err) => write!(f, "broadcast channel error: {err}"),
             Self::ProcessorChannel(ref err) => write!(f, "processor channel error: {err}"),
             Self::SentinelConfig(ref err) => write!(f, "sentinel configuration error: {err}"),
         }
