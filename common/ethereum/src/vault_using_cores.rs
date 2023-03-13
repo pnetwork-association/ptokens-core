@@ -1,4 +1,4 @@
-use common::{traits::DatabaseInterface, types::Result, V3CoreType};
+use common::{traits::DatabaseInterface, types::Result, CoreType, V3CoreType};
 use ethereum_types::Address as EthAddress;
 use strum_macros::EnumIter;
 
@@ -16,6 +16,22 @@ pub enum VaultUsingCores {
 }
 
 impl VaultUsingCores {
+    pub fn from_core_type(core_type: &CoreType) -> Result<Self> {
+        match core_type {
+            CoreType::IntOnEos => Ok(Self::IntOnEos),
+            CoreType::IntOnEvm => Ok(Self::IntOnEvm),
+            CoreType::IntOnAlgo => Ok(Self::IntOnAlgo),
+            CoreType::Erc20OnEos => Ok(Self::Erc20OnEos),
+            CoreType::Erc20OnEvm => Ok(Self::Erc20OnEvm),
+            CoreType::Erc20OnInt => Ok(Self::Erc20OnInt),
+            CoreType::V3(v3_core_type) => match v3_core_type {
+                V3CoreType::EvmOnInt => Ok(Self::V3(V3CoreType::EvmOnInt)),
+                V3CoreType::IntOnEvm => Ok(Self::V3(V3CoreType::IntOnEvm)),
+            },
+            _ => Err(format!("Core type '{core_type}' does not appear to be a vault using core").into()),
+        }
+    }
+
     pub fn get_vault_contract<D: DatabaseInterface, E: EthDbUtilsExt<D>>(&self, db_utils: &E) -> Result<EthAddress> {
         match self {
             Self::IntOnAlgo => db_utils.get_int_on_algo_smart_contract_address(),
