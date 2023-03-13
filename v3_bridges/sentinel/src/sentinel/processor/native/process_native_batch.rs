@@ -1,9 +1,10 @@
 use std::result::Result;
 
-use common_eth::{EthSubmissionMaterial, EthSubmissionMaterials};
+use common::DatabaseInterface;
+use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials};
 use lib::SentinelError;
 
-fn process_native(material: &EthSubmissionMaterial) -> Result<(), SentinelError> {
+fn process_native<D: DatabaseInterface>(_db: &D, material: &EthSubmissionMaterial) -> Result<(), SentinelError> {
     let n = material.get_block_number()?;
     if material.receipts.is_empty() {
         // TODO still need to do some chain stuff!
@@ -11,31 +12,28 @@ fn process_native(material: &EthSubmissionMaterial) -> Result<(), SentinelError>
         Ok(())
     } else {
         // TODO Real! pipeline
-        // check it's the next block to whatever is in the db
-        // validate block
         // validate receipts
         // filter receipts down to only ones we care about
-        // add block to db (here we KNOW it's subsequent, so no maybe needed!)
-        // update latest eth block hash
-        // update eth canon block hash
-        // update eth tail block hash
-        // update eth linker hash
+        //
+        // append to blockchain
         //
         // TODO the stuff we care about!! parse txs, save stuff in db(s)! (this could be where the
         // maybe stuff happens
         //
-        // remove_old_eth_tail_block
         // remove_receipts_from_eth_canon_block
         debug!("Finished processing native block {n}!");
         Ok(())
     }
 }
 
-pub fn process_native_batch(batch: &EthSubmissionMaterials) -> Result<Vec<()>, SentinelError> {
+pub fn process_native_batch<D: DatabaseInterface>(
+    db: &D,
+    batch: &EthSubmissionMaterials,
+) -> Result<Vec<()>, SentinelError> {
     info!("Processing native batch of submission material...");
     let r = batch
         .iter()
-        .map(process_native)
+        .map(|m| process_native(db, m))
         .collect::<Result<Vec<()>, SentinelError>>();
     info!("Finished processing native submission material!");
     r

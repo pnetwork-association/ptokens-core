@@ -1,5 +1,6 @@
 use std::result::Result;
 
+use common_rocksdb::get_db;
 use lib::{BroadcastMessages, ProcessorMessages, SentinelError, SyncerMessages};
 use tokio::sync::broadcast::{Receiver, Sender};
 
@@ -19,6 +20,9 @@ pub async fn processor_loop(
     _native_syncer_tx: Sender<SyncerMessages>,
 ) -> Result<(), SentinelError> {
     info!("Starting processor loop...");
+    let db = get_db()?;
+
+    // TODO FIXME TODO handle db lock error in below, sleep 500ms and try again...or a mutex?
 
     'processor_loop: loop {
         tokio::select! {
@@ -34,12 +38,12 @@ pub async fn processor_loop(
                         // Then give it a restart command with the correct block?
                         // Probably need a dedicated channel between the syncer and the processor,
                         // including for each side (native & host), hmmmm. enum SyncerProcessorMessages ??
-                        process_native_batch(&material)?;
+                        process_native_batch(&db, &material)?;
                         continue 'processor_loop;
                     },
                     Ok(ProcessorMessages::ProcessHost(material)) => {
                         debug!("Processing host material...");
-                        process_host_batch(&material)?;
+                        process_host_batch(&db, &material)?;
                         continue 'processor_loop;
                     },
                     Err(e) => {

@@ -1,20 +1,24 @@
 use std::result::Result;
 
+use common::DatabaseInterface;
 use common_eth::{EthSubmissionMaterial, EthSubmissionMaterials};
 use lib::SentinelError;
 
-fn process_host(material: &EthSubmissionMaterial) -> Result<(), SentinelError> {
+fn process_host<D: DatabaseInterface>(_db: &D, material: &EthSubmissionMaterial) -> Result<(), SentinelError> {
     // TODO Real pipeline
     let n = material.get_block_number()?;
     debug!("Finished processing host block {n}!");
     Ok(())
 }
 
-pub fn process_host_batch(batch: &EthSubmissionMaterials) -> Result<Vec<()>, SentinelError> {
+pub fn process_host_batch<D: DatabaseInterface>(
+    db: &D,
+    batch: &EthSubmissionMaterials,
+) -> Result<Vec<()>, SentinelError> {
     info!("Processing host batch of submission material...");
     let r = batch
         .iter()
-        .map(process_host)
+        .map(|m| process_host(db, m))
         .collect::<Result<Vec<()>, SentinelError>>();
     info!("Finished processing host submission material!");
     r

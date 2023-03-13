@@ -19,6 +19,18 @@ use tokio::{
 // TODO We need a channel to tell a syncer to restart from a given block number, in case of
 // processing errors etc.
 
+/*
+ can we tokio select like:
+_native_syncer_rx.recv {
+    SyncerMessages::stop => {
+        some indefinite timeout, or what??
+        OR send a watch channel with the above message? Then we watch for the change before restarting the loop?
+    },
+    SyncerMessages::start => {
+        start the native loop again?
+    },
+}
+ */
 async fn native_loop(
     log_prefix: &str,
     mut batch: Batch,

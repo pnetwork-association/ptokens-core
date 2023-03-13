@@ -15,6 +15,7 @@ pub enum SentinelError {
     SentinelConfig(crate::config::Error),
     Logger(flexi_logger::FlexiLoggerError),
     JsonRpc(jsonrpsee::core::error::Error),
+    RocksDb(common_rocksdb::RocksdbDatabaseError),
     Receiver(tokio::sync::broadcast::error::RecvError),
     SyncerChannel(Box<tokio::sync::broadcast::error::SendError<SyncerMessages>>),
     ProcessorChannel(Box<tokio::sync::broadcast::error::SendError<ProcessorMessages>>),
@@ -27,6 +28,7 @@ impl std::fmt::Display for SentinelError {
             Self::Custom(ref e) => write!(f, "{e}"),
             Self::Common(ref err) => write!(f, "{err}"),
             Self::JsonRpc(ref err) => write!(f, "{err}"),
+            Self::RocksDb(ref err) => write!(f, "{err}"),
             Self::Config(ref err) => write!(f, "config error: {err}"),
             Self::Logger(ref err) => write!(f, "logger error: {err}"),
             Self::Timeout(ref err) => write!(f, "timeout error: {err}"),
@@ -57,6 +59,7 @@ impl std::error::Error for SentinelError {
             Self::Logger(ref err) => Some(err),
             Self::JsonRpc(ref err) => Some(err),
             Self::MongoDb(ref err) => Some(err),
+            Self::RocksDb(ref err) => Some(err),
             Self::Receiver(ref err) => Some(err),
             Self::ParseInt(ref err) => Some(err),
             Self::TokioJoin(ref err) => Some(err),
@@ -150,5 +153,11 @@ impl From<tokio::sync::broadcast::error::SendError<SyncerMessages>> for Sentinel
 impl From<tokio::sync::broadcast::error::SendError<ProcessorMessages>> for SentinelError {
     fn from(err: tokio::sync::broadcast::error::SendError<ProcessorMessages>) -> Self {
         Self::ProcessorChannel(Box::new(err))
+    }
+}
+
+impl From<common_rocksdb::RocksdbDatabaseError> for SentinelError {
+    fn from(err: common_rocksdb::RocksdbDatabaseError) -> Self {
+        Self::RocksDb(err)
     }
 }
