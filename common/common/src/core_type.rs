@@ -1,11 +1,12 @@
 #![allow(dead_code)]
-use std::fmt;
+use std::{fmt, str::FromStr};
 
 use serde::Serialize;
 use strum_macros::EnumIter;
 
 use crate::{
     constants::MIN_DATA_SENSITIVITY_LEVEL,
+    errors::AppError,
     traits::DatabaseInterface,
     types::{Bytes, Result},
 };
@@ -18,7 +19,7 @@ lazy_static! {
         crate::utils::get_prefixed_db_key("native_core_is_initialized_db_key");
 }
 
-#[derive(Clone, Copy, EnumIter, Serialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, EnumIter, Serialize)]
 pub enum CoreType {
     BtcOnEth,
     BtcOnInt,
@@ -31,6 +32,51 @@ pub enum CoreType {
     Erc20OnEos,
     Erc20OnInt,
     Erc20OnEvm,
+    V3(V3CoreType),
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq, EnumIter, Serialize)]
+pub enum V3CoreType {
+    EvmOnInt,
+    IntOnEvm,
+}
+
+impl FromStr for V3CoreType {
+    type Err = AppError;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s.to_lowercase().as_ref() {
+            "int_on_evm" | "int-on-evm" | "intonevm" => Ok(Self::IntOnEvm),
+            "evm_on_int" | "evm-on-int" | "evmonint" => Ok(Self::EvmOnInt),
+            _ => Err(format!("Unrecognized v3 core type: {s}").into()),
+        }
+    }
+}
+
+impl V3CoreType {
+    fn get_host_symbol(&self) -> String {
+        self.to_string().split('_').collect::<Vec<_>>()[2].into()
+    }
+
+    fn get_native_symbol(&self) -> String {
+        self.to_string().split('_').collect::<Vec<_>>()[0].into()
+    }
+}
+
+impl fmt::Display for V3CoreType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            Self::EvmOnInt => "EVM_ON_INT",
+            Self::IntOnEvm => "Int_ON_EVM",
+        };
+        write!(f, "{}", s)
+    }
+}
+
+impl Default for V3CoreType {
+    fn default() -> Self {
+        Self::EvmOnInt
+    }
 }
 
 impl CoreType {
@@ -53,11 +99,17 @@ impl CoreType {
     }
 
     fn get_host_symbol(&self) -> String {
-        self.to_string().split('_').collect::<Vec<_>>()[2].into()
+        match self {
+            Self::V3(core_type) => core_type.get_host_symbol(),
+            _ => self.to_string().split('_').collect::<Vec<_>>()[2].into(),
+        }
     }
 
     fn get_native_symbol(&self) -> String {
-        self.to_string().split('_').collect::<Vec<_>>()[0].into()
+        match self {
+            Self::V3(core_type) => core_type.get_native_symbol(),
+            _ => self.to_string().split('_').collect::<Vec<_>>()[0].into(),
+        }
     }
 
     pub fn as_db_key_prefix(&self) -> String {
@@ -104,18 +156,19 @@ impl Default for CoreType {
 
 impl fmt::Display for CoreType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let s = match self {
-            Self::BtcOnEth => "BTC_ON_ETH",
-            Self::BtcOnEos => "BTC_ON_EOS",
-            Self::EosOnEth => "EOS_ON_ETH",
-            Self::BtcOnInt => "BTC_ON_INT",
-            Self::IntOnEos => "INT_ON_EOS",
-            Self::EosOnInt => "EOS_ON_INT",
-            Self::IntOnEvm => "INT_ON_EVM",
-            Self::IntOnAlgo => "INT_ON_ALGO",
-            Self::Erc20OnEos => "ERC20_ON_EOS",
-            Self::Erc20OnEvm => "ERC20_ON_EVM",
-            Self::Erc20OnInt => "ERC20_ON_INT",
+        let s: String = match self {
+            Self::BtcOnEth => "BTC_ON_ETH".into(),
+            Self::BtcOnEos => "BTC_ON_EOS".into(),
+            Self::EosOnEth => "EOS_ON_ETH".into(),
+            Self::BtcOnInt => "BTC_ON_INT".into(),
+            Self::IntOnEos => "INT_ON_EOS".into(),
+            Self::EosOnInt => "EOS_ON_INT".into(),
+            Self::IntOnEvm => "INT_ON_EVM".into(),
+            Self::IntOnAlgo => "INT_ON_ALGO".into(),
+            Self::Erc20OnEos => "ERC20_ON_EOS".into(),
+            Self::Erc20OnEvm => "ERC20_ON_EVM".into(),
+            Self::Erc20OnInt => "ERC20_ON_INT".into(),
+            Self::V3(v3_core_type) => format!("V3_{}", v3_core_type),
         };
         write!(f, "{}", s)
     }
@@ -141,6 +194,8 @@ mod tests {
             "erc20-on-eos",
             "erc20-on-int",
             "erc20-on-evm",
+            "v3-evm-on-int",
+            "v3-int-on-evm",
         ];
         CoreType::iter()
             .zip(expected_results.iter())
@@ -150,7 +205,7 @@ mod tests {
     #[test]
     fn should_get_native_symbol_from_core_type() {
         let expected_results = vec![
-            "BTC", "BTC", "INT", "INT", "EOS", "BTC", "EOS", "INT", "ERC20", "ERC20", "ERC20",
+            "BTC", "BTC", "INT", "INT", "EOS", "BTC", "EOS", "INT", "ERC20", "ERC20", "ERC20", "EVM", "INT",
         ];
         CoreType::iter()
             .zip(expected_results.iter())
@@ -160,7 +215,7 @@ mod tests {
     #[test]
     fn should_get_host_symbol_from_core_type() {
         let expected_results = vec![
-            "ETH", "INT", "EOS", "EVM", "INT", "EOS", "ETH", "ALGO", "EOS", "INT", "EVM",
+            "ETH", "INT", "EOS", "EVM", "INT", "EOS", "ETH", "ALGO", "EOS", "INT", "EVM", "INT", "EVM",
         ];
         CoreType::iter()
             .zip(expected_results.iter())

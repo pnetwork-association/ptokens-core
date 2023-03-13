@@ -13,7 +13,7 @@
 //! if running multiple instances on one machine.
 
 pub use crate::{
-    core_type::CoreType,
+    core_type::{CoreType, V3CoreType},
     errors::AppError,
     traits::DatabaseInterface,
     types::{Bytes, Result},
