@@ -5,15 +5,6 @@ use serde_json::json;
 
 use crate::cli::write_file;
 
-#[derive(Debug, Subcommand)]
-pub enum GetSubMatSubCmd {
-    /// Get HOST submission material.
-    GetHostSubMat(SubMatGetterArgs),
-
-    /// Get NATIVE submission material.
-    GetNativeSubMat(SubMatGetterArgs),
-}
-
 #[derive(Debug, Args)]
 pub struct SubMatGetterArgs {
     /// Block number to create the submission material for.

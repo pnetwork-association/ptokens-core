@@ -40,8 +40,8 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
     let processor_tx_2 = processor_tx_1.clone();
 
     // NOTE: Set up our batches...
-    let batch_1 = Batch::new_from_config(true, &config)?;
-    let batch_2 = Batch::new_from_config(false, &config)?;
+    let batch_1 = Batch::new_from_config(true, config)?;
+    let batch_2 = Batch::new_from_config(false, config)?;
 
     // NOTE: Hand everything off to async threads...
     let thread_1 =

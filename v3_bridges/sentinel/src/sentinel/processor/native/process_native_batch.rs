@@ -1,7 +1,7 @@
 use std::result::Result;
 
 use common::DatabaseInterface;
-use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials};
+use common_eth::{EthSubmissionMaterial, EthSubmissionMaterials};
 use lib::SentinelError;
 
 fn process_native<D: DatabaseInterface>(_db: &D, material: &EthSubmissionMaterial) -> Result<(), SentinelError> {

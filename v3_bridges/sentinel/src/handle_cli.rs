@@ -6,6 +6,7 @@ use crate::{
     cli::{
         get_latest_block_num::{get_host_latest_block_num, get_native_latest_block_num},
         get_sub_mat::{get_host_sub_mat, get_native_sub_mat},
+        init,
         CliArgs,
         SubCommands,
     },
@@ -19,6 +20,7 @@ pub async fn handle_cli() -> Result<String> {
 
     match cli_args.sub_commands {
         SubCommands::Start => Ok(start_sentinel(&config).await?),
+        SubCommands::Init(ref args) => Ok(init(&config, args).await?),
         SubCommands::GetHostSubMat(ref args) => get_host_sub_mat(&config.host_config.get_endpoints(), args).await,
         SubCommands::GetNativeSubMat(ref args) => get_native_sub_mat(&config.native_config.get_endpoints(), args).await,
         SubCommands::GetHostLatestBlockNum => get_host_latest_block_num(&config.host_config.get_endpoints()).await,

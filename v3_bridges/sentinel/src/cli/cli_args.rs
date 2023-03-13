@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use crate::cli::get_sub_mat::SubMatGetterArgs;
+use crate::cli::{get_sub_mat::SubMatGetterArgs, init::InitArgs};
 
 #[derive(Debug, Parser)]
 pub struct CliArgs {
@@ -24,4 +24,7 @@ pub enum SubCommands {
 
     /// Get NATIVE submission material.
     GetNativeSubMat(SubMatGetterArgs),
+
+    /// Initialize the core.
+    Init(InitArgs),
 }

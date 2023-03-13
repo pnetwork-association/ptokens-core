@@ -306,7 +306,7 @@ mod tests {
         receipt.logs = logs;
         let receipts = EthReceipts::new(vec![receipt]);
         let mut sub_mat = EthSubmissionMaterial::default();
-        sub_mat.receipts = receipts.clone();
+        sub_mat.receipts = receipts;
         let mut batch = Batch::new();
         batch.contract_addresses = vec![other_address];
         batch.push(sub_mat);

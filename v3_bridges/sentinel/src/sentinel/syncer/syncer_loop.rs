@@ -109,7 +109,7 @@ pub async fn native_syncer_loop(
     syncer_rx: Receiver<SyncerMessages>,
     processor_tx: Sender<ProcessorMessages>,
 ) -> Result<String, SentinelError> {
-    let log_prefix = format!("native_syncer:");
+    let log_prefix = "native_syncer:".to_string();
 
     tokio::select! {
         res = native_loop(&log_prefix, batch, processor_tx, syncer_rx) => res,
@@ -126,7 +126,7 @@ pub async fn host_syncer_loop(
     let log_prefix = "host_syncer:";
 
     tokio::select! {
-        res = host_loop(&log_prefix, batch, processor_tx, syncer_rx) => res,
-        _ = handle_sigint(&log_prefix, broadcast_rx) => Ok(format!("{log_prefix} shutdown received!")),
+        res = host_loop(log_prefix, batch, processor_tx, syncer_rx) => res,
+        _ = handle_sigint(log_prefix, broadcast_rx) => Ok(format!("{log_prefix} shutdown received!")),
     }
 }

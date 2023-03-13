@@ -1,6 +1,6 @@
 use std::{result::Result, str::FromStr};
 
-use common::V3CoreType;
+use common::{CoreType, V3CoreType};
 use serde::Deserialize;
 
 use crate::SentinelError;
@@ -14,14 +14,14 @@ pub struct CoreToml {
 #[derive(Debug, Default, Clone)]
 pub struct CoreConfig {
     pub db_path: String,
-    pub core_type: V3CoreType,
+    pub core_type: CoreType,
 }
 
 impl CoreConfig {
     pub fn from_toml(toml: &CoreToml) -> Result<Self, SentinelError> {
         Ok(Self {
             db_path: toml.db_path.clone(),
-            core_type: V3CoreType::from_str(&toml.core_type)?,
+            core_type: CoreType::V3(V3CoreType::from_str(&toml.core_type)?),
         })
     }
 }
