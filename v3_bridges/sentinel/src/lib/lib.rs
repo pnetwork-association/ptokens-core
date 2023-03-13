@@ -3,6 +3,7 @@ mod broadcast_messages;
 mod check_init;
 mod config;
 mod constants;
+mod core_state;
 mod endpoints;
 mod error;
 mod get_block;
@@ -22,6 +23,7 @@ pub use self::{
     check_init::check_init,
     config::Config as SentinelConfig,
     constants::MILLISECONDS_MULTIPLIER,
+    core_state::CoreState,
     endpoints::{check_endpoint, Endpoints, Error as EndpointError},
     error::SentinelError,
     get_block::get_block,

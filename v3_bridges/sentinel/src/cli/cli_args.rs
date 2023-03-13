@@ -27,4 +27,7 @@ pub enum SubCommands {
 
     /// Initialize the core.
     Init(InitArgs),
+
+    /// Get the state of the core.
+    GetCoreState,
 }

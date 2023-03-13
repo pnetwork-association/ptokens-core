@@ -1,12 +1,15 @@
 mod cli_args;
-mod write_file;
-
-pub(crate) mod get_latest_block_num;
-pub(crate) mod get_sub_mat;
+mod get_core_state;
+mod get_latest_block_num;
+mod get_sub_mat;
 mod init;
+mod write_file;
 
 pub(crate) use self::{
     cli_args::{CliArgs, SubCommands},
+    get_core_state::get_core_state,
+    get_latest_block_num::{get_host_latest_block_num, get_native_latest_block_num},
+    get_sub_mat::{get_host_sub_mat, get_native_sub_mat},
     init::init,
     write_file::write_file,
 };
