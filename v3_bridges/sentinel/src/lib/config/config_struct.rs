@@ -7,6 +7,8 @@ use crate::{
     config::{
         BatchingConfig,
         BatchingToml,
+        CoreConfig,
+        CoreToml,
         HostConfig,
         HostToml,
         LogConfig,
@@ -24,6 +26,7 @@ const CONFIG_FILE_PATH: &str = "config";
 struct ConfigToml {
     log: LogToml,
     host: HostToml,
+    core: CoreToml,
     native: NativeToml,
     mongo: MongoConfig,
     batching: BatchingToml,
@@ -42,6 +45,7 @@ impl ConfigToml {
 pub struct Config {
     pub log_config: LogConfig,
     pub host_config: HostConfig,
+    pub core_config: CoreConfig,
     pub mongo_config: MongoConfig,
     pub native_config: NativeConfig,
     pub batching_config: BatchingConfig,
@@ -58,6 +62,7 @@ impl Config {
         Ok(Self {
             mongo_config: toml.mongo.clone(),
             log_config: LogConfig::from_toml(&toml.log)?,
+            core_config: CoreConfig::from_toml(&toml.core)?,
             host_config: HostConfig::from_toml(&toml.host)?,
             native_config: NativeConfig::from_toml(&toml.native)?,
             batching_config: BatchingConfig::from_toml(&toml.batching)?,

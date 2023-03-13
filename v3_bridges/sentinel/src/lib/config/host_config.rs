@@ -1,7 +1,7 @@
 use std::{result::Result, str::FromStr};
 
+use common_chain_ids::EthChainId;
 use common_eth::convert_hex_strings_to_eth_addresses;
-use common_metadata::MetadataChainId;
 use ethereum_types::Address as EthAddress;
 use serde::Deserialize;
 
@@ -9,8 +9,8 @@ use crate::{constants::MILLISECONDS_MULTIPLIER, Endpoints, SentinelError};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct HostToml {
-    chain_id: String,
     sleep_duration: u64,
+    eth_chain_id: String,
     endpoints: Vec<String>,
     contract_addresses: Vec<String>,
 }
@@ -19,7 +19,7 @@ pub struct HostToml {
 pub struct HostConfig {
     sleep_duration: u64,
     endpoints: Endpoints,
-    chain_id: MetadataChainId,
+    eth_chain_id: EthChainId,
     contract_addresses: Vec<EthAddress>,
 }
 
@@ -30,12 +30,12 @@ impl HostConfig {
             sleep_duration,
             endpoints: Endpoints::new(false, sleep_duration, toml.endpoints.clone()),
             contract_addresses: convert_hex_strings_to_eth_addresses(&toml.contract_addresses)?,
-            chain_id: match MetadataChainId::from_str(&toml.chain_id) {
+            eth_chain_id: match EthChainId::from_str(&toml.eth_chain_id) {
                 Ok(id) => id,
                 Err(e) => {
-                    warn!("Could not parse `host_chain_id` from config, defaulting to `EthereumMainnet`");
+                    warn!("Could not parse `eth_chain_id` from host config, defaulting to ETH mainnet!");
                     warn!("{e}");
-                    MetadataChainId::EthereumMainnet
+                    EthChainId::Mainnet
                 },
             },
         })
@@ -57,5 +57,9 @@ impl HostConfig {
 
     pub fn get_sleep_duration(&self) -> u64 {
         self.sleep_duration
+    }
+
+    pub fn get_eth_chain_id(&self) -> EthChainId {
+        self.eth_chain_id.clone()
     }
 }

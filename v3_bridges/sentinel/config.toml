@@ -1,11 +1,15 @@
+[core]
+db_path = "./database"
+core_type = "evm-on-int"
+
 [native]
-chain_id = "EthereumMainnet"
+eth_chain_id = "1"
 endpoints = [ "ws://162.19.83.219:8546" ]
 sleep_duration = 15 # How long to wait before trying to get the next host block (in seconds)
 contract_addresses = [] # Used to prefilter submission material to reduce total batch size.
 
 [host]
-chain_id = "EthereumMainnet"
+eth_chain_id = "1"
 endpoints = [ "ws://162.19.83.219:8546" ]
 sleep_duration = 15 # How long to wait before trying to get the next native block (in seconds)
 contract_addresses = [] # Used to prefilter submission material to reduce total batch size.
