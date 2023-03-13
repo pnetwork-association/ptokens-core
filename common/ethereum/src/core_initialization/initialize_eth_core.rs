@@ -214,8 +214,8 @@ pub fn init_v3_native_core<D: DatabaseInterface>(
         confs,
         EthState::init(db),
         true,
-        None,
         Some(vault),
+        Some(&EthAddress::zero()), // NOTE: v3 sentinels do not use a router
         Some(vault_using_core),
         true,
     )

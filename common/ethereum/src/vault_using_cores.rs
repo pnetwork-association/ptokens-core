@@ -33,6 +33,7 @@ impl VaultUsingCores {
     }
 
     pub fn get_vault_contract<D: DatabaseInterface, E: EthDbUtilsExt<D>>(&self, db_utils: &E) -> Result<EthAddress> {
+        debug!("Getting vault contract for vault: '{self:?}'");
         match self {
             Self::IntOnAlgo => db_utils.get_int_on_algo_smart_contract_address(),
             Self::IntOnEos => db_utils.get_int_on_eos_smart_contract_address_from_db(),
@@ -50,6 +51,7 @@ impl VaultUsingCores {
         db_utils: &E,
         address: &EthAddress,
     ) -> Result<()> {
+        debug!("Putting vault contract in db for vault: '{self:?}'");
         match self {
             Self::IntOnEos => db_utils.put_int_on_eos_smart_contract_address_in_db(address),
             Self::IntOnAlgo => db_utils.put_int_on_algo_smart_contract_address_in_db(address),
