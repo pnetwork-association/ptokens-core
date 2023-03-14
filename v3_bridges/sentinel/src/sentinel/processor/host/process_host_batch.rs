@@ -1,12 +1,14 @@
 use std::result::Result;
 
 use common::DatabaseInterface;
-use common_eth::{EthSubmissionMaterial, EthSubmissionMaterials};
+use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials, HostDbUtils};
 use lib::SentinelError;
 
-fn process_host<D: DatabaseInterface>(_db: &D, material: &EthSubmissionMaterial) -> Result<(), SentinelError> {
-    // TODO Real pipeline
-    let n = material.get_block_number()?;
+fn process_host<D: DatabaseInterface>(db: &D, sub_mat: &EthSubmissionMaterial) -> Result<(), SentinelError> {
+    let n = sub_mat.get_block_number()?;
+    let db_utils = HostDbUtils::new(db);
+    append_to_blockchain(&db_utils, sub_mat)?;
+
     debug!("Finished processing host block {n}!");
     Ok(())
 }

@@ -4,6 +4,7 @@ use crate::{BroadcastMessages, ProcessorMessages, SyncerMessages};
 pub enum SentinelError {
     PoisonedLock,
     Custom(String),
+    SigInt(String),
     Timeout(String),
     Common(common::AppError),
     Config(config::ConfigError),
@@ -41,6 +42,7 @@ impl std::fmt::Display for SentinelError {
             Self::SerdeJson(ref err) => write!(f, "serde json error: {err}"),
             Self::TokioJoin(ref err) => write!(f, "tokio join error: {err}"),
             Self::Receiver(ref err) => write!(f, "tokio receive error: {err}"),
+            Self::SigInt(ref component) => write!(f, "sigint caught in {component}"),
             Self::SyncerChannel(ref err) => write!(f, "syncer channel error: {err}"),
             Self::BroadcastChannel(ref err) => write!(f, "broadcast channel error: {err}"),
             Self::ProcessorChannel(ref err) => write!(f, "processor channel error: {err}"),
@@ -52,6 +54,7 @@ impl std::fmt::Display for SentinelError {
 impl std::error::Error for SentinelError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
+            Self::SigInt(_) => None,
             Self::Custom(_) => None,
             Self::Timeout(_) => None,
             Self::Endpoint(_) => None,

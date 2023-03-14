@@ -6,6 +6,7 @@ mod constants;
 mod core_state;
 mod endpoints;
 mod error;
+mod flatten_join_handle;
 mod get_block;
 mod get_latest_block_num;
 mod get_receipts;
@@ -26,6 +27,7 @@ pub use self::{
     core_state::CoreState,
     endpoints::{check_endpoint, Endpoints, Error as EndpointError},
     error::SentinelError,
+    flatten_join_handle::flatten_join_handle,
     get_block::get_block,
     get_latest_block_num::get_latest_block_num,
     get_receipts::get_receipts,

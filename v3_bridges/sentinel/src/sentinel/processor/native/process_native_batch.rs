@@ -1,12 +1,15 @@
 use std::result::Result;
 
 use common::DatabaseInterface;
-use common_eth::{EthSubmissionMaterial, EthSubmissionMaterials};
+use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials, NativeDbUtils};
 use lib::SentinelError;
 
-fn process_native<D: DatabaseInterface>(_db: &D, material: &EthSubmissionMaterial) -> Result<(), SentinelError> {
-    let n = material.get_block_number()?;
-    if material.receipts.is_empty() {
+fn process_native<D: DatabaseInterface>(db: &D, sub_mat: &EthSubmissionMaterial) -> Result<(), SentinelError> {
+    let n = sub_mat.get_block_number()?;
+    let db_utils = NativeDbUtils::new(db);
+    append_to_blockchain(&db_utils, sub_mat)?;
+
+    if sub_mat.receipts.is_empty() {
         // TODO still need to do some chain stuff!
         warn!("Native block {n} had no receipts to process!");
         Ok(())

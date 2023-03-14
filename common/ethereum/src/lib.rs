@@ -114,7 +114,15 @@ pub use self::{
     },
     eth_crypto::{get_signed_minting_tx, EthPrivateKey, EthPublicKey, EthSignature, EthTransaction, EthTransactions},
     eth_database_transactions::{end_eth_db_transaction_and_return_state, start_eth_db_transaction_and_return_state},
-    eth_database_utils::{EthDatabaseKeysJson, EthDbUtils, EthDbUtilsExt, EvmDatabaseKeysJson, EvmDbUtils},
+    eth_database_utils::{
+        EthDatabaseKeysJson,
+        EthDbUtils,
+        EthDbUtils as NativeDbUtils,
+        EthDbUtilsExt,
+        EvmDatabaseKeysJson,
+        EvmDbUtils,
+        EvmDbUtils as HostDbUtils,
+    },
     eth_enclave_state::{EthEnclaveState, EvmEnclaveState},
     eth_log::{EthLog, EthLogExt, EthLogs},
     eth_message_signer::{
