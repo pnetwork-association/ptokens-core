@@ -71,16 +71,21 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
     match tokio::try_join!(
         flatten_join_handle(thread_1),
         flatten_join_handle(thread_2),
-        flatten_join_handle(thread_3)
+        flatten_join_handle(thread_3),
     ) {
         Ok((res_1, res_2, res_3)) => Ok(json!({
             "jsonrpc": "2.0",
             "result": { "thread_1": res_1, "thread_2": res_2, "thread_3": res_3},
         })
         .to_string()),
+        Err(SentinelError::SigInt(_)) => Ok(json!({
+            "jsonrpc": "2.0",
+            "result": "sigint caught successfully",
+        })
+        .to_string()),
         Err(e) => {
             debug!("try_join error: {e}");
-            Err(e)
+            Err(SentinelError::Json(json!({"jsonrpc": "2.0", "error": e.to_string()})))
         },
     }
 }

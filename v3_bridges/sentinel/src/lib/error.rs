@@ -9,6 +9,7 @@ pub enum SentinelError {
     SigInt(String),
     Timeout(String),
     IO(std::io::Error),
+    Json(serde_json::Value),
     Common(common::AppError),
     Config(config::ConfigError),
     SerdeJson(serde_json::Error),
@@ -31,6 +32,7 @@ pub enum SentinelError {
 impl std::fmt::Display for SentinelError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match *self {
+            Self::Json(ref e) => write!(f, "{e}"),
             Self::Custom(ref e) => write!(f, "{e}"),
             Self::Common(ref err) => write!(f, "{err}"),
             Self::JsonRpc(ref err) => write!(f, "{err}"),
@@ -60,6 +62,7 @@ impl std::fmt::Display for SentinelError {
 impl std::error::Error for SentinelError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
+            Self::Json(_) => None,
             Self::SigInt(_) => None,
             Self::Custom(_) => None,
             Self::Timeout(_) => None,
