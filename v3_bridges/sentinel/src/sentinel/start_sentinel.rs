@@ -12,7 +12,9 @@ use lib::{
 use serde_json::json;
 use tokio::sync::{
     broadcast,
-    broadcast::{Receiver, Sender},
+    broadcast::{Receiver as BroadcastRx, Sender as BroadcastTx},
+    mpsc,
+    mpsc::{Receiver as MpscRx, Sender as MpscTx},
     Mutex,
 };
 
@@ -29,19 +31,21 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
     let wrapped_db = Arc::new(Mutex::new(db));
 
     // NOTE: Set up our broadcast comms for all threads...
-    let (broadcast_tx_1, broadcast_rx_1): (Sender<BroadcastMessages>, Receiver<BroadcastMessages>) =
+    let (broadcast_tx_1, broadcast_rx_1): (BroadcastTx<BroadcastMessages>, BroadcastRx<BroadcastMessages>) =
         broadcast::channel(MAX_CHANNEL_CAPACITY);
     let _broadcast_tx_2 = broadcast_tx_1.clone();
     let broadcast_tx_3 = broadcast_tx_1.clone();
     let broadcast_rx_2 = broadcast_tx_1.subscribe();
     let broadcast_rx_3 = broadcast_tx_1.subscribe();
-    let (native_syncer_tx_1, native_syncer_rx): (Sender<SyncerMessages>, Receiver<SyncerMessages>) =
+    let (native_syncer_tx_1, native_syncer_rx): (BroadcastTx<SyncerMessages>, BroadcastRx<SyncerMessages>) =
         broadcast::channel(MAX_CHANNEL_CAPACITY);
-    let (host_syncer_tx_1, host_syncer_rx): (Sender<SyncerMessages>, Receiver<SyncerMessages>) =
+    let (host_syncer_tx_1, host_syncer_rx): (BroadcastTx<SyncerMessages>, BroadcastRx<SyncerMessages>) =
         broadcast::channel(MAX_CHANNEL_CAPACITY);
-    let (processor_tx_1, processor_rx): (Sender<ProcessorMessages>, Receiver<ProcessorMessages>) =
-        broadcast::channel(MAX_CHANNEL_CAPACITY);
+
+    let (processor_tx_1, processor_rx): (MpscTx<ProcessorMessages>, MpscRx<ProcessorMessages>) =
+        mpsc::channel(MAX_CHANNEL_CAPACITY);
     let processor_tx_2 = processor_tx_1.clone();
+
     let batch_1 = Batch::new_from_config(true, config)?;
     let batch_2 = Batch::new_from_config(false, config)?;
 

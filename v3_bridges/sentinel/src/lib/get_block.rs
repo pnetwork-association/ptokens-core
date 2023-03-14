@@ -1,7 +1,7 @@
 use common_eth::{EthBlock, EthBlockJsonFromRpc};
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
 
-use crate::{endpoints::Error, SentinelError};
+use crate::SentinelError;
 
 const GET_FULL_TRANSACTION: bool = false;
 const GET_BLOCK_BY_NUMBER_RPC_CMD: &str = "eth_getBlockByNumber";
@@ -17,7 +17,7 @@ pub async fn get_block(ws_client: &WsClient, block_num: u64) -> Result<EthBlock,
     match res {
         Ok(ref json) => Ok(EthBlock::from_json_rpc(json)?),
         Err(jsonrpsee::core::Error::ParseError(err)) if err.to_string().contains("null") => {
-            Err(SentinelError::Endpoint(Error::NoBlock(block_num)))
+            Err(SentinelError::NoBlock(block_num))
         },
         Err(err) => Err(SentinelError::JsonRpc(err)),
     }
@@ -41,7 +41,7 @@ mod tests {
         let ws_client = get_test_ws_client().await;
         let block_num = i64::MAX as u64;
         match get_block(&ws_client, block_num).await {
-            Err(SentinelError::Endpoint(Error::NoBlock(num))) => assert_eq!(num, block_num),
+            Err(SentinelError::NoBlock(num)) => assert_eq!(num, block_num),
             Ok(_) => panic!("Should not have succeeded!"),
             Err(e) => panic!("Wrong error received: {e}"),
         }

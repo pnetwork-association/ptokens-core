@@ -15,8 +15,8 @@ sleep_duration = 15 # How long to wait before trying to get the next native bloc
 contract_addresses = [] # Used to prefilter submission material to reduce total batch size.
 
 [batching]
-host_batch_size = 3 # Max number of host blocks to batch before submission
-native_batch_size = 5 # Max number of native blocks to batch before submission
+host_batch_size = 5 # Max number of host blocks to batch before submission
+native_batch_size = 10 # Max number of native blocks to batch before submission
 host_batch_duration = 300 # Max amount of time between batch submission in seconds
 native_batch_duration = 300 # Max amount of time between batch submission in seconds
 
@@ -26,7 +26,7 @@ enabled = true # Allow logging to be turned off entirely if desired
 use_file_logging = false # If false, logs are written to stderr, if true, logs are written to file
 path = "./" # Path to write logs to. Defaults to "./"
 max_num_logs = 10 # Maximum number of logs to maintain. The oldest half are compressed.
-max_log_size = 1_000_000 # Maximum size of a single log in bytes. Defalt is 10mb
+max_log_size = 1_000_000_000 # Maximum size of a single log in bytes. Defalt is 10mb
 
 [mongo]
 database = "database"

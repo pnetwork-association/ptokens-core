@@ -5,9 +5,11 @@ use crate::{BroadcastMessages, ProcessorMessages, SyncerMessages};
 #[derive(Debug)]
 pub enum SentinelError {
     PoisonedLock,
+    NoBlock(u64),
     Custom(String),
     SigInt(String),
     Timeout(String),
+    SyncerRestart(u64),
     IO(std::io::Error),
     Json(serde_json::Value),
     Common(common::AppError),
@@ -24,8 +26,10 @@ pub enum SentinelError {
     JsonRpc(jsonrpsee::core::error::Error),
     RocksDb(common_rocksdb::RocksdbDatabaseError),
     Receiver(tokio::sync::broadcast::error::RecvError),
+    OneshotReceiver(tokio::sync::oneshot::error::RecvError),
     SyncerChannel(Box<tokio::sync::broadcast::error::SendError<SyncerMessages>>),
-    ProcessorChannel(Box<tokio::sync::broadcast::error::SendError<ProcessorMessages>>),
+    //ProcessorChannel(Box<tokio::sync::broadcast::error::SendError<ProcessorMessages>>),
+    ProcessorChannel(Box<tokio::sync::mpsc::error::SendError<ProcessorMessages>>),
     BroadcastChannel(Box<tokio::sync::broadcast::error::SendError<BroadcastMessages>>),
 }
 
@@ -39,6 +43,7 @@ impl std::fmt::Display for SentinelError {
             Self::RocksDb(ref err) => write!(f, "{err}"),
             Self::NoParent(ref err) => write!(f, "{err}"),
             Self::IO(ref err) => write!(f, "IO error: {err}"),
+            Self::NoBlock(ref num) => write!(f, "no block {num}"),
             Self::PoisonedLock => write!(f, "posioned lock error!"),
             Self::Config(ref err) => write!(f, "config error: {err}"),
             Self::Logger(ref err) => write!(f, "logger error: {err}"),
@@ -52,8 +57,10 @@ impl std::fmt::Display for SentinelError {
             Self::Receiver(ref err) => write!(f, "tokio receive error: {err}"),
             Self::SigInt(ref component) => write!(f, "sigint caught in {component}"),
             Self::SyncerChannel(ref err) => write!(f, "syncer channel error: {err}"),
+            Self::OneshotReceiver(ref err) => write!(f, "oneshot receiver error: {err}"),
             Self::BroadcastChannel(ref err) => write!(f, "broadcast channel error: {err}"),
             Self::ProcessorChannel(ref err) => write!(f, "processor channel error: {err}"),
+            Self::SyncerRestart(ref err) => write!(f, "syncer to restart from block {err}"),
             Self::SentinelConfig(ref err) => write!(f, "sentinel configuration error: {err}"),
         }
     }
@@ -65,12 +72,14 @@ impl std::error::Error for SentinelError {
             Self::Json(_) => None,
             Self::SigInt(_) => None,
             Self::Custom(_) => None,
+            Self::NoBlock(_) => None,
             Self::Timeout(_) => None,
             Self::Endpoint(_) => None,
             Self::NoParent(_) => None,
             Self::Batching(_) => None,
             Self::PoisonedLock => None,
             Self::IO(ref err) => Some(err),
+            Self::SyncerRestart(_) => None,
             Self::Common(ref err) => Some(err),
             Self::Config(ref err) => Some(err),
             Self::Logger(ref err) => Some(err),
@@ -83,6 +92,7 @@ impl std::error::Error for SentinelError {
             Self::SerdeJson(ref err) => Some(err),
             Self::SyncerChannel(ref err) => Some(err),
             Self::SentinelConfig(ref err) => Some(err),
+            Self::OneshotReceiver(ref err) => Some(err),
             Self::BroadcastChannel(ref err) => Some(err),
             Self::ProcessorChannel(ref err) => Some(err),
         }
@@ -170,11 +180,13 @@ impl From<tokio::sync::broadcast::error::SendError<SyncerMessages>> for Sentinel
     }
 }
 
+/*
 impl From<tokio::sync::broadcast::error::SendError<ProcessorMessages>> for SentinelError {
     fn from(err: tokio::sync::broadcast::error::SendError<ProcessorMessages>) -> Self {
         Self::ProcessorChannel(Box::new(err))
     }
 }
+*/
 
 impl From<common_rocksdb::RocksdbDatabaseError> for SentinelError {
     fn from(err: common_rocksdb::RocksdbDatabaseError) -> Self {
@@ -191,5 +203,17 @@ impl<T> From<std::sync::PoisonError<T>> for SentinelError {
 impl From<std::io::Error> for SentinelError {
     fn from(err: std::io::Error) -> Self {
         Self::IO(err)
+    }
+}
+
+impl From<tokio::sync::mpsc::error::SendError<ProcessorMessages>> for SentinelError {
+    fn from(err: tokio::sync::mpsc::error::SendError<ProcessorMessages>) -> Self {
+        Self::ProcessorChannel(Box::new(err))
+    }
+}
+
+impl From<tokio::sync::oneshot::error::RecvError> for SentinelError {
+    fn from(err: tokio::sync::oneshot::error::RecvError) -> Self {
+        Self::OneshotReceiver(err)
     }
 }

@@ -1,9 +1,24 @@
-use common_eth::EthSubmissionMaterials;
+use std::result::Result;
 
-#[derive(Clone, Debug)]
+use common_eth::EthSubmissionMaterials;
+use derive_more::Constructor;
+use tokio::sync::oneshot;
+
+use crate::SentinelError;
+
+// TODO maybe move to own mod?
+pub type Responder<T> = oneshot::Sender<Result<T, SentinelError>>;
+
+#[derive(Debug, Constructor)]
+pub struct ProcessHostArgs {
+    pub batch: EthSubmissionMaterials,
+    pub responder: Responder<()>,
+}
+
+#[derive(Debug)]
 pub enum ProcessorMessages {
     //PauseHost, // TODO
     //PauseNative, // TODO
-    ProcessHost(EthSubmissionMaterials),
+    ProcessHost(ProcessHostArgs),
     ProcessNative(EthSubmissionMaterials),
 }

@@ -1,7 +1,7 @@
 use std::result::Result;
 
 use common::DatabaseInterface;
-use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials, HostDbUtils};
+use common_eth::{append_to_blockchain, EthDbUtilsExt, EthSubmissionMaterial, EthSubmissionMaterials, HostDbUtils};
 use lib::SentinelError;
 
 fn process_host<D: DatabaseInterface>(db: &D, sub_mat: &EthSubmissionMaterial) -> Result<(), SentinelError> {
@@ -24,8 +24,15 @@ pub fn process_host_batch<D: DatabaseInterface>(
         .map(|m| process_host(db, m))
         .collect::<Result<Vec<()>, SentinelError>>();
     db.end_transaction()?;
-    info!("Finished processing host submission material!");
-    r
+    if matches!(r, Err(SentinelError::NoParent(_))) {
+        let db_utils = HostDbUtils::new(db);
+        let n = db_utils.get_latest_eth_block_number()? + 1;
+        warn!("NO PARENT ERROR IN HOST PROOCESSOR - need to restart from {n}!");
+        Err(SentinelError::SyncerRestart(n as u64))
+    } else {
+        info!("Finished processing host submission material!");
+        r
+    }
 }
 
 // TODO need a oneshot channel for a synce to throw stuff to this thread.

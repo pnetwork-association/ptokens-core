@@ -35,7 +35,7 @@ pub use self::{
     get_sub_mat::get_sub_mat,
     handle_sigint::handle_sigint,
     logging::init_logger,
-    processor_messages::ProcessorMessages,
+    processor_messages::{ProcessHostArgs, ProcessorMessages},
     syncer_messages::SyncerMessages,
 };
 
