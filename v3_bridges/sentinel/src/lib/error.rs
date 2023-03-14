@@ -1,15 +1,19 @@
 use crate::{BroadcastMessages, ProcessorMessages, SyncerMessages};
 
+// TODO wrap in a json RPC style json in the writers in here?
+
 #[derive(Debug)]
 pub enum SentinelError {
     PoisonedLock,
     Custom(String),
     SigInt(String),
     Timeout(String),
+    IO(std::io::Error),
     Common(common::AppError),
     Config(config::ConfigError),
     SerdeJson(serde_json::Error),
     MongoDb(mongodb::error::Error),
+    NoParent(common::NoParentError),
     Batching(crate::batching::Error),
     ParseInt(std::num::ParseIntError),
     Endpoint(crate::endpoints::Error),
@@ -31,6 +35,8 @@ impl std::fmt::Display for SentinelError {
             Self::Common(ref err) => write!(f, "{err}"),
             Self::JsonRpc(ref err) => write!(f, "{err}"),
             Self::RocksDb(ref err) => write!(f, "{err}"),
+            Self::NoParent(ref err) => write!(f, "{err}"),
+            Self::IO(ref err) => write!(f, "IO error: {err}"),
             Self::PoisonedLock => write!(f, "posioned lock error!"),
             Self::Config(ref err) => write!(f, "config error: {err}"),
             Self::Logger(ref err) => write!(f, "logger error: {err}"),
@@ -58,8 +64,10 @@ impl std::error::Error for SentinelError {
             Self::Custom(_) => None,
             Self::Timeout(_) => None,
             Self::Endpoint(_) => None,
+            Self::NoParent(_) => None,
             Self::Batching(_) => None,
             Self::PoisonedLock => None,
+            Self::IO(ref err) => Some(err),
             Self::Common(ref err) => Some(err),
             Self::Config(ref err) => Some(err),
             Self::Logger(ref err) => Some(err),
@@ -80,7 +88,10 @@ impl std::error::Error for SentinelError {
 
 impl From<common::errors::AppError> for SentinelError {
     fn from(err: common::errors::AppError) -> Self {
-        Self::Common(err)
+        match err {
+            common::AppError::NoParentError(e) => Self::NoParent(e),
+            _ => Self::Common(err),
+        }
     }
 }
 
@@ -171,5 +182,11 @@ impl From<common_rocksdb::RocksdbDatabaseError> for SentinelError {
 impl<T> From<std::sync::PoisonError<T>> for SentinelError {
     fn from(_: std::sync::PoisonError<T>) -> Self {
         Self::PoisonedLock
+    }
+}
+
+impl From<std::io::Error> for SentinelError {
+    fn from(err: std::io::Error) -> Self {
+        Self::IO(err)
     }
 }

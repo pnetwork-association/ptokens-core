@@ -1,8 +1,8 @@
-use std::fs::write;
+use std::{fs::write, result::Result};
 
-use anyhow::Result;
+use lib::SentinelError;
 
-pub fn write_file(s: &str, path: &str) -> Result<()> {
-    info!("[+] Writing file to path {path}");
+pub fn write_file(s: &str, path: &str) -> Result<(), SentinelError> {
+    info!("Writing file to path {path}");
     Ok(write(path, s.as_bytes())?)
 }

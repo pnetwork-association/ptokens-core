@@ -1,5 +1,6 @@
-use anyhow::Result;
-use lib::{get_latest_block_num, get_rpc_client, Endpoints};
+use std::result::Result;
+
+use lib::{get_latest_block_num, get_rpc_client, Endpoints, SentinelError};
 use serde_json::json;
 
 #[derive(Debug, Subcommand)]
@@ -11,7 +12,7 @@ pub enum GetLatestBlockNumCmd {
     GetNativeLatestBlockNum,
 }
 
-async fn get_latest_block_num_cli(endpoints: &Endpoints, is_native: bool) -> Result<String> {
+async fn get_latest_block_num_cli(endpoints: &Endpoints, is_native: bool) -> Result<String, SentinelError> {
     let endpoint = endpoints.get_first_endpoint()?;
     let ws_client = get_rpc_client(&endpoint).await?;
     let block_type = if is_native { "native" } else { "host" };
@@ -20,10 +21,10 @@ async fn get_latest_block_num_cli(endpoints: &Endpoints, is_native: bool) -> Res
     Ok(json!({ "jsonrpc": "2.0", "result": num }).to_string())
 }
 
-pub async fn get_native_latest_block_num(endpoints: &Endpoints) -> Result<String> {
+pub async fn get_native_latest_block_num(endpoints: &Endpoints) -> Result<String, SentinelError> {
     get_latest_block_num_cli(endpoints, true).await
 }
 
-pub async fn get_host_latest_block_num(endpoints: &Endpoints) -> Result<String> {
+pub async fn get_host_latest_block_num(endpoints: &Endpoints) -> Result<String, SentinelError> {
     get_latest_block_num_cli(endpoints, false).await
 }

@@ -1,6 +1,7 @@
-use anyhow::Result;
+use std::result::Result;
+
 use clap::Args;
-use lib::{get_rpc_client, get_sub_mat, Endpoints};
+use lib::{get_rpc_client, get_sub_mat, Endpoints, SentinelError};
 use serde_json::json;
 
 use crate::cli::write_file;
@@ -15,7 +16,11 @@ pub struct SubMatGetterArgs {
     pub path: Option<String>,
 }
 
-async fn get_sub_mat_cli(endpoints: &Endpoints, args: &SubMatGetterArgs, is_native: bool) -> Result<String> {
+async fn get_sub_mat_cli(
+    endpoints: &Endpoints,
+    args: &SubMatGetterArgs,
+    is_native: bool,
+) -> Result<String, SentinelError> {
     let endpoint = endpoints.get_first_endpoint()?;
     let ws_client = get_rpc_client(&endpoint).await?;
     let sub_mat_type = if is_native { "native" } else { "host" };
@@ -29,10 +34,10 @@ async fn get_sub_mat_cli(endpoints: &Endpoints, args: &SubMatGetterArgs, is_nati
     Ok(json!({ "jsonrpc": "2.0", "result": full_path }).to_string())
 }
 
-pub async fn get_native_sub_mat(endpoints: &Endpoints, args: &SubMatGetterArgs) -> Result<String> {
+pub async fn get_native_sub_mat(endpoints: &Endpoints, args: &SubMatGetterArgs) -> Result<String, SentinelError> {
     get_sub_mat_cli(endpoints, args, true).await
 }
 
-pub async fn get_host_sub_mat(endpoints: &Endpoints, args: &SubMatGetterArgs) -> Result<String> {
+pub async fn get_host_sub_mat(endpoints: &Endpoints, args: &SubMatGetterArgs) -> Result<String, SentinelError> {
     get_sub_mat_cli(endpoints, args, false).await
 }

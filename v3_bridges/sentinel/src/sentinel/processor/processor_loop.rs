@@ -39,10 +39,13 @@ pub async fn processor_loop<D: DatabaseInterface>(
                         let db = guarded_db.lock().await;
                         match process_native_batch(&*db, &material) {
                             Ok(_r) => continue 'processor_loop, // TODO send a response via a oneshot?
+                            Err(SentinelError::NoParent(e)) => {
+                                warn!("native side no parent error successfully caught!");
+                                break 'processor_loop Err(SentinelError::NoParent(e))
+                            },
                             Err(e) => {
                                 warn!("native processor err: {e}");
-                                //broadcast_tx.send(BroadcastMessages::Shutdown)?; // FIXME do we need this?
-                                break 'processor_loop Err(e)
+                                break 'processor_loop Err(e.into())
                             },
                         }
                     },
@@ -51,10 +54,13 @@ pub async fn processor_loop<D: DatabaseInterface>(
                         let db = guarded_db.lock().await;
                         match process_host_batch(&*db, &material) {
                             Ok(_r) => continue 'processor_loop, // TODO send res via oneshot1
+                            Err(SentinelError::NoParent(e)) => {
+                                warn!("host side no parent error successfully caught!");
+                                break 'processor_loop Err(SentinelError::NoParent(e))
+                            },
                             Err(e) => {
                                 warn!("host processor err: {e}");
-                                //broadcast_tx.send(BroadcastMessages::Shutdown)?;
-                                break 'processor_loop Err(e)
+                                break 'processor_loop Err(e.into())
                             },
                         };
                     },
