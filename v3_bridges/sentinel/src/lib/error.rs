@@ -2,6 +2,7 @@ use crate::{BroadcastMessages, ProcessorMessages, SyncerMessages};
 
 #[derive(Debug)]
 pub enum SentinelError {
+    PoisonedLock,
     Custom(String),
     Timeout(String),
     Common(common::AppError),
@@ -29,6 +30,7 @@ impl std::fmt::Display for SentinelError {
             Self::Common(ref err) => write!(f, "{err}"),
             Self::JsonRpc(ref err) => write!(f, "{err}"),
             Self::RocksDb(ref err) => write!(f, "{err}"),
+            Self::PoisonedLock => write!(f, "posioned lock error!"),
             Self::Config(ref err) => write!(f, "config error: {err}"),
             Self::Logger(ref err) => write!(f, "logger error: {err}"),
             Self::Timeout(ref err) => write!(f, "timeout error: {err}"),
@@ -54,6 +56,7 @@ impl std::error::Error for SentinelError {
             Self::Timeout(_) => None,
             Self::Endpoint(_) => None,
             Self::Batching(_) => None,
+            Self::PoisonedLock => None,
             Self::Common(ref err) => Some(err),
             Self::Config(ref err) => Some(err),
             Self::Logger(ref err) => Some(err),
@@ -159,5 +162,11 @@ impl From<tokio::sync::broadcast::error::SendError<ProcessorMessages>> for Senti
 impl From<common_rocksdb::RocksdbDatabaseError> for SentinelError {
     fn from(err: common_rocksdb::RocksdbDatabaseError) -> Self {
         Self::RocksDb(err)
+    }
+}
+
+impl<T> From<std::sync::PoisonError<T>> for SentinelError {
+    fn from(_: std::sync::PoisonError<T>) -> Self {
+        Self::PoisonedLock
     }
 }

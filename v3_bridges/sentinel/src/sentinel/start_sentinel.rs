@@ -18,7 +18,12 @@ use crate::sentinel::{
 
 const MAX_CHANNEL_CAPACITY: usize = 1337;
 
+use std::sync::{Arc, Mutex};
 pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelError> {
+    let db = common_rocksdb::get_db()?;
+    lib::check_init(&db)?;
+    let wrapped_db = Arc::new(Mutex::new(db));
+
     // NOTE: Set up our broadcast comms for all threads...
     let (broadcast_tx_1, broadcast_rx_1): (Sender<BroadcastMessages>, Receiver<BroadcastMessages>) =
         broadcast::channel(MAX_CHANNEL_CAPACITY);
@@ -51,7 +56,14 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
     let thread_2 =
         tokio::spawn(async move { host_syncer_loop(batch_2, broadcast_rx_2, host_syncer_rx, processor_tx_2).await });
     let thread_3 = tokio::spawn(async move {
-        processor_loop(broadcast_rx_3, processor_rx, native_syncer_tx_1, host_syncer_tx_1).await
+        processor_loop(
+            wrapped_db.clone(),
+            broadcast_rx_3,
+            processor_rx,
+            native_syncer_tx_1,
+            host_syncer_tx_1,
+        )
+        .await
     });
 
     // NOTE: Graceful shutdown upon ctrl-c...
