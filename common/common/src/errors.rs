@@ -1,7 +1,10 @@
-//! # The pToken error enum.
 quick_error! {
     #[derive(Debug)]
     pub enum AppError {
+        NoParentError(err: crate::NoParentError) {
+            from()
+            display("{err}")
+        }
         Json(err: serde_json::Value) {
             from()
             display("{}", err)

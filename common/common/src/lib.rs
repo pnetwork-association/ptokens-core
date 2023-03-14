@@ -13,8 +13,10 @@
 //! if running multiple instances on one machine.
 
 pub use crate::{
+    bridge_side::BridgeSide,
     core_type::{CoreType, V3CoreType},
     errors::AppError,
+    no_parent_error::NoParentError,
     traits::DatabaseInterface,
     types::{Bytes, Result},
     utils::get_core_version,
@@ -24,11 +26,13 @@ pub use crate::{
 #[macro_use]
 pub mod macros;
 pub mod address;
+mod bridge_side;
 pub mod constants;
 pub mod core_type;
 pub mod crypto_utils;
 pub mod dictionaries;
 pub mod errors;
+mod no_parent_error;
 pub mod test_utils;
 pub mod traits;
 pub mod types;

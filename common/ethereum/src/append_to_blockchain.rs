@@ -97,9 +97,6 @@ mod tests {
         };
         assert_eq!(hashes, expected_hashes);
 
-        use simple_logger;
-        simple_logger::init().unwrap();
-
         // Now add a block...
         append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx]).unwrap();
         last_submitted_block_idx += 1;
@@ -146,11 +143,12 @@ mod tests {
         // Now let's check that we can't add a block that's _past_ the next one...
         match append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx + 2]) {
             Ok(_) => panic!("Should not have succeeded!"),
-            Err(AppError::Json(e)) => {
-                let n = blocks[last_submitted_block_idx + 2].get_block_number().unwrap();
-                let s = e.to_string();
-                let expected_err = format!("ETH block #{n} rejected");
-                assert!(s.contains(&expected_err))
+            Err(AppError::NoParentError(e)) => {
+                let n = blocks[last_submitted_block_idx + 2]
+                    .get_block_number()
+                    .unwrap()
+                    .as_u64();
+                assert_eq!(e.block_num, n)
             },
             Err(e) => panic!("Wrong error received: {e}!"),
         }
