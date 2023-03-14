@@ -9,6 +9,7 @@ use crate::{config::Error, SentinelError};
 pub struct LogToml {
     pub path: String,
     pub level: String,
+    pub enabled: bool,
     pub max_log_size: u64,
     pub max_num_logs: usize,
     pub use_file_logging: bool,
@@ -16,6 +17,7 @@ pub struct LogToml {
 
 #[derive(Debug, Clone)]
 pub struct LogConfig {
+    enabled: bool,
     pub path: String,
     pub level: LogLevel,
     pub max_log_size: u64,
@@ -26,6 +28,7 @@ pub struct LogConfig {
 impl LogConfig {
     pub fn from_toml(toml: &LogToml) -> Result<Self, SentinelError> {
         Ok(Self {
+            enabled: toml.enabled,
             path: toml.path.clone(),
             use_file_logging: toml.use_file_logging,
             max_num_logs: Self::sanity_check_max_num_logs(toml.max_num_logs)?,
@@ -65,5 +68,9 @@ impl LogConfig {
                 min: MIN,
             }))
         }
+    }
+
+    pub fn is_enabled(&self) -> bool {
+        self.enabled
     }
 }

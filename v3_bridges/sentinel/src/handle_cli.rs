@@ -18,7 +18,9 @@ use crate::{
 
 pub async fn handle_cli() -> Result<String> {
     let config = SentinelConfig::new()?;
-    init_logger(&config.log_config)?;
+    if config.log_config.is_enabled() {
+        init_logger(&config.log_config)?;
+    };
     let cli_args = CliArgs::parse();
 
     match cli_args.sub_commands {
