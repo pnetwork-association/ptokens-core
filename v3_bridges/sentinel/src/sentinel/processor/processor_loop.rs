@@ -5,11 +5,14 @@ while let Ok(value) = receiver.try_recv() {
     println!("received {}", value);
 }
  */
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use common::DatabaseInterface;
 use lib::{BroadcastMessages, ProcessorMessages, SentinelError, SyncerMessages};
-use tokio::sync::broadcast::{Receiver, Sender};
+use tokio::sync::{
+    broadcast::{Receiver, Sender},
+    Mutex,
+};
 
 use crate::sentinel::processor::{process_host_batch, process_native_batch};
 
@@ -28,13 +31,13 @@ pub async fn processor_loop<D: DatabaseInterface>(
                 match r {
                     Ok(ProcessorMessages::ProcessNative(material)) => {
                         debug!("Processing native material...");
-                        let db = guarded_db.lock()?;
+                        let db = guarded_db.lock().await;
                         process_native_batch(&*db, &material)?;
                         continue 'processor_loop;
                     },
                     Ok(ProcessorMessages::ProcessHost(material)) => {
                         debug!("Processing host material...");
-                        let db = guarded_db.lock()?;
+                        let db = guarded_db.lock().await;
                         process_host_batch(&*db, &material)?;
                         continue 'processor_loop;
                     },

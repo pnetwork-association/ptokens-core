@@ -31,10 +31,12 @@ pub fn process_native_batch<D: DatabaseInterface>(
     batch: &EthSubmissionMaterials,
 ) -> Result<Vec<()>, SentinelError> {
     info!("Processing native batch of submission material...");
+    db.start_transaction()?;
     let r = batch
         .iter()
         .map(|m| process_native(db, m))
         .collect::<Result<Vec<()>, SentinelError>>();
+    db.end_transaction()?;
     info!("Finished processing native submission material!");
     r
 }

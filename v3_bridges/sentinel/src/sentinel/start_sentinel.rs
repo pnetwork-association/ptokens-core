@@ -1,4 +1,4 @@
-use std::result::Result;
+use std::{result::Result, sync::Arc};
 
 use futures::join;
 use lib::{Batch, BroadcastMessages, ProcessorMessages, SentinelConfig, SentinelError, SyncerMessages};
@@ -8,6 +8,7 @@ use tokio::{
     sync::{
         broadcast,
         broadcast::{Receiver, Sender},
+        Mutex,
     },
 };
 
@@ -18,7 +19,6 @@ use crate::sentinel::{
 
 const MAX_CHANNEL_CAPACITY: usize = 1337;
 
-use std::sync::{Arc, Mutex};
 pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelError> {
     let db = common_rocksdb::get_db()?;
     lib::check_init(&db)?;

@@ -16,10 +16,12 @@ pub fn process_host_batch<D: DatabaseInterface>(
     batch: &EthSubmissionMaterials,
 ) -> Result<Vec<()>, SentinelError> {
     info!("Processing host batch of submission material...");
+    db.start_transaction()?;
     let r = batch
         .iter()
         .map(|m| process_host(db, m))
         .collect::<Result<Vec<()>, SentinelError>>();
+    db.end_transaction()?;
     info!("Finished processing host submission material!");
     r
 }
