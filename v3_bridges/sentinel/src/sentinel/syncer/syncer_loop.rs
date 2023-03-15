@@ -1,13 +1,13 @@
 use std::result::Result;
 
-use lib::{get_sub_mat, Batch, BroadcastMessages, ProcessArgs, ProcessorMessages, SentinelError, SyncerMessages};
+use lib::{get_sub_mat, Batch, ProcessArgs, ProcessorMessages, SentinelError};
 use tokio::{
-    sync::{broadcast::Receiver as BroadcasterRx, mpsc::Sender as MpscTx, oneshot},
+    sync::{mpsc::Sender as MpscTx, oneshot},
     time::{sleep, Duration},
 };
 
 async fn main_loop(mut batch: Batch, processor_tx: MpscTx<ProcessorMessages>) -> Result<(), SentinelError> {
-    let log_prefix = format!("{} syncer", batch.get_side());
+    let log_prefix = format!("{} syncer", batch.side());
     let ws_client = batch.get_rpc_client().await?;
     let sleep_duration = batch.get_sleep_duration();
 
@@ -58,33 +58,10 @@ async fn main_loop(mut batch: Batch, processor_tx: MpscTx<ProcessorMessages>) ->
     }
 }
 
-pub async fn native_syncer_loop(
-    mut batch: Batch,
-    _broadcast_rx: BroadcasterRx<BroadcastMessages>,
-    _syncer_rx: BroadcasterRx<SyncerMessages>,
-    processor_tx: MpscTx<ProcessorMessages>,
-) -> Result<(), SentinelError> {
+pub async fn syncer_loop(mut batch: Batch, processor_tx: MpscTx<ProcessorMessages>) -> Result<(), SentinelError> {
     let block_num = 16778137; // FIXME get this from the core!
-    let side = batch.get_side();
-    batch.set_block_num(block_num);
-
-    tokio::select! {
-        res = main_loop(batch, processor_tx) => res,
-        _ = tokio::signal::ctrl_c() => {
-            warn!("{side} syncer shutting down...");
-            Err(SentinelError::SigInt("{side} syncer".into()))
-        },
-    }
-}
-
-pub async fn host_syncer_loop(
-    mut batch: Batch,
-    _broadcast_rx: BroadcasterRx<BroadcastMessages>,
-    _syncer_rx: BroadcasterRx<SyncerMessages>,
-    processor_tx: MpscTx<ProcessorMessages>,
-) -> Result<(), SentinelError> {
-    let block_num = 16778137; // FIXME get this from the core!
-    let side = batch.get_side();
+                              //
+    let side = batch.side();
     batch.set_block_num(block_num);
 
     tokio::select! {

@@ -1,5 +1,6 @@
 use std::{result::Result, sync::Arc};
 
+use common::BridgeSide;
 use lib::{
     flatten_join_handle,
     Batch,
@@ -18,10 +19,7 @@ use tokio::sync::{
     Mutex,
 };
 
-use crate::sentinel::{
-    processor_loop,
-    syncer::{host_syncer_loop, native_syncer_loop},
-};
+use crate::sentinel::{processor_loop, syncer::syncer_loop};
 
 const MAX_CHANNEL_CAPACITY: usize = 1337;
 
@@ -31,39 +29,30 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
     let wrapped_db = Arc::new(Mutex::new(db));
 
     // NOTE: Set up our broadcast comms for all threads...
-    let (broadcast_tx_1, broadcast_rx_1): (BroadcastTx<BroadcastMessages>, BroadcastRx<BroadcastMessages>) =
+    let (broadcast_tx_1, _): (BroadcastTx<BroadcastMessages>, BroadcastRx<BroadcastMessages>) =
         broadcast::channel(MAX_CHANNEL_CAPACITY);
     let _broadcast_tx_2 = broadcast_tx_1.clone();
     let broadcast_tx_3 = broadcast_tx_1.clone();
-    let broadcast_rx_2 = broadcast_tx_1.subscribe();
     let broadcast_rx_3 = broadcast_tx_1.subscribe();
-    let (native_syncer_tx_1, native_syncer_rx): (BroadcastTx<SyncerMessages>, BroadcastRx<SyncerMessages>) =
+    let (native_syncer_tx_1, _): (BroadcastTx<SyncerMessages>, BroadcastRx<SyncerMessages>) =
         broadcast::channel(MAX_CHANNEL_CAPACITY);
-    let (host_syncer_tx_1, host_syncer_rx): (BroadcastTx<SyncerMessages>, BroadcastRx<SyncerMessages>) =
+    let (host_syncer_tx_1, _): (BroadcastTx<SyncerMessages>, BroadcastRx<SyncerMessages>) =
         broadcast::channel(MAX_CHANNEL_CAPACITY);
 
     let (processor_tx_1, processor_rx): (MpscTx<ProcessorMessages>, MpscRx<ProcessorMessages>) =
         mpsc::channel(MAX_CHANNEL_CAPACITY);
     let processor_tx_2 = processor_tx_1.clone();
 
-    let batch_1 = Batch::new_from_config(true, config)?;
-    let batch_2 = Batch::new_from_config(false, config)?;
-
-    let thread_1 = tokio::spawn(native_syncer_loop(
-        batch_1,
-        broadcast_rx_1,
-        native_syncer_rx,
+    // NOTE: Set off our threads
+    let native_syncer_thread = tokio::spawn(syncer_loop(
+        Batch::new_from_config(BridgeSide::Native, config)?,
         processor_tx_1,
     ));
-
-    let thread_2 = tokio::spawn(host_syncer_loop(
-        batch_2,
-        broadcast_rx_2,
-        host_syncer_rx,
+    let host_syncer_thread = tokio::spawn(syncer_loop(
+        Batch::new_from_config(BridgeSide::Host, config)?,
         processor_tx_2,
     ));
-
-    let thread_3 = tokio::spawn(processor_loop(
+    let processor_thread = tokio::spawn(processor_loop(
         wrapped_db.clone(),
         broadcast_tx_3,
         broadcast_rx_3,
@@ -73,13 +62,13 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
     ));
 
     match tokio::try_join!(
-        flatten_join_handle(thread_1),
-        flatten_join_handle(thread_2),
-        flatten_join_handle(thread_3),
+        flatten_join_handle(native_syncer_thread),
+        flatten_join_handle(host_syncer_thread),
+        flatten_join_handle(processor_thread),
     ) {
         Ok((res_1, res_2, res_3)) => Ok(json!({
             "jsonrpc": "2.0",
-            "result": { "thread_1": res_1, "thread_2": res_2, "thread_3": res_3},
+            "result": { "native_syncer_thread": res_1, "host_syncer_thread": res_2, "processor_thread": res_3},
         })
         .to_string()),
         Err(SentinelError::SigInt(_)) => Ok(json!({

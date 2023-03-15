@@ -10,8 +10,8 @@ use crate::{config::Config, endpoints::Endpoints, SentinelError};
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Batch {
     block_num: u64,
-    is_native: bool,
     batch_size: u64,
+    side: BridgeSide,
     sleep_duration: u64,
     batch_duration: u64,
     endpoints: Endpoints,
@@ -26,10 +26,10 @@ impl Default for Batch {
         Self {
             block_num: 0,
             batch_size: 1,
-            is_native: true,
             sleep_duration: 0,
             batch_duration: 300, // NOTE: 5mins
             contract_addresses: vec![],
+            side: BridgeSide::default(),
             batching_is_disabled: false,
             endpoints: Endpoints::default(),
             batch: EthSubmissionMaterials::default(),
@@ -39,12 +39,8 @@ impl Default for Batch {
 }
 
 impl Batch {
-    pub fn get_side(&self) -> BridgeSide {
-        if self.is_native() {
-            BridgeSide::Native
-        } else {
-            BridgeSide::Host
-        }
+    pub fn side(&self) -> BridgeSide {
+        self.side
     }
 
     pub fn increment_block_num(&mut self) {
@@ -68,21 +64,22 @@ impl Batch {
     }
 
     pub fn is_native(&self) -> bool {
-        self.is_native
+        self.side.is_native()
     }
 
     pub fn is_host(&self) -> bool {
-        !self.is_native
+        self.side.is_host()
     }
 
     pub fn get_sleep_duration(&self) -> u64 {
         self.sleep_duration
     }
 
-    pub fn new_from_config(is_native: bool, config: &Config) -> Result<Self, SentinelError> {
+    pub fn new_from_config(side: BridgeSide, config: &Config) -> Result<Self, SentinelError> {
         info!("Getting Batch from config...");
+        let is_native = side.is_native();
         let res = Self {
-            is_native,
+            side,
             sleep_duration: if is_native {
                 config.native_config.get_sleep_duration()
             } else {
@@ -393,18 +390,19 @@ mod tests {
 
     #[test]
     fn should_get_native_side_correctly() {
-        let batch = Batch::default();
+        let mut batch = Batch::default();
+        batch.side = BridgeSide::Native;
         let expected_result = BridgeSide::Native;
-        let result = batch.get_side();
+        let result = batch.side();
         assert_eq!(result, expected_result);
     }
 
     #[test]
     fn should_get_host_side_correctly() {
         let mut batch = Batch::default();
-        batch.is_native = false;
+        batch.side = BridgeSide::Host;
         let expected_result = BridgeSide::Host;
-        let result = batch.get_side();
+        let result = batch.side();
         assert_eq!(result, expected_result);
     }
 }
