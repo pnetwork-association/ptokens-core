@@ -13,7 +13,7 @@ use serde_json::{json, Value as JsonValue};
 
 use crate::{EthBlock, EthBlockJson, EthReceipt, EthReceiptJson, EthReceipts, EthState};
 
-#[derive(Clone, Debug, PartialEq, Eq, Deref, DerefMut, Constructor, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Default, Deref, DerefMut, Constructor, Deserialize, Serialize)]
 pub struct EthSubmissionMaterials(Vec<EthSubmissionMaterial>);
 
 impl FromStr for EthSubmissionMaterials {
