@@ -16,24 +16,24 @@ use tokio::{
 };
 
 async fn host_loop(
-    log_prefix: &str,
     mut batch: Batch,
     processor_tx: MpscTx<ProcessorMessages>,
     _host_syncer_rx: BroadcasterRx<SyncerMessages>,
 ) -> Result<(), SentinelError> {
+    let log_prefix = if batch.is_native() { "native" } else { "host" };
     let ws_client = batch.get_rpc_client().await?;
     let sleep_duration = batch.get_sleep_duration();
-    let mut block_num = 16778137;
+    let mut block_num = 16778137; // TODO get block num from db! Or store it in the batch?
 
-    'host_loop: loop {
+    'main_loop: loop {
         match get_sub_mat(&ws_client, block_num).await {
             Ok(block) => {
                 batch.push(block);
-
                 if !batch.is_ready_to_submit() {
                     block_num += 1;
-                    continue 'host_loop;
+                    continue 'main_loop;
                 } else {
+                    // TODO check if batch is chained correctly!
                     info!("{log_prefix} batch is ready to submit!");
                     let (resp_tx, resp_rx) = oneshot::channel();
                     let args = ProcessHostArgs::new(batch.to_submission_material(), resp_tx);
@@ -42,28 +42,27 @@ async fn host_loop(
                         Ok(_) => {
                             debug!("host oneshot channel returned ok");
                             block_num += 1;
-                            batch.drain();
-                            continue 'host_loop;
                         },
                         Err(SentinelError::SyncerRestart(n)) => {
-                            warn!("host oneshot channel returned a syncer restart  err {n}");
+                            warn!("host oneshot channel returned a syncer restart err {n}");
                             block_num = n;
-                            batch.drain();
-                            continue 'host_loop;
                         },
                         Err(e) => {
                             warn!("host oneshot channel returned err {e}");
-                            break 'host_loop Err(e.into());
+                            break 'main_loop Err(e);
                         },
-                    }
+                    };
+
+                    batch.drain();
+                    continue 'main_loop;
                 }
             },
             Err(SentinelError::NoBlock(_)) => {
-                info!("{log_prefix} No next block yet - sleeping for {sleep_duration}ms...");
+                info!("{log_prefix} no next block yet - sleeping for {sleep_duration}ms...");
                 sleep(Duration::from_millis(sleep_duration)).await;
-                continue 'host_loop;
+                continue 'main_loop;
             },
-            Err(e) => break Err(e),
+            Err(e) => break 'main_loop Err(e),
         }
     }
 }
@@ -137,7 +136,7 @@ pub async fn host_syncer_loop(
     let log_prefix = "host_syncer:";
 
     tokio::select! {
-        res = host_loop(log_prefix, batch, processor_tx, syncer_rx) => res,
+        res = host_loop(batch, processor_tx, syncer_rx) => res,
         _ = tokio::signal::ctrl_c() => {
             warn!("{log_prefix} shutting down...");
             Err(SentinelError::SigInt("host syncer".into()))

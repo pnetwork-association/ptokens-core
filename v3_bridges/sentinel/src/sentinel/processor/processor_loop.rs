@@ -50,7 +50,7 @@ pub async fn processor_loop<D: DatabaseInterface>(
                             },
                             Err(e) => {
                                 warn!("host processor err: {e}");
-                                break 'processor_loop Err(e.into())
+                                break 'processor_loop Err(e)
                             },
                         };
                     },
@@ -71,7 +71,7 @@ pub async fn processor_loop<D: DatabaseInterface>(
                             },
                             Err(e) => {
                                 warn!("native processor err: {e}");
-                                break 'processor_loop Err(e.into())
+                                break 'processor_loop Err(e)
                             },
                         }
                     },
