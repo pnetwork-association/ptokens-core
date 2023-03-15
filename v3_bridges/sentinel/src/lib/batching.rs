@@ -8,20 +8,22 @@ use crate::{config::Config, endpoints::Endpoints, SentinelError};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Batch {
+    block_num: u64,
     is_native: bool,
     batch_size: u64,
     sleep_duration: u64,
     batch_duration: u64,
     endpoints: Endpoints,
     batching_is_disabled: bool,
-    last_submitted: SystemTime,
     batch: EthSubmissionMaterials,
     contract_addresses: Vec<EthAddress>,
+    last_submitted_timestamp: SystemTime,
 }
 
 impl Default for Batch {
     fn default() -> Self {
         Self {
+            block_num: 0,
             batch_size: 1,
             is_native: true,
             sleep_duration: 0,
@@ -29,13 +31,25 @@ impl Default for Batch {
             contract_addresses: vec![],
             batching_is_disabled: false,
             endpoints: Endpoints::default(),
-            last_submitted: SystemTime::now(),
-            batch: EthSubmissionMaterials::new(vec![]),
+            batch: EthSubmissionMaterials::default(),
+            last_submitted_timestamp: SystemTime::now(),
         }
     }
 }
 
 impl Batch {
+    pub fn increment_block_num(&mut self) {
+        self.block_num += 1;
+    }
+
+    pub fn set_block_num(&mut self, n: u64) {
+        self.block_num = n;
+    }
+
+    pub fn get_block_num(&self) -> u64 {
+        self.block_num
+    }
+
     pub fn new() -> Self {
         Self::default()
     }
@@ -99,11 +113,11 @@ impl Batch {
     }
 
     pub fn set_time_of_last_submission(&mut self) {
-        self.last_submitted = SystemTime::now();
+        self.last_submitted_timestamp = SystemTime::now();
     }
 
     pub fn get_time_of_last_submission(&self) -> SystemTime {
-        self.last_submitted
+        self.last_submitted_timestamp
     }
 
     pub fn push(&mut self, sub_mat: EthSubmissionMaterial) {
@@ -137,7 +151,7 @@ impl Batch {
             );
             return true;
         }
-        if let Ok(t) = self.last_submitted.elapsed() {
+        if let Ok(t) = self.last_submitted_timestamp.elapsed() {
             let res = t.as_secs() >= self.batch_duration;
             if res {
                 info!("[+] Ready to submit because enough time has elapsed");
@@ -349,5 +363,22 @@ mod tests {
             Err(SentinelError::Batching(e)) => assert_eq!(e, expected_error),
             Err(e) => panic!("Wrong error received: {e}"),
         }
+    }
+
+    #[test]
+    fn should_get_and_set_block_num() {
+        let mut batch = Batch::default();
+        assert_eq!(batch.get_block_num(), 0);
+        let n = 1337;
+        batch.set_block_num(n);
+        assert_eq!(batch.get_block_num(), n);
+    }
+
+    #[test]
+    fn should_increment_block_num() {
+        let mut batch = Batch::default();
+        assert_eq!(batch.get_block_num(), 0);
+        batch.increment_block_num();
+        assert_eq!(batch.get_block_num(), 1);
     }
 }
