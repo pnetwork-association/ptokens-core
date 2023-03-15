@@ -61,11 +61,12 @@ async fn main_loop(mut batch: Batch, processor_tx: MpscTx<ProcessorMessages>) ->
 pub async fn syncer_loop(
     mut batch: Batch,
     processor_tx: MpscTx<ProcessorMessages>,
-    _core_accessor_tx: MpscTx<CoreAccessorMessages>,
+    core_accessor_tx: MpscTx<CoreAccessorMessages>,
 ) -> Result<(), SentinelError> {
-    let block_num = 16778137; // FIXME get this from the core!
     let side = batch.side();
-    batch.set_block_num(block_num);
+    let (msg, rx) = CoreAccessorMessages::get_latest_block_num_msg(&batch.side());
+    core_accessor_tx.send(msg).await?;
+    batch.set_block_num(rx.await?? + 1);
 
     tokio::select! {
         res = main_loop(batch, processor_tx) => res,
