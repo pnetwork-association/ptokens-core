@@ -2,7 +2,8 @@ use std::result::Result;
 
 use common::DatabaseInterface;
 use common_eth::{append_to_blockchain, EthDbUtilsExt, EthSubmissionMaterial, EthSubmissionMaterials, HostDbUtils};
-use lib::SentinelError;
+use lib::{MongoAccessorMessages, SentinelError};
+use tokio::sync::mpsc::Sender as MpscTx;
 
 fn process_host<D: DatabaseInterface>(db: &D, sub_mat: &EthSubmissionMaterial) -> Result<(), SentinelError> {
     let n = sub_mat.get_block_number()?;
@@ -21,6 +22,7 @@ fn process_host<D: DatabaseInterface>(db: &D, sub_mat: &EthSubmissionMaterial) -
 pub fn process_host_batch<D: DatabaseInterface>(
     db: &D,
     batch: &EthSubmissionMaterials,
+    _mongo_accessor_tx: MpscTx<MongoAccessorMessages>,
 ) -> Result<Vec<()>, SentinelError> {
     info!("Processing host batch of submission material...");
     db.start_transaction()?;

@@ -32,7 +32,15 @@ pub use self::{
     get_sub_mat::get_sub_mat,
     handle_sigint::handle_sigint,
     logging::init_logger,
-    messages::{BroadcasterMessages, CoreAccessorMessages, ProcessArgs, ProcessorMessages, Responder, SyncerMessages},
+    messages::{
+        BroadcasterMessages,
+        CoreAccessorMessages,
+        MongoAccessorMessages,
+        ProcessArgs,
+        ProcessorMessages,
+        Responder,
+        SyncerMessages,
+    },
 };
 
 #[macro_use]

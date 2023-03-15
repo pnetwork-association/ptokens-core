@@ -2,7 +2,8 @@ use std::result::Result;
 
 use common::DatabaseInterface;
 use common_eth::{append_to_blockchain, EthDbUtilsExt, EthSubmissionMaterial, EthSubmissionMaterials, NativeDbUtils};
-use lib::SentinelError;
+use lib::{MongoAccessorMessages, SentinelError};
+use tokio::sync::mpsc::Sender as MspcTx;
 
 fn process_native<D: DatabaseInterface>(db: &D, sub_mat: &EthSubmissionMaterial) -> Result<(), SentinelError> {
     let n = sub_mat.get_block_number()?;
@@ -21,6 +22,7 @@ fn process_native<D: DatabaseInterface>(db: &D, sub_mat: &EthSubmissionMaterial)
 pub fn process_native_batch<D: DatabaseInterface>(
     db: &D,
     batch: &EthSubmissionMaterials,
+    _mongo_accessor_tx: MspcTx<MongoAccessorMessages>,
 ) -> Result<Vec<()>, SentinelError> {
     info!("Processing native batch of submission material...");
     db.start_transaction()?;
