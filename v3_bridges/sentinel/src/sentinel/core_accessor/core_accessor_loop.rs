@@ -2,7 +2,7 @@ use std::{result::Result, sync::Arc};
 
 use common::DatabaseInterface;
 use common_eth::{EthDbUtilsExt, HostDbUtils, NativeDbUtils};
-use lib::{CoreAccessorMessages, SentinelError};
+use lib::{CoreAccessorMessages, CoreState, SentinelError};
 use tokio::sync::{mpsc::Receiver as MpscRx, Mutex};
 
 async fn process_message<D: DatabaseInterface>(
@@ -10,6 +10,7 @@ async fn process_message<D: DatabaseInterface>(
     msg: CoreAccessorMessages,
 ) -> Result<(), SentinelError> {
     let db = guarded_db.lock().await;
+
     match msg {
         CoreAccessorMessages::GetHostLatestBlockNumber(responder) => {
             let n = HostDbUtils::new(&*db).get_latest_eth_block_number()?;
@@ -18,6 +19,10 @@ async fn process_message<D: DatabaseInterface>(
         CoreAccessorMessages::GetNativeLatestBlockNumber(responder) => {
             let n = NativeDbUtils::new(&*db).get_latest_eth_block_number()?;
             let _ = responder.send(Ok(n as u64));
+        },
+        CoreAccessorMessages::GetCoreState((core_type, responder)) => {
+            let r = CoreState::get(&*db, &core_type)?;
+            let _ = responder.send(Ok(r));
         },
     }
 

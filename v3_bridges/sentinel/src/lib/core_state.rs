@@ -8,7 +8,7 @@ use serde_json::{json, Value as JsonValue};
 
 use crate::SentinelError;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CoreState {
     info: EnclaveInfo,
     int: EthEnclaveState,
