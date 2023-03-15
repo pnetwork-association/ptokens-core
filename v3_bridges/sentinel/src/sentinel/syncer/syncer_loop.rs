@@ -1,6 +1,6 @@
 use std::result::Result;
 
-use lib::{get_sub_mat, Batch, ProcessArgs, ProcessorMessages, SentinelError};
+use lib::{get_sub_mat, Batch, CoreAccessorMessages, ProcessArgs, ProcessorMessages, SentinelError};
 use tokio::{
     sync::{mpsc::Sender as MpscTx, oneshot},
     time::{sleep, Duration},
@@ -58,9 +58,12 @@ async fn main_loop(mut batch: Batch, processor_tx: MpscTx<ProcessorMessages>) ->
     }
 }
 
-pub async fn syncer_loop(mut batch: Batch, processor_tx: MpscTx<ProcessorMessages>) -> Result<(), SentinelError> {
+pub async fn syncer_loop(
+    mut batch: Batch,
+    processor_tx: MpscTx<ProcessorMessages>,
+    _core_accessor_tx: MpscTx<CoreAccessorMessages>,
+) -> Result<(), SentinelError> {
     let block_num = 16778137; // FIXME get this from the core!
-                              //
     let side = batch.side();
     batch.set_block_num(block_num);
 

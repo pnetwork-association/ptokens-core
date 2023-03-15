@@ -1,4 +1,4 @@
-use crate::{BroadcastMessages, ProcessorMessages, SyncerMessages};
+use crate::{BroadcasterMessages, ProcessorMessages, SyncerMessages};
 
 // TODO wrap in a json RPC style json in the writers in here?
 
@@ -30,7 +30,7 @@ pub enum SentinelError {
     SyncerChannel(Box<tokio::sync::broadcast::error::SendError<SyncerMessages>>),
     //ProcessorChannel(Box<tokio::sync::broadcast::error::SendError<ProcessorMessages>>),
     ProcessorChannel(Box<tokio::sync::mpsc::error::SendError<ProcessorMessages>>),
-    BroadcastChannel(Box<tokio::sync::broadcast::error::SendError<BroadcastMessages>>),
+    BroadcastChannel(Box<tokio::sync::broadcast::error::SendError<BroadcasterMessages>>),
 }
 
 impl std::fmt::Display for SentinelError {
@@ -162,8 +162,8 @@ impl From<config::ConfigError> for SentinelError {
     }
 }
 
-impl From<tokio::sync::broadcast::error::SendError<BroadcastMessages>> for SentinelError {
-    fn from(err: tokio::sync::broadcast::error::SendError<BroadcastMessages>) -> Self {
+impl From<tokio::sync::broadcast::error::SendError<BroadcasterMessages>> for SentinelError {
+    fn from(err: tokio::sync::broadcast::error::SendError<BroadcasterMessages>) -> Self {
         Self::BroadcastChannel(Box::new(err))
     }
 }

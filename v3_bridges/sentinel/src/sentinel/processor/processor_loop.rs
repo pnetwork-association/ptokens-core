@@ -8,7 +8,7 @@ while let Ok(value) = receiver.try_recv() {
 use std::sync::Arc;
 
 use common::DatabaseInterface;
-use lib::{BroadcastMessages, ProcessorMessages, SentinelError, SyncerMessages};
+use lib::{BroadcasterMessages, ProcessorMessages, SentinelError, SyncerMessages};
 use tokio::sync::{
     broadcast::{Receiver, Sender},
     mpsc::Receiver as MpscRx,
@@ -19,8 +19,8 @@ use crate::sentinel::processor::{process_host_batch, process_native_batch};
 
 pub async fn processor_loop<D: DatabaseInterface>(
     guarded_db: Arc<Mutex<D>>,
-    _broadcast_tx: Sender<BroadcastMessages>,
-    mut broadcast_rx: Receiver<BroadcastMessages>,
+    _broadcast_tx: Sender<BroadcasterMessages>,
+    mut broadcast_rx: Receiver<BroadcasterMessages>,
     mut processor_rx: MpscRx<ProcessorMessages>,
     _host_syncer_tx: Sender<SyncerMessages>,
     _native_syncer_tx: Sender<SyncerMessages>,
@@ -81,7 +81,7 @@ pub async fn processor_loop<D: DatabaseInterface>(
             },
             r = broadcast_rx.recv() => {
                 match r {
-                    Ok(BroadcastMessages::Shutdown) => {
+                    Ok(BroadcasterMessages::Shutdown) => {
                         warn!("processor gracefully shutting down...");
                         break 'processor_loop Ok::<(), SentinelError>(())
                     },
