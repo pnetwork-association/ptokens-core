@@ -1,7 +1,7 @@
 use std::result::Result;
 
 use common::DatabaseInterface;
-use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials, NativeDbUtils};
+use common_eth::{append_to_blockchain, EthDbUtilsExt, EthSubmissionMaterial, EthSubmissionMaterials, NativeDbUtils};
 use lib::SentinelError;
 
 fn process_native<D: DatabaseInterface>(db: &D, sub_mat: &EthSubmissionMaterial) -> Result<(), SentinelError> {
@@ -10,20 +10,9 @@ fn process_native<D: DatabaseInterface>(db: &D, sub_mat: &EthSubmissionMaterial)
     append_to_blockchain(&db_utils, sub_mat)?;
 
     if sub_mat.receipts.is_empty() {
-        // TODO still need to do some chain stuff!
         warn!("Native block {n} had no receipts to process!");
         Ok(())
     } else {
-        // TODO Real! pipeline
-        // validate receipts
-        // filter receipts down to only ones we care about
-        //
-        // append to blockchain
-        //
-        // TODO the stuff we care about!! parse txs, save stuff in db(s)! (this could be where the
-        // maybe stuff happens
-        //
-        // remove_receipts_from_eth_canon_block
         debug!("Finished processing native block {n}!");
         Ok(())
     }
@@ -41,7 +30,16 @@ pub fn process_native_batch<D: DatabaseInterface>(
         .collect::<Result<Vec<()>, SentinelError>>();
     db.end_transaction()?;
     info!("Finished processing native submission material!");
-    r
+
+    if matches!(r, Err(SentinelError::NoParent(_))) {
+        let db_utils = NativeDbUtils::new(db);
+        let n = db_utils.get_latest_eth_block_number()? + 1;
+        warn!("NO PARENT ERROR IN NATIVE PROOCESSOR - need to restart from {n}!");
+        Err(SentinelError::SyncerRestart(n as u64))
+    } else {
+        info!("Finished processing host submission material!");
+        r
+    }
 }
 
 // TODO need a oneshot channel for a synce to throw stuff to this thread.

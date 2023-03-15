@@ -10,7 +10,7 @@ use crate::SentinelError;
 pub type Responder<T> = oneshot::Sender<Result<T, SentinelError>>;
 
 #[derive(Debug, Constructor)]
-pub struct ProcessHostArgs {
+pub struct ProcessArgs {
     pub batch: EthSubmissionMaterials,
     pub responder: Responder<()>,
 }
@@ -19,6 +19,6 @@ pub struct ProcessHostArgs {
 pub enum ProcessorMessages {
     //PauseHost, // TODO
     //PauseNative, // TODO
-    ProcessHost(ProcessHostArgs),
-    ProcessNative(EthSubmissionMaterials),
+    ProcessHost(ProcessArgs),
+    ProcessNative(ProcessArgs),
 }

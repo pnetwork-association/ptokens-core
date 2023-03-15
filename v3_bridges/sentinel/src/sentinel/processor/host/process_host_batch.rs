@@ -9,8 +9,13 @@ fn process_host<D: DatabaseInterface>(db: &D, sub_mat: &EthSubmissionMaterial) -
     let db_utils = HostDbUtils::new(db);
     append_to_blockchain(&db_utils, sub_mat)?;
 
-    debug!("Finished processing host block {n}!");
-    Ok(())
+    if sub_mat.receipts.is_empty() {
+        warn!("Native block {n} had no receipts to process!");
+        Ok(())
+    } else {
+        debug!("Finished processing native block {n}!");
+        Ok(())
+    }
 }
 
 pub fn process_host_batch<D: DatabaseInterface>(

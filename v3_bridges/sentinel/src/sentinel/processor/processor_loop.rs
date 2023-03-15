@@ -54,23 +54,21 @@ pub async fn processor_loop<D: DatabaseInterface>(
                             },
                         };
                     },
-
-
-
-
-
-                    // TODO the rest!
-                    Some(ProcessorMessages::ProcessNative(material)) => {
+                    Some(ProcessorMessages::ProcessNative(args)) => {
                         debug!("Processing native material...");
                         let db = guarded_db.lock().await;
-                        match process_native_batch(&*db, &material) {
-                            Ok(_r) => continue 'processor_loop, // TODO send a response via a oneshot?
-                            Err(SentinelError::NoParent(e)) => {
-                                warn!("native side no parent error successfully caught!");
-                                break 'processor_loop Err(SentinelError::NoParent(e))
+                        match process_native_batch(&*db, &args.batch) {
+                            Ok(_r) => {
+                                let _ = args.responder.send(Ok(())); // Send an OK response so syncer can continue...
+                                continue 'processor_loop
+                            },
+                            Err(SentinelError::SyncerRestart(n)) => {
+                                warn!("host side no parent error successfully caught and returned to syncer");
+                                let _ = args.responder.send(Err(SentinelError::SyncerRestart(n)));
+                                continue 'processor_loop
                             },
                             Err(e) => {
-                                warn!("native processor err: {e}");
+                                warn!("host processor err: {e}");
                                 break 'processor_loop Err(e)
                             },
                         }
