@@ -7,7 +7,7 @@ use tokio::{
 };
 
 async fn main_loop(mut batch: Batch, processor_tx: MpscTx<ProcessorMessages>) -> Result<(), SentinelError> {
-    let log_prefix = format!("{} syncer", if batch.is_native() { "native" } else { "host" });
+    let log_prefix = format!("{} syncer", batch.get_side());
     let ws_client = batch.get_rpc_client().await?;
     let sleep_duration = batch.get_sleep_duration();
 
@@ -65,13 +65,14 @@ pub async fn native_syncer_loop(
     processor_tx: MpscTx<ProcessorMessages>,
 ) -> Result<(), SentinelError> {
     let block_num = 16778137; // FIXME get this from the core!
+    let side = batch.get_side();
     batch.set_block_num(block_num);
 
     tokio::select! {
         res = main_loop(batch, processor_tx) => res,
         _ = tokio::signal::ctrl_c() => {
-            warn!("native syncer shutting down...");
-            Err(SentinelError::SigInt("native syncer".into()))
+            warn!("{side} syncer shutting down...");
+            Err(SentinelError::SigInt("{side} syncer".into()))
         },
     }
 }
@@ -83,13 +84,14 @@ pub async fn host_syncer_loop(
     processor_tx: MpscTx<ProcessorMessages>,
 ) -> Result<(), SentinelError> {
     let block_num = 16778137; // FIXME get this from the core!
+    let side = batch.get_side();
     batch.set_block_num(block_num);
 
     tokio::select! {
         res = main_loop(batch, processor_tx) => res,
         _ = tokio::signal::ctrl_c() => {
-            warn!("host syncer shutting down...");
-            Err(SentinelError::SigInt("host syncer".into()))
+            warn!("{side} syncer shutting down...");
+            Err(SentinelError::SigInt("{side} syncer".into()))
         },
     }
 }

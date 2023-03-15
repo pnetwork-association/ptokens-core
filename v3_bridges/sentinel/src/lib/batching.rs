@@ -1,5 +1,6 @@
 use std::{result::Result, time::SystemTime};
 
+use common::BridgeSide;
 use common_eth::{EthSubmissionMaterial, EthSubmissionMaterials};
 use ethereum_types::{Address as EthAddress, U256};
 use jsonrpsee::ws_client::WsClient;
@@ -38,6 +39,14 @@ impl Default for Batch {
 }
 
 impl Batch {
+    pub fn get_side(&self) -> BridgeSide {
+        if self.is_native() {
+            BridgeSide::Native
+        } else {
+            BridgeSide::Host
+        }
+    }
+
     pub fn increment_block_num(&mut self) {
         self.block_num += 1;
     }
@@ -380,5 +389,22 @@ mod tests {
         assert_eq!(batch.get_block_num(), 0);
         batch.increment_block_num();
         assert_eq!(batch.get_block_num(), 1);
+    }
+
+    #[test]
+    fn should_get_native_side_correctly() {
+        let batch = Batch::default();
+        let expected_result = BridgeSide::Native;
+        let result = batch.get_side();
+        assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    fn should_get_host_side_correctly() {
+        let mut batch = Batch::default();
+        batch.is_native = false;
+        let expected_result = BridgeSide::Host;
+        let result = batch.get_side();
+        assert_eq!(result, expected_result);
     }
 }
