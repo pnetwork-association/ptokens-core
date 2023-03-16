@@ -123,7 +123,7 @@ pub use self::{
         EvmDbUtils,
         EvmDbUtils as HostDbUtils,
     },
-    eth_enclave_state::{EthEnclaveState, EvmEnclaveState},
+    eth_enclave_state::{NativeCoreState, HostCoreState, EthEnclaveState, EvmEnclaveState},
     eth_log::{EthLog, EthLogExt, EthLogs},
     eth_message_signer::{
         sign_ascii_msg_with_eth_key_with_no_prefix,

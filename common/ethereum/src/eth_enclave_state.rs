@@ -24,24 +24,24 @@ macro_rules! make_enclave_state_struct {
 
             #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
             pub struct $name {
-                [<$prefix _gas_price>]: u64,
-                [<$prefix _chain_id>]: u64,
-                [<$prefix _address>]: String,
-                [<$prefix _tail_length>]: u64,
+                [<$prefix:lower _gas_price>]: u64,
+                [<$prefix:lower _chain_id>]: u64,
+                [<$prefix:lower _address>]: String,
+                [<$prefix:lower _tail_length>]: u64,
                 any_sender_nonce: u64,
-                [<$prefix _account_nonce>]: u64,
-                [<$prefix _linker_hash>]: String,
-                [<$prefix _safe_address>]: String,
-                [<$prefix _tail_block_hash>]: String,
-                [<$prefix _canon_to_tip_length>]: u64,
-                [<$prefix _tail_block_number>]: usize,
-                [<$prefix _canon_block_hash>]: String,
-                [<$prefix _anchor_block_hash>]: String,
-                [<$prefix _latest_block_hash>]: String,
-                [<$prefix _canon_block_number>]: usize,
-                [<$prefix _anchor_block_number>]: usize,
-                [<$prefix _latest_block_number>]: usize,
-                [<$prefix _core_is_validating>]: bool,
+                [<$prefix:lower _account_nonce>]: u64,
+                [<$prefix:lower _linker_hash>]: String,
+                [<$prefix:lower _safe_address>]: String,
+                [<$prefix:lower _tail_block_hash>]: String,
+                [<$prefix:lower _canon_to_tip_length>]: u64,
+                [<$prefix:lower _tail_block_number>]: usize,
+                [<$prefix:lower _canon_block_hash>]: String,
+                [<$prefix:lower _anchor_block_hash>]: String,
+                [<$prefix:lower _latest_block_hash>]: String,
+                [<$prefix:lower _canon_block_number>]: usize,
+                [<$prefix:lower _anchor_block_number>]: usize,
+                [<$prefix:lower _latest_block_number>]: usize,
+                [<$prefix:lower _core_is_validating>]: bool,
                 smart_contract_address: String,
                 router_contract_address: String,
                 erc777_proxy_contract_address: String,
@@ -54,50 +54,55 @@ macro_rules! make_enclave_state_struct {
                     router_address: Option<EthAddress>,
                 ) -> Result<Self> {
                     info!("✔ Getting {} enclave state...", if db_utils.get_is_for_eth() { "ETH" } else { "EVM "});
-                    let [<$prefix _tail_block>] = db_utils.get_eth_tail_block_from_db()?;
-                    let [<$prefix _canon_block>] = db_utils.get_eth_canon_block_from_db()?;
-                    let [<$prefix _anchor_block>] = db_utils.get_eth_anchor_block_from_db()?;
-                    let [<$prefix _latest_block>] = db_utils.get_eth_latest_block_from_db()?;
+                    let [<$prefix:lower _tail_block>] = db_utils.get_eth_tail_block_from_db()?;
+                    let [<$prefix:lower _canon_block>] = db_utils.get_eth_canon_block_from_db()?;
+                    let [<$prefix:lower _anchor_block>] = db_utils.get_eth_anchor_block_from_db()?;
+                    let [<$prefix:lower _latest_block>] = db_utils.get_eth_latest_block_from_db()?;
+                    let safe_address = if stringify!($prefix:lower) == "native" || stringify!($prefix:lower) == "eth" {
+                        hex::encode(SAFE_ETH_ADDRESS.as_bytes())
+                    } else {
+                        hex::encode(SAFE_EVM_ADDRESS.as_bytes())
+                    };
                     Ok(Self {
-                        [<$prefix _tail_length>]:
+                        [<$prefix:lower _safe_address>]:
+                            safe_address,
+                        [<$prefix:lower _tail_length>]:
                             ETH_TAIL_LENGTH,
                         any_sender_nonce:
                             db_utils.get_any_sender_nonce_from_db()?,
-                        [<$prefix _gas_price>]:
+                        [<$prefix:lower _gas_price>]:
                             db_utils.get_eth_gas_price_from_db()?,
                         smart_contract_address:
                             hex::encode(contract_address.as_bytes()),
-                        [<$prefix _chain_id>]:
+                        [<$prefix:lower _chain_id>]:
                             db_utils.get_eth_chain_id_from_db()?.to_u64(),
-                        [<$prefix _account_nonce>]:
+                        [<$prefix:lower _account_nonce>]:
                             db_utils.get_eth_account_nonce_from_db()?,
-                        [<$prefix _canon_to_tip_length>]:
+                        [<$prefix:lower _canon_to_tip_length>]:
                             db_utils.get_eth_canon_to_tip_length_from_db()?,
-                        [<$prefix _safe_address>]:
-                            hex::encode([<SAFE_ $prefix:upper _ADDRESS>].as_bytes()),
-                        [<$prefix _tail_block_number>]:
-                            [<$prefix _tail_block>].get_block_number()?.as_usize(),
-                        [<$prefix _canon_block_number>]:
-                            [<$prefix _canon_block>].get_block_number()?.as_usize(),
+                        [<$prefix:lower _tail_block_number>]:
+                            [<$prefix:lower _tail_block>].get_block_number()?.as_usize(),
+                        [<$prefix:lower _canon_block_number>]:
+                            [<$prefix:lower _canon_block>].get_block_number()?.as_usize(),
                         [<$prefix _anchor_block_number>]:
-                            [<$prefix _anchor_block>].get_block_number()?.as_usize(),
-                        [<$prefix _latest_block_number>]:
-                            [<$prefix _latest_block>].get_block_number()?.as_usize(),
-                        [<$prefix _address>]:
+                            [<$prefix:lower _anchor_block>].get_block_number()?.as_usize(),
+                        [<$prefix:lower _latest_block_number>]:
+                            [<$prefix:lower _latest_block>].get_block_number()?.as_usize(),
+                        [<$prefix:lower _address>]:
                             hex::encode(db_utils.get_public_eth_address_from_db()?.as_bytes()),
-                        [<$prefix _tail_block_hash>]:
-                            hex::encode([<$prefix _tail_block>].get_block_hash()?.as_bytes()),
+                        [<$prefix:lower _tail_block_hash>]:
+                            hex::encode([<$prefix:lower _tail_block>].get_block_hash()?.as_bytes()),
                         erc777_proxy_contract_address:
                             hex::encode(db_utils.get_erc777_proxy_contract_address_from_db()?),
-                        [<$prefix _canon_block_hash>]:
-                            hex::encode([<$prefix _canon_block>].get_block_hash()?.as_bytes()),
-                        [<$prefix _linker_hash>]:
+                        [<$prefix:lower _canon_block_hash>]:
+                            hex::encode([<$prefix:lower _canon_block>].get_block_hash()?.as_bytes()),
+                        [<$prefix:lower _linker_hash>]:
                             hex::encode(db_utils.get_linker_hash_or_genesis_hash()?.as_bytes()),
-                        [<$prefix _anchor_block_hash>]:
+                        [<$prefix:lower _anchor_block_hash>]:
                             hex::encode([<$prefix _anchor_block>].get_block_hash()?.as_bytes()),
-                        [<$prefix _latest_block_hash>]:
+                        [<$prefix:lower _latest_block_hash>]:
                             hex::encode([<$prefix _latest_block>].get_block_hash()?.as_bytes()),
-                        [<$prefix _core_is_validating>]: !cfg!(feature="non-validating"),
+                        [<$prefix:lower _core_is_validating>]: !cfg!(feature="non-validating"),
                         router_contract_address: match router_address {
                             Some(address) => hex::encode(address.as_bytes()),
                             None => hex::encode(EthAddress::zero().as_bytes()),
@@ -111,6 +116,8 @@ macro_rules! make_enclave_state_struct {
 
 make_enclave_state_struct!(EthEnclaveState, eth);
 make_enclave_state_struct!(EvmEnclaveState, evm);
+make_enclave_state_struct!(NativeCoreState, native);
+make_enclave_state_struct!(HostCoreState, host);
 
 #[cfg(test)]
 mod tests {

@@ -8,10 +8,10 @@ use common_debug_signers::DebugSignatories;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnclaveInfo {
-    db_key_prefix: String,
     core_version: String,
+    db_key_prefix: String,
     max_fee_basis_points: u64,
     debug_signatories: JsonValue,
 }
