@@ -19,4 +19,9 @@ impl CoreAccessorMessages {
             (Self::GetHostLatestBlockNumber(resp_tx), resp_rx)
         }
     }
+
+    pub fn get_core_state_msg(core_type: &CoreType) -> (Self, Receiver<Result<CoreState, SentinelError>>) {
+        let (resp_tx, resp_rx) = oneshot::channel();
+        (Self::GetCoreState((*core_type, resp_tx)), resp_rx)
+    }
 }

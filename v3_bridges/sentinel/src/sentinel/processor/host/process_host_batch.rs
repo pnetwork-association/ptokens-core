@@ -11,10 +11,10 @@ fn process_host<D: DatabaseInterface>(db: &D, sub_mat: &EthSubmissionMaterial) -
     append_to_blockchain(&db_utils, sub_mat)?;
 
     if sub_mat.receipts.is_empty() {
-        warn!("Native block {n} had no receipts to process!");
+        debug!("host block {n} had no receipts to process!");
         Ok(())
     } else {
-        debug!("Finished processing native block {n}!");
+        debug!("Finished processing host block {n}!");
         Ok(())
     }
 }

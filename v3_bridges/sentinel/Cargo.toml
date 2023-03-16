@@ -19,6 +19,7 @@ non-validating = ["common/non-validating"] # NOTE: Disables block & recepit vali
 
 [dependencies]
 log = "0.4.17"
+warp = "0.3.3"
 config = "0.13.3"
 anyhow = "1.0.69"
 serde = "1.0.152"
