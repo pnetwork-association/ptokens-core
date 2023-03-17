@@ -5,6 +5,8 @@ use common_eth::{append_to_blockchain, EthDbUtilsExt, EthSubmissionMaterial, Eth
 use lib::{MongoAccessorMessages, SentinelError};
 use tokio::sync::mpsc::Sender as MspcTx;
 
+use super::NativeOutput;
+
 fn process_native<D: DatabaseInterface>(db: &D, sub_mat: &EthSubmissionMaterial) -> Result<(), SentinelError> {
     let n = sub_mat.get_block_number()?;
     let db_utils = NativeDbUtils::new(db);
@@ -40,6 +42,9 @@ pub fn process_native_batch<D: DatabaseInterface>(
         Err(SentinelError::SyncerRestart(n as u64))
     } else {
         info!("Finished processing host submission material!");
+        let output = NativeOutput::new(batch.get_last_block_num()?)?;
+        // TODO send this to a mongo thread!
+
         r
     }
 }

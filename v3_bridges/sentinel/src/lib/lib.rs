@@ -15,6 +15,7 @@ mod handle_sigint;
 mod logging;
 mod messages;
 mod test_utils;
+mod utils;
 
 pub use self::{
     batching::Batch,
@@ -41,6 +42,7 @@ pub use self::{
         Responder,
         SyncerMessages,
     },
+    utils::get_utc_timestamp,
 };
 
 #[macro_use]

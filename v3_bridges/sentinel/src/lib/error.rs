@@ -17,6 +17,7 @@ pub enum SentinelError {
     SerdeJson(serde_json::Error),
     MongoDb(mongodb::error::Error),
     NoParent(common::NoParentError),
+    Time(std::time::SystemTimeError),
     Batching(crate::batching::Error),
     ParseInt(std::num::ParseIntError),
     Endpoint(crate::endpoints::Error),
@@ -49,6 +50,7 @@ impl std::fmt::Display for SentinelError {
             Self::Logger(ref err) => write!(f, "logger error: {err}"),
             Self::Timeout(ref err) => write!(f, "timeout error: {err}"),
             Self::MongoDb(ref err) => write!(f, "mongodb error: {err}"),
+            Self::Time(ref err) => write!(f, "system time error: {err}"),
             Self::Endpoint(ref err) => write!(f, "endpoint error: {err}"),
             Self::Batching(ref err) => write!(f, "batching error: {err}"),
             Self::ParseInt(ref err) => write!(f, "parse int error: {err}"),
@@ -81,6 +83,7 @@ impl std::error::Error for SentinelError {
             Self::PoisonedLock => None,
             Self::IO(ref err) => Some(err),
             Self::SyncerRestart(_) => None,
+            Self::Time(ref err) => Some(err),
             Self::Common(ref err) => Some(err),
             Self::Config(ref err) => Some(err),
             Self::Logger(ref err) => Some(err),
@@ -215,5 +218,11 @@ impl From<tokio::sync::mpsc::error::SendError<ProcessorMessages>> for SentinelEr
 impl From<tokio::sync::oneshot::error::RecvError> for SentinelError {
     fn from(err: tokio::sync::oneshot::error::RecvError) -> Self {
         Self::OneshotReceiver(err)
+    }
+}
+
+impl From<std::time::SystemTimeError> for SentinelError {
+    fn from(err: std::time::SystemTimeError) -> Self {
+        Self::Time(err)
     }
 }
