@@ -1,8 +1,10 @@
-#![allow(unused)] // FIXME rm!
 use common::BridgeSide;
 use tokio::sync::{oneshot, oneshot::Receiver};
 
-use crate::{Responder, SentinelError};
+use crate::{NativeOutput, Responder, SentinelError};
 
 #[derive(Debug)]
-pub enum MongoAccessorMessages {}
+pub enum MongoAccessorMessages {
+    //PutHost(HostOutput),
+    PutNative(NativeOutput),
+}

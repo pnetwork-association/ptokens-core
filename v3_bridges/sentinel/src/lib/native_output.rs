@@ -1,7 +1,8 @@
 use std::result::Result;
 
-use lib::{get_utc_timestamp, SentinelError};
 use serde::{Deserialize, Serialize};
+
+use crate::{get_utc_timestamp, SentinelError};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NativeOutput {

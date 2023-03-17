@@ -14,6 +14,7 @@ mod get_sub_mat;
 mod handle_sigint;
 mod logging;
 mod messages;
+mod native_output;
 mod test_utils;
 mod utils;
 
@@ -42,6 +43,7 @@ pub use self::{
         Responder,
         SyncerMessages,
     },
+    native_output::NativeOutput,
     utils::get_utc_timestamp,
 };
 

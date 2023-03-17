@@ -2,10 +2,8 @@ use std::result::Result;
 
 use common::DatabaseInterface;
 use common_eth::{append_to_blockchain, EthDbUtilsExt, EthSubmissionMaterial, EthSubmissionMaterials, NativeDbUtils};
-use lib::{MongoAccessorMessages, SentinelError};
+use lib::{MongoAccessorMessages, NativeOutput, SentinelError};
 use tokio::sync::mpsc::Sender as MspcTx;
-
-use super::NativeOutput;
 
 fn process_native<D: DatabaseInterface>(db: &D, sub_mat: &EthSubmissionMaterial) -> Result<(), SentinelError> {
     let n = sub_mat.get_block_number()?;
