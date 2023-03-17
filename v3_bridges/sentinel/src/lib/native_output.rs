@@ -18,6 +18,14 @@ impl NativeOutput {
             timestamp: get_utc_timestamp()?,
         })
     }
+
+    pub fn get_timestamp(&self) -> u64 {
+        self.timestamp
+    }
+
+    pub fn get_latest_block_num(&self) -> u64 {
+        self.latest_block_num
+    }
 }
 
 impl fmt::Display for NativeOutput {

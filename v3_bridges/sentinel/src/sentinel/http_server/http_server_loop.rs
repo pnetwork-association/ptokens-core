@@ -43,6 +43,9 @@ async fn main_loop(
         async move { get_core_state_from_db(tx, &core_type).await }
     });
 
+    // GET /bpm
+    let bpm = warp::path::end().map(|| "bpm to go here eventually"); // TODO
+
     let routes = warp::get().and(welcome.or(state));
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
     Ok(())

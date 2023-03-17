@@ -12,6 +12,7 @@ mod get_receipts;
 mod get_rpc_client;
 mod get_sub_mat;
 mod handle_sigint;
+mod heartbeat;
 mod host_output;
 mod logging;
 mod messages;
@@ -34,6 +35,7 @@ pub use self::{
     get_rpc_client::get_rpc_client,
     get_sub_mat::get_sub_mat,
     handle_sigint::handle_sigint,
+    heartbeat::{HeartbeatInfo, Heartbeats},
     host_output::HostOutput,
     logging::init_logger,
     messages::{
