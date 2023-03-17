@@ -22,7 +22,7 @@ mod utils;
 pub use self::{
     batching::Batch,
     check_init::check_init,
-    config::Config as SentinelConfig,
+    config::{Config as SentinelConfig, MongoConfig},
     constants::MILLISECONDS_MULTIPLIER,
     core_state::CoreState,
     endpoints::{check_endpoint, Endpoints, Error as EndpointError},

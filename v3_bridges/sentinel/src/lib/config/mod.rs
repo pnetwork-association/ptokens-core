@@ -14,6 +14,6 @@ pub use self::{
     core_config::{CoreConfig, CoreToml},
     host_config::{HostConfig, HostToml},
     log_config::{LogConfig, LogToml},
-    mongo_config::MongoConfig,
+    mongo_config::{MongoConfig, MongoToml},
     native_config::{NativeConfig, NativeToml},
 };

@@ -29,6 +29,8 @@ max_num_logs = 10 # Maximum number of logs to maintain. The oldest half are comp
 max_log_size = 1_000_000_000 # Maximum size of a single log in bytes. Defalt is 10mb
 
 [mongo]
-database = "database"
-collection = "reports"
+database = "database" # Name of the database
+host_collection = "host" # Name of the host collection
+native_collection = "native" # Name of the host collection
+timeout = 3 # How many seconds to wait when conneting/inserting/reading etc
 uri = "mongodb://127.0.0.1:27017"
