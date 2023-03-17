@@ -13,7 +13,7 @@ use crate::{
     eth_crypto::{EthPrivateKey, EthPublicKey, EthTransaction},
     eth_log::{EthLog, EthLogs},
     eth_receipt::EthReceipt,
-    eth_submission_material::{EthSubmissionMaterial, EthSubmissionMaterialJson},
+    eth_submission_material::{EthSubmissionMaterial, EthSubmissionMaterialJson, EthSubmissionMaterials},
     EthDbUtils,
     EthDbUtilsExt,
 };
@@ -235,7 +235,7 @@ pub fn get_sample_eth_public_key() -> EthPublicKey {
 
 pub fn get_sequential_eth_blocks_and_receipts() -> Vec<EthSubmissionMaterial> {
     let mut block_and_receipts = Vec::new();
-    for i in 0..20 {
+    for i in 0..=20 {
         let path = format!(
             "{}{}.json",
             SAMPLE_SEQUENTIAL_BLOCK_AND_RECEIPT_JSONS_PATH_PREFIX,
@@ -245,6 +245,10 @@ pub fn get_sequential_eth_blocks_and_receipts() -> Vec<EthSubmissionMaterial> {
         block_and_receipts.push(block_and_receipt)
     }
     block_and_receipts
+}
+
+pub fn get_sample_eth_submission_materials() -> EthSubmissionMaterials {
+    EthSubmissionMaterials::new(get_sequential_eth_blocks_and_receipts())
 }
 
 pub fn get_sample_receipt_with_desired_topic() -> EthReceipt {
