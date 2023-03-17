@@ -24,7 +24,7 @@ const MAX_CHANNEL_CAPACITY: usize = 1337;
 pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelError> {
     let db = common_rocksdb::get_db()?;
     lib::check_init(&db)?;
-    let db = Arc::new(Mutex::new(db));
+    let wrapped_db = Arc::new(Mutex::new(db));
 
     let (processor_tx, processor_rx): (MpscTx<ProcessorMessages>, MpscRx<ProcessorMessages>) =
         mpsc::channel(MAX_CHANNEL_CAPACITY);
@@ -45,8 +45,9 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
         processor_tx,
         core_tx.clone(),
     ));
-    let processor_thread = tokio::spawn(processor_loop(db.clone(), processor_rx, mongo_tx));
-    let core_accessor_thread = tokio::spawn(core_accessor_loop(db.clone(), core_rx));
+
+    let processor_thread = tokio::spawn(processor_loop(wrapped_db.clone(), processor_rx, mongo_tx.clone()));
+    let core_accessor_thread = tokio::spawn(core_accessor_loop(wrapped_db.clone(), core_rx));
     let mongo_accessor_thread = tokio::spawn(mongo_accessor_loop(mongo_rx));
     let http_server_thread = tokio::spawn(http_server_loop(core_tx.clone(), config.clone()));
 
