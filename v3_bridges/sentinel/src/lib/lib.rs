@@ -35,7 +35,7 @@ pub use self::{
     get_rpc_client::get_rpc_client,
     get_sub_mat::get_sub_mat,
     handle_sigint::handle_sigint,
-    heartbeat::{HeartbeatInfo, Heartbeats},
+    heartbeat::{HeartbeatInfo, Heartbeats, HeartbeatsJson},
     host_output::HostOutput,
     logging::init_logger,
     messages::{

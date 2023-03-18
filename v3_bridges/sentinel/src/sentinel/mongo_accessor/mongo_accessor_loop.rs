@@ -1,7 +1,7 @@
 use std::result::Result;
 
-use lib::{HostOutput, MongoAccessorMessages, MongoConfig, NativeOutput, SentinelError};
-use mongodb::Collection;
+use lib::{HeartbeatsJson, HostOutput, MongoAccessorMessages, MongoConfig, NativeOutput, SentinelError};
+use mongodb::{bson::doc, Collection};
 use tokio::sync::mpsc::Receiver as MpscRx;
 
 async fn insert_into_mongodb<T: std::fmt::Display + serde::Serialize>(
@@ -14,6 +14,13 @@ async fn insert_into_mongodb<T: std::fmt::Display + serde::Serialize>(
     Ok(())
 }
 
+async fn update_heartbeat(h: &HeartbeatsJson, collection: &Collection<HeartbeatsJson>) -> Result<(), SentinelError> {
+    let f = doc! {"_id":"heartbeats"};
+    collection.delete_one(f, None).await?;
+    collection.insert_one(h, None).await?;
+    Ok(())
+}
+
 pub async fn mongo_accessor_loop(
     mongo_config: MongoConfig,
     mut mongo_accessor_rx: MpscRx<MongoAccessorMessages>,
@@ -21,6 +28,8 @@ pub async fn mongo_accessor_loop(
     info!("mongo accessor listening...");
     let host_collection = mongo_config.get_host_collection().await?;
     let native_collection = mongo_config.get_native_collection().await?;
+    let heartbeats_collection = mongo_config.get_heartbeats_collection().await?;
+    update_heartbeat(&HeartbeatsJson::default(), &heartbeats_collection).await?;
 
     'mongo_accessor_loop: loop {
         tokio::select! {
@@ -31,6 +40,10 @@ pub async fn mongo_accessor_loop(
                 },
                 Some(MongoAccessorMessages::PutHost(msg)) => {
                     insert_into_mongodb(msg, &host_collection).await?;
+                    continue 'mongo_accessor_loop
+                },
+                Some(MongoAccessorMessages::PutHeartbeats(msg)) => {
+                    update_heartbeat(&msg, &heartbeats_collection).await?;
                     continue 'mongo_accessor_loop
                 },
                 None => {

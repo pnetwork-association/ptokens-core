@@ -9,7 +9,7 @@ use mongodb::{
 };
 use serde::Deserialize;
 
-use crate::{HostOutput, NativeOutput, SentinelError};
+use crate::{HeartbeatsJson, HostOutput, NativeOutput, SentinelError};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct MongoToml {
@@ -79,6 +79,12 @@ impl MongoConfig {
         debug!("Getting native mongo collection @ '{}'...", self.native_collection);
         let db = self.get_db().await?;
         Ok(db.collection(&self.native_collection))
+    }
+
+    pub async fn get_heartbeats_collection(&self) -> Result<Collection<HeartbeatsJson>, SentinelError> {
+        debug!("Getting heartbeats mongo collection...");
+        let db = self.get_db().await?;
+        Ok(db.collection("heartbeats"))
     }
 }
 

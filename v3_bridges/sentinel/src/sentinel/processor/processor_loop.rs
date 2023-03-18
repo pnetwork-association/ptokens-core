@@ -1,7 +1,7 @@
 use std::{result::Result, sync::Arc};
 
 use common::DatabaseInterface;
-use lib::{MongoAccessorMessages, ProcessorMessages, SentinelError};
+use lib::{Heartbeats, MongoAccessorMessages, ProcessorMessages, SentinelError};
 use tokio::sync::{
     mpsc::{Receiver as MpscRx, Sender as MpscTx},
     Mutex,
@@ -15,6 +15,7 @@ pub async fn processor_loop<D: DatabaseInterface>(
     mongo_accessor_tx: MpscTx<MongoAccessorMessages>,
 ) -> Result<(), SentinelError> {
     info!("Starting processor loop...");
+    let mut heartbeats = Heartbeats::new();
 
     'processor_loop: loop {
         tokio::select! {
@@ -28,7 +29,9 @@ pub async fn processor_loop<D: DatabaseInterface>(
                         match result {
                             Ok(output) => {
                                 let _ = args.responder.send(Ok(())); // Send an OK response so syncer can continue
+                                heartbeats.push_native(&output);
                                 mongo_accessor_tx.send(MongoAccessorMessages::PutNative(output)).await?;
+                                mongo_accessor_tx.send(MongoAccessorMessages::PutHeartbeats(heartbeats.to_json())).await?;
                                 continue 'processor_loop
                             },
                             Err(SentinelError::SyncerRestart(n)) => {
@@ -49,7 +52,9 @@ pub async fn processor_loop<D: DatabaseInterface>(
                         match result {
                             Ok(output) => {
                                 let _ = args.responder.send(Ok(())); // Send an OK response so syncer can continue...
+                                heartbeats.push_host(&output);
                                 mongo_accessor_tx.send(MongoAccessorMessages::PutHost(output)).await?;
+                                mongo_accessor_tx.send(MongoAccessorMessages::PutHeartbeats(heartbeats.to_json())).await?;
                                 continue 'processor_loop
                             },
                             Err(SentinelError::SyncerRestart(n)) => {

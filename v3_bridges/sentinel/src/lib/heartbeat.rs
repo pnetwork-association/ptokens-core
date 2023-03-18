@@ -31,6 +31,16 @@ pub struct HeartbeatsJson {
     native: Vec<HeartbeatInfo>,
 }
 
+impl Default for HeartbeatsJson {
+    fn default() -> Self {
+        Self {
+            host: vec![],
+            native: vec![],
+            id: "heartbeats".to_string(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HeartbeatInfo((Timestamp, LatestBlockNum));
 
@@ -95,23 +105,21 @@ impl Heartbeats {
         }
     }
 
-    pub fn push_native(mut self, o: &NativeOutput) -> Self {
+    pub fn push_native(&mut self, o: &NativeOutput) {
         let last_timestamp = self.get_last_native_timestamp();
         let this_timestamp = o.get_timestamp();
 
         if this_timestamp > last_timestamp {
             self.native_deque.push_back(HeartbeatInfo::from(o));
         }
-        self
     }
 
-    pub fn push_host(mut self, o: &HostOutput) -> Self {
+    pub fn push_host(&mut self, o: &HostOutput) {
         let last_timestamp = self.get_last_host_timestamp();
         let this_timestamp = o.get_timestamp();
         if this_timestamp > last_timestamp {
             self.host_deque.push_back(HeartbeatInfo::from(o));
         }
-        self
     }
 
     fn calc_bpm(deque: &BoundedVecDeque<HeartbeatInfo>) -> f64 {
@@ -168,6 +176,15 @@ impl fmt::Display for Heartbeats {
         let n = self.get_native_heartbeat();
         let j = json!({ "native": format!("{n} bpm"), "host": format!("{h} bpm")});
         write!(f, "{j}")
+    }
+}
+
+impl fmt::Display for HeartbeatsJson {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match serde_json::to_string(self) {
+            Ok(s) => write!(f, "{s}"),
+            Err(e) => write!(f, "error converting `HeartbeatsJson` to string: {e}"),
+        }
     }
 }
 
