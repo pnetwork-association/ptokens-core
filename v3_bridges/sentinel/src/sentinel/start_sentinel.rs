@@ -49,7 +49,7 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
     let processor_thread = tokio::spawn(processor_loop(wrapped_db.clone(), processor_rx, mongo_tx.clone()));
     let core_accessor_thread = tokio::spawn(core_accessor_loop(wrapped_db.clone(), core_rx));
     let mongo_accessor_thread = tokio::spawn(mongo_accessor_loop(config.mongo_config.clone(), mongo_rx));
-    let http_server_thread = tokio::spawn(http_server_loop(core_tx.clone(), config.clone()));
+    let http_server_thread = tokio::spawn(http_server_loop(core_tx.clone(), mongo_tx.clone(), config.clone()));
 
     match tokio::try_join!(
         flatten_join_handle(native_syncer_thread),

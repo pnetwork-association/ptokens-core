@@ -301,8 +301,10 @@ mod tests {
     #[test]
     fn pushed_block_should_have_receipts_if_they_contain_pertinent_logs() {
         let address = convert_hex_to_eth_address("0xfEDFe2616EB3661CB8FEd2782F5F0cC91D59DCaC").unwrap();
-        let mut log = EthLog::default();
-        log.address = address;
+        let log = EthLog {
+            address,
+            ..Default::default()
+        };
         let logs = EthLogs::new(vec![log]);
         let mut receipt = EthReceipt::default();
         receipt.logs = logs;
@@ -319,8 +321,10 @@ mod tests {
     fn pushed_block_should_not_have_receipts_if_they_contain_pertinent_logs() {
         let address = convert_hex_to_eth_address("0xfEDFe2616EB3661CB8FEd2782F5F0cC91D59DCaC").unwrap();
         let other_address = convert_hex_to_eth_address("0x690b9a9e9aa1c9db991c7721a92d351db4fac990").unwrap();
-        let mut log = EthLog::default();
-        log.address = address;
+        let log = EthLog {
+            address,
+            ..Default::default()
+        };
         let logs = EthLogs::new(vec![log]);
         let mut receipt = EthReceipt::default();
         receipt.logs = logs;

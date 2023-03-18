@@ -1,6 +1,6 @@
 use std::result::Result;
 
-use lib::{HeartbeatsJson, HostOutput, MongoAccessorMessages, MongoConfig, NativeOutput, SentinelError};
+use lib::{HeartbeatsJson, MongoAccessorMessages, MongoConfig, SentinelError};
 use mongodb::{bson::doc, Collection};
 use tokio::sync::mpsc::Receiver as MpscRx;
 
@@ -19,6 +19,11 @@ async fn update_heartbeat(h: &HeartbeatsJson, collection: &Collection<Heartbeats
     collection.delete_one(f, None).await?;
     collection.insert_one(h, None).await?;
     Ok(())
+}
+
+async fn get_heartbeats(collection: &Collection<HeartbeatsJson>) -> Result<HeartbeatsJson, SentinelError> {
+    let f = doc! {"_id":"heartbeats"};
+    Ok(collection.find_one(f, None).await?.unwrap_or_default())
 }
 
 pub async fn mongo_accessor_loop(
@@ -44,6 +49,11 @@ pub async fn mongo_accessor_loop(
                 },
                 Some(MongoAccessorMessages::PutHeartbeats(msg)) => {
                     update_heartbeat(&msg, &heartbeats_collection).await?;
+                    continue 'mongo_accessor_loop
+                },
+                Some(MongoAccessorMessages::GetHeartbeats(responder)) => {
+                    let r = get_heartbeats(&heartbeats_collection).await;
+                    let _ = responder.send(r);
                     continue 'mongo_accessor_loop
                 },
                 None => {

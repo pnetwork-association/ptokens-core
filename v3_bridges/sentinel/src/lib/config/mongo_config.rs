@@ -1,12 +1,6 @@
 use std::{result::Result, time::Duration};
 
-use mongodb::{
-    bson::{doc, Document},
-    options::ClientOptions,
-    Client,
-    Collection,
-    Database,
-};
+use mongodb::{bson::doc, options::ClientOptions, Client, Collection, Database};
 use serde::Deserialize;
 
 use crate::{HeartbeatsJson, HostOutput, NativeOutput, SentinelError};

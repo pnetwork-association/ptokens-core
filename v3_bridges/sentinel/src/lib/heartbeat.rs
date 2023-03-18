@@ -1,7 +1,6 @@
 use std::{convert::From, fmt};
 
 use bounded_vec_deque::BoundedVecDeque;
-use common::BridgeSide;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -70,8 +69,8 @@ impl Heartbeats {
     pub fn to_json(&self) -> HeartbeatsJson {
         HeartbeatsJson {
             id: "heartbeats".to_string(),
-            host: self.host_deque.iter().map(|x| x).cloned().collect::<Vec<_>>(),
-            native: self.native_deque.iter().map(|x| x).cloned().collect::<Vec<_>>(),
+            host: self.host_deque.iter().cloned().collect::<Vec<_>>(),
+            native: self.native_deque.iter().cloned().collect::<Vec<_>>(),
         }
     }
 
@@ -149,7 +148,7 @@ impl Heartbeats {
         if r == 0.0 {
             "not enough data yet!".to_string()
         } else {
-            format!("{r}")
+            format!("{r:.2}")
         }
     }
 
@@ -168,13 +167,36 @@ impl Heartbeats {
     fn get_native_deque(&self) -> &BoundedVecDeque<HeartbeatInfo> {
         &self.native_deque
     }
+
+    pub fn to_output(&self) -> HeartbeatsOutput {
+        HeartbeatsOutput {
+            host_bpm: self.get_host_heartbeat(),
+            native_bpm: self.get_native_heartbeat(),
+            host_data: self.host_deque.iter().cloned().collect::<Vec<_>>(),
+            native_data: self.native_deque.iter().cloned().collect::<Vec<_>>(),
+        }
+    }
+}
+
+impl HeartbeatsJson {
+    pub fn to_output(&self) -> HeartbeatsOutput {
+        Heartbeats::from_json(self).to_output()
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct HeartbeatsOutput {
+    host_bpm: String,
+    native_bpm: String,
+    host_data: Vec<HeartbeatInfo>,
+    native_data: Vec<HeartbeatInfo>,
 }
 
 impl fmt::Display for Heartbeats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let h = self.get_host_heartbeat();
         let n = self.get_native_heartbeat();
-        let j = json!({ "native": format!("{n} bpm"), "host": format!("{h} bpm")});
+        let j = json!({ "native_bpm": format!("{n}"), "host_bpm": format!("{h}")});
         write!(f, "{j}")
     }
 }
@@ -185,16 +207,5 @@ impl fmt::Display for HeartbeatsJson {
             Ok(s) => write!(f, "{s}"),
             Err(e) => write!(f, "error converting `HeartbeatsJson` to string: {e}"),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn should_x() {
-        // TODO
-        assert!(false)
     }
 }

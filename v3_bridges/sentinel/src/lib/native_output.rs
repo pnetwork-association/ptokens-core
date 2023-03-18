@@ -1,6 +1,6 @@
 use std::{fmt, result::Result};
 
-use mongodb::bson::{doc, from_bson, to_bson, Bson, Document};
+use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 
 use crate::{get_utc_timestamp, SentinelError};
