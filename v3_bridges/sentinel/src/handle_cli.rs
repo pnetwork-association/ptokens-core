@@ -18,7 +18,7 @@ use crate::{
 };
 
 pub async fn handle_cli() -> Result<String, SentinelError> {
-    let config = SentinelConfig::new().await?;
+    let config = SentinelConfig::new()?;
 
     if config.log_config.is_enabled() {
         init_logger(&config.log_config)?;

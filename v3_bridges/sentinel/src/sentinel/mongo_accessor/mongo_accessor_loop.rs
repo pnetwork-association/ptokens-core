@@ -30,7 +30,10 @@ pub async fn mongo_accessor_loop(
     mongo_config: MongoConfig,
     mut mongo_accessor_rx: MpscRx<MongoAccessorMessages>,
 ) -> Result<(), SentinelError> {
-    info!("mongo accessor listening...");
+    info!("Checking mongo config...");
+    mongo_config.check_mongo_connection().await?;
+    info!("Mongo accessor listening!");
+
     let host_collection = mongo_config.get_host_collection().await?;
     let native_collection = mongo_config.get_native_collection().await?;
     let heartbeats_collection = mongo_config.get_heartbeats_collection().await?;

@@ -53,19 +53,19 @@ pub struct Config {
 }
 
 impl Config {
-    pub async fn new() -> Result<Self, SentinelError> {
-        let res = Self::from_toml(&ConfigToml::new()?).await?;
+    pub fn new() -> Result<Self, SentinelError> {
+        let res = Self::from_toml(&ConfigToml::new()?)?;
         debug!("Config {:?}", res);
         Ok(res)
     }
 
-    async fn from_toml(toml: &ConfigToml) -> Result<Self, SentinelError> {
+    fn from_toml(toml: &ConfigToml) -> Result<Self, SentinelError> {
         Ok(Self {
             log_config: LogConfig::from_toml(&toml.log)?,
             core_config: CoreConfig::from_toml(&toml.core)?,
             host_config: HostConfig::from_toml(&toml.host)?,
+            mongo_config: MongoConfig::from_toml(&toml.mongo),
             native_config: NativeConfig::from_toml(&toml.native)?,
-            mongo_config: MongoConfig::from_toml(&toml.mongo).await?,
             batching_config: BatchingConfig::from_toml(&toml.batching)?,
         })
     }
@@ -79,9 +79,9 @@ impl Config {
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn should_get_config() {
-        let result = Config::new().await;
+    #[test]
+    fn should_get_config() {
+        let result = Config::new();
         result.unwrap();
     }
 }

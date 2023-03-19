@@ -37,22 +37,20 @@ impl MongoConfig {
         Some(d)
     }
 
-    pub async fn from_toml(toml: &MongoToml) -> Result<Self, SentinelError> {
-        let config = Self {
+    pub fn from_toml(toml: &MongoToml) -> Self {
+        Self {
             uri: toml.uri.clone(),
             database: toml.database.clone(),
             host_collection: toml.host_collection.clone(),
             timeout: Self::sanity_check_timeout(toml.timeout),
             native_collection: toml.native_collection.clone(),
-        };
-
-        config.check_mongo_connection().await
+        }
     }
 
-    async fn check_mongo_connection(self) -> Result<Self, SentinelError> {
+    pub async fn check_mongo_connection(&self) -> Result<(), SentinelError> {
         self.get_db().await?.run_command(doc! {"ping": 1}, None).await?;
         debug!("Mongo connected successfully");
-        Ok(self)
+        Ok(())
     }
 
     async fn get_db(&self) -> Result<Database, SentinelError> {
@@ -87,9 +85,9 @@ mod tests {
     use super::*;
     use crate::config::Config;
 
-    #[tokio::test]
-    async fn should_get_mongo_config() {
-        match Config::new().await {
+    #[test]
+    fn should_get_mongo_config() {
+        match Config::new() {
             Ok(_) => assert!(true),
             Err(SentinelError::MongoDb(e)) => panic!("error getting config: {e}"),
             Err(e) => panic!("wrong type of error received: {e}"),
@@ -98,13 +96,13 @@ mod tests {
 
     #[tokio::test]
     async fn should_get_host_collection() {
-        let mongo_config = Config::new().await.unwrap().mongo_config;
+        let mongo_config = Config::new().unwrap().mongo_config;
         mongo_config.get_host_collection().await.unwrap();
     }
 
     #[tokio::test]
     async fn should_get_native_collection() {
-        let mongo_config = Config::new().await.unwrap().mongo_config;
+        let mongo_config = Config::new().unwrap().mongo_config;
         mongo_config.get_native_collection().await.unwrap();
     }
 }
