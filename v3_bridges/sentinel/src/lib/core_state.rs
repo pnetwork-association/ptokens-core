@@ -3,12 +3,12 @@ use std::result::Result;
 use common::{CoreType, DatabaseInterface};
 use common_enclave_info::EnclaveInfo;
 use common_eth::{EthDbUtils, EthDbUtilsExt, EvmDbUtils, HostCoreState, NativeCoreState, VaultUsingCores};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::{json, Value as JsonValue};
 
 use crate::SentinelError;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct CoreState {
     info: EnclaveInfo,
     host: HostCoreState,
@@ -21,7 +21,7 @@ impl CoreState {
         let evm_db_utils = EvmDbUtils::new(db);
 
         Ok(Self {
-            info: EnclaveInfo::new(eth_db_utils.get_db())?,
+            info: EnclaveInfo::new_with_core_type(eth_db_utils.get_db(), *core_type)?,
             host: HostCoreState::new(
                 &evm_db_utils,
                 &VaultUsingCores::from_core_type(core_type)?.get_vault_contract(&evm_db_utils)?,

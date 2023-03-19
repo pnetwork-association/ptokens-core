@@ -27,7 +27,7 @@ pub async fn handle_cli() -> Result<String, SentinelError> {
     let cli_args = CliArgs::parse();
 
     match cli_args.sub_commands {
-        SubCommands::Start => start_sentinel(&config).await,
+        SubCommands::Start(ref args) => start_sentinel(&config, args).await,
         SubCommands::GetCoreState => get_core_state(&config),
         SubCommands::Init(ref args) => init(&config, args).await,
         SubCommands::GetHostSubMat(ref args) => get_host_sub_mat(&config.host_config.get_endpoints(), args).await,

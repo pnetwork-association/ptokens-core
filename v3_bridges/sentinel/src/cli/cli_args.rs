@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use crate::cli::{get_sub_mat::SubMatGetterArgs, init::InitArgs};
+use crate::cli::{get_sub_mat::SubMatGetterArgs, init::InitArgs, StartSentinelArgs};
 
 #[derive(Debug, Parser)]
 pub struct CliArgs {
@@ -11,7 +11,7 @@ pub struct CliArgs {
 #[derive(Debug, Subcommand)]
 pub enum SubCommands {
     /// Start the Sentinel
-    Start,
+    Start(StartSentinelArgs),
 
     /// Get HOST latest block number.
     GetHostLatestBlockNum,

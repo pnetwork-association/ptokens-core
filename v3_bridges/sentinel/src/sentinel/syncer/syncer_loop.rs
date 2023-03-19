@@ -62,17 +62,27 @@ pub async fn syncer_loop(
     mut batch: Batch,
     processor_tx: MpscTx<ProcessorMessages>,
     core_accessor_tx: MpscTx<CoreAccessorMessages>,
+    disable_syncer: bool,
 ) -> Result<(), SentinelError> {
     let side = batch.side();
     let (msg, rx) = CoreAccessorMessages::get_latest_block_num_msg(&batch.side());
     core_accessor_tx.send(msg).await?;
     batch.set_block_num(rx.await?? + 1);
 
-    tokio::select! {
-        res = main_loop(batch, processor_tx) => res,
-        _ = tokio::signal::ctrl_c() => {
-            warn!("{side} syncer shutting down...");
-            Err(SentinelError::SigInt("{side} syncer".into()))
-        },
+    if disable_syncer {
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {
+                warn!("{side} syncer shutting down...");
+                Err(SentinelError::SigInt("{side} syncer".into()))
+            },
+        }
+    } else {
+        tokio::select! {
+            res = main_loop(batch, processor_tx) => res,
+            _ = tokio::signal::ctrl_c() => {
+                warn!("{side} syncer shutting down...");
+                Err(SentinelError::SigInt("{side} syncer".into()))
+            },
+        }
     }
 }

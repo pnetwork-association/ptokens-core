@@ -17,11 +17,17 @@ use tokio::sync::{
     Mutex,
 };
 
-use crate::sentinel::{core_accessor_loop, http_server_loop, mongo_accessor_loop, processor_loop, syncer_loop};
+use crate::{
+    cli::StartSentinelArgs,
+    sentinel::{core_accessor_loop, http_server_loop, mongo_accessor_loop, processor_loop, syncer_loop},
+};
 
 const MAX_CHANNEL_CAPACITY: usize = 1337;
 
-pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelError> {
+pub async fn start_sentinel(
+    config: &SentinelConfig,
+    sentinel_args: &StartSentinelArgs,
+) -> Result<String, SentinelError> {
     let db = common_rocksdb::get_db()?;
     lib::check_init(&db)?;
     let wrapped_db = Arc::new(Mutex::new(db));
@@ -39,11 +45,13 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
         Batch::new_from_config(BridgeSide::Native, config)?,
         processor_tx.clone(),
         core_tx.clone(),
+        sentinel_args.disable_native_syncer,
     ));
     let host_syncer_thread = tokio::spawn(syncer_loop(
         Batch::new_from_config(BridgeSide::Host, config)?,
         processor_tx,
         core_tx.clone(),
+        sentinel_args.disable_host_syncer,
     ));
 
     let processor_thread = tokio::spawn(processor_loop(wrapped_db.clone(), processor_rx, mongo_tx.clone()));

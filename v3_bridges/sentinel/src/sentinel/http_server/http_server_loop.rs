@@ -56,7 +56,6 @@ async fn main_loop(
     // GET /bpm
     let bpm = warp::path("bpm").and_then(move || {
         let tx = mongo_accessor_tx.clone();
-        warn!("here we are!");
         async move { get_heartbeat_from_db(tx).await }
     });
 

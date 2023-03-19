@@ -146,7 +146,7 @@ impl Heartbeats {
     fn calc_bpm_string(deque: &BoundedVecDeque<HeartbeatInfo>) -> String {
         let r = Self::calc_bpm(deque);
         if r == 0.0 {
-            "not enough data yet!".to_string()
+            "not enough data!".to_string()
         } else {
             format!("{r:.2}")
         }
