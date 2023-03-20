@@ -9,6 +9,7 @@ use crate::{config::Config, endpoints::Endpoints, SentinelError};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Batch {
+    confs: u64,
     block_num: u64,
     batch_size: u64,
     side: BridgeSide,
@@ -24,6 +25,7 @@ pub struct Batch {
 impl Default for Batch {
     fn default() -> Self {
         Self {
+            confs: 1,
             block_num: 0,
             batch_size: 1,
             sleep_duration: 0,
@@ -39,6 +41,18 @@ impl Default for Batch {
 }
 
 impl Batch {
+    pub fn set_confs(&mut self, n: u64) {
+        self.confs = n;
+    }
+
+    pub fn get_confs(&self) -> u64 {
+        self.confs
+    }
+
+    pub fn batch_size(&self) -> u64 {
+        self.batch_size
+    }
+
     pub fn side(&self) -> BridgeSide {
         self.side
     }

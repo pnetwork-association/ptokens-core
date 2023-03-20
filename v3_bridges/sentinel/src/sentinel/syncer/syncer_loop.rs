@@ -65,9 +65,16 @@ pub async fn syncer_loop(
     disable_syncer: bool,
 ) -> Result<(), SentinelError> {
     let side = batch.side();
-    let (msg, rx) = CoreAccessorMessages::get_latest_block_num_msg(&batch.side());
-    core_accessor_tx.send(msg).await?;
-    batch.set_block_num(rx.await?? + 1);
+
+    // NOTE: Get & set the core's latest block num into the batch...
+    let (latest_block_num_msg, latest_block_num_rx) = CoreAccessorMessages::get_latest_block_num_msg(&side);
+    core_accessor_tx.send(latest_block_num_msg).await?;
+    batch.set_block_num(latest_block_num_rx.await?? + 1);
+
+    // NOTE: Get & set the core's number of confs into the batch...
+    let (confs_msg, confs_rx) = CoreAccessorMessages::get_confs_msg(&side);
+    core_accessor_tx.send(confs_msg).await?;
+    batch.set_confs(confs_rx.await??);
 
     if disable_syncer {
         tokio::select! {

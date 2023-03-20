@@ -24,6 +24,14 @@ async fn process_message<D: DatabaseInterface>(
             let r = CoreState::get(&*db, &core_type)?;
             let _ = responder.send(Ok(r));
         },
+        CoreAccessorMessages::GetNativeConfs(responder) => {
+            let r = NativeDbUtils::new(&*db).get_eth_canon_to_tip_length_from_db()?;
+            let _ = responder.send(Ok(r));
+        },
+        CoreAccessorMessages::GetHostConfs(responder) => {
+            let r = HostDbUtils::new(&*db).get_eth_canon_to_tip_length_from_db()?;
+            let _ = responder.send(Ok(r));
+        },
     }
 
     Ok(())
