@@ -1,14 +1,7 @@
 use std::result::Result;
 
 use common::CoreType;
-use lib::{
-    get_latest_block_num,
-    CoreAccessorMessages,
-    Endpoints,
-    MongoAccessorMessages,
-    SentinelConfig,
-    SentinelError,
-};
+use lib::{get_latest_block_num, CoreMessages, Endpoints, MongoMessages, SentinelConfig, SentinelError};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::sync::mpsc::Sender as MpscTx;
@@ -23,11 +16,8 @@ fn convert_error_to_rejection<T: core::fmt::Display>(e: T) -> Rejection {
     reject::custom(Error(e.to_string()))
 }
 
-async fn get_core_state_from_db(
-    tx: MpscTx<CoreAccessorMessages>,
-    core_type: &CoreType,
-) -> Result<impl warp::Reply, Rejection> {
-    let (msg, rx) = CoreAccessorMessages::get_core_state_msg(core_type);
+async fn get_core_state_from_db(tx: MpscTx<CoreMessages>, core_type: &CoreType) -> Result<impl warp::Reply, Rejection> {
+    let (msg, rx) = CoreMessages::get_core_state_msg(core_type);
     tx.send(msg).await.map_err(convert_error_to_rejection)?;
     rx.await
         .map_err(convert_error_to_rejection)?
@@ -35,8 +25,8 @@ async fn get_core_state_from_db(
         .map(|core_state| warp::reply::json(&core_state))
 }
 
-async fn get_heartbeat_from_db(tx: MpscTx<MongoAccessorMessages>) -> Result<impl warp::Reply, Rejection> {
-    let (msg, rx) = MongoAccessorMessages::get_heartbeats_msg();
+async fn get_heartbeat_from_db(tx: MpscTx<MongoMessages>) -> Result<impl warp::Reply, Rejection> {
+    let (msg, rx) = MongoMessages::get_heartbeats_msg();
     tx.send(msg).await.map_err(convert_error_to_rejection)?;
     rx.await
         .map_err(convert_error_to_rejection)?
@@ -47,7 +37,7 @@ async fn get_heartbeat_from_db(tx: MpscTx<MongoAccessorMessages>) -> Result<impl
 async fn get_sync_status(
     n_endpoints: &Endpoints,
     h_endpoints: &Endpoints,
-    tx: MpscTx<CoreAccessorMessages>,
+    tx: MpscTx<CoreMessages>,
 ) -> Result<impl warp::Reply, Rejection> {
     let n_endpoint = n_endpoints.get_rpc_client().await.map_err(convert_error_to_rejection)?;
     let h_endpoint = h_endpoints.get_rpc_client().await.map_err(convert_error_to_rejection)?;
@@ -59,7 +49,7 @@ async fn get_sync_status(
         .await
         .map_err(convert_error_to_rejection)?;
 
-    let (msg, rx) = CoreAccessorMessages::get_latest_block_numbers_msg();
+    let (msg, rx) = CoreMessages::get_latest_block_numbers_msg();
     tx.send(msg).await.map_err(convert_error_to_rejection)?;
     rx.await
         .map_err(convert_error_to_rejection)?
@@ -79,13 +69,13 @@ async fn get_sync_status(
 }
 
 async fn main_loop(
-    core_accessor_tx: MpscTx<CoreAccessorMessages>,
-    mongo_accessor_tx: MpscTx<MongoAccessorMessages>,
+    core_tx: MpscTx<CoreMessages>,
+    mongo_tx: MpscTx<MongoMessages>,
     config: SentinelConfig,
 ) -> Result<(), SentinelError> {
     debug!("server listening!");
-    let core_tx_1 = core_accessor_tx.clone();
-    let core_tx_2 = core_accessor_tx.clone();
+    let core_tx_1 = core_tx.clone();
+    let core_tx_2 = core_tx.clone();
 
     // GET /ping
     let ping = warp::path("ping").map(|| warp::reply::json(&json!({"result": "pTokens Sentinel pong"})));
@@ -99,7 +89,7 @@ async fn main_loop(
 
     // GET /bpm
     let bpm = warp::path("bpm").and_then(move || {
-        let tx = mongo_accessor_tx.clone();
+        let tx = mongo_tx.clone();
         async move { get_heartbeat_from_db(tx).await }
     });
 
@@ -117,12 +107,12 @@ async fn main_loop(
 }
 
 pub async fn http_server_loop(
-    core_accessor_tx: MpscTx<CoreAccessorMessages>,
-    mongo_accessor_tx: MpscTx<MongoAccessorMessages>,
+    core_tx: MpscTx<CoreMessages>,
+    mongo_tx: MpscTx<MongoMessages>,
     config: SentinelConfig,
 ) -> Result<(), SentinelError> {
     tokio::select! {
-        _ = main_loop(core_accessor_tx, mongo_accessor_tx, config.clone()) => Ok(()),
+        _ = main_loop(core_tx, mongo_tx, config.clone()) => Ok(()),
         _ = tokio::signal::ctrl_c() => {
             warn!("http server shutting down...");
             Err(SentinelError::SigInt("http server".into()))

@@ -1,4 +1,4 @@
-use crate::{BroadcasterMessages, CoreAccessorMessages, MongoAccessorMessages, ProcessorMessages, SyncerMessages};
+use crate::{BroadcasterMessages, CoreMessages, MongoMessages, ProcessorMessages, SyncerMessages};
 // FIXME Macro or something for the various channel errors?
 
 #[derive(Debug)]
@@ -27,9 +27,9 @@ pub enum SentinelError {
     RocksDb(common_rocksdb::RocksdbDatabaseError),
     Receiver(tokio::sync::broadcast::error::RecvError),
     OneshotReceiver(tokio::sync::oneshot::error::RecvError),
-    CoreChannel(Box<tokio::sync::mpsc::error::SendError<CoreAccessorMessages>>),
+    CoreChannel(Box<tokio::sync::mpsc::error::SendError<CoreMessages>>),
     SyncerChannel(Box<tokio::sync::broadcast::error::SendError<SyncerMessages>>),
-    MongoChannel(Box<tokio::sync::mpsc::error::SendError<MongoAccessorMessages>>),
+    MongoChannel(Box<tokio::sync::mpsc::error::SendError<MongoMessages>>),
     ProcessorChannel(Box<tokio::sync::mpsc::error::SendError<ProcessorMessages>>),
     BroadcastChannel(Box<tokio::sync::broadcast::error::SendError<BroadcasterMessages>>),
 }
@@ -175,8 +175,8 @@ impl From<tokio::sync::broadcast::error::SendError<BroadcasterMessages>> for Sen
     }
 }
 
-impl From<tokio::sync::mpsc::error::SendError<CoreAccessorMessages>> for SentinelError {
-    fn from(err: tokio::sync::mpsc::error::SendError<CoreAccessorMessages>) -> Self {
+impl From<tokio::sync::mpsc::error::SendError<CoreMessages>> for SentinelError {
+    fn from(err: tokio::sync::mpsc::error::SendError<CoreMessages>) -> Self {
         Self::CoreChannel(Box::new(err))
     }
 }
@@ -229,8 +229,8 @@ impl From<std::time::SystemTimeError> for SentinelError {
     }
 }
 
-impl From<tokio::sync::mpsc::error::SendError<MongoAccessorMessages>> for SentinelError {
-    fn from(err: tokio::sync::mpsc::error::SendError<MongoAccessorMessages>) -> Self {
+impl From<tokio::sync::mpsc::error::SendError<MongoMessages>> for SentinelError {
+    fn from(err: tokio::sync::mpsc::error::SendError<MongoMessages>) -> Self {
         Self::MongoChannel(Box::new(err))
     }
 }

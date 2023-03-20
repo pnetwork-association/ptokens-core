@@ -1,15 +1,7 @@
 use std::{result::Result, sync::Arc};
 
 use common::BridgeSide;
-use lib::{
-    flatten_join_handle,
-    Batch,
-    CoreAccessorMessages,
-    MongoAccessorMessages,
-    ProcessorMessages,
-    SentinelConfig,
-    SentinelError,
-};
+use lib::{flatten_join_handle, Batch, CoreMessages, MongoMessages, ProcessorMessages, SentinelConfig, SentinelError};
 use serde_json::json;
 use tokio::sync::{
     mpsc,
@@ -19,7 +11,7 @@ use tokio::sync::{
 
 use crate::{
     cli::StartSentinelArgs,
-    sentinel::{core_accessor_loop, http_server_loop, mongo_accessor_loop, processor_loop, syncer_loop},
+    sentinel::{core_loop, http_server_loop, mongo_loop, processor_loop, syncer_loop},
 };
 
 const MAX_CHANNEL_CAPACITY: usize = 1337;
@@ -35,11 +27,9 @@ pub async fn start_sentinel(
     let (processor_tx, processor_rx): (MpscTx<ProcessorMessages>, MpscRx<ProcessorMessages>) =
         mpsc::channel(MAX_CHANNEL_CAPACITY);
 
-    let (core_tx, core_rx): (MpscTx<CoreAccessorMessages>, MpscRx<CoreAccessorMessages>) =
-        mpsc::channel(MAX_CHANNEL_CAPACITY);
+    let (core_tx, core_rx): (MpscTx<CoreMessages>, MpscRx<CoreMessages>) = mpsc::channel(MAX_CHANNEL_CAPACITY);
 
-    let (mongo_tx, mongo_rx): (MpscTx<MongoAccessorMessages>, MpscRx<MongoAccessorMessages>) =
-        mpsc::channel(MAX_CHANNEL_CAPACITY);
+    let (mongo_tx, mongo_rx): (MpscTx<MongoMessages>, MpscRx<MongoMessages>) = mpsc::channel(MAX_CHANNEL_CAPACITY);
 
     let native_syncer_thread = tokio::spawn(syncer_loop(
         Batch::new_from_config(BridgeSide::Native, config)?,
@@ -55,16 +45,16 @@ pub async fn start_sentinel(
     ));
 
     let processor_thread = tokio::spawn(processor_loop(wrapped_db.clone(), processor_rx, mongo_tx.clone()));
-    let core_accessor_thread = tokio::spawn(core_accessor_loop(wrapped_db.clone(), core_rx));
-    let mongo_accessor_thread = tokio::spawn(mongo_accessor_loop(config.mongo_config.clone(), mongo_rx));
+    let core_thread = tokio::spawn(core_loop(wrapped_db.clone(), core_rx));
+    let mongo_thread = tokio::spawn(mongo_loop(config.mongo_config.clone(), mongo_rx));
     let http_server_thread = tokio::spawn(http_server_loop(core_tx.clone(), mongo_tx.clone(), config.clone()));
 
     match tokio::try_join!(
         flatten_join_handle(native_syncer_thread),
         flatten_join_handle(host_syncer_thread),
         flatten_join_handle(processor_thread),
-        flatten_join_handle(core_accessor_thread),
-        flatten_join_handle(mongo_accessor_thread),
+        flatten_join_handle(core_thread),
+        flatten_join_handle(mongo_thread),
         flatten_join_handle(http_server_thread),
     ) {
         Ok((res_1, res_2, res_3, res_4, res_5, res_6)) => Ok(json!({
@@ -73,8 +63,8 @@ pub async fn start_sentinel(
                 "native_syncer_thread": res_1,
                 "host_syncer_thread": res_2,
                 "processor_thread": res_3,
-                "core_accessor_thread": res_4,
-                "mongo_accessor_thread": res_5,
+                "core_thread": res_4,
+                "mongo_thread": res_5,
                 "http_server_thread": res_6,
             },
         })

@@ -4,7 +4,7 @@ use tokio::sync::{oneshot, oneshot::Receiver};
 use crate::{CoreState, Responder, SentinelError};
 
 #[derive(Debug)]
-pub enum CoreAccessorMessages {
+pub enum CoreMessages {
     GetHostConfs(Responder<u64>),
     GetNativeConfs(Responder<u64>),
     GetHostLatestBlockNumber(Responder<u64>),
@@ -13,7 +13,7 @@ pub enum CoreAccessorMessages {
     GetCoreState((CoreType, Responder<CoreState>)),
 }
 
-impl CoreAccessorMessages {
+impl CoreMessages {
     pub fn get_latest_block_num_msg(side: &BridgeSide) -> (Self, Receiver<Result<u64, SentinelError>>) {
         let (resp_tx, resp_rx) = oneshot::channel();
         if side.is_native() {

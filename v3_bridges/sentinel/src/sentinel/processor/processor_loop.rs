@@ -1,7 +1,7 @@
 use std::{result::Result, sync::Arc};
 
 use common::DatabaseInterface;
-use lib::{Heartbeats, MongoAccessorMessages, ProcessorMessages, SentinelError};
+use lib::{Heartbeats, MongoMessages, ProcessorMessages, SentinelError};
 use tokio::sync::{
     mpsc::{Receiver as MpscRx, Sender as MpscTx},
     Mutex,
@@ -12,7 +12,7 @@ use crate::sentinel::processor::{process_host_batch, process_native_batch};
 pub async fn processor_loop<D: DatabaseInterface>(
     guarded_db: Arc<Mutex<D>>,
     mut processor_rx: MpscRx<ProcessorMessages>,
-    mongo_accessor_tx: MpscTx<MongoAccessorMessages>,
+    mongo_tx: MpscTx<MongoMessages>,
 ) -> Result<(), SentinelError> {
     info!("Starting processor loop...");
     let mut heartbeats = Heartbeats::new();
@@ -34,8 +34,8 @@ pub async fn processor_loop<D: DatabaseInterface>(
                             Ok(output) => {
                                 let _ = args.responder.send(Ok(())); // Send an OK response so syncer can continue
                                 heartbeats.push_native(&output);
-                                mongo_accessor_tx.send(MongoAccessorMessages::PutNative(output)).await?;
-                                mongo_accessor_tx.send(MongoAccessorMessages::PutHeartbeats(heartbeats.to_json())).await?;
+                                mongo_tx.send(MongoMessages::PutNative(output)).await?;
+                                mongo_tx.send(MongoMessages::PutHeartbeats(heartbeats.to_json())).await?;
                                 continue 'processor_loop
                             },
                             Err(SentinelError::SyncerRestart(n)) => {
@@ -61,8 +61,8 @@ pub async fn processor_loop<D: DatabaseInterface>(
                             Ok(output) => {
                                 let _ = args.responder.send(Ok(())); // Send an OK response so syncer can continue...
                                 heartbeats.push_host(&output);
-                                mongo_accessor_tx.send(MongoAccessorMessages::PutHost(output)).await?;
-                                mongo_accessor_tx.send(MongoAccessorMessages::PutHeartbeats(heartbeats.to_json())).await?;
+                                mongo_tx.send(MongoMessages::PutHost(output)).await?;
+                                mongo_tx.send(MongoMessages::PutHeartbeats(heartbeats.to_json())).await?;
                                 continue 'processor_loop
                             },
                             Err(SentinelError::SyncerRestart(n)) => {

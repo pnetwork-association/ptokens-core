@@ -1,14 +1,6 @@
 use std::result::Result;
 
-use lib::{
-    get_latest_block_num,
-    get_sub_mat,
-    Batch,
-    CoreAccessorMessages,
-    ProcessArgs,
-    ProcessorMessages,
-    SentinelError,
-};
+use lib::{get_latest_block_num, get_sub_mat, Batch, CoreMessages, ProcessArgs, ProcessorMessages, SentinelError};
 use tokio::{
     sync::{mpsc::Sender as MpscTx, oneshot},
     time::{sleep, Duration},
@@ -76,19 +68,19 @@ async fn main_loop(mut batch: Batch, processor_tx: MpscTx<ProcessorMessages>) ->
 pub async fn syncer_loop(
     mut batch: Batch,
     processor_tx: MpscTx<ProcessorMessages>,
-    core_accessor_tx: MpscTx<CoreAccessorMessages>,
+    core_tx: MpscTx<CoreMessages>,
     disable_syncer: bool,
 ) -> Result<(), SentinelError> {
     let side = batch.side();
 
     // NOTE: Get & set the core's latest block num into the batch...
-    let (latest_block_num_msg, latest_block_num_rx) = CoreAccessorMessages::get_latest_block_num_msg(&side);
-    core_accessor_tx.send(latest_block_num_msg).await?;
+    let (latest_block_num_msg, latest_block_num_rx) = CoreMessages::get_latest_block_num_msg(&side);
+    core_tx.send(latest_block_num_msg).await?;
     batch.set_block_num(latest_block_num_rx.await?? + 1);
 
     // NOTE: Get & set the core's number of confs into the batch...
-    let (confs_msg, confs_rx) = CoreAccessorMessages::get_confs_msg(&side);
-    core_accessor_tx.send(confs_msg).await?;
+    let (confs_msg, confs_rx) = CoreMessages::get_confs_msg(&side);
+    core_tx.send(confs_msg).await?;
     batch.set_confs(confs_rx.await??);
 
     if disable_syncer {

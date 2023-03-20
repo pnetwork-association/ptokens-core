@@ -40,8 +40,8 @@ pub use self::{
     logging::init_logger,
     messages::{
         BroadcasterMessages,
-        CoreAccessorMessages,
-        MongoAccessorMessages,
+        CoreMessages,
+        MongoMessages,
         ProcessArgs,
         ProcessorMessages,
         Responder,
