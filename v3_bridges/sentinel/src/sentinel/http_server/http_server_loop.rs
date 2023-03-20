@@ -10,6 +10,7 @@ use lib::{
     SentinelError,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use tokio::sync::mpsc::Sender as MpscTx;
 use warp::{reject, reject::Reject, Filter, Rejection};
 
@@ -66,7 +67,7 @@ async fn get_sync_status(
         .map(|(n_c, h_c)| {
             let n_d = if n_e > n_c { n_e - n_c } else { 0 };
             let h_d = if h_e > h_c { h_e - h_c } else { 0 };
-            warp::reply::json(&serde_json::json!({
+            warp::reply::json(&json!({
                 "host_delta": h_d,
                 "native_delta": n_d,
                 "host_core_latest_block_num": h_c,
@@ -86,8 +87,8 @@ async fn main_loop(
     let core_tx_1 = core_accessor_tx.clone();
     let core_tx_2 = core_accessor_tx.clone();
 
-    // GET /
-    let welcome = warp::path::end().map(|| "pTokens Sentinel is online!");
+    // GET /ping
+    let ping = warp::path("ping").map(|| warp::reply::json(&json!({"result": "pTokens Sentinel pong"})));
 
     // GET /state
     let state = warp::path("state").and_then(move || {
@@ -110,7 +111,7 @@ async fn main_loop(
         async move { get_sync_status(&n_endpoints, &h_endpoints, tx).await }
     });
 
-    let routes = warp::get().and(welcome.or(state).or(bpm).or(sync));
+    let routes = warp::get().and(ping.or(state).or(bpm).or(sync));
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
     Ok(())
 }

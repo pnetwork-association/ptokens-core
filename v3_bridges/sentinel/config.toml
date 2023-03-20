@@ -14,6 +14,13 @@ endpoints = [ "ws://162.19.83.219:8546" ]
 sleep_duration = 15 # How long to wait before trying to get the next native block (in seconds)
 contract_addresses = [] # Used to prefilter submission material to reduce total batch size.
 
+#[[host.contract_addresses]]
+#name =
+#address =
+#topic =
+#[[host.contract_addresses]]
+#etc
+
 [batching]
 host_batch_size = 5 # Max number of host blocks to batch before submission
 native_batch_size = 10 # Max number of native blocks to batch before submission

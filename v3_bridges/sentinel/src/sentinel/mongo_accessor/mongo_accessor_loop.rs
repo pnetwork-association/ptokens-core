@@ -2,22 +2,44 @@ use std::result::Result;
 
 use lib::{HeartbeatsJson, MongoAccessorMessages, MongoConfig, SentinelError};
 use mongodb::{bson::doc, Collection};
-use tokio::sync::mpsc::Receiver as MpscRx;
+use tokio::{
+    sync::mpsc::Receiver as MpscRx,
+    time::{sleep, Duration},
+};
+
+const MONGO_RETRY_SLEEP_TIME: u64 = 500;
 
 async fn insert_into_mongodb<T: std::fmt::Display + serde::Serialize>(
     output: T,
     collection: &Collection<T>,
 ) -> Result<(), SentinelError> {
-    info!("Adding output to mongo: {output}");
-    let insert_options = None;
-    collection.insert_one(output, insert_options).await?;
-    Ok(())
+    debug!("Adding output to mongo: {output}");
+    loop {
+        match collection.insert_one(&output, None).await {
+            Ok(_) => break Ok(()),
+            Err(ref e) if e.contains_label(mongodb::error::RETRYABLE_WRITE_ERROR) => {
+                warn!("Error writing to mongo, sleeing {MONGO_RETRY_SLEEP_TIME}ms and retrying...");
+                sleep(Duration::from_millis(MONGO_RETRY_SLEEP_TIME)).await;
+                continue;
+            },
+            Err(e) => break Err(e.into()),
+        }
+    }
 }
 
 async fn update_heartbeat(h: &HeartbeatsJson, collection: &Collection<HeartbeatsJson>) -> Result<(), SentinelError> {
-    let f = doc! {"_id":"heartbeats"};
-    collection.find_one_and_replace(f, h, None).await?;
-    Ok(())
+    loop {
+        let f = doc! {"_id":"heartbeats"};
+        match collection.find_one_and_replace(f, h, None).await {
+            Ok(_) => break Ok(()),
+            Err(ref e) if e.contains_label(mongodb::error::RETRYABLE_WRITE_ERROR) => {
+                warn!("Error writing heartbeat to mongo, sleeing {MONGO_RETRY_SLEEP_TIME}ms and retrying...");
+                sleep(Duration::from_millis(MONGO_RETRY_SLEEP_TIME)).await;
+                continue;
+            },
+            Err(e) => break Err(e.into()),
+        }
+    }
 }
 
 async fn get_heartbeats(collection: &Collection<HeartbeatsJson>) -> Result<HeartbeatsJson, SentinelError> {
