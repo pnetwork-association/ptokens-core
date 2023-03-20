@@ -1,15 +1,17 @@
-mod broadcaster_messages;
-mod core_messages;
-mod mongo_messages;
-mod processor_messages;
+mod eth_rpc;
+mod broadcaster;
+mod core;
+mod mongo;
+mod processor;
 mod responder;
-mod syncer_messages;
+mod syncer;
 
 pub use self::{
-    broadcaster_messages::BroadcasterMessages,
-    core_messages::CoreMessages,
-    mongo_messages::MongoMessages,
-    processor_messages::{ProcessArgs, ProcessorMessages},
+    eth_rpc::EthRpcMessages,
+    broadcaster::BroadcasterMessages,
+    core::CoreMessages,
+    mongo::MongoMessages,
+    processor::{ProcessArgs, ProcessorMessages},
     responder::Responder,
-    syncer_messages::SyncerMessages,
+    syncer::SyncerMessages,
 };
