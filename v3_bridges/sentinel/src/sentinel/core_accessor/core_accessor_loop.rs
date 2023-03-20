@@ -32,6 +32,11 @@ async fn process_message<D: DatabaseInterface>(
             let r = HostDbUtils::new(&*db).get_eth_canon_to_tip_length_from_db()?;
             let _ = responder.send(Ok(r));
         },
+        CoreAccessorMessages::GetLatestBlockNumbers(responder) => {
+            let n = NativeDbUtils::new(&*db).get_latest_eth_block_number()?;
+            let h = HostDbUtils::new(&*db).get_latest_eth_block_number()?;
+            let _ = responder.send(Ok((n as u64, h as u64)));
+        },
     }
 
     Ok(())

@@ -9,6 +9,7 @@ pub enum CoreAccessorMessages {
     GetNativeConfs(Responder<u64>),
     GetHostLatestBlockNumber(Responder<u64>),
     GetNativeLatestBlockNumber(Responder<u64>),
+    GetLatestBlockNumbers(Responder<(u64, u64)>),
     GetCoreState((CoreType, Responder<CoreState>)),
 }
 
@@ -34,5 +35,11 @@ impl CoreAccessorMessages {
         } else {
             (Self::GetHostConfs(resp_tx), resp_rx)
         }
+    }
+
+    #[allow(clippy::type_complexity)]
+    pub fn get_latest_block_numbers_msg() -> (Self, Receiver<Result<(u64, u64), SentinelError>>) {
+        let (resp_tx, resp_rx) = oneshot::channel();
+        (Self::GetLatestBlockNumbers(resp_tx), resp_rx)
     }
 }

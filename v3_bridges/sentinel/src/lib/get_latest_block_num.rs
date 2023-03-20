@@ -7,7 +7,7 @@ use crate::{constants::HEX_RADIX, endpoints::Error, SentinelError};
 const GET_LATEST_BLOCK_NUM_RPC_CMD: &str = "eth_blockNumber";
 
 pub async fn get_latest_block_num(ws_client: &WsClient) -> Result<u64, SentinelError> {
-    info!("[+] Getting latest block number...");
+    debug!("Getting latest block number...");
     let res: jsonrpsee::core::RpcResult<String> = ws_client.request(GET_LATEST_BLOCK_NUM_RPC_CMD, rpc_params![]).await;
     match res {
         Err(_) => Err(SentinelError::Endpoint(Error::NoLatestBlock)),
