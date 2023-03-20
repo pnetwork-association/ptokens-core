@@ -1,6 +1,7 @@
 mod batching_config;
 mod config_error;
 mod config_struct;
+mod contract_info;
 mod core_config;
 mod host_config;
 mod log_config;
@@ -11,6 +12,7 @@ pub use self::{
     batching_config::{BatchingConfig, BatchingToml},
     config_error::Error,
     config_struct::Config,
+    contract_info::{ContractInfoToml, ContractInfos},
     core_config::{CoreConfig, CoreToml},
     host_config::{HostConfig, HostToml},
     log_config::{LogConfig, LogToml},

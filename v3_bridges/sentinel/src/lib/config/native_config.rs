@@ -1,18 +1,22 @@
 use std::{result::Result, str::FromStr};
 
 use common_chain_ids::EthChainId;
-use common_eth::convert_hex_strings_to_eth_addresses;
 use ethereum_types::Address as EthAddress;
 use serde::Deserialize;
 
-use crate::{constants::MILLISECONDS_MULTIPLIER, Endpoints, SentinelError};
+use crate::{
+    config::{ContractInfoToml, ContractInfos},
+    constants::MILLISECONDS_MULTIPLIER,
+    Endpoints,
+    SentinelError,
+};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct NativeToml {
     sleep_duration: u64,
     eth_chain_id: String,
     endpoints: Vec<String>,
-    contract_addresses: Vec<String>,
+    contract_info: Vec<ContractInfoToml>,
 }
 
 #[derive(Debug, Clone)]
@@ -20,7 +24,7 @@ pub struct NativeConfig {
     sleep_duration: u64,
     endpoints: Endpoints,
     eth_chain_id: EthChainId,
-    contract_addresses: Vec<EthAddress>,
+    contract_infos: ContractInfos,
 }
 
 impl NativeConfig {
@@ -29,7 +33,7 @@ impl NativeConfig {
         Ok(Self {
             sleep_duration,
             endpoints: Endpoints::new(false, sleep_duration, toml.endpoints.clone()),
-            contract_addresses: convert_hex_strings_to_eth_addresses(&toml.contract_addresses)?,
+            contract_infos: ContractInfos::from_tomls(&toml.contract_info)?,
             eth_chain_id: match EthChainId::from_str(&toml.eth_chain_id) {
                 Ok(id) => id,
                 Err(e) => {
@@ -52,7 +56,7 @@ impl NativeConfig {
     }
 
     pub fn get_contract_addresses(&self) -> Vec<EthAddress> {
-        self.contract_addresses.clone()
+        self.contract_infos.get_addresses()
     }
 
     pub fn get_sleep_duration(&self) -> u64 {

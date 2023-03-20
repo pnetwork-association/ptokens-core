@@ -12,14 +12,6 @@ contract_addresses = [] # Used to prefilter submission material to reduce total 
 eth_chain_id = "1"
 endpoints = [ "ws://162.19.83.219:8546" ]
 sleep_duration = 15 # How long to wait before trying to get the next native block (in seconds)
-contract_addresses = [] # Used to prefilter submission material to reduce total batch size.
-
-#[[host.contract_addresses]]
-#name =
-#address =
-#topic =
-#[[host.contract_addresses]]
-#etc
 
 [batching]
 host_batch_size = 5 # Max number of host blocks to batch before submission
@@ -41,3 +33,21 @@ host_collection = "host" # Name of the host collection
 native_collection = "native" # Name of the host collection
 timeout = 3 # How many seconds to wait when conneting/inserting/reading etc
 uri = "mongodb://127.0.0.1:27017"
+
+# NOTE: These are an analogue to the v1 & v2 core token dictionaries
+[[host.contract_info]]
+name = "pBTC"
+address = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628"
+#topic = "" #
+
+[[host.contract_info]]
+name = "pEOS"
+address = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628"
+
+[[native.contract_info]]
+name = "pBTC"
+address = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628"
+
+[[native.contract_info]]
+name = "pEOS"
+address = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628"
