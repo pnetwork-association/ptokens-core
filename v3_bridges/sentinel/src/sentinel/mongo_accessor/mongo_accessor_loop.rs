@@ -16,8 +16,7 @@ async fn insert_into_mongodb<T: std::fmt::Display + serde::Serialize>(
 
 async fn update_heartbeat(h: &HeartbeatsJson, collection: &Collection<HeartbeatsJson>) -> Result<(), SentinelError> {
     let f = doc! {"_id":"heartbeats"};
-    collection.delete_one(f, None).await?;
-    collection.insert_one(h, None).await?;
+    collection.find_one_and_replace(f, h, None).await?;
     Ok(())
 }
 
