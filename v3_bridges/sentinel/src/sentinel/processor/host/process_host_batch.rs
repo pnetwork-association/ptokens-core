@@ -6,12 +6,19 @@ use lib::{HostOutput, SentinelError};
 
 const SIDE: &str = "host";
 
-fn process_host<D: DatabaseInterface>(db: &D, sub_mat: &EthSubmissionMaterial) -> Result<(), SentinelError> {
+fn process_host<D: DatabaseInterface>(
+    db: &D,
+    is_in_sync: bool,
+    sub_mat: &EthSubmissionMaterial,
+) -> Result<(), SentinelError> {
     let n = sub_mat.get_block_number()?;
     let db_utils = HostDbUtils::new(db);
     append_to_blockchain(&db_utils, sub_mat)?;
 
-    if sub_mat.receipts.is_empty() {
+    if !is_in_sync {
+        warn!("{SIDE} is not in sync, not processing receipts!");
+        Ok(())
+    } else if sub_mat.receipts.is_empty() {
         debug!("{SIDE} block {n} had no receipts to process!");
         Ok(())
     } else {
@@ -22,13 +29,14 @@ fn process_host<D: DatabaseInterface>(db: &D, sub_mat: &EthSubmissionMaterial) -
 
 pub fn process_host_batch<D: DatabaseInterface>(
     db: &D,
+    is_in_sync: bool,
     batch: &EthSubmissionMaterials,
 ) -> Result<HostOutput, SentinelError> {
     info!("Processing {SIDE} batch of submission material...");
     db.start_transaction()?;
     let result = batch
         .iter()
-        .map(|m| process_host(db, m))
+        .map(|m| process_host(db, is_in_sync, m))
         .collect::<Result<Vec<()>, SentinelError>>();
     db.end_transaction()?;
 

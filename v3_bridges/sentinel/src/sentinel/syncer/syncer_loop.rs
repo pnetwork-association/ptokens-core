@@ -1,6 +1,14 @@
 use std::result::Result;
 
-use lib::{get_sub_mat, Batch, CoreAccessorMessages, ProcessArgs, ProcessorMessages, SentinelError};
+use lib::{
+    get_latest_block_num,
+    get_sub_mat,
+    Batch,
+    CoreAccessorMessages,
+    ProcessArgs,
+    ProcessorMessages,
+    SentinelError,
+};
 use tokio::{
     sync::{mpsc::Sender as MpscTx, oneshot},
     time::{sleep, Duration},
@@ -21,15 +29,22 @@ async fn main_loop(mut batch: Batch, processor_tx: MpscTx<ProcessorMessages>) ->
                 } else {
                     // TODO check if batch is chained correctly!
                     info!("{log_prefix} batch is ready to submit!");
-                    let (resp_tx, resp_rx) = oneshot::channel();
-                    let args = ProcessArgs::new(batch.to_submission_material(), resp_tx);
+                    let (tx, rx) = oneshot::channel();
+                    let latest_block_num = get_latest_block_num(&ws_client).await?;
+                    let args = ProcessArgs::new(
+                        batch.get_confs(),
+                        batch.batch_size(),
+                        latest_block_num,
+                        tx,
+                        batch.to_submission_material(),
+                    );
                     let msg = if batch.is_native() {
                         ProcessorMessages::ProcessNative(args)
                     } else {
                         ProcessorMessages::ProcessHost(args)
                     };
                     processor_tx.send(msg).await?;
-                    match resp_rx.await? {
+                    match rx.await? {
                         Ok(_) => {
                             debug!("{log_prefix} oneshot channel returned ok");
                             batch.increment_block_num();

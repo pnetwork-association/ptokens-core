@@ -24,8 +24,12 @@ pub async fn processor_loop<D: DatabaseInterface>(
                 match r {
                     Some(ProcessorMessages::ProcessNative(args)) => {
                         debug!("Processing native material...");
-                        // NOTE If we match on the fxn call directly, we get tokio errors!
-                        let result =  process_native_batch(&*db, &args.batch);
+                        // NOTE If we match on the process fxn call directly, we get tokio errors!
+                        let result =  process_native_batch(
+                            &*db,
+                            matches!(args.is_in_sync(), Ok(true)),
+                            &args.batch,
+                        );
                         match result {
                             Ok(output) => {
                                 let _ = args.responder.send(Ok(())); // Send an OK response so syncer can continue
@@ -47,8 +51,12 @@ pub async fn processor_loop<D: DatabaseInterface>(
                     },
                     Some(ProcessorMessages::ProcessHost(args)) => {
                         debug!("Processing host material...");
-                        // NOTE If we match on the fxn call directly, we get tokio errors!
-                        let result = process_host_batch(&*db, &args.batch);
+                        // NOTE If we match on the process fxn call directly, we get tokio errors!
+                        let result = process_host_batch(
+                            &*db,
+                            matches!(args.is_in_sync(), Ok(true)),
+                            &args.batch
+                        );
                         match result {
                             Ok(output) => {
                                 let _ = args.responder.send(Ok(())); // Send an OK response so syncer can continue...

@@ -6,12 +6,19 @@ use lib::{NativeOutput, SentinelError};
 
 const SIDE: &str = "native";
 
-fn process_native<D: DatabaseInterface>(db: &D, sub_mat: &EthSubmissionMaterial) -> Result<(), SentinelError> {
+fn process_native<D: DatabaseInterface>(
+    db: &D,
+    is_in_sync: bool,
+    sub_mat: &EthSubmissionMaterial,
+) -> Result<(), SentinelError> {
     let n = sub_mat.get_block_number()?;
     let db_utils = NativeDbUtils::new(db);
     append_to_blockchain(&db_utils, sub_mat)?;
 
-    if sub_mat.receipts.is_empty() {
+    if !is_in_sync {
+        warn!("{SIDE} is not in sync, not processing receipts!");
+        Ok(())
+    } else if sub_mat.receipts.is_empty() {
         debug!("Native block {n} had no receipts to process!");
         Ok(())
     } else {
@@ -22,6 +29,7 @@ fn process_native<D: DatabaseInterface>(db: &D, sub_mat: &EthSubmissionMaterial)
 
 pub fn process_native_batch<D: DatabaseInterface>(
     db: &D,
+    is_in_sync: bool,
     batch: &EthSubmissionMaterials,
 ) -> Result<NativeOutput, SentinelError> {
     info!("Processing {SIDE} batch of submission material...");
@@ -29,7 +37,7 @@ pub fn process_native_batch<D: DatabaseInterface>(
     db.start_transaction()?;
     let result = batch
         .iter()
-        .map(|m| process_native(db, m))
+        .map(|m| process_native(db, is_in_sync, m))
         .collect::<Result<Vec<()>, SentinelError>>();
     db.end_transaction()?;
 
