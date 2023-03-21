@@ -44,7 +44,7 @@ pub fn append_to_blockchain<D: DatabaseInterface, E: EthDbUtilsExt<D>>(
 
 #[cfg(test)]
 mod tests {
-    use common::{errors::AppError, test_utils::get_test_database};
+    use common::{errors::AppError, test_utils::get_test_database, BlockAlreadyInDbError, BridgeSide};
     use common_chain_ids::EthChainId;
     use ethereum_types::H256 as EthHash;
 
@@ -156,9 +156,13 @@ mod tests {
         // Or that we can't add the same block again...
         match append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx]) {
             Ok(_) => panic!("Should not have succeeded!"),
-            Err(AppError::Custom(s)) => {
-                let expected_err = "Rejected - it's already in the db";
-                assert!(s.contains(&expected_err))
+            Err(AppError::BlockAlreadyInDbError(e)) => {
+                let expected_err = BlockAlreadyInDbError::new(
+                    blocks[last_submitted_block_idx].get_block_number().unwrap().as_u64(),
+                    "✘ Block Rejected - it's already in the db!".to_string(),
+                    BridgeSide::Native,
+                );
+                assert_eq!(e, expected_err)
             },
             Err(e) => panic!("Wrong error received: {e}!"),
         }
@@ -166,9 +170,16 @@ mod tests {
         // Or a previous one...
         match append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx - 1]) {
             Ok(_) => panic!("Should not have succeeded!"),
-            Err(AppError::Custom(s)) => {
-                let expected_err = "Rejected - it's already in the db";
-                assert!(s.contains(&expected_err))
+            Err(AppError::BlockAlreadyInDbError(e)) => {
+                let expected_err = BlockAlreadyInDbError::new(
+                    blocks[last_submitted_block_idx - 1]
+                        .get_block_number()
+                        .unwrap()
+                        .as_u64(),
+                    "✘ Block Rejected - it's already in the db!".to_string(),
+                    BridgeSide::Native,
+                );
+                assert_eq!(e, expected_err)
             },
             Err(e) => panic!("Wrong error received: {e}!"),
         }

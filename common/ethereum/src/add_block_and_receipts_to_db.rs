@@ -1,4 +1,4 @@
-use common::{traits::DatabaseInterface, types::Result};
+use common::{traits::DatabaseInterface, types::Result, AppError, BlockAlreadyInDbError, BridgeSide};
 
 use crate::{eth_database_utils::EthDbUtilsExt, eth_state::EthState, eth_submission_material::EthSubmissionMaterial};
 
@@ -6,12 +6,22 @@ pub fn add_block_and_receipts_to_db_if_not_extant<D: DatabaseInterface, E: EthDb
     db_utils: &E,
     block_and_receipts: &EthSubmissionMaterial,
 ) -> Result<()> {
+    let is_for_eth = db_utils.get_is_for_eth();
     info!(
         "✔ Adding {} block and receipts if not already in db...",
-        if db_utils.get_is_for_eth() { "ETH" } else { "EVM" }
+        if is_for_eth { "ETH" } else { "EVM" }
     );
     if db_utils.eth_block_exists_in_db(&block_and_receipts.get_block_hash()?) {
-        Err("✘ Block Rejected - it's already in the db!".into())
+        let e = BlockAlreadyInDbError::new(
+            block_and_receipts.get_block_number()?.as_u64(),
+            "✘ Block Rejected - it's already in the db!".to_string(),
+            if is_for_eth {
+                BridgeSide::Native
+            } else {
+                BridgeSide::Host
+            },
+        );
+        Err(AppError::BlockAlreadyInDbError(e))
     } else {
         info!("✔ Block & receipts not in db, adding them now...");
         db_utils.put_eth_submission_material_in_db(block_and_receipts)
