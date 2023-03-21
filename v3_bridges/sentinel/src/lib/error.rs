@@ -25,6 +25,7 @@ pub enum SentinelError {
     Logger(flexi_logger::FlexiLoggerError),
     JsonRpc(jsonrpsee::core::error::Error),
     RocksDb(common_rocksdb::RocksdbDatabaseError),
+    BlockAlreadyInDb(common::BlockAlreadyInDbError),
     Receiver(tokio::sync::broadcast::error::RecvError),
     OneshotReceiver(tokio::sync::oneshot::error::RecvError),
     CoreChannel(Box<tokio::sync::mpsc::error::SendError<CoreMessages>>),
@@ -44,6 +45,7 @@ impl std::fmt::Display for SentinelError {
             Self::RocksDb(ref err) => write!(f, "{err}"),
             Self::NoParent(ref err) => write!(f, "{err}"),
             Self::IO(ref err) => write!(f, "IO error: {err}"),
+            Self::BlockAlreadyInDb(ref err) => write!(f, "{err}"),
             Self::NoBlock(ref num) => write!(f, "no block {num}"),
             Self::PoisonedLock => write!(f, "posioned lock error!"),
             Self::Config(ref err) => write!(f, "config error: {err}"),
@@ -85,6 +87,7 @@ impl std::error::Error for SentinelError {
             Self::IO(ref err) => Some(err),
             Self::SyncerRestart(_) => None,
             Self::Time(ref err) => Some(err),
+            Self::BlockAlreadyInDb(_) => None,
             Self::Common(ref err) => Some(err),
             Self::Config(ref err) => Some(err),
             Self::Logger(ref err) => Some(err),
@@ -110,6 +113,7 @@ impl From<common::errors::AppError> for SentinelError {
     fn from(err: common::errors::AppError) -> Self {
         match err {
             common::AppError::NoParentError(e) => Self::NoParent(e),
+            common::AppError::BlockAlreadyInDbError(e) => Self::BlockAlreadyInDb(e),
             _ => Self::Common(err),
         }
     }
