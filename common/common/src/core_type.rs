@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use std::{fmt, str::FromStr};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use strum_macros::EnumIter;
 
 use crate::{
@@ -19,7 +19,7 @@ lazy_static! {
         crate::utils::get_prefixed_db_key("native_core_is_initialized_db_key");
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, EnumIter, Serialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, EnumIter, Serialize, Deserialize)]
 pub enum CoreType {
     BtcOnEth,
     BtcOnInt,
@@ -35,7 +35,7 @@ pub enum CoreType {
     V3(V3CoreType),
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, EnumIter, Serialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, EnumIter, Serialize, Deserialize)]
 pub enum V3CoreType {
     EvmOnInt,
     IntOnEvm,

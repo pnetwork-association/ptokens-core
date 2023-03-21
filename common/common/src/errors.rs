@@ -1,6 +1,10 @@
 quick_error! {
     #[derive(Debug)]
     pub enum AppError {
+        BlockAlreadyInDbError(err: crate::BlockAlreadyInDbError) {
+            from()
+            display("{err}")
+        }
         NoParentError(err: crate::NoParentError) {
             from()
             display("{err}")

@@ -13,6 +13,7 @@
 //! if running multiple instances on one machine.
 
 pub use crate::{
+    block_already_in_db_error::BlockAlreadyInDbError,
     bridge_side::BridgeSide,
     core_type::{CoreType, V3CoreType},
     errors::AppError,
@@ -26,6 +27,7 @@ pub use crate::{
 #[macro_use]
 pub mod macros;
 pub mod address;
+mod block_already_in_db_error;
 mod bridge_side;
 pub mod constants;
 pub mod core_type;
