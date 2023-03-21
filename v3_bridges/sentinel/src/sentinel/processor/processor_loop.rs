@@ -43,6 +43,11 @@ pub async fn processor_loop<D: DatabaseInterface>(
                                 let _ = args.responder.send(Err(SentinelError::NoParent(e)));
                                 continue 'processor_loop
                             },
+                            Err(SentinelError::BlockAlreadyInDb(e)) => {
+                                debug!("native side block already in db successfully caught and returned to syncer");
+                                let _ = args.responder.send(Err(SentinelError::BlockAlreadyInDb(e)));
+                                continue 'processor_loop
+                            },
                             Err(e) => {
                                 warn!("native processor err: {e}");
                                 break 'processor_loop Err(e)
@@ -68,6 +73,11 @@ pub async fn processor_loop<D: DatabaseInterface>(
                             Err(SentinelError::NoParent(e)) => {
                                 debug!("host side no parent error successfully caught and returned to syncer");
                                 let _ = args.responder.send(Err(SentinelError::NoParent(e)));
+                                continue 'processor_loop
+                            },
+                            Err(SentinelError::BlockAlreadyInDb(e)) => {
+                                debug!("host side block already in db successfully caught and returned to syncer");
+                                let _ = args.responder.send(Err(SentinelError::BlockAlreadyInDb(e)));
                                 continue 'processor_loop
                             },
                             Err(e) => {

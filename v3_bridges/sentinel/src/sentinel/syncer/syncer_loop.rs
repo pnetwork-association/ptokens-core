@@ -46,7 +46,15 @@ async fn main_loop(mut batch: Batch, processor_tx: MpscTx<ProcessorMessages>) ->
                             warn!("{log_prefix} returned a no parent err for {n}!");
                             batch.drain();
                             batch.set_block_num(n - 1);
-                            batch.set_no_parent_error_flag();
+                            batch.set_single_submissions_flag();
+                            continue 'main_loop;
+                        },
+                        Err(SentinelError::BlockAlreadyInDb(e)) => {
+                            let n = e.block_num;
+                            warn!("{log_prefix} block {n} already in the db!");
+                            batch.drain();
+                            batch.set_block_num(n + 1);
+                            batch.set_single_submissions_flag();
                             continue 'main_loop;
                         },
                         Err(e) => {
