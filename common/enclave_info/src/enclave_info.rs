@@ -6,10 +6,10 @@ use common::{
     CoreType,
 };
 use common_debug_signers::DebugSignatories;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnclaveInfo {
     core_version: String,
     db_key_prefix: String,
