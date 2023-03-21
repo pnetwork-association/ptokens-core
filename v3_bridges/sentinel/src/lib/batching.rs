@@ -16,6 +16,7 @@ pub struct Batch {
     sleep_duration: u64,
     batch_duration: u64,
     endpoints: Endpoints,
+    no_parent_error_flag: bool,
     batching_is_disabled: bool,
     batch: EthSubmissionMaterials,
     contract_addresses: Vec<EthAddress>,
@@ -32,6 +33,7 @@ impl Default for Batch {
             batch_duration: 300, // NOTE: 5mins
             contract_addresses: vec![],
             side: BridgeSide::default(),
+            no_parent_error_flag: false,
             batching_is_disabled: false,
             endpoints: Endpoints::default(),
             batch: EthSubmissionMaterials::default(),
@@ -41,6 +43,10 @@ impl Default for Batch {
 }
 
 impl Batch {
+    pub fn set_no_parent_error_flag(&mut self) {
+        self.no_parent_error_flag = true;
+    }
+
     pub fn set_confs(&mut self, n: u64) {
         self.confs = n;
     }
@@ -150,6 +156,10 @@ impl Batch {
     }
 
     pub fn drain(&mut self) {
+        if self.no_parent_error_flag {
+            // If we're draining a batch it's due to of a successful submission, so we reset this flag.
+            self.no_parent_error_flag = false;
+        };
         self.batch = EthSubmissionMaterials::new(vec![]);
         self.set_time_of_last_submission()
     }
@@ -162,6 +172,9 @@ impl Batch {
         if self.is_empty() {
             // NOTE: There's nothing to submit.
             return false;
+        } else if self.no_parent_error_flag == true {
+            // NOTE: We're handling a no parent error, so we want to submit one block at a time...
+            return true;
         } else if self.size_in_blocks() >= self.batch_size {
             // NOTE: We've reached the max allowable batch size for submissions...
             info!(

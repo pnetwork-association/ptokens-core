@@ -1,6 +1,6 @@
 use common::{BridgeSide, CoreType};
-use tokio::sync::{oneshot, oneshot::Receiver};
 use ethereum_types::Address as EthAddress;
+use tokio::sync::{oneshot, oneshot::Receiver};
 
 use crate::{CoreState, Responder, SentinelError};
 
