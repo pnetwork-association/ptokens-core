@@ -172,8 +172,8 @@ impl Batch {
         if self.is_empty() {
             // NOTE: There's nothing to submit.
             return false;
-        } else if self.no_parent_error_flag == true {
-            // NOTE: We're handling a no parent error, so we want to submit one block at a time...
+        } else if self.no_parent_error_flag {
+            // NOTE: We're handling a no parent error, so we want to submit only one block at a time...
             return true;
         } else if self.size_in_blocks() >= self.batch_size {
             // NOTE: We've reached the max allowable batch size for submissions...

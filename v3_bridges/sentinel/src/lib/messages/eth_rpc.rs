@@ -1,8 +1,8 @@
-use common::{BridgeSide, CoreType};
+#![allow(dead_code)] // FIXME rm once this is used
 use ethereum_types::Address as EthAddress;
 use tokio::sync::{oneshot, oneshot::Receiver};
 
-use crate::{CoreState, Responder, SentinelError};
+use crate::{Responder, SentinelError};
 
 #[derive(Debug)]
 pub enum EthRpcMessages {

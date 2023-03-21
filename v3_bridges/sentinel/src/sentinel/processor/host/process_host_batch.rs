@@ -1,7 +1,7 @@
 use std::result::Result;
 
 use common::DatabaseInterface;
-use common_eth::{append_to_blockchain, EthDbUtilsExt, EthSubmissionMaterial, EthSubmissionMaterials, HostDbUtils};
+use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials, HostDbUtils};
 use lib::{HostOutput, SentinelError};
 
 const SIDE: &str = "host";
@@ -41,16 +41,10 @@ pub fn process_host_batch<D: DatabaseInterface>(
     db.end_transaction()?;
 
     match result {
+        Err(e) => Err(e),
         Ok(_) => {
             info!("Finished processing {SIDE} submission material!");
             HostOutput::new(batch.get_last_block_num()?)
         },
-        Err(SentinelError::NoParent(_)) => {
-            let db_utils = HostDbUtils::new(db);
-            let n = db_utils.get_latest_eth_block_number()? + 1;
-            warn!("no parent error in {SIDE} proocessor - need to restart from {n}!");
-            Err(SentinelError::SyncerRestart(n as u64))
-        },
-        Err(e) => Err(e),
     }
 }

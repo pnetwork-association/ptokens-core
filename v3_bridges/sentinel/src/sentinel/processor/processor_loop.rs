@@ -38,9 +38,9 @@ pub async fn processor_loop<D: DatabaseInterface>(
                                 mongo_tx.send(MongoMessages::PutHeartbeats(heartbeats.to_json())).await?;
                                 continue 'processor_loop
                             },
-                            Err(SentinelError::SyncerRestart(n)) => {
-                                warn!("native side no parent error successfully caught and returned to syncer");
-                                let _ = args.responder.send(Err(SentinelError::SyncerRestart(n)));
+                            Err(SentinelError::NoParent(e)) => {
+                                debug!("native side no parent error successfully caught and returned to syncer");
+                                let _ = args.responder.send(Err(SentinelError::NoParent(e)));
                                 continue 'processor_loop
                             },
                             Err(e) => {
@@ -65,9 +65,9 @@ pub async fn processor_loop<D: DatabaseInterface>(
                                 mongo_tx.send(MongoMessages::PutHeartbeats(heartbeats.to_json())).await?;
                                 continue 'processor_loop
                             },
-                            Err(SentinelError::SyncerRestart(n)) => {
-                                warn!("host side no parent error successfully caught and returned to syncer");
-                                let _ = args.responder.send(Err(SentinelError::SyncerRestart(n)));
+                            Err(SentinelError::NoParent(e)) => {
+                                debug!("host side no parent error successfully caught and returned to syncer");
+                                let _ = args.responder.send(Err(SentinelError::NoParent(e)));
                                 continue 'processor_loop
                             },
                             Err(e) => {

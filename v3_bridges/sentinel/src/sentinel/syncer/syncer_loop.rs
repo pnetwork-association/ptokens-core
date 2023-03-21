@@ -41,9 +41,13 @@ async fn main_loop(mut batch: Batch, processor_tx: MpscTx<ProcessorMessages>) ->
                             debug!("{log_prefix} oneshot channel returned ok");
                             batch.increment_block_num();
                         },
-                        Err(SentinelError::SyncerRestart(n)) => {
-                            warn!("{log_prefix} oneshot channel returned a syncer restart err {n}");
-                            batch.set_block_num(n);
+                        Err(SentinelError::NoParent(e)) => {
+                            let n = e.block_num;
+                            warn!("{log_prefix} returned a no parent err for {n}!");
+                            batch.drain();
+                            batch.set_block_num(n - 1);
+                            batch.set_no_parent_error_flag();
+                            continue 'main_loop;
                         },
                         Err(e) => {
                             warn!("{log_prefix} oneshot channel returned err {e}");
