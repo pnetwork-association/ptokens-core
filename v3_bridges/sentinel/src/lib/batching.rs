@@ -168,34 +168,42 @@ impl Batch {
         self.batch.len() as u64
     }
 
+    pub fn get_seconds_since_last_submission(&self) -> u64 {
+        match self.last_submitted_timestamp.elapsed() {
+            Ok(d) => d.as_secs(),
+            Err(e) => {
+                // NOTE: We default to u64::MAX here because that will mean the batch is always ready
+                // to submit in case of this error, which is preferable to the batch never being ready!
+                warn!("Error getting time since last submission: {e}");
+                u64::MAX
+            },
+        }
+    }
+
     pub fn is_ready_to_submit(&self) -> bool {
         if self.is_empty() {
-            // NOTE: There's nothing to submit.
+            info!("Batch not ready to submit because it's empty");
             return false;
         } else if self.single_submissions_flag {
-            // NOTE: We're probably handling an error, and need submissions of size 1 for the time being...
+            info!("Batch set to single submission so it's ready to submit");
             return true;
-        } else if self.size_in_blocks() >= self.batch_size {
-            // NOTE: We've reached the max allowable batch size for submissions...
+        }
+
+        let size = self.size_in_blocks();
+        if size >= self.batch_size {
             info!(
-                "[+] Ready to submit because batch has sufficient blocks! (Num blocks: {}, limit: {})",
-                self.size_in_blocks(),
+                "Batch has sufficient blocks! (blocks: {size}, limit: {})",
                 self.batch_size
             );
             return true;
         }
-        if let Ok(t) = self.last_submitted_timestamp.elapsed() {
-            let res = t.as_secs() >= self.batch_duration;
-            if res {
-                info!("[+] Ready to submit because enough time has elapsed");
-                true
-            } else {
-                false
-            }
-        } else {
-            // NOTE: If there's some error figuring out the elapsed time, let's assume it's ready...
-            warn!("[!] Could not ascertain elapsed time since last submission, so assuming it's ready!");
+
+        if self.get_seconds_since_last_submission() >= self.batch_duration {
+            info!("Ready to submit because enough time has elapsed");
             true
+        } else {
+            info!("Batch not ready to submit because not enough time has elapsed!");
+            false
         }
     }
 
