@@ -190,21 +190,23 @@ impl Batch {
         }
 
         let size = self.size_in_blocks();
+        let size_limit = self.batch_size;
         if size >= self.batch_size {
-            info!(
-                "Batch has sufficient blocks! (blocks: {size}, limit: {})",
-                self.batch_size
-            );
+            info!("Batch has sufficient blocks to submit! (blocks: {size}, limit: {size_limit})");
             return true;
         }
 
-        if self.get_seconds_since_last_submission() >= self.batch_duration {
+        let time_limit = self.batch_duration;
+        let time = self.get_seconds_since_last_submission();
+        if time >= time_limit {
             info!("Ready to submit because enough time has elapsed");
-            true
-        } else {
-            info!("Batch not ready to submit because not enough time has elapsed!");
-            false
+            return true;
         }
+
+        let pct_full = (size / size_limit) * 100;
+        let pct_time = (time / time_limit) * 100;
+        info!("Batch not ready to submit yet! ({pct_full}% full, {pct_time}% time)");
+        false
     }
 
     pub fn check_is_chained(self) -> Result<Self, SentinelError> {
