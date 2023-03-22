@@ -5,7 +5,7 @@ use common_eth::EthSubmissionMaterial;
 use dotenv::dotenv;
 use jsonrpsee::ws_client::WsClient;
 
-use crate::{check_endpoint, get_rpc_client, Batch, SentinelError};
+use crate::{check_endpoint, get_rpc_client, Batch, Endpoints, SentinelError};
 
 const ENV_VAR: &str = "TEST_ENDPOINT";
 
@@ -18,6 +18,17 @@ pub async fn get_test_ws_client() -> WsClient {
     let ws_client = get_rpc_client(&url).await.unwrap();
     check_endpoint(&ws_client, time_limit).await.unwrap();
     ws_client
+}
+
+pub async fn get_test_endpoints() -> Endpoints {
+    dotenv().ok();
+    let is_native = true;
+    let sleep_time = 500;
+    let url = env::var(ENV_VAR)
+        .map_err(|_| SentinelError::Custom("Please set env var '{ENV_VAR}' to a working endpoint!".into()))
+        .unwrap();
+    let urls = vec![url];
+    Endpoints::new(is_native, sleep_time, urls)
 }
 
 pub fn get_sample_sub_mat_n(n: usize) -> EthSubmissionMaterial {

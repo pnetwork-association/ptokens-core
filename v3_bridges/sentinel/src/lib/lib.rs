@@ -30,7 +30,7 @@ pub use self::{
     error::SentinelError,
     flatten_join_handle::flatten_join_handle,
     get_block::get_block,
-    get_latest_block_num::get_latest_block_num,
+    get_latest_block_num::{get_latest_block_num, get_latest_block_num_via_endpoints},
     get_receipts::get_receipts,
     get_rpc_client::get_rpc_client,
     get_sub_mat::get_sub_mat,
