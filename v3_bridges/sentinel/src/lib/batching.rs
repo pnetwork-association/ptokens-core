@@ -195,7 +195,7 @@ impl Batch {
 
         let size = self.size_in_blocks();
         let size_limit = self.batch_size;
-        if size >= self.batch_size {
+        if size >= size_limit {
             info!("Batch has sufficient blocks to submit! (blocks: {size}, limit: {size_limit})");
             return true;
         }
@@ -207,9 +207,9 @@ impl Batch {
             return true;
         }
 
-        let pct_full = (size / size_limit) * 100;
-        let pct_time = (time / time_limit) * 100;
-        info!("Batch not ready to submit yet! ({pct_full}% full, {pct_time}% time)");
+        let pct_full = (size as f64 / size_limit as f64) * 100_f64;
+        let pct_time = (time as f64 / time_limit as f64) * 100_f64;
+        info!("Batch not ready to submit yet! ({pct_full:.2}% full, {pct_time:.2}% time)");
         false
     }
 
