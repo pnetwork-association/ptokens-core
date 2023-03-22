@@ -1,7 +1,7 @@
 use common::{CoreType, DatabaseInterface};
 use common_eth::{convert_hex_to_eth_address, init_v3_host_core, init_v3_native_core, VaultUsingCores};
 use common_rocksdb::get_db;
-use lib::{get_latest_block_num, get_rpc_client, get_sub_mat, SentinelConfig, SentinelError};
+use lib::{get_latest_block_num, get_sub_mat, SentinelConfig, SentinelError};
 use serde_json::json;
 
 #[derive(Debug, Args)]
@@ -28,9 +28,9 @@ async fn init_native<D: DatabaseInterface>(
     args: &InitArgs,
 ) -> Result<(), SentinelError> {
     info!("Initializing native core...");
-    let endpoint = config.native_config.get_first_endpoint()?;
-    let ws_client = get_rpc_client(&endpoint).await?;
-    let latest_block_num = get_latest_block_num(&ws_client).await?;
+    let endpoints = config.get_native_endpoints();
+    let ws_client = endpoints.get_rpc_client().await?;
+    let latest_block_num = get_latest_block_num(&endpoints).await?;
     let sub_mat = get_sub_mat(&ws_client, latest_block_num).await?;
 
     init_v3_native_core(
@@ -52,9 +52,9 @@ async fn init_host<D: DatabaseInterface>(
     args: &InitArgs,
 ) -> Result<(), SentinelError> {
     info!("Initializing host core...");
-    let endpoint = config.host_config.get_first_endpoint()?;
-    let ws_client = get_rpc_client(&endpoint).await?;
-    let latest_block_num = get_latest_block_num(&ws_client).await?;
+    let endpoints = config.get_host_endpoints();
+    let ws_client = endpoints.get_rpc_client().await?;
+    let latest_block_num = get_latest_block_num(&endpoints).await?;
     let sub_mat = get_sub_mat(&ws_client, latest_block_num).await?;
 
     init_v3_host_core(

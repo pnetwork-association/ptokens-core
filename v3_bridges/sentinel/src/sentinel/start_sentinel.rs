@@ -40,7 +40,7 @@ pub async fn start_sentinel(
 
     let (mongo_tx, mongo_rx): (MpscTx<MongoMessages>, MpscRx<MongoMessages>) = mpsc::channel(MAX_CHANNEL_CAPACITY);
 
-    let (eth_rpc_tx, eth_rpc_rx): (MpscTx<EthRpcMessages>, MpscRx<EthRpcMessages>) =
+    let (_eth_rpc_tx, eth_rpc_rx): (MpscTx<EthRpcMessages>, MpscRx<EthRpcMessages>) =
         mpsc::channel(MAX_CHANNEL_CAPACITY);
 
     let native_syncer_thread = tokio::spawn(syncer_loop(

@@ -50,7 +50,7 @@ async fn get_heartbeats(collection: &Collection<HeartbeatsJson>) -> Result<Heart
 pub async fn mongo_loop(mongo_config: MongoConfig, mut mongo_rx: MpscRx<MongoMessages>) -> Result<(), SentinelError> {
     info!("Checking mongo config...");
     mongo_config.check_mongo_connection().await?;
-    info!("Mongo accessor listening!");
+    info!("Mongo listening!");
 
     let host_collection = mongo_config.get_host_collection().await?;
     let native_collection = mongo_config.get_native_collection().await?;
@@ -78,14 +78,14 @@ pub async fn mongo_loop(mongo_config: MongoConfig, mut mongo_rx: MpscRx<MongoMes
                     continue 'mongo_loop
                 },
                 None => {
-                    let m = "all mongo accessor senders dropped!";
+                    let m = "all mongo senders dropped!";
                     warn!("{m}");
                     break 'mongo_loop Err(SentinelError::Custom(m.into()))
                 },
             },
             _ = tokio::signal::ctrl_c() => {
-                warn!("mongo accessor shutting down...");
-                break 'mongo_loop Err(SentinelError::SigInt("mongo accessor".into()))
+                warn!("mongo shutting down...");
+                break 'mongo_loop Err(SentinelError::SigInt("mongo".into()))
             },
         }
     }

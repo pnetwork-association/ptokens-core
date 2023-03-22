@@ -24,7 +24,7 @@ async fn get_sub_mat_cli(
     let endpoint = endpoints.get_first_endpoint()?;
     let ws_client = get_rpc_client(&endpoint).await?;
     let sub_mat_type = if is_native { "native" } else { "host" };
-    info!("[+] Getting {sub_mat_type} submission material...");
+    info!("Getting {sub_mat_type} submission material...");
     let sub_mat = get_sub_mat(&ws_client, args.block_num).await?;
     let block_num = sub_mat.get_block_number()?;
     let s = serde_json::to_string(&sub_mat)?;

@@ -1,7 +1,7 @@
 use std::result::Result;
 
 use common::BridgeSide;
-use lib::{get_latest_block_num_via_endpoints, EthRpcMessages, SentinelConfig, SentinelError};
+use lib::{get_latest_block_num, EthRpcMessages, SentinelConfig, SentinelError};
 use tokio::sync::mpsc::Receiver as MpscRx;
 
 pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: SentinelConfig) -> Result<(), SentinelError> {
@@ -13,8 +13,8 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
             r = eth_rpc_rx.recv() => match r {
                 Some(EthRpcMessages::GetLatestBlockNum((side, responder))) => {
                     let r = match side {
-                        BridgeSide::Host => get_latest_block_num_via_endpoints(&host_endpoints),
-                        BridgeSide::Native => get_latest_block_num_via_endpoints(&native_endpoints),
+                        BridgeSide::Host => get_latest_block_num(&host_endpoints),
+                        BridgeSide::Native => get_latest_block_num(&native_endpoints),
                     }.await;
                     let _ = responder.send(r);
                     continue 'eth_rpc_loop

@@ -16,12 +16,16 @@ pub async fn get_sub_mat(ws_client: &WsClient, block_num: u64) -> Result<EthSubm
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{get_latest_block_num, test_utils::get_test_ws_client};
+    use crate::{
+        get_latest_block_num,
+        test_utils::{get_test_endpoints, get_test_ws_client},
+    };
 
     #[tokio::test]
     async fn should_get_sub_mat() {
         let ws_client = get_test_ws_client().await;
-        let block_num = get_latest_block_num(&ws_client).await.unwrap();
+        let endpoints = get_test_endpoints().await;
+        let block_num = get_latest_block_num(&endpoints).await.unwrap();
         let result = get_sub_mat(&ws_client, block_num).await;
         assert!(result.is_ok())
     }

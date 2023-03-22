@@ -1,6 +1,6 @@
 use std::result::Result;
 
-use lib::{get_latest_block_num, get_rpc_client, Endpoints, SentinelError};
+use lib::{get_latest_block_num, Endpoints, SentinelError};
 use serde_json::json;
 
 #[derive(Debug, Subcommand)]
@@ -13,11 +13,9 @@ pub enum GetLatestBlockNumCmd {
 }
 
 async fn get_latest_block_num_cli(endpoints: &Endpoints, is_native: bool) -> Result<String, SentinelError> {
-    let endpoint = endpoints.get_first_endpoint()?;
-    let ws_client = get_rpc_client(&endpoint).await?;
     let block_type = if is_native { "native" } else { "host" };
-    info!("[+] Getting {block_type} latest bock number...");
-    let num = get_latest_block_num(&ws_client).await?;
+    info!("Getting {block_type} latest bock number...");
+    let num = get_latest_block_num(endpoints).await?;
     Ok(json!({ "jsonrpc": "2.0", "result": num }).to_string())
 }
 

@@ -39,13 +39,10 @@ async fn get_sync_status(
     h_endpoints: &Endpoints,
     tx: MpscTx<CoreMessages>,
 ) -> Result<impl warp::Reply, Rejection> {
-    let n_endpoint = n_endpoints.get_rpc_client().await.map_err(convert_error_to_rejection)?;
-    let h_endpoint = h_endpoints.get_rpc_client().await.map_err(convert_error_to_rejection)?;
-
-    let n_e = get_latest_block_num(&n_endpoint)
+    let n_e = get_latest_block_num(n_endpoints)
         .await
         .map_err(convert_error_to_rejection)?;
-    let h_e = get_latest_block_num(&h_endpoint)
+    let h_e = get_latest_block_num(h_endpoints)
         .await
         .map_err(convert_error_to_rejection)?;
 

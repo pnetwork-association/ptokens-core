@@ -46,7 +46,7 @@ pub async fn core_loop<D: DatabaseInterface>(
     guarded_db: Arc<Mutex<D>>,
     mut core_rx: MpscRx<CoreMessages>,
 ) -> Result<(), SentinelError> {
-    info!("core accessor listening...");
+    info!("core listening...");
 
     'core_loop: loop {
         tokio::select! {
@@ -55,14 +55,14 @@ pub async fn core_loop<D: DatabaseInterface>(
                     process_message(guarded_db.clone(), msg).await?;
                     continue 'core_loop
                 } else {
-                    let m = "all core accessor senders dropped!";
+                    let m = "all core senders dropped!";
                     warn!("{m}");
                     break 'core_loop Err(SentinelError::Custom(m.into()))
                 }
             },
             _ = tokio::signal::ctrl_c() => {
-                warn!("core accessor shutting down...");
-                break 'core_loop Err(SentinelError::SigInt("core accessor".into()))
+                warn!("core shutting down...");
+                break 'core_loop Err(SentinelError::SigInt("core".into()))
             },
         }
     }

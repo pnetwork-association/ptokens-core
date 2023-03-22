@@ -95,6 +95,10 @@ impl Batch {
         self.sleep_duration
     }
 
+    pub fn get_endpoints(&self) -> Endpoints {
+        self.endpoints.clone()
+    }
+
     pub fn new_from_config(side: BridgeSide, config: &Config) -> Result<Self, SentinelError> {
         info!("Getting Batch from config...");
         let is_native = side.is_native();
