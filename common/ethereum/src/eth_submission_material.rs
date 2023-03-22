@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, time::Duration};
 
 use common::{
     errors::AppError,
@@ -12,6 +12,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as JsonValue};
 
 use crate::{EthBlock, EthBlockJson, EthReceipt, EthReceiptJson, EthReceipts, EthState};
+
+const NANO_SECONDS: u32 = 0;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default, Deref, DerefMut, Constructor, Deserialize, Serialize)]
 pub struct EthSubmissionMaterials(Vec<EthSubmissionMaterial>);
@@ -34,6 +36,17 @@ impl FromStr for EthSubmissionMaterials {
 }
 
 impl EthSubmissionMaterials {
+    pub fn get_last_block_timestamp(&self) -> Result<Duration> {
+        debug!("Getting last block timestamp from batch...");
+        let len = self.len();
+        match len {
+            0 => Err(AppError::Custom(
+                "no submission material to get block timestamp from".into(),
+            )),
+            _ => Ok(self[len - 1].get_timestamp()),
+        }
+    }
+
     pub fn get_first_block_num(&self) -> Result<u64> {
         debug!("Getting first block number from batch...");
         match self.len() {
@@ -87,6 +100,16 @@ pub struct EthSubmissionMaterial {
 }
 
 impl EthSubmissionMaterial {
+    pub fn get_timestamp(&self) -> Duration {
+        match self.block {
+            Some(ref b) => Duration::new(b.get_timestamp().as_u64(), NANO_SECONDS),
+            None => {
+                warn!("no block in submission material to get timestamp from!");
+                Duration::new(0, NANO_SECONDS)
+            },
+        }
+    }
+
     pub fn add_block(mut self, block: EthBlock) -> Result<Self> {
         if self.block.is_none() {
             info!("Adding block to ETH submission material...");
@@ -673,5 +696,22 @@ mod tests {
         let expected_result = 8065770;
         let result = sub_mats.get_last_block_num().unwrap();
         assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    fn should_get_timestamp_from_submission_material() {
+        let sub_mat = get_sample_eth_submission_material();
+        let result = sub_mat.get_timestamp();
+        let expected_result = Duration::new(1567871882, NANO_SECONDS);
+        assert_eq!(result, expected_result)
+    }
+
+    #[test]
+    fn should_get_zero_as_timestamp_if_no_block_in_submission_material() {
+        let mut sub_mat = get_sample_eth_submission_material();
+        sub_mat.block = None;
+        let result = sub_mat.get_timestamp();
+        let expected_result = Duration::new(0, NANO_SECONDS);
+        assert_eq!(result, expected_result)
     }
 }

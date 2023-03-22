@@ -47,6 +47,10 @@ pub struct EthBlock {
 }
 
 impl EthBlock {
+    pub fn get_timestamp(&self) -> U256 {
+        self.timestamp
+    }
+
     pub fn get_base_fee_per_gas(&self) -> Result<U256> {
         self.base_fee_per_gas
             .ok_or(NoneError("Could not unwrap 'base_fee' from ETH block!"))
