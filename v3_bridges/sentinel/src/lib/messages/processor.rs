@@ -1,13 +1,10 @@
 use common_eth::EthSubmissionMaterials;
 use derive_more::Constructor;
 
-use crate::{Responder, SentinelError};
+use crate::{get_utc_timestamp, Responder, SentinelError};
 
 #[derive(Debug, Constructor)]
 pub struct ProcessArgs {
-    pub confs: u64,
-    pub batch_size: u64,
-    pub latest_block_number: u64,
     pub responder: Responder<()>,
     pub batch: EthSubmissionMaterials,
 }
@@ -15,16 +12,17 @@ pub struct ProcessArgs {
 impl ProcessArgs {
     pub fn is_in_sync(&self) -> Result<bool, SentinelError> {
         // NOTE: We define the core as being in sync if the about-to-be-submitted batch's last
-        // block number is within x blocks of the chain's tip, where x is whichever is the
-        // larger of the batch size OR the number of confs.
-        let batch_last_block_num = self.batch.get_last_block_num()?;
-        let delta = if self.latest_block_number > batch_last_block_num {
-            self.latest_block_number - batch_last_block_num
+        // block timestamp is within ~ an hour of now.
+        let last_block_timestamp = self.batch.get_last_block_timestamp()?.as_secs();
+        let one_hour_in_seconds = 1000 * 60 * 60;
+        let now = get_utc_timestamp()?;
+        let target = now - one_hour_in_seconds;
+        let delta = if now > last_block_timestamp {
+            now - last_block_timestamp
         } else {
             0
         };
-        let required_delta = self.confs.max(self.batch_size);
-        Ok(delta <= required_delta)
+        Ok(delta <= target)
     }
 }
 

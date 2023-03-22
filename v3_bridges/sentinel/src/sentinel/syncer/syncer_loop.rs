@@ -1,6 +1,6 @@
 use std::result::Result;
 
-use lib::{get_latest_block_num, get_sub_mat, Batch, CoreMessages, ProcessArgs, ProcessorMessages, SentinelError};
+use lib::{get_sub_mat, Batch, CoreMessages, ProcessArgs, ProcessorMessages, SentinelError};
 use tokio::{
     sync::{mpsc::Sender as MpscTx, oneshot},
     time::{sleep, Duration},
@@ -8,7 +8,6 @@ use tokio::{
 
 async fn main_loop(mut batch: Batch, processor_tx: MpscTx<ProcessorMessages>) -> Result<(), SentinelError> {
     let log_prefix = format!("{} syncer", batch.side());
-    let endpoints = batch.get_endpoints();
     let ws_client = batch.get_rpc_client().await?;
     let sleep_duration = batch.get_sleep_duration();
 
@@ -23,14 +22,7 @@ async fn main_loop(mut batch: Batch, processor_tx: MpscTx<ProcessorMessages>) ->
                     // TODO check if batch is chained correctly!
                     info!("{log_prefix} batch is ready to submit!");
                     let (tx, rx) = oneshot::channel();
-                    let latest_block_num = get_latest_block_num(&endpoints).await?;
-                    let args = ProcessArgs::new(
-                        batch.get_confs(),
-                        batch.batch_size(),
-                        latest_block_num,
-                        tx,
-                        batch.to_submission_material(),
-                    );
+                    let args = ProcessArgs::new(tx, batch.to_submission_material());
                     let msg = if batch.is_native() {
                         ProcessorMessages::ProcessNative(args)
                     } else {
