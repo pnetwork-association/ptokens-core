@@ -31,6 +31,8 @@ pub async fn start_sentinel(
 ) -> Result<String, SentinelError> {
     let db = common_rocksdb::get_db()?;
     lib::check_init(&db)?;
+    // TODO check mongo!
+    // TODO check endpoints!
     let wrapped_db = Arc::new(Mutex::new(db));
 
     let (processor_tx, processor_rx): (MpscTx<ProcessorMessages>, MpscRx<ProcessorMessages>) =

@@ -8,7 +8,7 @@ use crate::{HostOutput, NativeOutput};
 
 type Timestamp = u64;
 type LatestBlockNum = u64;
-const MAX_SIZE: usize = 16;
+const MAX_SIZE: usize = 2;
 
 #[derive(Debug, Clone)]
 pub struct Heartbeats {
