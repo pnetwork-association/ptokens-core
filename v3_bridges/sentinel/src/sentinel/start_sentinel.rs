@@ -1,7 +1,16 @@
 use std::{result::Result, sync::Arc};
 
 use common::BridgeSide;
-use lib::{flatten_join_handle, Batch, CoreMessages, MongoMessages, ProcessorMessages, SentinelConfig, SentinelError};
+use lib::{
+    flatten_join_handle,
+    Batch,
+    CoreMessages,
+    EthRpcMessages,
+    MongoMessages,
+    ProcessorMessages,
+    SentinelConfig,
+    SentinelError,
+};
 use serde_json::json;
 use tokio::sync::{
     mpsc,
@@ -11,7 +20,7 @@ use tokio::sync::{
 
 use crate::{
     cli::StartSentinelArgs,
-    sentinel::{core_loop, http_server_loop, mongo_loop, processor_loop, syncer_loop},
+    sentinel::{core_loop, eth_rpc_loop, http_server_loop, mongo_loop, processor_loop, syncer_loop},
 };
 
 const MAX_CHANNEL_CAPACITY: usize = 1337;
@@ -31,6 +40,9 @@ pub async fn start_sentinel(
 
     let (mongo_tx, mongo_rx): (MpscTx<MongoMessages>, MpscRx<MongoMessages>) = mpsc::channel(MAX_CHANNEL_CAPACITY);
 
+    let (eth_rpc_tx, eth_rpc_rx): (MpscTx<EthRpcMessages>, MpscRx<EthRpcMessages>) =
+        mpsc::channel(MAX_CHANNEL_CAPACITY);
+
     let native_syncer_thread = tokio::spawn(syncer_loop(
         Batch::new_from_config(BridgeSide::Native, config)?,
         processor_tx.clone(),
@@ -48,6 +60,7 @@ pub async fn start_sentinel(
     let core_thread = tokio::spawn(core_loop(wrapped_db.clone(), core_rx));
     let mongo_thread = tokio::spawn(mongo_loop(config.mongo_config.clone(), mongo_rx));
     let http_server_thread = tokio::spawn(http_server_loop(core_tx.clone(), mongo_tx.clone(), config.clone()));
+    let eth_rpc_thread = tokio::spawn(eth_rpc_loop(eth_rpc_rx, config.clone()));
 
     match tokio::try_join!(
         flatten_join_handle(native_syncer_thread),
@@ -56,16 +69,18 @@ pub async fn start_sentinel(
         flatten_join_handle(core_thread),
         flatten_join_handle(mongo_thread),
         flatten_join_handle(http_server_thread),
+        flatten_join_handle(eth_rpc_thread),
     ) {
-        Ok((res_1, res_2, res_3, res_4, res_5, res_6)) => Ok(json!({
+        Ok((r1, r2, r3, r4, r5, r6, r7)) => Ok(json!({
             "jsonrpc": "2.0",
             "result": {
-                "native_syncer_thread": res_1,
-                "host_syncer_thread": res_2,
-                "processor_thread": res_3,
-                "core_thread": res_4,
-                "mongo_thread": res_5,
-                "http_server_thread": res_6,
+                "native_syncer_thread": r1,
+                "host_syncer_thread": r2,
+                "processor_thread": r3,
+                "core_thread": r4,
+                "mongo_thread": r5,
+                "http_server_thread": r6,
+                "eth_rpc_thread": r7,
             },
         })
         .to_string()),

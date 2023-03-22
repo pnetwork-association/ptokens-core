@@ -18,6 +18,7 @@ use crate::{
         NativeConfig,
         NativeToml,
     },
+    Endpoints,
     SentinelError,
 };
 
@@ -72,6 +73,14 @@ impl Config {
 
     pub fn get_log_level(&self) -> LogLevel {
         self.log_config.level
+    }
+
+    pub fn get_host_endpoints(&self) -> Endpoints {
+        self.host_config.get_endpoints()
+    }
+
+    pub fn get_native_endpoints(&self) -> Endpoints {
+        self.native_config.get_endpoints()
     }
 }
 

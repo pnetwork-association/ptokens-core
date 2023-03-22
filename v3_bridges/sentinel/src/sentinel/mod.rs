@@ -1,4 +1,5 @@
 mod core;
+mod eth_rpc;
 mod http_server;
 mod mongo;
 mod processor;
@@ -8,6 +9,7 @@ mod syncer;
 pub(crate) use self::start_sentinel::start_sentinel;
 use self::{
     core::core_loop,
+    eth_rpc::eth_rpc_loop,
     http_server::http_server_loop,
     mongo::mongo_loop,
     processor::processor_loop,

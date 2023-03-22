@@ -41,6 +41,7 @@ pub use self::{
     messages::{
         BroadcasterMessages,
         CoreMessages,
+        EthRpcMessages,
         MongoMessages,
         ProcessArgs,
         ProcessorMessages,
