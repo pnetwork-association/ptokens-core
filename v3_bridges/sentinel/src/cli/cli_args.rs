@@ -1,6 +1,6 @@
 use clap::Parser;
 
-use crate::cli::{get_sub_mat::SubMatGetterArgs, init::InitArgs, StartSentinelArgs};
+use crate::cli::{get_sub_mat::SubMatGetterArgs, init::InitArgs, NonceCliArgs, StartSentinelArgs};
 
 #[derive(Debug, Parser)]
 pub struct CliArgs {
@@ -30,4 +30,7 @@ pub enum SubCommands {
 
     /// Get the state of the core.
     GetCoreState,
+
+    /// Get nonce for given address
+    GetNonce(NonceCliArgs),
 }

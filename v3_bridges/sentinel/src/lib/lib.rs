@@ -8,6 +8,7 @@ mod error;
 mod flatten_join_handle;
 mod get_block;
 mod get_latest_block_num;
+mod get_nonce;
 mod get_receipts;
 mod get_rpc_client;
 mod get_sub_mat;
@@ -31,6 +32,7 @@ pub use self::{
     flatten_join_handle::flatten_join_handle,
     get_block::get_block,
     get_latest_block_num::get_latest_block_num,
+    get_nonce::get_nonce,
     get_receipts::get_receipts,
     get_rpc_client::get_rpc_client,
     get_sub_mat::get_sub_mat,
