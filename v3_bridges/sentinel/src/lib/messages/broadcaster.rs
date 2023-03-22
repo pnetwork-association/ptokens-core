@@ -1,4 +1,2 @@
 #[derive(Debug, Clone)]
-pub enum BroadcasterMessages {
-    Shutdown,
-}
+pub enum BroadcasterMessages {}
