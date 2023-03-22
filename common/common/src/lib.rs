@@ -20,7 +20,7 @@ pub use crate::{
     no_parent_error::NoParentError,
     traits::DatabaseInterface,
     types::{Bytes, Result},
-    utils::get_core_version,
+    utils::{strip_hex_prefix, get_core_version},
 };
 
 // FIXME Sort out the pub mods
