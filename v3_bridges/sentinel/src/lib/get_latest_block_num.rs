@@ -19,7 +19,7 @@ pub async fn get_latest_block_num(endpoints: &Endpoints) -> Result<u64, Sentinel
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::{get_test_endpoints, get_test_ws_client};
+    use crate::test_utils::get_test_endpoints;
 
     #[tokio::test]
     async fn should_get_latest_block_num() {

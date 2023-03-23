@@ -5,18 +5,16 @@ use common_eth::EthSubmissionMaterial;
 use dotenv::dotenv;
 use jsonrpsee::ws_client::WsClient;
 
-use crate::{check_endpoint, get_rpc_client, Batch, Endpoints, SentinelError};
+use crate::{get_rpc_client, Batch, Endpoints, SentinelError};
 
 const ENV_VAR: &str = "TEST_ENDPOINT";
 
 pub async fn get_test_ws_client() -> WsClient {
     dotenv().ok();
-    let time_limit = 5000; // NOTE: 5s
     let url = env::var(ENV_VAR)
         .map_err(|_| SentinelError::Custom("Please set env var '{ENV_VAR}' to a working endpoint!".into()))
         .unwrap();
     let ws_client = get_rpc_client(&url).await.unwrap();
-    check_endpoint(&ws_client, time_limit).await.unwrap();
     ws_client
 }
 

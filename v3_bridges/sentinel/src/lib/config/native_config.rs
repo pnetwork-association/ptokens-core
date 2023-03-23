@@ -14,6 +14,7 @@ use crate::{
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct NativeToml {
+    validate: bool,
     sleep_duration: u64,
     eth_chain_id: String,
     endpoints: Vec<String>,
@@ -22,6 +23,7 @@ pub struct NativeToml {
 
 #[derive(Debug, Clone)]
 pub struct NativeConfig {
+    validate: bool,
     sleep_duration: u64,
     endpoints: Endpoints,
     eth_chain_id: EthChainId,
@@ -33,6 +35,7 @@ impl NativeConfig {
         let sleep_duration = toml.sleep_duration * MILLISECONDS_MULTIPLIER;
         Ok(Self {
             sleep_duration,
+            validate: toml.validate,
             endpoints: Endpoints::new(false, sleep_duration, toml.endpoints.clone()),
             contract_infos: ContractInfos::from_tomls(&toml.contract_info)?,
             eth_chain_id: match EthChainId::from_str(&toml.eth_chain_id) {
@@ -72,5 +75,9 @@ impl ConfigT for NativeConfig {
 
     fn side(&self) -> BridgeSide {
         BridgeSide::Native
+    }
+
+    fn is_validating(&self) -> bool {
+        self.validate
     }
 }
