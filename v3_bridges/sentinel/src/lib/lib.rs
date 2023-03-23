@@ -1,3 +1,4 @@
+mod addresses_and_topics;
 mod batching;
 mod check_init;
 mod config;
@@ -22,6 +23,7 @@ mod test_utils;
 mod utils;
 
 pub use self::{
+    addresses_and_topics::{AddressAndTopic, AddressesAndTopics},
     batching::Batch,
     check_init::check_init,
     config::{Config as SentinelConfig, ConfigT, HostConfig, MongoConfig, NativeConfig},
