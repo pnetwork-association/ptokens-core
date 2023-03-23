@@ -17,13 +17,14 @@ mod host_output;
 mod logging;
 mod messages;
 mod native_output;
+mod relevant_logs;
 mod test_utils;
 mod utils;
 
 pub use self::{
     batching::Batch,
     check_init::check_init,
-    config::{Config as SentinelConfig, HostConfig, MongoConfig, NativeConfig},
+    config::{Config as SentinelConfig, ConfigT, HostConfig, MongoConfig, NativeConfig},
     constants::MILLISECONDS_MULTIPLIER,
     core_state::CoreState,
     endpoints::{check_endpoint, Endpoints, Error as EndpointError},
@@ -49,8 +50,11 @@ pub use self::{
         SyncerMessages,
     },
     native_output::NativeOutput,
+    relevant_logs::RelevantLogs,
     utils::get_utc_timestamp,
 };
 
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate lazy_static;

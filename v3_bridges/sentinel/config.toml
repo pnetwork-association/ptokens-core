@@ -34,11 +34,10 @@ native_collection = "native" # Name of the host collection
 timeout = 3 # How many seconds to wait when conneting/inserting/reading etc
 uri = "mongodb://127.0.0.1:27017"
 
-# NOTE: These are an analogue to the v1 & v2 core token dictionaries
+# NOTE: These are an analogous to the v1 & v2 core token dictionaries
 [[host.contract_info]]
 name = "pBTC"
 address = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628"
-#topic = "" #
 
 [[host.contract_info]]
 name = "pEOS"
