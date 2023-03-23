@@ -1,11 +1,12 @@
 use std::{result::Result, str::FromStr};
 
+use common::BridgeSide;
 use common_chain_ids::EthChainId;
 use ethereum_types::Address as EthAddress;
 use serde::Deserialize;
 
 use crate::{
-    config::{ContractInfoToml, ContractInfos},
+    config::{ConfigT, ContractInfoToml, ContractInfos},
     constants::MILLISECONDS_MULTIPLIER,
     Endpoints,
     SentinelError,
@@ -55,15 +56,21 @@ impl NativeConfig {
         self.endpoints.clone()
     }
 
-    pub fn get_contract_addresses(&self) -> Vec<EthAddress> {
-        self.contract_infos.get_addresses()
-    }
-
     pub fn get_sleep_duration(&self) -> u64 {
         self.sleep_duration
     }
 
     pub fn get_eth_chain_id(&self) -> EthChainId {
         self.eth_chain_id.clone()
+    }
+}
+
+impl ConfigT for NativeConfig {
+    fn get_contract_addresses(&self) -> Vec<EthAddress> {
+        self.contract_infos.get_addresses()
+    }
+
+    fn side(&self) -> BridgeSide {
+        BridgeSide::Native
     }
 }

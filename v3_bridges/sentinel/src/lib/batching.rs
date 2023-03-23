@@ -5,7 +5,11 @@ use common_eth::{EthSubmissionMaterial, EthSubmissionMaterials};
 use ethereum_types::{Address as EthAddress, U256};
 use jsonrpsee::ws_client::WsClient;
 
-use crate::{config::Config, endpoints::Endpoints, SentinelError};
+use crate::{
+    config::{Config, ConfigT},
+    endpoints::Endpoints,
+    SentinelError,
+};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Batch {
