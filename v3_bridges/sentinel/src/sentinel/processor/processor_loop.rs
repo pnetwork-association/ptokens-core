@@ -1,7 +1,7 @@
 use std::{result::Result, sync::Arc};
 
 use common::DatabaseInterface;
-use lib::{Heartbeats, MongoMessages, ProcessorMessages, SentinelError};
+use lib::{AddressesAndTopics, ConfigT, Heartbeats, MongoMessages, ProcessorMessages, SentinelConfig, SentinelError};
 use tokio::sync::{
     mpsc::{Receiver as MpscRx, Sender as MpscTx},
     Mutex,
@@ -13,9 +13,15 @@ pub async fn processor_loop<D: DatabaseInterface>(
     guarded_db: Arc<Mutex<D>>,
     mut processor_rx: MpscRx<ProcessorMessages>,
     mongo_tx: MpscTx<MongoMessages>,
+    config: SentinelConfig,
 ) -> Result<(), SentinelError> {
     info!("Starting processor loop...");
+
     let mut heartbeats = Heartbeats::new();
+    let host_is_validating = config.host_config.is_validating();
+    let native_is_validating = config.native_config.is_validating();
+    let host_addresses_and_topics = AddressesAndTopics::from_config(&config.host_config);
+    let native_addresses_and_topics = AddressesAndTopics::from_config(&config.native_config);
 
     'processor_loop: loop {
         tokio::select! {
@@ -29,6 +35,8 @@ pub async fn processor_loop<D: DatabaseInterface>(
                             &*db,
                             matches!(args.is_in_sync(), Ok(true)),
                             &args.batch,
+                            &native_addresses_and_topics,
+                            native_is_validating,
                         );
                         match result {
                             Ok(output) => {
@@ -60,7 +68,9 @@ pub async fn processor_loop<D: DatabaseInterface>(
                         let result = process_host_batch(
                             &*db,
                             matches!(args.is_in_sync(), Ok(true)),
-                            &args.batch
+                            &args.batch,
+                            &host_addresses_and_topics,
+                            host_is_validating,
                         );
                         match result {
                             Ok(output) => {
