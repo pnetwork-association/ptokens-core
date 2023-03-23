@@ -15,19 +15,25 @@ use crate::{
 /// Append to blockchain
 ///
 /// A helper function that takes the db utils as an argument and appends the passed in submission
-/// material to the chain in the database, if and only if it's subsequent.
+/// material to the chain in the database, if and only if it's valid & subsequent.
 ///
 /// WARN: No checks are done on the receipt's validity, since at this point they'll likely have
 /// bene truncated down to only pertinent ones in order to save space in the database.
 pub fn append_to_blockchain<D: DatabaseInterface, E: EthDbUtilsExt<D>>(
     db_utils: &E,
     sub_mat: &EthSubMat,
+    validate: bool,
 ) -> Result<()> {
     let n = sub_mat.get_block_number()?;
     let chain_id = db_utils.get_eth_chain_id_from_db()?;
     let confs = db_utils.get_eth_canon_to_tip_length_from_db()?;
-
-    if sub_mat.block_header_is_valid(&chain_id) {
+    let header_is_valid = if validate {
+        sub_mat.block_header_is_valid(&chain_id)
+    } else {
+        warn!("Block header validation is disabled!");
+        true
+    };
+    if header_is_valid {
         info!("Adding block {n} to chain in db...");
         check_for_parent_of_block(db_utils, sub_mat)
             .and_then(|_| add_block_and_receipts_to_db_if_not_extant(db_utils, sub_mat))
@@ -98,7 +104,7 @@ mod tests {
         assert_eq!(hashes, expected_hashes);
 
         // Now add a block...
-        append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx]).unwrap();
+        append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx], true).unwrap();
         last_submitted_block_idx += 1;
 
         hashes = db_utils.get_special_hashes();
@@ -114,7 +120,7 @@ mod tests {
         // Now let's add enough blocks to pull the canon away from the tail...
         let end_idx = confs + 1;
         (last_submitted_block_idx..=end_idx).for_each(|i| {
-            append_to_blockchain(&db_utils, &blocks[i]).unwrap();
+            append_to_blockchain(&db_utils, &blocks[i], true).unwrap();
             last_submitted_block_idx = i;
         });
         hashes = db_utils.get_special_hashes();
@@ -128,7 +134,7 @@ mod tests {
         assert_eq!(hashes, expected_hashes);
 
         // And another block...
-        append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx + 1]).unwrap();
+        append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx + 1], true).unwrap();
         last_submitted_block_idx += 1;
         hashes = db_utils.get_special_hashes();
         expected_hashes = SpecialHashes {
@@ -141,7 +147,7 @@ mod tests {
         assert_eq!(hashes, expected_hashes);
 
         // Now let's check that we can't add a block that's _past_ the next one...
-        match append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx + 2]) {
+        match append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx + 2], true) {
             Ok(_) => panic!("Should not have succeeded!"),
             Err(AppError::NoParentError(e)) => {
                 let n = blocks[last_submitted_block_idx + 2]
@@ -154,7 +160,7 @@ mod tests {
         }
 
         // Or that we can't add the same block again...
-        match append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx]) {
+        match append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx], true) {
             Ok(_) => panic!("Should not have succeeded!"),
             Err(AppError::BlockAlreadyInDbError(e)) => {
                 let expected_err = BlockAlreadyInDbError::new(
@@ -168,7 +174,7 @@ mod tests {
         }
 
         // Or a previous one...
-        match append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx - 1]) {
+        match append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx - 1], true) {
             Ok(_) => panic!("Should not have succeeded!"),
             Err(AppError::BlockAlreadyInDbError(e)) => {
                 let expected_err = BlockAlreadyInDbError::new(
@@ -192,7 +198,7 @@ mod tests {
 
         // Now let's add enough blocks to start moving the tail away from the anchor...
         (last_submitted_block_idx + 1..=(ETH_TAIL_LENGTH as usize + confs)).for_each(|i| {
-            append_to_blockchain(&db_utils, &blocks[i]).unwrap();
+            append_to_blockchain(&db_utils, &blocks[i], true).unwrap();
             last_submitted_block_idx = i;
         });
         hashes = db_utils.get_special_hashes();
@@ -206,7 +212,7 @@ mod tests {
         assert_eq!(hashes, expected_hashes);
 
         // Another block should start the linker hash changing...
-        append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx + 1]).unwrap();
+        append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx + 1], true).unwrap();
         last_submitted_block_idx += 1;
         hashes = db_utils.get_special_hashes();
         let mut expected_linker_hash = calculate_linker_hash(
@@ -226,7 +232,7 @@ mod tests {
         // And a final block should mean old blocks beyond the tail are now being removed (this
         // didn't happen with the previous submission because the one block older than the tail was
         // in fact the anchor block, which will never be removed.
-        append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx + 1]).unwrap();
+        append_to_blockchain(&db_utils, &blocks[last_submitted_block_idx + 1], true).unwrap();
         last_submitted_block_idx += 1;
         hashes = db_utils.get_special_hashes();
         expected_linker_hash = calculate_linker_hash(
