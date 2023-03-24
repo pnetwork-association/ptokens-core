@@ -52,7 +52,7 @@ pub use self::{
         SyncerMessages,
     },
     native_output::NativeOutput,
-    relevant_logs::RelevantLogsFromBlock,
+    relevant_logs::{RelevantLogs, RelevantLogsFromBlock},
     utils::get_utc_timestamp,
 };
 
@@ -60,3 +60,5 @@ pub use self::{
 extern crate log;
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate paste;

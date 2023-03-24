@@ -7,20 +7,21 @@ use serde::{Deserialize, Serialize};
 
 use crate::{AddressAndTopic, SentinelError};
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, Constructor)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Constructor)]
 pub struct RelevantLogs(Vec<RelevantLogsFromBlock>);
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, Constructor)]
-pub struct NativeRelevantLogs(RelevantLogs);
-
-#[derive(Clone, Debug, Default, Serialize, Deserialize, Constructor)]
-pub struct HostRelevantLogs(RelevantLogs);
-
-#[derive(Clone, Debug, Default, Serialize, Deserialize, Constructor)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Constructor)]
 pub struct RelevantLogsFromBlock {
     block_num: u64,
     timestamp: Duration,
     logs: EthLogs,
+}
+
+#[cfg(test)]
+impl RelevantLogsFromBlock {
+    pub fn set_timestamp(&mut self, ts: Duration) {
+        self.timestamp = ts;
+    }
 }
 
 impl RelevantLogsFromBlock {
@@ -47,35 +48,57 @@ impl RelevantLogsFromBlock {
     }
 }
 
-impl fmt::Display for RelevantLogsFromBlock {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match serde_json::to_string_pretty(self) {
-            Ok(s) => write!(f, "{s}"),
-            Err(e) => write!(f, "Error convert `RelevantLogsFromBlock` to string: {e}",),
+macro_rules! make_log_structs {
+    ($($prefix:ident),* $(,)?) => {
+        paste! {
+            $(
+                #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Constructor)]
+                pub struct [< $prefix:camel RelevantLogs >](RelevantLogs);
+
+                impl fmt::Display for [< $prefix:camel RelevantLogs >] {
+                    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                        match serde_json::to_string_pretty(self) {
+                            Ok(s) => write!(f, "{s}"),
+                            Err(e) => write!(f, "Error convert `HostRelevantLogs` to string: {e}",),
+                        }
+                    }
+                }
+
+
+                impl FromStr for [< $prefix:camel RelevantLogs >]{
+                    type Err = SentinelError;
+
+                    fn from_str(s: &str) -> Result<Self, Self::Err> {
+                        Ok(serde_json::from_str(s)?)
+                    }
+                }
+
+                impl TryInto<Bytes> for [< $prefix:camel RelevantLogs >] {
+                    type Error = SentinelError;
+
+                    fn try_into(self) -> Result<Bytes, Self::Error> {
+                        Ok(serde_json::to_vec(&self)?)
+                    }
+                }
+
+                impl TryFrom<&[Byte]> for [< $prefix:camel RelevantLogs >] {
+                    type Error = SentinelError;
+
+                    fn try_from(b: &[Byte]) -> Result<Self, Self::Error> {
+                        Ok(serde_json::from_slice(b)?)
+                    }
+                }
+
+                impl TryFrom<Bytes> for [< $prefix:camel RelevantLogs >] {
+                    type Error = SentinelError;
+
+                    fn try_from(b: Bytes) -> Result<Self, Self::Error> {
+                        Ok(serde_json::from_slice(&b)?)
+                    }
+                }
+            )*
         }
     }
 }
 
-impl FromStr for RelevantLogsFromBlock {
-    type Err = SentinelError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(serde_json::from_str(s)?)
-    }
-}
-
-impl TryInto<Bytes> for RelevantLogsFromBlock {
-    type Error = SentinelError;
-
-    fn try_into(self) -> Result<Bytes, Self::Error> {
-        Ok(serde_json::to_vec(&self)?)
-    }
-}
-
-impl TryFrom<&[Byte]> for RelevantLogsFromBlock {
-    type Error = SentinelError;
-
-    fn try_from(b: &[Byte]) -> Result<Self, Self::Error> {
-        Ok(serde_json::from_slice(b)?)
-    }
-}
+make_log_structs!(HOST, NATIVE);
