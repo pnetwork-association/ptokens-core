@@ -21,7 +21,7 @@ pub struct NativeToml {
     contract_info: Vec<ContractInfoToml>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct NativeConfig {
     validate: bool,
     sleep_duration: u64,
@@ -79,5 +79,12 @@ impl ConfigT for NativeConfig {
 
     fn is_validating(&self) -> bool {
         self.validate
+    }
+}
+
+#[cfg(test)]
+impl NativeConfig {
+    pub fn set_contract_infos(&mut self, infos: ContractInfos) {
+        self.contract_infos = infos;
     }
 }

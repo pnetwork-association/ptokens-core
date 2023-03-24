@@ -14,7 +14,7 @@ pub use self::{
     config_error::Error,
     config_struct::Config,
     config_traits::ConfigT,
-    contract_info::{ContractInfoToml, ContractInfos},
+    contract_info::{ContractInfo, ContractInfoToml, ContractInfos},
     core_config::{CoreConfig, CoreToml},
     host_config::{HostConfig, HostToml},
     log_config::{LogConfig, LogToml},

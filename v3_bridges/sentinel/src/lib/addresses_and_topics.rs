@@ -9,7 +9,7 @@ macro_rules! setup_topics {
     ($($name:ident => $hex:expr),* $(,)?) => {
         $(
             lazy_static! {
-                static ref $name: EthHash = convert_hex_to_h256(&stringify!($hex))
+                static ref $name: EthHash = convert_hex_to_h256(&$hex)
                     .expect(&format!("Converting from hex shouldn't fail for {}", stringify!($name)));
             }
         )*
@@ -46,10 +46,39 @@ impl AddressesAndTopics {
                 r.push(AddressAndTopic::new(address, *NATIVE_PEG_IN_TOPIC));
                 r.push(AddressAndTopic::new(address, *NATIVE_ERC20_TRANSFER_TOPIC));
             } else {
-                r.push(AddressAndTopic::new(address, *HOST_PEG_OUT_TOPIC));
                 r.push(AddressAndTopic::new(address, *HOST_MINTED_TOPIC));
+                r.push(AddressAndTopic::new(address, *HOST_PEG_OUT_TOPIC));
             }
         }
         Self::new(r)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use common_eth::convert_hex_to_eth_address;
+
+    use super::*;
+    use crate::config::{ContractInfo, ContractInfos, HostConfig, NativeConfig};
+
+    fn get_sample_contract_infos() -> ContractInfos {
+        let name = "pBTC".to_string();
+        let address = convert_hex_to_eth_address("0xedB86cd455ef3ca43f0e227e00469C3bDFA40628").unwrap();
+        let contract_info = ContractInfo::new(name, address);
+        ContractInfos::new(vec![contract_info])
+    }
+
+    #[test]
+    fn should_get_addresses_and_topics_from_native_config() {
+        let mut config = NativeConfig::default();
+        config.set_contract_infos(get_sample_contract_infos());
+        AddressesAndTopics::from_config(&config);
+    }
+
+    #[test]
+    fn should_get_addresses_and_topics_from_host_config() {
+        let mut config = HostConfig::default();
+        config.set_contract_infos(get_sample_contract_infos());
+        AddressesAndTopics::from_config(&config);
     }
 }

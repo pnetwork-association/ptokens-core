@@ -7,7 +7,7 @@ use serde::Deserialize;
 
 use crate::SentinelError;
 
-#[derive(Debug, Clone, Deref, Constructor)]
+#[derive(Debug, Clone, Default, Deref, Constructor)]
 pub struct ContractInfos(Vec<ContractInfo>);
 
 impl ContractInfos {
@@ -25,13 +25,13 @@ impl ContractInfos {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct ContractInfoToml {
     pub name: String,
     pub address: String,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Constructor, Deserialize)]
 pub struct ContractInfo {
     #[allow(dead_code)]
     name: String,
