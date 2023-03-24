@@ -54,7 +54,7 @@ pub use self::{
         SyncerMessages,
     },
     native_output::NativeOutput,
-    relevant_logs::{RelevantLogs, RelevantLogsFromBlock},
+    relevant_logs::{HostRelevantLogs, NativeRelevantLogs, RelevantLogs, RelevantLogsFromBlock},
     utils::get_utc_timestamp,
 };
 

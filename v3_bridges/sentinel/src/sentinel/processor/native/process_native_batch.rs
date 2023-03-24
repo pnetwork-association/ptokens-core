@@ -2,7 +2,14 @@ use std::result::Result;
 
 use common::DatabaseInterface;
 use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials, NativeDbUtils};
-use lib::{NativeAddressesAndTopics, NativeOutput, RelevantLogsFromBlock, SentinelError};
+use lib::{
+    NativeAddressesAndTopics,
+    NativeOutput,
+    NativeRelevantLogs,
+    RelevantLogsFromBlock,
+    SentinelDbUtils,
+    SentinelError,
+};
 
 const SIDE: &str = "native";
 /*
@@ -37,17 +44,20 @@ fn process_native<D: DatabaseInterface>(
         return Ok(empty_logs);
     }
 
-    if is_validating {
+    let r = if is_validating {
         sub_mat.receipts_are_valid()?;
-    }
+        RelevantLogsFromBlock::from_eth_receipts(
+            sub_mat.get_block_number()?.as_u64(),
+            sub_mat.get_timestamp(),
+            &sub_mat.receipts,
+            &**addresses_and_topics,
+        )
+    } else {
+        RelevantLogsFromBlock::default()
+    };
 
     debug!("Finished processing {SIDE} block {n}!");
-    Ok(RelevantLogsFromBlock::from_eth_receipts(
-        sub_mat.get_block_number()?.as_u64(),
-        sub_mat.get_timestamp(),
-        &sub_mat.receipts,
-        &**addresses_and_topics,
-    ))
+    Ok(r)
 }
 
 pub fn process_native_batch<D: DatabaseInterface>(
@@ -58,19 +68,20 @@ pub fn process_native_batch<D: DatabaseInterface>(
     is_validating: bool,
 ) -> Result<NativeOutput, SentinelError> {
     info!("Processing {SIDE} batch of submission material...");
-
     db.start_transaction()?;
-    let result = batch
-        .iter()
-        .map(|m| process_native(db, is_in_sync, m, addresses_and_topics, is_validating))
-        .collect::<Result<Vec<RelevantLogsFromBlock>, SentinelError>>();
-    db.end_transaction()?;
 
-    match result {
-        Err(e) => Err(e),
-        Ok(_relevant_logs) => {
-            info!("Finished processing {SIDE} submission material!");
-            NativeOutput::new(batch.get_last_block_num()?)
-        },
-    }
+    let relevant_logs = NativeRelevantLogs::new(
+        batch
+            .iter()
+            .map(|m| process_native(db, is_in_sync, m, addresses_and_topics, is_validating))
+            .collect::<Result<Vec<RelevantLogsFromBlock>, SentinelError>>()?,
+    );
+
+    if !relevant_logs.is_empty() {
+        SentinelDbUtils::new(db).add_native_relevant_logs(relevant_logs)?;
+    };
+
+    db.end_transaction()?;
+    info!("Finished processing {SIDE} submission material!");
+    NativeOutput::new(batch.get_last_block_num()?)
 }

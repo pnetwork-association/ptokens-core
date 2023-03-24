@@ -52,7 +52,7 @@ macro_rules! make_log_structs {
     ($($prefix:ident),* $(,)?) => {
         paste! {
             $(
-                #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+                #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Deref)]
                 pub struct [< $prefix:camel RelevantLogs >](RelevantLogs);
 
                 impl [< $prefix:camel RelevantLogs>] {
