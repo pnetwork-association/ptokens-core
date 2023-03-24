@@ -52,6 +52,12 @@ macro_rules! create_db_keys {
                         )?;
                         Ok(())
                     }
+
+                    pub fn [< add_ $name:lower >](&self, thing: [< $name:camel >]) -> Result<(), SentinelError> {
+                        let mut thing_from_db = self.[< get_ $name:lower >]()?;
+                        thing_from_db.add(thing);
+                        self.[< put_ $name:lower >](thing_from_db)
+                    }
                 )*
             }
         }
@@ -79,7 +85,7 @@ macro_rules! create_db_keys {
                     }
 
                     #[test]
-                    fn [< should_get_and_put $name:lower in_db>]() {
+                    fn [< should_get_and_put_ $name:lower in_db>]() {
                         let db = get_test_database();
                         let db_utils = SentinelDbUtils::new(&db);
                         let mut x = RelevantLogsFromBlock::default();
@@ -87,6 +93,26 @@ macro_rules! create_db_keys {
                         let mut expected_result = [< $name:camel >]::new(RelevantLogs::new(vec![x]));
                         db_utils.[< put_ $name:lower >](expected_result.clone()).unwrap();
                         let result = db_utils.[< get_ $name:lower >]().unwrap();
+                        assert_eq!(result, expected_result);
+                    }
+
+                    #[test]
+                    fn [< should_add_ $name:lower in_db>]() {
+                        let db = get_test_database();
+                        let db_utils = SentinelDbUtils::new(&db);
+                        let mut x = RelevantLogsFromBlock::default();
+                        x.set_timestamp(Duration::new(1337, 0));
+                        let xs = [< $name:camel >]::new(RelevantLogs::new(vec![x.clone()]));
+                        db_utils.[< put_ $name:lower >](xs.clone()).unwrap();
+                        let mut result = db_utils.[< get_ $name:lower >]().unwrap();
+                        assert_eq!(result, xs);
+                        let mut y = RelevantLogsFromBlock::default();
+                        y.set_timestamp(Duration::new(1338, 0));
+                        let ys = [< $name:camel >]::new(RelevantLogs::new(vec![y.clone()]));
+                        assert_ne!(x, y);
+                        let expected_result = [< $name:camel >]::new(RelevantLogs::new(vec![x, y]));
+                        db_utils.[< add_ $name:lower >](ys).unwrap();
+                        result = db_utils.[< get_ $name:lower >]().unwrap();
                         assert_eq!(result, expected_result);
                     }
                 )*

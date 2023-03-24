@@ -2,12 +2,12 @@ use std::{fmt, iter::IntoIterator, str::FromStr, time::Duration};
 
 use common::{Byte, Bytes};
 use common_eth::{EthLog, EthLogs, EthReceipts};
-use derive_more::Constructor;
+use derive_more::{Constructor, Deref};
 use serde::{Deserialize, Serialize};
 
 use crate::{AddressAndTopic, SentinelError};
 
-#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Constructor)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Constructor, Deref)]
 pub struct RelevantLogs(Vec<RelevantLogsFromBlock>);
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Constructor)]
@@ -52,8 +52,20 @@ macro_rules! make_log_structs {
     ($($prefix:ident),* $(,)?) => {
         paste! {
             $(
-                #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Constructor)]
+                #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
                 pub struct [< $prefix:camel RelevantLogs >](RelevantLogs);
+
+                impl [< $prefix:camel RelevantLogs>] {
+                    pub fn new(logs: Vec<RelevantLogsFromBlock>) -> Self {
+                        Self(RelevantLogs::new(logs))
+                    }
+
+                    pub fn add(&mut self, other: Self) {
+                        let a = self.0.0.clone();
+                        let b = other.0.0;
+                        self.0 = RelevantLogs::new([a, b].concat());
+                    }
+                }
 
                 impl fmt::Display for [< $prefix:camel RelevantLogs >] {
                     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -63,7 +75,6 @@ macro_rules! make_log_structs {
                         }
                     }
                 }
-
 
                 impl FromStr for [< $prefix:camel RelevantLogs >]{
                     type Err = SentinelError;
