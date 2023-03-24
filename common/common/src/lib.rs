@@ -20,7 +20,9 @@ pub use crate::{
     no_parent_error::NoParentError,
     traits::DatabaseInterface,
     types::{Byte, Bytes, Result},
-    utils::{strip_hex_prefix, get_core_version},
+    utils::{strip_hex_prefix, get_core_version, get_prefixed_db_key},
+    constants::{MAX_DATA_SENSITIVITY_LEVEL, MIN_DATA_SENSITIVITY_LEVEL},
+    test_utils::get_test_database,
 };
 
 // FIXME Sort out the pub mods
