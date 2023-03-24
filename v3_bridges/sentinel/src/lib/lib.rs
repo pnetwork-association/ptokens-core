@@ -4,6 +4,7 @@ mod check_init;
 mod config;
 mod constants;
 mod core_state;
+mod db_utils;
 mod endpoints;
 mod error;
 mod flatten_join_handle;
@@ -29,6 +30,7 @@ pub use self::{
     config::{Config as SentinelConfig, ConfigT, HostConfig, MongoConfig, NativeConfig},
     constants::MILLISECONDS_MULTIPLIER,
     core_state::CoreState,
+    db_utils::SentinelDbUtils,
     endpoints::{check_endpoint, Endpoints, Error as EndpointError},
     error::SentinelError,
     flatten_join_handle::flatten_join_handle,
