@@ -1,7 +1,17 @@
 use std::{result::Result, sync::Arc};
 
 use common::DatabaseInterface;
-use lib::{AddressesAndTopics, ConfigT, Heartbeats, MongoMessages, ProcessorMessages, SentinelConfig, SentinelError};
+use lib::{
+    AddressesAndTopicsT,
+    ConfigT,
+    Heartbeats,
+    HostAddressesAndTopics,
+    MongoMessages,
+    NativeAddressesAndTopics,
+    ProcessorMessages,
+    SentinelConfig,
+    SentinelError,
+};
 use tokio::sync::{
     mpsc::{Receiver as MpscRx, Sender as MpscTx},
     Mutex,
@@ -20,8 +30,8 @@ pub async fn processor_loop<D: DatabaseInterface>(
     let mut heartbeats = Heartbeats::new();
     let host_is_validating = config.host_config.is_validating();
     let native_is_validating = config.native_config.is_validating();
-    let host_addresses_and_topics = AddressesAndTopics::from_config(&config.host_config);
-    let native_addresses_and_topics = AddressesAndTopics::from_config(&config.native_config);
+    let host_addresses_and_topics = HostAddressesAndTopics::from_config(&config.host_config)?;
+    let native_addresses_and_topics = NativeAddressesAndTopics::from_config(&config.native_config)?;
 
     'processor_loop: loop {
         tokio::select! {

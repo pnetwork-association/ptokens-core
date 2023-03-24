@@ -81,13 +81,19 @@ async fn main_loop(
     let state = warp::path("state").and_then(move || {
         let tx = core_tx_1.clone();
         let core_type = config.core_config.core_type;
-        async move { get_core_state_from_db(tx, &core_type).await }
+        #[allow(clippy::redundant_async_block)]
+        async move {
+            get_core_state_from_db(tx, &core_type).await
+        }
     });
 
     // GET /bpm
     let bpm = warp::path("bpm").and_then(move || {
         let tx = mongo_tx.clone();
-        async move { get_heartbeat_from_db(tx).await }
+        #[allow(clippy::redundant_async_block)]
+        async move {
+            get_heartbeat_from_db(tx).await
+        }
     });
 
     // GET /sync
@@ -95,7 +101,10 @@ async fn main_loop(
         let tx = core_tx_2.clone();
         let h_endpoints = config.host_config.get_endpoints();
         let n_endpoints = config.native_config.get_endpoints();
-        async move { get_sync_status(&n_endpoints, &h_endpoints, tx).await }
+        #[allow(clippy::redundant_async_block)]
+        async move {
+            get_sync_status(&n_endpoints, &h_endpoints, tx).await
+        }
     });
 
     let routes = warp::get().and(ping.or(state).or(bpm).or(sync));

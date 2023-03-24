@@ -1,9 +1,9 @@
 use common_eth::convert_hex_to_h256;
-use derive_more::{Constructor, Deref};
+use derive_more::{Constructor, Deref, IntoIterator};
 use ethereum_types::{Address as EthAddress, H256 as EthHash};
 use serde::{Deserialize, Serialize};
 
-use crate::ConfigT;
+use crate::{ConfigT, SentinelError};
 
 macro_rules! setup_topics {
     ($($name:ident => $hex:expr),* $(,)?) => {
@@ -34,23 +34,49 @@ pub struct AddressAndTopic {
     pub(crate) topic: EthHash,
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, Deref, Constructor)]
-pub struct AddressesAndTopics(Vec<AddressAndTopic>);
+pub trait AddressesAndTopicsT {
+    fn from_config<C: ConfigT>(config: &C) -> Result<Self, SentinelError>
+    where
+        Self: Sized;
+}
 
-impl AddressesAndTopics {
-    pub fn from_config<C: ConfigT>(config: &C) -> Self {
+#[derive(Clone, Debug, Default, Serialize, Deserialize, Deref, Constructor, IntoIterator)]
+pub struct NativeAddressesAndTopics(Vec<AddressAndTopic>);
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize, Deref, Constructor, IntoIterator)]
+pub struct HostAddressesAndTopics(Vec<AddressAndTopic>);
+
+impl AddressesAndTopicsT for NativeAddressesAndTopics {
+    fn from_config<C: ConfigT>(config: &C) -> Result<Self, SentinelError> {
+        if config.side().is_host() {
+            return Err(SentinelError::Custom(
+                "Cannot create native addresses and topics from host config!".into(),
+            ));
+        }
         let mut r: Vec<AddressAndTopic> = vec![];
         let addresses = config.get_contract_addresses();
         for address in addresses {
-            if config.side().is_native() {
-                r.push(AddressAndTopic::new(address, *NATIVE_PEG_IN_TOPIC));
-                r.push(AddressAndTopic::new(address, *NATIVE_ERC20_TRANSFER_TOPIC));
-            } else {
-                r.push(AddressAndTopic::new(address, *HOST_MINTED_TOPIC));
-                r.push(AddressAndTopic::new(address, *HOST_PEG_OUT_TOPIC));
-            }
+            r.push(AddressAndTopic::new(address, *NATIVE_PEG_IN_TOPIC));
+            r.push(AddressAndTopic::new(address, *NATIVE_ERC20_TRANSFER_TOPIC));
         }
-        Self::new(r)
+        Ok(Self::new(r))
+    }
+}
+
+impl AddressesAndTopicsT for HostAddressesAndTopics {
+    fn from_config<C: ConfigT>(config: &C) -> Result<Self, SentinelError> {
+        if config.side().is_native() {
+            return Err(SentinelError::Custom(
+                "Cannot create host addresses and topics from host config!".into(),
+            ));
+        }
+        let mut r: Vec<AddressAndTopic> = vec![];
+        let addresses = config.get_contract_addresses();
+        for address in addresses {
+            r.push(AddressAndTopic::new(address, *HOST_MINTED_TOPIC));
+            r.push(AddressAndTopic::new(address, *HOST_PEG_OUT_TOPIC));
+        }
+        Ok(Self::new(r))
     }
 }
 
@@ -69,16 +95,18 @@ mod tests {
     }
 
     #[test]
-    fn should_get_addresses_and_topics_from_native_config() {
+    fn should_get_native_addresses_and_topics_from_native_config() {
         let mut config = NativeConfig::default();
         config.set_contract_infos(get_sample_contract_infos());
-        AddressesAndTopics::from_config(&config);
+        let result = NativeAddressesAndTopics::from_config(&config);
+        assert!(result.is_ok());
     }
 
     #[test]
     fn should_get_addresses_and_topics_from_host_config() {
         let mut config = HostConfig::default();
         config.set_contract_infos(get_sample_contract_infos());
-        AddressesAndTopics::from_config(&config);
+        let result = HostAddressesAndTopics::from_config(&config);
+        assert!(result.is_ok());
     }
 }

@@ -23,7 +23,7 @@ mod test_utils;
 mod utils;
 
 pub use self::{
-    addresses_and_topics::{AddressAndTopic, AddressesAndTopics},
+    addresses_and_topics::{AddressAndTopic, AddressesAndTopicsT, HostAddressesAndTopics, NativeAddressesAndTopics},
     batching::Batch,
     check_init::check_init,
     config::{Config as SentinelConfig, ConfigT, HostConfig, MongoConfig, NativeConfig},
@@ -52,7 +52,7 @@ pub use self::{
         SyncerMessages,
     },
     native_output::NativeOutput,
-    relevant_logs::RelevantLogs,
+    relevant_logs::RelevantLogsFromBlock,
     utils::get_utc_timestamp,
 };
 
