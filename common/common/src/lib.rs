@@ -19,7 +19,7 @@ pub use crate::{
     errors::AppError,
     no_parent_error::NoParentError,
     traits::DatabaseInterface,
-    types::{Bytes, Result},
+    types::{Byte, Bytes, Result},
     utils::{strip_hex_prefix, get_core_version},
 };
 
