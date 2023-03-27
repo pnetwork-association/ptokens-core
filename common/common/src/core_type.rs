@@ -80,6 +80,15 @@ impl Default for V3CoreType {
 }
 
 impl CoreType {
+    pub fn to_v3_core_type(&self) -> Result<V3CoreType> {
+        match self {
+            Self::V3(c) => Ok(*c),
+            _ => Err(AppError::Custom(
+                format!("Cannot convert `{self}` to v3 core type!").into(),
+            )),
+        }
+    }
+
     pub fn initialize_native_core<D: DatabaseInterface>(db: &D) -> Result<()> {
         info!("✔ Initializing NATIVE core...");
         db.put(
