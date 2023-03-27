@@ -1,17 +1,7 @@
 use std::{result::Result, sync::Arc};
 
 use common::DatabaseInterface;
-use lib::{
-    AddressesAndTopicsT,
-    ConfigT,
-    Heartbeats,
-    HostAddressesAndTopics,
-    MongoMessages,
-    NativeAddressesAndTopics,
-    ProcessorMessages,
-    SentinelConfig,
-    SentinelError,
-};
+use lib::{ConfigT, Heartbeats, MongoMessages, ProcessorMessages, SentinelConfig, SentinelError};
 use tokio::sync::{
     mpsc::{Receiver as MpscRx, Sender as MpscTx},
     Mutex,
@@ -30,8 +20,8 @@ pub async fn processor_loop<D: DatabaseInterface>(
     let mut heartbeats = Heartbeats::new();
     let host_is_validating = config.host_config.is_validating();
     let native_is_validating = config.native_config.is_validating();
-    let host_addresses_and_topics = HostAddressesAndTopics::from_config(&config.host_config)?;
-    let native_addresses_and_topics = NativeAddressesAndTopics::from_config(&config.native_config)?;
+    let host_state_manager = config.host_config.get_state_manager();
+    let native_state_manager = config.native_config.get_state_manager();
 
     'processor_loop: loop {
         tokio::select! {
@@ -44,8 +34,8 @@ pub async fn processor_loop<D: DatabaseInterface>(
                         let result =  process_native_batch(
                             &*db,
                             matches!(args.is_in_sync(), Ok(true)),
+                            &native_state_manager,
                             &args.batch,
-                            &native_addresses_and_topics,
                             native_is_validating,
                         );
                         match result {
@@ -78,8 +68,8 @@ pub async fn processor_loop<D: DatabaseInterface>(
                         let result = process_host_batch(
                             &*db,
                             matches!(args.is_in_sync(), Ok(true)),
+                            &host_state_manager,
                             &args.batch,
-                            &host_addresses_and_topics,
                             host_is_validating,
                         );
                         match result {

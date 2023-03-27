@@ -1,4 +1,3 @@
-mod addresses_and_topics;
 mod batching;
 mod check_init;
 mod config;
@@ -21,10 +20,10 @@ mod messages;
 mod native_output;
 mod relevant_logs;
 mod test_utils;
+mod user_operation;
 mod utils;
 
 pub use self::{
-    addresses_and_topics::{AddressAndTopic, AddressesAndTopicsT, HostAddressesAndTopics, NativeAddressesAndTopics},
     batching::Batch,
     check_init::check_init,
     config::{Config as SentinelConfig, ConfigT, HostConfig, MongoConfig, NativeConfig},
@@ -54,7 +53,8 @@ pub use self::{
         SyncerMessages,
     },
     native_output::NativeOutput,
-    relevant_logs::{HostRelevantLogs, NativeRelevantLogs, RelevantLogs, RelevantLogsFromBlock},
+    relevant_logs::{RelevantLogs, RelevantLogsFromBlock},
+    user_operation::{UserOperation, USER_OPERATION_TOPIC},
     utils::get_utc_timestamp,
 };
 

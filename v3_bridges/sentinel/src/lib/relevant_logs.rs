@@ -1,11 +1,12 @@
-use std::{fmt, iter::IntoIterator, str::FromStr, time::Duration};
+use std::{fmt, str::FromStr, time::Duration};
 
 use common::{Byte, Bytes};
 use common_eth::{EthLog, EthLogs, EthReceipts};
 use derive_more::{Constructor, Deref};
+use ethereum_types::Address as EthAddress;
 use serde::{Deserialize, Serialize};
 
-use crate::{AddressAndTopic, SentinelError};
+use crate::{SentinelError, USER_OPERATION_TOPIC};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Constructor, Deref)]
 pub struct RelevantLogs(Vec<RelevantLogsFromBlock>);
@@ -14,7 +15,7 @@ pub struct RelevantLogs(Vec<RelevantLogsFromBlock>);
 pub struct RelevantLogsFromBlock {
     block_num: u64,
     timestamp: Duration,
-    logs: EthLogs,
+    logs: EthLogs, // FIXME change this to UserOperations (by converting the log to UserOperation)
 }
 
 #[cfg(test)]
@@ -25,22 +26,21 @@ impl RelevantLogsFromBlock {
 }
 
 impl RelevantLogsFromBlock {
-    pub fn from_eth_receipts<A>(
+    pub fn empty() -> Self {
+        Self::default()
+    }
+
+    pub fn from_eth_receipts(
         block_num: u64,
         timestamp: Duration,
         receipts: &EthReceipts,
-        addresses_and_topics: &A,
-    ) -> Self
-    where
-        for<'a> &'a A: IntoIterator<Item = &'a AddressAndTopic>,
-    {
+        state_manager: &EthAddress,
+    ) -> Self {
         let mut logs: Vec<EthLog> = vec![];
         for receipt in receipts.iter() {
             for log in receipt.logs.iter() {
-                for AddressAndTopic { address, topic } in addresses_and_topics.into_iter() {
-                    if !log.topics.is_empty() && &log.address == address && &log.topics[0] == topic {
-                        logs.push(log.clone());
-                    }
+                if !log.topics.is_empty() && &log.address == state_manager && log.topics[0] == *USER_OPERATION_TOPIC {
+                    logs.push(log.clone());
                 }
             }
         }
@@ -48,68 +48,51 @@ impl RelevantLogsFromBlock {
     }
 }
 
-macro_rules! make_log_structs {
-    ($($prefix:ident),* $(,)?) => {
-        paste! {
-            $(
-                #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Deref)]
-                pub struct [< $prefix:camel RelevantLogs >](RelevantLogs);
+impl RelevantLogs {
+    pub fn add(&mut self, other: Self) {
+        let a = self.0.clone();
+        let b = other.0;
+        self.0 = [a, b].concat();
+    }
+}
 
-                impl [< $prefix:camel RelevantLogs>] {
-                    pub fn new(logs: Vec<RelevantLogsFromBlock>) -> Self {
-                        Self(RelevantLogs::new(logs))
-                    }
-
-                    pub fn add(&mut self, other: Self) {
-                        let a = self.0.0.clone();
-                        let b = other.0.0;
-                        self.0 = RelevantLogs::new([a, b].concat());
-                    }
-                }
-
-                impl fmt::Display for [< $prefix:camel RelevantLogs >] {
-                    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                        match serde_json::to_string_pretty(self) {
-                            Ok(s) => write!(f, "{s}"),
-                            Err(e) => write!(f, "Error convert `HostRelevantLogs` to string: {e}",),
-                        }
-                    }
-                }
-
-                impl FromStr for [< $prefix:camel RelevantLogs >]{
-                    type Err = SentinelError;
-
-                    fn from_str(s: &str) -> Result<Self, Self::Err> {
-                        Ok(serde_json::from_str(s)?)
-                    }
-                }
-
-                impl TryInto<Bytes> for [< $prefix:camel RelevantLogs >] {
-                    type Error = SentinelError;
-
-                    fn try_into(self) -> Result<Bytes, Self::Error> {
-                        Ok(serde_json::to_vec(&self)?)
-                    }
-                }
-
-                impl TryFrom<&[Byte]> for [< $prefix:camel RelevantLogs >] {
-                    type Error = SentinelError;
-
-                    fn try_from(b: &[Byte]) -> Result<Self, Self::Error> {
-                        Ok(serde_json::from_slice(b)?)
-                    }
-                }
-
-                impl TryFrom<Bytes> for [< $prefix:camel RelevantLogs >] {
-                    type Error = SentinelError;
-
-                    fn try_from(b: Bytes) -> Result<Self, Self::Error> {
-                        Ok(serde_json::from_slice(&b)?)
-                    }
-                }
-            )*
+impl fmt::Display for RelevantLogs {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match serde_json::to_string_pretty(self) {
+            Ok(s) => write!(f, "{s}"),
+            Err(e) => write!(f, "Error convert `HostRelevantLogs` to string: {e}",),
         }
     }
 }
 
-make_log_structs!(HOST, NATIVE);
+impl FromStr for RelevantLogs {
+    type Err = SentinelError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(serde_json::from_str(s)?)
+    }
+}
+
+impl TryInto<Bytes> for RelevantLogs {
+    type Error = SentinelError;
+
+    fn try_into(self) -> Result<Bytes, Self::Error> {
+        Ok(serde_json::to_vec(&self)?)
+    }
+}
+
+impl TryFrom<&[Byte]> for RelevantLogs {
+    type Error = SentinelError;
+
+    fn try_from(b: &[Byte]) -> Result<Self, Self::Error> {
+        Ok(serde_json::from_slice(b)?)
+    }
+}
+
+impl TryFrom<Bytes> for RelevantLogs {
+    type Error = SentinelError;
+
+    fn try_from(b: Bytes) -> Result<Self, Self::Error> {
+        Ok(serde_json::from_slice(&b)?)
+    }
+}

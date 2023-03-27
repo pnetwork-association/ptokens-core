@@ -2,23 +2,19 @@ use std::{result::Result, str::FromStr};
 
 use common::BridgeSide;
 use common_chain_ids::EthChainId;
+use common_eth::convert_hex_to_eth_address;
 use ethereum_types::Address as EthAddress;
 use serde::Deserialize;
 
-use crate::{
-    config::{ConfigT, ContractInfoToml, ContractInfos},
-    constants::MILLISECONDS_MULTIPLIER,
-    Endpoints,
-    SentinelError,
-};
+use crate::{config::ConfigT, constants::MILLISECONDS_MULTIPLIER, Endpoints, SentinelError};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct NativeToml {
     validate: bool,
     sleep_duration: u64,
     eth_chain_id: String,
+    state_manager: String,
     endpoints: Vec<String>,
-    contract_info: Vec<ContractInfoToml>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -27,7 +23,7 @@ pub struct NativeConfig {
     sleep_duration: u64,
     endpoints: Endpoints,
     eth_chain_id: EthChainId,
-    contract_infos: ContractInfos,
+    state_manager: EthAddress,
 }
 
 impl NativeConfig {
@@ -36,8 +32,8 @@ impl NativeConfig {
         Ok(Self {
             sleep_duration,
             validate: toml.validate,
+            state_manager: convert_hex_to_eth_address(&toml.state_manager)?,
             endpoints: Endpoints::new(false, sleep_duration, toml.endpoints.clone()),
-            contract_infos: ContractInfos::from_tomls(&toml.contract_info)?,
             eth_chain_id: match EthChainId::from_str(&toml.eth_chain_id) {
                 Ok(id) => id,
                 Err(e) => {
@@ -69,10 +65,6 @@ impl NativeConfig {
 }
 
 impl ConfigT for NativeConfig {
-    fn get_contract_addresses(&self) -> Vec<EthAddress> {
-        self.contract_infos.get_addresses()
-    }
-
     fn side(&self) -> BridgeSide {
         BridgeSide::Native
     }
@@ -80,11 +72,8 @@ impl ConfigT for NativeConfig {
     fn is_validating(&self) -> bool {
         self.validate
     }
-}
 
-#[cfg(test)]
-impl NativeConfig {
-    pub fn set_contract_infos(&mut self, infos: ContractInfos) {
-        self.contract_infos = infos;
+    fn get_state_manager(&self) -> EthAddress {
+        self.state_manager
     }
 }

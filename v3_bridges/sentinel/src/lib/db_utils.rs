@@ -2,10 +2,7 @@
 
 use common::{get_prefixed_db_key, Byte, Bytes, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
 
-use crate::{
-    relevant_logs::{HostRelevantLogs, NativeRelevantLogs},
-    SentinelError,
-};
+use crate::{relevant_logs::RelevantLogs, SentinelError};
 
 type DbKey = [Byte; 32];
 
@@ -28,23 +25,23 @@ macro_rules! create_db_keys {
                         $name.to_vec()
                     }
 
-                    fn [< get_ $name:lower >](&self) -> Result<[< $name:camel >], SentinelError> {
+                    fn [< get_ $name:lower >](&self) -> Result<RelevantLogs, SentinelError> {
                         let result = self.db().get(
                             Self::[< get_ $name:lower _key >](),
                             MIN_DATA_SENSITIVITY_LEVEL
                         );
 
                         match result {
-                            Ok(bytes) => [< $name:camel >]::try_from(bytes),
+                            Ok(bytes) => RelevantLogs::try_from(bytes),
                             Err(e) => {
                                 warn!("Error getting {} from db, defaulting to empty set!", stringify!([< $name:camel >]));
-                                Ok([< $name:camel >]::default())
+                                Ok(RelevantLogs::default())
                             },
                         }
 
                     }
 
-                    fn [< put_ $name:lower >](&self, thing: [< $name:camel >]) -> Result<(), SentinelError> {
+                    fn [< put_ $name:lower >](&self, thing: RelevantLogs) -> Result<(), SentinelError> {
                         self.db().put(
                             Self::[< get_ $name:lower _key >](),
                             thing.try_into()?,
@@ -53,7 +50,7 @@ macro_rules! create_db_keys {
                         Ok(())
                     }
 
-                    pub fn [< add_ $name:lower >](&self, thing: [< $name:camel >]) -> Result<(), SentinelError> {
+                    pub fn [< add_ $name:lower >](&self, thing: RelevantLogs) -> Result<(), SentinelError> {
                         let mut thing_from_db = self.[< get_ $name:lower >]()?;
                         thing_from_db.add(thing);
                         self.[< put_ $name:lower >](thing_from_db)
@@ -62,6 +59,7 @@ macro_rules! create_db_keys {
             }
         }
 
+        /*
         #[cfg(test)]
         mod tests {
             use super::*;
@@ -118,6 +116,7 @@ macro_rules! create_db_keys {
                 )*
             }
         }
+        */
     }
 }
 

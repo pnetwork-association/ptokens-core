@@ -12,12 +12,10 @@ pub async fn broadcaster_loop(
 
     'broadcaster_loop: loop {
         tokio::select! {
-            r = rx.recv() => match r {
-                _ => {
-                    let m = "all broadcaster senders dropped!";
-                    warn!("{m}");
-                    break 'broadcaster_loop Err(SentinelError::Custom(m.into()))
-                },
+            _r = rx.recv() => {
+                let m = "all broadcaster senders dropped!";
+                warn!("{m}");
+                break 'broadcaster_loop Err(SentinelError::Custom(m.into()))
             },
             _ = tokio::signal::ctrl_c() => {
                 warn!("broadcaster shutting down...");

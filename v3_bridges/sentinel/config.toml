@@ -8,6 +8,7 @@ endpoints = [ "ws://162.19.83.219:8546" ]
 sleep_duration = 15 # How long to wait before trying to get the next host block (in seconds)
 contract_addresses = [] # Used to prefilter submission material to reduce total batch size.
 validate = true # Used to turn off validation for this side's chain.
+state_manager = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628"
 
 [host]
 eth_chain_id = "1"
@@ -15,6 +16,7 @@ endpoints = [ "ws://162.19.83.219:8546" ]
 sleep_duration = 15 # How long to wait before trying to get the next native block (in seconds)
 contract_addresses = [] # Used to prefilter submission material to reduce total batch size.
 validate = true # Used to turn off validation for this side's chain.
+state_manager = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628"
 
 [batching]
 host_batch_size = 5 # Max number of host blocks to batch before submission
@@ -37,19 +39,7 @@ native_collection = "native" # Name of the host collection
 timeout = 3 # How many seconds to wait when conneting/inserting/reading etc
 uri = "mongodb://127.0.0.1:27017"
 
-# NOTE: These are an analogous to the v1 & v2 core token dictionaries
-[[host.contract_info]]
-name = "pBTC"
-address = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628"
-
-[[host.contract_info]]
-name = "pEOS"
-address = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628"
-
-[[native.contract_info]]
-name = "pBTC"
-address = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628"
-
-[[native.contract_info]]
-name = "pEOS"
-address = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628"
+# TODO
+# impl a type for the user operation log.
+# impl a way to convert it from an ETH log
+# update the db_utils to use the same relevant log struct for host and native since they're the same now

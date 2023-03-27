@@ -20,10 +20,10 @@ pub struct Batch {
     sleep_duration: u64,
     batch_duration: u64,
     endpoints: Endpoints,
+    state_manager: EthAddress,
     batching_is_disabled: bool,
     single_submissions_flag: bool,
     batch: EthSubmissionMaterials,
-    contract_addresses: Vec<EthAddress>,
     last_submitted_timestamp: SystemTime,
 }
 
@@ -35,11 +35,11 @@ impl Default for Batch {
             batch_size: 1,
             sleep_duration: 0,
             batch_duration: 300, // NOTE: 5mins
-            contract_addresses: vec![],
             side: BridgeSide::default(),
             batching_is_disabled: false,
             single_submissions_flag: false,
             endpoints: Endpoints::default(),
+            state_manager: EthAddress::default(),
             batch: EthSubmissionMaterials::default(),
             last_submitted_timestamp: SystemTime::now(),
         }
@@ -120,10 +120,10 @@ impl Batch {
             },
             batch_size: config.batching_config.get_batch_size(is_native),
             batch_duration: config.batching_config.get_batch_duration(is_native),
-            contract_addresses: if is_native {
-                config.native_config.get_contract_addresses()
+            state_manager: if is_native {
+                config.native_config.get_state_manager()
             } else {
-                config.host_config.get_contract_addresses()
+                config.host_config.get_state_manager()
             },
             ..Default::default()
         };
@@ -156,7 +156,11 @@ impl Batch {
 
     pub fn push(&mut self, sub_mat: EthSubmissionMaterial) {
         self.batch
-            .push(sub_mat.remove_receipts_if_no_logs_from_addresses(&self.contract_addresses));
+            .push(sub_mat.remove_receipts_if_no_logs_from_addresses(&[self.state_manager]));
+    }
+
+    pub fn get_state_manager(&self) -> &EthAddress {
+        &self.state_manager
     }
 
     pub fn is_empty(&self) -> bool {

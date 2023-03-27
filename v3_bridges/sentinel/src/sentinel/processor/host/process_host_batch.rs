@@ -2,14 +2,8 @@ use std::result::Result;
 
 use common::DatabaseInterface;
 use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials, HostDbUtils};
-use lib::{
-    HostAddressesAndTopics,
-    HostOutput,
-    HostRelevantLogs,
-    RelevantLogsFromBlock,
-    SentinelDbUtils,
-    SentinelError,
-};
+use ethereum_types::Address as EthAddress;
+use lib::{HostOutput, RelevantLogs, RelevantLogsFromBlock, SentinelDbUtils, SentinelError};
 
 const SIDE: &str = "host";
 
@@ -17,7 +11,7 @@ fn process_host<D: DatabaseInterface>(
     db: &D,
     is_in_sync: bool,
     sub_mat: &EthSubmissionMaterial,
-    addresses_and_topics: &HostAddressesAndTopics,
+    state_manager: &EthAddress,
     is_validating: bool,
 ) -> Result<RelevantLogsFromBlock, SentinelError> {
     let n = sub_mat.get_block_number()?;
@@ -41,10 +35,10 @@ fn process_host<D: DatabaseInterface>(
             sub_mat.get_block_number()?.as_u64(),
             sub_mat.get_timestamp(),
             &sub_mat.receipts,
-            &**addresses_and_topics,
+            state_manager,
         )
     } else {
-        RelevantLogsFromBlock::default()
+        RelevantLogsFromBlock::empty()
     };
 
     debug!("Finished processing {SIDE} block {n}!");
@@ -54,17 +48,17 @@ fn process_host<D: DatabaseInterface>(
 pub fn process_host_batch<D: DatabaseInterface>(
     db: &D,
     is_in_sync: bool,
+    state_manager: &EthAddress,
     batch: &EthSubmissionMaterials,
-    addresses_and_topics: &HostAddressesAndTopics,
     is_validating: bool,
 ) -> Result<HostOutput, SentinelError> {
     info!("Processing {SIDE} batch of submission material...");
     db.start_transaction()?;
 
-    let relevant_logs = HostRelevantLogs::new(
+    let relevant_logs = RelevantLogs::new(
         batch
             .iter()
-            .map(|m| process_host(db, is_in_sync, m, addresses_and_topics, is_validating))
+            .map(|sub_mat| process_host(db, is_in_sync, sub_mat, state_manager, is_validating))
             .collect::<Result<Vec<RelevantLogsFromBlock>, SentinelError>>()?,
     );
 

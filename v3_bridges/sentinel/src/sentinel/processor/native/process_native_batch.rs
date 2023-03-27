@@ -2,31 +2,16 @@ use std::result::Result;
 
 use common::DatabaseInterface;
 use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials, NativeDbUtils};
-use lib::{
-    NativeAddressesAndTopics,
-    NativeOutput,
-    NativeRelevantLogs,
-    RelevantLogsFromBlock,
-    SentinelDbUtils,
-    SentinelError,
-};
+use ethereum_types::Address as EthAddress;
+use lib::{NativeOutput, RelevantLogs, RelevantLogsFromBlock, SentinelDbUtils, SentinelError};
 
 const SIDE: &str = "native";
-/*
-Okay so we need relevant logs in three flavours:
-
-- logs we expect to see (on the host chain)
-- logs we expected to se (because of the host chain)
-- logs we need to query (if we're in sync we can send these straight to a broadcaster, otherwise save them in core db)
-
-We also need to save stuff in epochs but for now we can save it in two mega structs instead, one each for host and native.
- */
 
 fn process_native<D: DatabaseInterface>(
     db: &D,
     is_in_sync: bool,
     sub_mat: &EthSubmissionMaterial,
-    addresses_and_topics: &NativeAddressesAndTopics,
+    state_manager: &EthAddress,
     is_validating: bool,
 ) -> Result<RelevantLogsFromBlock, SentinelError> {
     let n = sub_mat.get_block_number()?;
@@ -50,10 +35,10 @@ fn process_native<D: DatabaseInterface>(
             sub_mat.get_block_number()?.as_u64(),
             sub_mat.get_timestamp(),
             &sub_mat.receipts,
-            &**addresses_and_topics,
+            state_manager,
         )
     } else {
-        RelevantLogsFromBlock::default()
+        RelevantLogsFromBlock::empty()
     };
 
     debug!("Finished processing {SIDE} block {n}!");
@@ -63,17 +48,17 @@ fn process_native<D: DatabaseInterface>(
 pub fn process_native_batch<D: DatabaseInterface>(
     db: &D,
     is_in_sync: bool,
+    state_manager: &EthAddress,
     batch: &EthSubmissionMaterials,
-    addresses_and_topics: &NativeAddressesAndTopics,
     is_validating: bool,
 ) -> Result<NativeOutput, SentinelError> {
     info!("Processing {SIDE} batch of submission material...");
     db.start_transaction()?;
 
-    let relevant_logs = NativeRelevantLogs::new(
+    let relevant_logs = RelevantLogs::new(
         batch
             .iter()
-            .map(|m| process_native(db, is_in_sync, m, addresses_and_topics, is_validating))
+            .map(|sub_mat| process_native(db, is_in_sync, sub_mat, state_manager, is_validating))
             .collect::<Result<Vec<RelevantLogsFromBlock>, SentinelError>>()?,
     );
 
