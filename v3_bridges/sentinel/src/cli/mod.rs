@@ -4,6 +4,7 @@ mod get_latest_block_num;
 mod get_nonce;
 mod get_sub_mat;
 mod init;
+mod reset_chain;
 mod start_sentinel_args;
 mod write_file;
 
@@ -14,6 +15,7 @@ pub(crate) use self::{
     get_nonce::{get_nonce_cli, NonceCliArgs},
     get_sub_mat::{get_host_sub_mat, get_native_sub_mat},
     init::init,
+    reset_chain::{reset_chain_cli, ResetCliArgs},
     start_sentinel_args::StartSentinelArgs,
     write_file::write_file,
 };

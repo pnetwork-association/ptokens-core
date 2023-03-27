@@ -2,10 +2,10 @@
 license = "MIT"
 publish = false
 edition = "2021"
-name = "ethereum_debug"
 version = "6.10.2"
 readme = "README.md"
 rust-version = "1.56"
+name = "ethereum_debug"
 keywords = ["provable", "defi", "crypto"]
 authors = ["Greg Kapka <gregkapka@gmail.com>"]
 

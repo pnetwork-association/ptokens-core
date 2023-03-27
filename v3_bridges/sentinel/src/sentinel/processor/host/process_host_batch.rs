@@ -49,7 +49,6 @@ fn process_host<D: DatabaseInterface>(
 
     debug!("Finished processing {SIDE} block {n}!");
     Ok(r)
-
 }
 
 pub fn process_host_batch<D: DatabaseInterface>(
