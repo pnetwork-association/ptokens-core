@@ -26,7 +26,7 @@ impl std::str::FromStr for BridgeSide {
         match s.to_lowercase().as_ref() {
             "host" => Ok(Self::Host),
             "native" => Ok(Self::Native),
-            _ => Err(format!("Error converting '{s}' into `BridgeSide`").into()),
+            _ => Err(format!("Error converting '{s}' into `BridgeSide`, expected `native` or `host`!").into()),
         }
     }
 }
