@@ -2,7 +2,6 @@ use std::fmt;
 
 use derive_more::Constructor;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 use crate::{HostOutput, NativeOutput, UserOperations};
 
@@ -33,7 +32,7 @@ impl fmt::Display for Output {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match serde_json::to_string_pretty(self) {
             Ok(s) => write!(f, "{s}"),
-            Err(e) => write!(f, "Error pretty printing `Output` json!"),
+            Err(e) => write!(f, "Error pretty printing `Output` json: {e}"),
         }
     }
 }

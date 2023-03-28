@@ -87,22 +87,6 @@ impl From<Vec<UserOperations>> for UserOperations {
     }
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
-pub struct UserOperation {
-    block_hash: EthHash,
-    nonce: U256,
-    destination_account: String,
-    destination_network_id: MetadataChainId,
-    underlying_asset_token_address: EthAddress,
-    underlying_asset_name: String,
-    underlying_asset_symbol: String,
-    underlying_asset_chain_id: MetadataChainId,
-    asset_token_address: EthAddress,
-    asset_amount: U256,
-    user_data: Bytes,
-    options_mask: Bytes,
-}
-
 #[cfg(test)]
 impl UserOperation {
     pub fn set_destination_account(&mut self, s: String) {
@@ -134,6 +118,21 @@ impl TryFrom<EthLog> for UserOperation {
     }
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct UserOperation {
+    nonce: U256,
+    destination_account: String,
+    destination_network_id: MetadataChainId,
+    underlying_asset_name: String,
+    underlying_asset_symbol: String,
+    underlying_asset_token_address: EthAddress,
+    underlying_asset_chain_id: U256,
+    asset_token_address: EthAddress,
+    asset_amount: U256,
+    user_data: Bytes,
+    options_mask: Bytes,
+}
+
 impl TryFrom<&EthLog> for UserOperation {
     type Error = SentinelError;
 
@@ -141,14 +140,13 @@ impl TryFrom<&EthLog> for UserOperation {
         debug!("Decoding `UserOperation` from `EthLog`...");
         let tokens = eth_abi_decode(
             &[
-                EthAbiParamType::FixedBytes(32),
                 EthAbiParamType::Uint(256),
                 EthAbiParamType::String,
                 EthAbiParamType::FixedBytes(4),
+                EthAbiParamType::String,
+                EthAbiParamType::String,
                 EthAbiParamType::Address,
-                EthAbiParamType::String,
-                EthAbiParamType::String,
-                EthAbiParamType::FixedBytes(4),
+                EthAbiParamType::Uint(256),
                 EthAbiParamType::Address,
                 EthAbiParamType::Uint(256),
                 EthAbiParamType::Bytes,
@@ -157,32 +155,30 @@ impl TryFrom<&EthLog> for UserOperation {
             &l.get_data(),
         )?;
 
-        let block_hash = Self::get_eth_hash_from_token(&tokens[0])?;
-        let nonce = Self::get_u256_from_token(&tokens[1])?;
-        let destination_account = Self::get_string_from_token(&tokens[2])?;
-        let destination_network_id = Self::get_metadata_chain_id_from_token(&tokens[3])?;
-        let underlying_asset_token_address = Self::get_address_from_token(&tokens[4])?;
-        let underlying_asset_name = Self::get_string_from_token(&tokens[5])?;
-        let underlying_asset_symbol = Self::get_string_from_token(&tokens[6])?;
-        let underlying_asset_chain_id = Self::get_metadata_chain_id_from_token(&tokens[7])?;
-        let asset_token_address = Self::get_address_from_token(&tokens[8])?;
-        let asset_amount = Self::get_u256_from_token(&tokens[9])?;
-        let user_data = Self::get_bytes_from_token(&tokens[10])?;
-        let options_mask = Self::get_bytes_from_token(&tokens[11])?;
+        let nonce = Self::get_u256_from_token(&tokens[0])?;
+        let destination_account = Self::get_string_from_token(&tokens[1])?;
+        let destination_network_id = Self::get_metadata_chain_id_from_token(&tokens[2])?;
+        let underlying_asset_name = Self::get_string_from_token(&tokens[3])?;
+        let underlying_asset_symbol = Self::get_string_from_token(&tokens[4])?;
+        let underlying_asset_token_address = Self::get_address_from_token(&tokens[5])?;
+        let underlying_asset_chain_id = Self::get_u256_from_token(&tokens[6])?;
+        let asset_token_address = Self::get_address_from_token(&tokens[7])?;
+        let asset_amount = Self::get_u256_from_token(&tokens[8])?;
+        let user_data = Self::get_bytes_from_token(&tokens[9])?;
+        let options_mask = Self::get_bytes_from_token(&tokens[10])?;
 
         Ok(Self {
-            block_hash,
             nonce,
+            user_data,
+            asset_amount,
+            options_mask,
+            asset_token_address,
             destination_account,
-            destination_network_id,
-            underlying_asset_token_address,
             underlying_asset_name,
+            destination_network_id,
             underlying_asset_symbol,
             underlying_asset_chain_id,
-            asset_token_address,
-            asset_amount,
-            user_data,
-            options_mask,
+            underlying_asset_token_address,
         })
     }
 }
@@ -213,6 +209,7 @@ impl UserOperation {
         }
     }
 
+    #[allow(unused)]
     fn get_eth_hash_from_token(t: &EthAbiToken) -> Result<EthHash, SentinelError> {
         match t {
             EthAbiToken::FixedBytes(ref b) => Ok(EthHash::from_slice(b)),
