@@ -1,6 +1,6 @@
-use std::convert::TryFrom;
+use std::{convert::TryFrom, fmt, str::FromStr};
 
-use common::Bytes;
+use common::{Byte, Bytes};
 use common_eth::{convert_hex_to_h256, EthLog, EthLogExt, EthReceipts};
 use common_metadata::MetadataChainId;
 use derive_more::{Constructor, Deref};
@@ -12,6 +12,14 @@ use crate::SentinelError;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Deref, Serialize, Deserialize)]
 pub struct UserOperations(Vec<UserOperation>);
+
+impl UserOperations {
+    pub fn add(&mut self, other: Self) {
+        let a = self.0.clone();
+        let b = other.0;
+        self.0 = [a, b].concat();
+    }
+}
 
 impl UserOperations {
     pub fn empty() -> Self {
@@ -61,6 +69,13 @@ pub struct UserOperation {
     asset_amount: U256,
     user_data: Bytes,
     options_mask: Bytes,
+}
+
+#[cfg(test)]
+impl UserOperation {
+    pub fn set_destination_account(&mut self, s: String) {
+        self.destination_account = s;
+    }
 }
 
 // NOTE: Originally we worked w/ > 1 topic, hence using a macro - bit overkill now.
@@ -186,5 +201,46 @@ impl UserOperation {
 
     fn get_metadata_chain_id_from_token(t: &EthAbiToken) -> Result<MetadataChainId, SentinelError> {
         Self::get_bytes_from_token(t).and_then(|ref bs| Ok(MetadataChainId::from_bytes(bs)?))
+    }
+}
+
+impl fmt::Display for UserOperations {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match serde_json::to_string_pretty(self) {
+            Ok(s) => write!(f, "{s}"),
+            Err(e) => write!(f, "Error convert `UserOperations` to string: {e}",),
+        }
+    }
+}
+
+impl FromStr for UserOperations {
+    type Err = SentinelError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(serde_json::from_str(s)?)
+    }
+}
+
+impl TryInto<Bytes> for UserOperations {
+    type Error = SentinelError;
+
+    fn try_into(self) -> Result<Bytes, Self::Error> {
+        Ok(serde_json::to_vec(&self)?)
+    }
+}
+
+impl TryFrom<&[Byte]> for UserOperations {
+    type Error = SentinelError;
+
+    fn try_from(b: &[Byte]) -> Result<Self, Self::Error> {
+        Ok(serde_json::from_slice(b)?)
+    }
+}
+
+impl TryFrom<Bytes> for UserOperations {
+    type Error = SentinelError;
+
+    fn try_from(b: Bytes) -> Result<Self, Self::Error> {
+        Ok(serde_json::from_slice(&b)?)
     }
 }
