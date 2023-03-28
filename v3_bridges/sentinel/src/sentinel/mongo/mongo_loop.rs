@@ -2,6 +2,7 @@ use std::result::Result;
 
 use lib::{HeartbeatsJson, MongoConfig, MongoMessages, SentinelError};
 use mongodb::{bson::doc, Collection};
+use serde::{de::DeserializeOwned, Serialize};
 use tokio::{
     sync::mpsc::Receiver as MpscRx,
     time::{sleep, Duration},
@@ -9,6 +10,7 @@ use tokio::{
 
 const MONGO_RETRY_SLEEP_TIME: u64 = 500;
 
+#[allow(unused)]
 async fn insert_into_mongodb<T: std::fmt::Display + serde::Serialize>(
     output: T,
     collection: &Collection<T>,
@@ -42,6 +44,24 @@ async fn update_heartbeat(h: &HeartbeatsJson, collection: &Collection<Heartbeats
     }
 }
 
+async fn update_in_mongodb<T>(t: &T, id: &str, collection: &Collection<T>) -> Result<(), SentinelError>
+where
+    T: std::fmt::Display + Serialize + DeserializeOwned,
+{
+    loop {
+        let f = doc! { "_id": id };
+        match collection.find_one_and_replace(f, t, None).await {
+            Ok(_) => break Ok(()),
+            Err(ref e) if e.contains_label(mongodb::error::RETRYABLE_WRITE_ERROR) => {
+                warn!("Error writing `{id}` to mongo, sleeing {MONGO_RETRY_SLEEP_TIME}ms and retrying...");
+                sleep(Duration::from_millis(MONGO_RETRY_SLEEP_TIME)).await;
+                continue;
+            },
+            Err(e) => break Err(e.into()),
+        }
+    }
+}
+
 async fn get_heartbeats(collection: &Collection<HeartbeatsJson>) -> Result<HeartbeatsJson, SentinelError> {
     let f = doc! {"_id":"heartbeats"};
     Ok(collection.find_one(f, None).await?.unwrap_or_default())
@@ -61,11 +81,11 @@ pub async fn mongo_loop(mongo_config: MongoConfig, mut mongo_rx: MpscRx<MongoMes
         tokio::select! {
             r = mongo_rx.recv() => match r {
                 Some(MongoMessages::PutNative(msg)) => {
-                    insert_into_mongodb(msg, &native_collection).await?;
+                    update_in_mongodb(&msg, "native_latest_output", &native_collection).await?;
                     continue 'mongo_loop
                 },
                 Some(MongoMessages::PutHost(msg)) => {
-                    insert_into_mongodb(msg, &host_collection).await?;
+                    update_in_mongodb(&msg, "host_latest_output", &host_collection).await?;
                     continue 'mongo_loop
                 },
                 Some(MongoMessages::PutHeartbeats(msg)) => {

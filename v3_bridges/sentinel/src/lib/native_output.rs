@@ -3,12 +3,14 @@ use std::{fmt, result::Result};
 use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 
-use crate::{get_utc_timestamp, SentinelError};
+use crate::{get_utc_timestamp, SentinelError, UserOperations};
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct NativeOutput {
     timestamp: u64,
     latest_block_num: u64,
+    host_unmatched_user_ops: UserOperations,
+    native_unmatched_user_ops: UserOperations,
 }
 
 impl NativeOutput {
@@ -16,6 +18,8 @@ impl NativeOutput {
         Ok(Self {
             latest_block_num,
             timestamp: get_utc_timestamp()?,
+            host_unmatched_user_ops: UserOperations::empty(),
+            native_unmatched_user_ops: UserOperations::empty(),
         })
     }
 
@@ -25,6 +29,11 @@ impl NativeOutput {
 
     pub fn get_latest_block_num(&self) -> u64 {
         self.latest_block_num
+    }
+
+    pub fn add_unmatched_user_ops(&mut self, n: &UserOperations, h: &UserOperations) {
+        self.host_unmatched_user_ops = h.clone();
+        self.native_unmatched_user_ops = n.clone();
     }
 }
 

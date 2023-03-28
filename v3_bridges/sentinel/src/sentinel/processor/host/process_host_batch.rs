@@ -56,6 +56,8 @@ pub fn process_host_batch<D: DatabaseInterface>(
             .collect::<Result<Vec<UserOperations>, SentinelError>>()?,
     );
 
+    let mut output = HostOutput::new(batch.get_last_block_num()?)?;
+
     if !user_ops.is_empty() {
         let db_utils = SentinelDbUtils::new(db);
 
@@ -64,7 +66,9 @@ pub fn process_host_batch<D: DatabaseInterface>(
         host_user_ops.add(user_ops);
 
         let (native, host) = native_user_ops.remove_matches(host_user_ops);
+        output.add_unmatched_user_ops(&native, &host);
 
+        // TODO need to send native and host to mongo since these are our currently unmatched user ops!
         db_utils.add_native_user_operations(native)?;
         db_utils.add_host_user_operations(host)?;
     }
@@ -72,5 +76,5 @@ pub fn process_host_batch<D: DatabaseInterface>(
     db.end_transaction()?;
 
     info!("Finished processing {SIDE} submission material!");
-    HostOutput::new(batch.get_last_block_num()?)
+    Ok(output)
 }
