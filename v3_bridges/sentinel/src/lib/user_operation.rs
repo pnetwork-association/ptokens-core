@@ -19,6 +19,32 @@ impl UserOperations {
         let b = other.0;
         self.0 = [a, b].concat();
     }
+
+    pub fn remove_matches(self, other: Self) -> (Self, Self) {
+        // TODO remove clones & make this efficient as possible since it's already O(self.len() * other.len())
+        let mut self_user_ops: Vec<UserOperation> = vec![];
+        let mut other_user_ops = other;
+
+        for self_op in self.iter() {
+            let len_before = other_user_ops.len();
+            other_user_ops = Self::new(
+                other_user_ops
+                    .iter()
+                    .cloned()
+                    .filter(|other_op| self_op != other_op)
+                    .collect::<Vec<_>>(),
+            );
+            let len_after = other_user_ops.len();
+
+            if len_before != len_after {
+                debug!("Found a matching user op:\n{}", self_op);
+            } else {
+                self_user_ops.push(self_op.clone());
+            }
+        }
+
+        (Self::new(self_user_ops), other_user_ops)
+    }
 }
 
 impl UserOperations {
@@ -209,6 +235,15 @@ impl fmt::Display for UserOperations {
         match serde_json::to_string_pretty(self) {
             Ok(s) => write!(f, "{s}"),
             Err(e) => write!(f, "Error convert `UserOperations` to string: {e}",),
+        }
+    }
+}
+
+impl fmt::Display for UserOperation {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match serde_json::to_string_pretty(self) {
+            Ok(s) => write!(f, "{s}"),
+            Err(e) => write!(f, "Error convert `UserOperation` to string: {e}",),
         }
     }
 }
