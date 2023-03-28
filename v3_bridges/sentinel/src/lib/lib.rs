@@ -54,7 +54,7 @@ pub use self::{
     },
     native_output::NativeOutput,
     relevant_logs::{RelevantLogs, RelevantLogsFromBlock},
-    user_operation::{UserOperation, USER_OPERATION_TOPIC},
+    user_operation::{UserOperation, UserOperations, USER_OPERATION_TOPIC},
     utils::get_utc_timestamp,
 };
 

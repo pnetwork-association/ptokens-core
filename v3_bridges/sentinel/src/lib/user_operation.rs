@@ -1,14 +1,53 @@
 use std::convert::TryFrom;
 
 use common::Bytes;
-use common_eth::{convert_hex_to_h256, EthLog, EthLogExt};
+use common_eth::{convert_hex_to_h256, EthLog, EthLogExt, EthReceipts};
 use common_metadata::MetadataChainId;
+use derive_more::{Constructor, Deref};
 use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType, Token as EthAbiToken};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
+use serde::{Deserialize, Serialize};
 
 use crate::SentinelError;
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Deref, Serialize, Deserialize)]
+pub struct UserOperations(Vec<UserOperation>);
+
+impl UserOperations {
+    pub fn empty() -> Self {
+        Self::default()
+    }
+
+    pub fn from_eth_receipts(receipts: &EthReceipts, state_manager: &EthAddress) -> Result<Self, SentinelError> {
+        let mut logs: Vec<EthLog> = vec![];
+        for receipt in receipts.iter() {
+            for log in receipt.logs.iter() {
+                if !log.topics.is_empty() && &log.address == state_manager && log.topics[0] == *USER_OPERATION_TOPIC {
+                    logs.push(log.clone());
+                }
+            }
+        }
+        Ok(Self::new(
+            logs.iter()
+                .map(UserOperation::try_from)
+                .collect::<Result<Vec<UserOperation>, SentinelError>>()?,
+        ))
+    }
+}
+
+impl From<Vec<UserOperations>> for UserOperations {
+    fn from(v: Vec<UserOperations>) -> Self {
+        let mut user_ops: Vec<UserOperation> = vec![];
+        for ops in v.into_iter() {
+            for op in ops.iter() {
+                user_ops.push(op.clone())
+            }
+        }
+        Self::new(user_ops)
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct UserOperation {
     block_hash: EthHash,
     nonce: U256,
@@ -42,6 +81,7 @@ get_topics!(
 
 impl TryFrom<EthLog> for UserOperation {
     type Error = SentinelError;
+
     fn try_from(l: EthLog) -> Result<Self, Self::Error> {
         Self::try_from(&l)
     }
