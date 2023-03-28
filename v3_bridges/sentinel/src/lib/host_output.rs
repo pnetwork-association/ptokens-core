@@ -34,6 +34,10 @@ impl HostOutput {
         self.host_unmatched_user_ops = h.clone();
         self.native_unmatched_user_ops = n.clone();
     }
+
+    pub fn get_host_unmatched_user_ops(&self) -> UserOperations {
+        self.host_unmatched_user_ops.clone()
+    }
 }
 
 impl fmt::Display for HostOutput {

@@ -35,6 +35,10 @@ impl NativeOutput {
         self.host_unmatched_user_ops = h.clone();
         self.native_unmatched_user_ops = n.clone();
     }
+
+    pub fn get_native_unmatched_user_ops(&self) -> UserOperations {
+        self.native_unmatched_user_ops.clone()
+    }
 }
 
 impl fmt::Display for NativeOutput {

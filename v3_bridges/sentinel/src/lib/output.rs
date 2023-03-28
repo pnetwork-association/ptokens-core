@@ -4,22 +4,36 @@ use derive_more::Constructor;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::{HostOutput, NativeOutput};
+use crate::{HostOutput, NativeOutput, UserOperations};
 
 #[derive(Clone, Debug, Default, Constructor, Serialize, Deserialize)]
 pub struct Output {
-    native: NativeOutput,
-    host: HostOutput,
+    host_timestamp: u64,
+    native_timestamp: u64,
+    host_latest_block_num: u64,
+    native_latest_block_num: u64,
+    host_unmatched_user_ops: UserOperations,
+    native_unmatched_user_ops: UserOperations,
+}
+
+impl From<(&NativeOutput, &HostOutput)> for Output {
+    fn from((n, h): (&NativeOutput, &HostOutput)) -> Self {
+        Self {
+            host_timestamp: h.get_timestamp(),
+            native_timestamp: n.get_timestamp(),
+            host_latest_block_num: h.get_latest_block_num(),
+            native_latest_block_num: n.get_latest_block_num(),
+            host_unmatched_user_ops: h.get_host_unmatched_user_ops(),
+            native_unmatched_user_ops: n.get_native_unmatched_user_ops(),
+        }
+    }
 }
 
 impl fmt::Display for Output {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = json!({
-            "native": self.native.to_string(),
-            "host": self.host.to_string(),
-        })
-        .to_string();
-
-        write!(f, "{s}")
+        match serde_json::to_string_pretty(self) {
+            Ok(s) => write!(f, "{s}"),
+            Err(e) => write!(f, "Error pretty printing `Output` json!"),
+        }
     }
 }

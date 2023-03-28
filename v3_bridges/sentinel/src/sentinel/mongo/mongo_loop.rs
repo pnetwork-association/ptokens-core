@@ -50,7 +50,6 @@ async fn update_in_mongodb<T>(t: &T, id: &str, collection: &Collection<T>) -> Re
 where
     T: std::fmt::Display + Serialize + DeserializeOwned,
 {
-    warn!("Updating _id: {id}",);
     loop {
         let f = doc! { "_id": id };
         let o = FindOneAndReplaceOptions::builder().upsert(true).build();
@@ -93,6 +92,7 @@ pub async fn mongo_loop(mongo_config: MongoConfig, mut mongo_rx: MpscRx<MongoMes
     'mongo_loop: loop {
         tokio::select! {
             r = mongo_rx.recv() => match r {
+                // TODO fix the duplicate storage in the db
                 Some(MongoMessages::PutNative(msg)) => {
                     update_in_mongodb(&msg, NATIVE_OUTPUT_KEY, &native_collection).await?;
                     continue 'mongo_loop
@@ -113,7 +113,7 @@ pub async fn mongo_loop(mongo_config: MongoConfig, mut mongo_rx: MpscRx<MongoMes
                 Some(MongoMessages::GetOutput(responder)) => {
                     let n = get(NATIVE_OUTPUT_KEY, &native_collection).await?;
                     let h = get(HOST_OUTPUT_KEY, &host_collection).await?;
-                    let o = Output::new(n, h);
+                    let o = Output::from((&n, &h));
                     let _ = responder.send(Ok(o));
                     continue 'mongo_loop
                 },
