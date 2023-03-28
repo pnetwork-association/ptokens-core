@@ -34,13 +34,22 @@ async fn get_unmatched_user_ops_from_db(tx: MpscTx<CoreMessages>) -> Result<impl
         .map(|r| warp::reply::json(&r))
 }
 
-async fn get_heartbeat_from_db(tx: MpscTx<MongoMessages>) -> Result<impl warp::Reply, Rejection> {
+async fn get_heartbeat_from_mongo(tx: MpscTx<MongoMessages>) -> Result<impl warp::Reply, Rejection> {
     let (msg, rx) = MongoMessages::get_heartbeats_msg();
     tx.send(msg).await.map_err(convert_error_to_rejection)?;
     rx.await
         .map_err(convert_error_to_rejection)?
         .map_err(convert_error_to_rejection)
         .map(|h| warp::reply::json(&h.to_output()))
+}
+
+async fn get_output_from_mongo(tx: MpscTx<MongoMessages>) -> Result<impl warp::Reply, Rejection> {
+    let (msg, rx) = MongoMessages::get_output_msg();
+    tx.send(msg).await.map_err(convert_error_to_rejection)?;
+    rx.await
+        .map_err(convert_error_to_rejection)?
+        .map_err(convert_error_to_rejection)
+        .map(|o| warp::reply::json(&o))
 }
 
 async fn get_sync_status(
@@ -83,6 +92,8 @@ async fn main_loop(
     let core_tx_1 = core_tx.clone();
     let core_tx_2 = core_tx.clone();
     let core_tx_3 = core_tx.clone();
+    let mongo_tx_1 = mongo_tx.clone();
+    let mongo_tx_2 = mongo_tx.clone();
 
     // GET /ping
     let ping = warp::path("ping").map(|| warp::reply::json(&json!({"result": "pTokens Sentinel pong"})));
@@ -99,10 +110,10 @@ async fn main_loop(
 
     // GET /bpm
     let bpm = warp::path("bpm").and_then(move || {
-        let tx = mongo_tx.clone();
+        let tx = mongo_tx_1.clone();
         #[allow(clippy::redundant_async_block)]
         async move {
-            get_heartbeat_from_db(tx).await
+            get_heartbeat_from_mongo(tx).await
         }
     });
 
@@ -126,7 +137,16 @@ async fn main_loop(
         }
     });
 
-    let routes = warp::get().and(ping.or(state).or(bpm).or(sync).or(unmatched));
+    // GET /output
+    let output = warp::path("output").and_then(move || {
+        let tx = mongo_tx_2.clone();
+        #[allow(clippy::redundant_async_block)]
+        async move {
+            get_output_from_mongo(tx).await
+        }
+    });
+
+    let routes = warp::get().and(ping.or(state).or(bpm).or(sync).or(unmatched).or(output));
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
     Ok(())
 }

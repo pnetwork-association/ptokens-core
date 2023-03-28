@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{get_utc_timestamp, SentinelError, UserOperations};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct HostOutput {
     timestamp: u64,
     latest_block_num: u64,

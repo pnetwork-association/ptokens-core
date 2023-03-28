@@ -1,6 +1,6 @@
 use std::result::Result;
 
-use lib::{HeartbeatsJson, MongoConfig, MongoMessages, SentinelError};
+use lib::{HeartbeatsJson, MongoConfig, MongoMessages, Output, SentinelError};
 use mongodb::{bson::doc, Collection};
 use serde::{de::DeserializeOwned, Serialize};
 use tokio::{
@@ -9,6 +9,8 @@ use tokio::{
 };
 
 const MONGO_RETRY_SLEEP_TIME: u64 = 500;
+const HOST_OUTPUT_KEY: &str = "host_latest_output";
+const NATIVE_OUTPUT_KEY: &str = "native_latest_output";
 
 #[allow(unused)]
 async fn insert_into_mongodb<T: std::fmt::Display + serde::Serialize>(
@@ -67,6 +69,14 @@ async fn get_heartbeats(collection: &Collection<HeartbeatsJson>) -> Result<Heart
     Ok(collection.find_one(f, None).await?.unwrap_or_default())
 }
 
+async fn get<T>(key: &str, collection: &Collection<T>) -> Result<T, SentinelError>
+where
+    T: std::fmt::Display + Serialize + DeserializeOwned + Send + Unpin + Sync + Default,
+{
+    let f = doc! {"_id": key};
+    Ok(collection.find_one(f, None).await?.unwrap_or_default())
+}
+
 pub async fn mongo_loop(mongo_config: MongoConfig, mut mongo_rx: MpscRx<MongoMessages>) -> Result<(), SentinelError> {
     info!("Checking mongo config...");
     mongo_config.check_mongo_connection().await?;
@@ -81,11 +91,11 @@ pub async fn mongo_loop(mongo_config: MongoConfig, mut mongo_rx: MpscRx<MongoMes
         tokio::select! {
             r = mongo_rx.recv() => match r {
                 Some(MongoMessages::PutNative(msg)) => {
-                    update_in_mongodb(&msg, "native_latest_output", &native_collection).await?;
+                    update_in_mongodb(&msg, NATIVE_OUTPUT_KEY, &native_collection).await?;
                     continue 'mongo_loop
                 },
                 Some(MongoMessages::PutHost(msg)) => {
-                    update_in_mongodb(&msg, "host_latest_output", &host_collection).await?;
+                    update_in_mongodb(&msg, HOST_OUTPUT_KEY, &host_collection).await?;
                     continue 'mongo_loop
                 },
                 Some(MongoMessages::PutHeartbeats(msg)) => {
@@ -95,6 +105,13 @@ pub async fn mongo_loop(mongo_config: MongoConfig, mut mongo_rx: MpscRx<MongoMes
                 Some(MongoMessages::GetHeartbeats(responder)) => {
                     let r = get_heartbeats(&heartbeats_collection).await;
                     let _ = responder.send(r);
+                    continue 'mongo_loop
+                },
+                Some(MongoMessages::GetOutput(responder)) => {
+                    let n = get(NATIVE_OUTPUT_KEY, &native_collection).await?;
+                    let h = get(HOST_OUTPUT_KEY, &host_collection).await?;
+                    let o = Output::new(n, h);
+                    let _ = responder.send(Ok(o));
                     continue 'mongo_loop
                 },
                 None => {

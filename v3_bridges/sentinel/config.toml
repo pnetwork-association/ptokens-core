@@ -19,8 +19,8 @@ validate = true # Used to turn off validation for this side's chain.
 state_manager = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628"
 
 [batching]
-host_batch_size = 5 # Max number of host blocks to batch before submission
-native_batch_size = 10 # Max number of native blocks to batch before submission
+host_batch_size = 1 # Max number of host blocks to batch before submission
+native_batch_size = 1 # Max number of native blocks to batch before submission
 host_batch_duration = 300 # Max amount of time between batch submission in seconds
 native_batch_duration = 300 # Max amount of time between batch submission in seconds
 
@@ -38,8 +38,3 @@ host_collection = "host" # Name of the host collection
 native_collection = "native" # Name of the host collection
 timeout = 3 # How many seconds to wait when conneting/inserting/reading etc
 uri = "mongodb://127.0.0.1:27017"
-
-# TODO
-# impl a type for the user operation log.
-# impl a way to convert it from an ETH log
-# update the db_utils to use the same relevant log struct for host and native since they're the same now
