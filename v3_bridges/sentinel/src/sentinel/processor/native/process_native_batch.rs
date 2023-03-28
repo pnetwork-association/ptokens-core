@@ -7,13 +7,19 @@ use lib::{NativeOutput, SentinelDbUtils, SentinelError, UserOperations};
 
 const SIDE: &str = "native";
 
-fn process_native<D: DatabaseInterface>(
+pub fn process_native<D: DatabaseInterface>(
     db: &D,
     is_in_sync: bool,
     sub_mat: &EthSubmissionMaterial,
     state_manager: &EthAddress,
     is_validating: bool,
+    use_db_tx: bool,
 ) -> Result<UserOperations, SentinelError> {
+    if use_db_tx {
+        debug!("Starting db tx in host processor!");
+        db.start_transaction()?;
+    }
+
     let n = sub_mat.get_block_number()?;
     let db_utils = NativeDbUtils::new(db);
     append_to_blockchain(&db_utils, sub_mat, is_validating)?;
@@ -35,6 +41,11 @@ fn process_native<D: DatabaseInterface>(
         UserOperations::empty()
     };
 
+    if use_db_tx {
+        debug!("Ending db tx in host processor!");
+        db.end_transaction()?;
+    }
+
     debug!("Finished processing {SIDE} block {n}!");
     Ok(r)
 }
@@ -48,11 +59,12 @@ pub fn process_native_batch<D: DatabaseInterface>(
 ) -> Result<NativeOutput, SentinelError> {
     info!("Processing {SIDE} batch of submission material...");
     db.start_transaction()?;
+    let use_db_tx = false;
 
     let user_ops = UserOperations::from(
         batch
             .iter()
-            .map(|sub_mat| process_native(db, is_in_sync, sub_mat, state_manager, is_validating))
+            .map(|sub_mat| process_native(db, is_in_sync, sub_mat, state_manager, is_validating, use_db_tx))
             .collect::<Result<Vec<UserOperations>, SentinelError>>()?,
     );
 
