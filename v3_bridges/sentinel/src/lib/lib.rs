@@ -18,7 +18,6 @@ mod host_output;
 mod logging;
 mod messages;
 mod native_output;
-mod relevant_logs;
 mod test_utils;
 mod user_operation;
 mod utils;
@@ -53,7 +52,6 @@ pub use self::{
         SyncerMessages,
     },
     native_output::NativeOutput,
-    relevant_logs::{RelevantLogs, RelevantLogsFromBlock},
     user_operation::{UserOperation, UserOperations, USER_OPERATION_TOPIC},
     utils::get_utc_timestamp,
 };

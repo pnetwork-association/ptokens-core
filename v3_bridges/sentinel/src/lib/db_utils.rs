@@ -1,8 +1,6 @@
-#![allow(unused)] // FIXME rm!
-
 use common::{get_prefixed_db_key, Byte, Bytes, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
 
-use crate::{relevant_logs::RelevantLogs, SentinelError, UserOperations};
+use crate::{SentinelError, UserOperations};
 
 type DbKey = [Byte; 32];
 
@@ -34,7 +32,7 @@ macro_rules! create_db_keys {
                         match result {
                             Ok(bytes) => UserOperations::try_from(bytes),
                             Err(e) => {
-                                warn!("Error getting {} from db, defaulting to empty set!", stringify!([< $name:camel >]));
+                                warn!("Error getting {} from db, defaulting to empty set: {e}", stringify!([< $name:camel >]));
                                 Ok(UserOperations::default())
                             },
                         }
@@ -52,7 +50,7 @@ macro_rules! create_db_keys {
 
                     fn [< replace_ $name:lower >](&self, ops: UserOperations) -> Result<(), SentinelError> {
                         let key = Self::[< get_ $name:lower _key >]();
-                        self.db().delete(key.clone());
+                        self.db().delete(key.clone())?;
                         self.db().put(key, ops.try_into()?, MIN_DATA_SENSITIVITY_LEVEL)?;
                         Ok(())
                     }
