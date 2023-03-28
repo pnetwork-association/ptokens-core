@@ -3,7 +3,7 @@ use std::result::Result;
 use common::DatabaseInterface;
 use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials, NativeDbUtils};
 use ethereum_types::Address as EthAddress;
-use lib::{NativeOutput, RelevantLogs, RelevantLogsFromBlock, SentinelDbUtils, SentinelError, UserOperations};
+use lib::{NativeOutput, SentinelDbUtils, SentinelError, UserOperations};
 
 const SIDE: &str = "native";
 
@@ -17,7 +17,6 @@ fn process_native<D: DatabaseInterface>(
     let n = sub_mat.get_block_number()?;
     let db_utils = NativeDbUtils::new(db);
     append_to_blockchain(&db_utils, sub_mat, is_validating)?;
-    let empty_ops = UserOperations::empty();
 
     if !is_in_sync {
         warn!("{SIDE} is not in sync, not processing receipts!");
@@ -50,18 +49,16 @@ pub fn process_native_batch<D: DatabaseInterface>(
     info!("Processing {SIDE} batch of submission material...");
     db.start_transaction()?;
 
-    let _user_ops = UserOperations::from(
+    let user_ops = UserOperations::from(
         batch
             .iter()
             .map(|sub_mat| process_native(db, is_in_sync, sub_mat, state_manager, is_validating))
             .collect::<Result<Vec<UserOperations>, SentinelError>>()?,
     );
 
-    /* FIXME
     if !user_ops.is_empty() {
-        SentinelDbUtils::new(db).add_native_relevant_logs(user_ops)?;
+        SentinelDbUtils::new(db).add_native_user_operations(user_ops)?;
     };
-    */
 
     db.end_transaction()?;
     info!("Finished processing {SIDE} submission material!");

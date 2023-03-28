@@ -49,18 +49,16 @@ pub fn process_host_batch<D: DatabaseInterface>(
     info!("Processing {SIDE} batch of submission material...");
     db.start_transaction()?;
 
-    let _user_ops = UserOperations::from(
+    let user_ops = UserOperations::from(
         batch
             .iter()
             .map(|sub_mat| process_host(db, is_in_sync, sub_mat, state_manager, is_validating))
             .collect::<Result<Vec<UserOperations>, SentinelError>>()?,
     );
 
-    /* FIXME
     if !user_ops.is_empty() {
-        SentinelDbUtils::new(db).add_host_relevant_logs(relevant_logs)?;
+        SentinelDbUtils::new(db).add_host_user_operations(user_ops)?;
     }
-    */
 
     db.end_transaction()?;
 
