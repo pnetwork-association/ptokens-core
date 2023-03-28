@@ -50,6 +50,13 @@ macro_rules! create_db_keys {
                         Ok(())
                     }
 
+                    fn [< replace_ $name:lower >](&self, ops: UserOperations) -> Result<(), SentinelError> {
+                        let key = Self::[< get_ $name:lower _key >]();
+                        self.db().delete(key.clone());
+                        self.db().put(key, ops.try_into()?, MIN_DATA_SENSITIVITY_LEVEL)?;
+                        Ok(())
+                    }
+
                     pub fn [< add_ $name:lower >](&self, ops: UserOperations) -> Result<(), SentinelError> {
                         let mut ops_from_db = self.[< get_ $name:lower >]()?;
                         ops_from_db.add(ops);
@@ -110,6 +117,25 @@ macro_rules! create_db_keys {
                         db_utils.[< add_ $name:lower >](ys).unwrap();
                         result = db_utils.[< get_ $name:lower >]().unwrap();
                         assert_eq!(result, expected_result);
+                    }
+
+                    #[test]
+                    fn [< should_replace_ $name:lower _in_db >]() {
+                        let db = get_test_database();
+                        let db_utils = SentinelDbUtils::new(&db);
+                        let mut x = UserOperation::default();
+                        x.set_destination_account("some account".into());
+                        let mut y = UserOperation::default();
+                        y.set_destination_account("some other account".into());
+                        assert_ne!(x, y);
+                        let xs = UserOperations::new(vec![x.clone()]);
+                        let ys = UserOperations::new(vec![y.clone()]);
+                        assert_ne!(xs, ys);
+                        db_utils.[< put_ $name:lower >](xs.clone()).unwrap();
+                        let mut result = db_utils.[< get_ $name:lower >]().unwrap();
+                        db_utils.[< replace_ $name:lower >](ys.clone()).unwrap();
+                        result = db_utils.[< get_ $name:lower >]().unwrap();
+                        assert_eq!(result, ys);
                     }
                 )*
             }
