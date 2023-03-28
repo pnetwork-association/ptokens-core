@@ -33,13 +33,21 @@ pub enum DbOp {
 }
 
 impl Database {
-    pub fn open() -> Result<Self, RocksdbDatabaseError> {
+    fn open_inner(path: &str) -> Result<Self, RocksdbDatabaseError> {
         Ok(Self {
+            rocks_db: DB::open_default(path)?,
             hashmap: RefCell::new(HashMap::new()),
             batch_db_ops: RefCell::new(Vec::new()),
             keys_to_delete: RefCell::new(Vec::new()),
-            rocks_db: DB::open_default(DATABASE_PATH)?,
         })
+    }
+
+    pub fn open() -> Result<Self, RocksdbDatabaseError> {
+        Self::open_inner(DATABASE_PATH)
+    }
+
+    pub fn open_at_path(path: &str) -> Result<Self, RocksdbDatabaseError> {
+        Self::open_inner(path)
     }
 }
 

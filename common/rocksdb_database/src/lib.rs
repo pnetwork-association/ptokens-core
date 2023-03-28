@@ -12,4 +12,8 @@ pub fn get_db() -> Result<Database, RocksdbDatabaseError> {
     Database::open()
 }
 
+pub fn get_db_at_path(p: &str) -> Result<Database, RocksdbDatabaseError> {
+    Database::open_at_path(p)
+}
+
 pub use crate::errors::RocksdbDatabaseError;
