@@ -1,7 +1,7 @@
 use common::{CoreType, DatabaseInterface};
 use common_eth::{convert_hex_to_eth_address, init_v3_host_core, init_v3_native_core, VaultUsingCores};
 use common_rocksdb::get_db;
-use lib::{get_latest_block_num, get_sub_mat, SentinelConfig, SentinelError};
+use lib::{get_latest_block_num, get_sub_mat, ConfigT, SentinelConfig, SentinelError};
 use serde_json::json;
 
 #[derive(Debug, Args)]
@@ -20,6 +20,7 @@ pub struct InitArgs {
 
     /// The address of the vault contract.
     pub vault_address: String,
+    // FIXME Rm!
 }
 
 async fn init_native<D: DatabaseInterface>(
@@ -41,6 +42,7 @@ async fn init_native<D: DatabaseInterface>(
         args.native_confs,
         &convert_hex_to_eth_address(&args.vault_address)?,
         &VaultUsingCores::from_core_type(&config.core_config.core_type)?,
+        config.native_config.is_validating(),
     )?;
 
     Ok(())
@@ -63,6 +65,7 @@ async fn init_host<D: DatabaseInterface>(
         &config.host_config.get_eth_chain_id(),
         args.host_gas_price,
         args.host_confs,
+        config.host_config.is_validating(),
     )?;
 
     Ok(())
