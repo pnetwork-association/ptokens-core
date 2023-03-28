@@ -84,7 +84,7 @@ impl CoreType {
         match self {
             Self::V3(c) => Ok(*c),
             _ => Err(AppError::Custom(
-                format!("Cannot convert `{self}` to v3 core type!").into(),
+                format!("Cannot convert `{self}` to v3 core type!"),
             )),
         }
     }

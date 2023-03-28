@@ -10,6 +10,7 @@ pub enum SentinelError {
     Timeout(String),
     SyncerRestart(u64),
     IO(std::io::Error),
+    EthAbi(ethabi::Error),
     Json(serde_json::Value),
     Common(common::AppError),
     Config(config::ConfigError),
@@ -41,6 +42,7 @@ impl std::fmt::Display for SentinelError {
             Self::Json(ref e) => write!(f, "{e}"),
             Self::Custom(ref e) => write!(f, "{e}"),
             Self::Common(ref err) => write!(f, "{err}"),
+            Self::EthAbi(ref err) => write!(f, "{err}"),
             Self::JsonRpc(ref err) => write!(f, "{err}"),
             Self::RocksDb(ref err) => write!(f, "{err}"),
             Self::NoParent(ref err) => write!(f, "{err}"),
@@ -90,6 +92,7 @@ impl std::error::Error for SentinelError {
             Self::BlockAlreadyInDb(_) => None,
             Self::Common(ref err) => Some(err),
             Self::Config(ref err) => Some(err),
+            Self::EthAbi(ref err) => Some(err),
             Self::Logger(ref err) => Some(err),
             Self::JsonRpc(ref err) => Some(err),
             Self::MongoDb(ref err) => Some(err),
@@ -236,5 +239,11 @@ impl From<std::time::SystemTimeError> for SentinelError {
 impl From<tokio::sync::mpsc::error::SendError<MongoMessages>> for SentinelError {
     fn from(err: tokio::sync::mpsc::error::SendError<MongoMessages>) -> Self {
         Self::MongoChannel(Box::new(err))
+    }
+}
+
+impl From<ethabi::Error> for SentinelError {
+    fn from(err: ethabi::Error) -> Self {
+        Self::EthAbi(err)
     }
 }

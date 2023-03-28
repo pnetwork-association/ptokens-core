@@ -361,7 +361,7 @@ mod tests {
         let mut sub_mat = EthSubmissionMaterial::default();
         sub_mat.receipts = receipts.clone();
         let mut batch = Batch::new();
-        batch.contract_addresses = vec![address];
+        batch.state_manager = address;
         batch.push(sub_mat);
         assert_eq!(batch.batch[0].receipts, receipts);
     }
@@ -381,7 +381,7 @@ mod tests {
         let mut sub_mat = EthSubmissionMaterial::default();
         sub_mat.receipts = receipts;
         let mut batch = Batch::new();
-        batch.contract_addresses = vec![other_address];
+        batch.state_manager = other_address;
         batch.push(sub_mat);
         assert!(batch.batch[0].receipts.is_empty());
     }
