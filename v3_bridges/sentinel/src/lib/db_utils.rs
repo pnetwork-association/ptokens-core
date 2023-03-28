@@ -23,7 +23,7 @@ macro_rules! create_db_keys {
                         $name.to_vec()
                     }
 
-                    fn [< get_ $name:lower >](&self) -> Result<UserOperations, SentinelError> {
+                    pub fn [< get_ $name:lower >](&self) -> Result<UserOperations, SentinelError> {
                         let result = self.db().get(
                             Self::[< get_ $name:lower _key >](),
                             MIN_DATA_SENSITIVITY_LEVEL
@@ -39,7 +39,7 @@ macro_rules! create_db_keys {
 
                     }
 
-                    fn [< put_ $name:lower >](&self, ops: UserOperations) -> Result<(), SentinelError> {
+                    pub fn [< put_ $name:lower >](&self, ops: UserOperations) -> Result<(), SentinelError> {
                         self.db().put(
                             Self::[< get_ $name:lower _key >](),
                             ops.try_into()?,
@@ -48,7 +48,7 @@ macro_rules! create_db_keys {
                         Ok(())
                     }
 
-                    fn [< replace_ $name:lower >](&self, ops: UserOperations) -> Result<(), SentinelError> {
+                    pub fn [< replace_ $name:lower >](&self, ops: UserOperations) -> Result<(), SentinelError> {
                         let key = Self::[< get_ $name:lower _key >]();
                         self.db().delete(key.clone())?;
                         self.db().put(key, ops.try_into()?, MIN_DATA_SENSITIVITY_LEVEL)?;

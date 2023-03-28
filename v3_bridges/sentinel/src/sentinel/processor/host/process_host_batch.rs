@@ -57,7 +57,16 @@ pub fn process_host_batch<D: DatabaseInterface>(
     );
 
     if !user_ops.is_empty() {
-        SentinelDbUtils::new(db).add_host_user_operations(user_ops)?;
+        let db_utils = SentinelDbUtils::new(db);
+
+        let mut host_user_ops = db_utils.get_host_user_operations()?;
+        let native_user_ops = db_utils.get_native_user_operations()?;
+        host_user_ops.add(user_ops);
+
+        let (native, host) = native_user_ops.remove_matches(host_user_ops);
+
+        db_utils.add_native_user_operations(native)?;
+        db_utils.add_host_user_operations(host)?;
     }
 
     db.end_transaction()?;
