@@ -1,4 +1,4 @@
 *sub-mat*.json
-**/database/*
+**/*database*/*
 *.log
 *.gz
