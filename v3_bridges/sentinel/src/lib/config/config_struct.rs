@@ -57,6 +57,10 @@ pub struct Config {
 }
 
 impl Config {
+    pub fn get_db_path(&self) -> String {
+        self.core_config.get_db_path()
+    }
+
     pub fn new() -> Result<Self, SentinelError> {
         let res = Self::from_toml(&ConfigToml::new()?)?;
         debug!("Config {:?}", res);

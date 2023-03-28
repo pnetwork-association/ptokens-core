@@ -1,6 +1,6 @@
 use common::{CoreType, DatabaseInterface};
 use common_eth::{convert_hex_to_eth_address, init_v3_host_core, init_v3_native_core, VaultUsingCores};
-use common_rocksdb::get_db;
+use common_rocksdb::get_db_at_path;
 use lib::{get_latest_block_num, get_sub_mat, ConfigT, SentinelConfig, SentinelError};
 use serde_json::json;
 
@@ -73,7 +73,7 @@ async fn init_host<D: DatabaseInterface>(
 
 pub async fn init(config: &SentinelConfig, args: &InitArgs) -> Result<String, SentinelError> {
     info!("Initializing core...");
-    let db = get_db()?;
+    let db = get_db_at_path(&config.get_db_path())?;
     db.start_transaction()?;
 
     let host_is_initted = CoreType::host_core_is_initialized(&db);

@@ -28,4 +28,8 @@ impl CoreConfig {
     pub fn db_exists(&self) -> bool {
         Path::new(&self.db_path).exists()
     }
+
+    pub fn get_db_path(&self) -> String {
+        self.db_path.clone()
+    }
 }

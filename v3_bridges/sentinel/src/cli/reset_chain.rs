@@ -63,7 +63,7 @@ pub async fn reset_chain_cli(config: &SentinelConfig, cli_args: &ResetCliArgs) -
             config.core_config.db_path
         )));
     };
-    let db = common_rocksdb::get_db()?;
+    let db = common_rocksdb::get_db_at_path(&config.get_db_path())?;
     let args = ResetArgs::from_cli_args(cli_args)?;
     let native_db_utils = EthDbUtils::new(&db);
     let host_db_utils = EvmDbUtils::new(&db);

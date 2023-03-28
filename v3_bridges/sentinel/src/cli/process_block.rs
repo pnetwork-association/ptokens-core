@@ -3,7 +3,7 @@ use std::{convert::TryFrom, fs::read_to_string, path::Path, str::FromStr};
 use clap::Args;
 use common::BridgeSide;
 use common_eth::EthSubmissionMaterial;
-use common_rocksdb::get_db;
+use common_rocksdb::get_db_at_path;
 use derive_more::Constructor;
 use lib::{SentinelConfig, SentinelError};
 use serde_json::json;
@@ -53,7 +53,7 @@ impl TryFrom<&ProcessBlockCliArgs> for ProcessBlockArgs {
 
 pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliArgs) -> Result<String, SentinelError> {
     let args = ProcessBlockArgs::try_from(cli_args)?;
-    let db = get_db()?;
+    let db = get_db_at_path(&config.get_db_path())?;
     let is_in_sync = true;
     let state_manager = config.get_state_manager(&args.side);
     let is_validating = true;

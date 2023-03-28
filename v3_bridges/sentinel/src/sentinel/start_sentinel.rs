@@ -30,7 +30,7 @@ pub async fn start_sentinel(
     config: &SentinelConfig,
     sentinel_args: &StartSentinelArgs,
 ) -> Result<String, SentinelError> {
-    let db = common_rocksdb::get_db()?;
+    let db = common_rocksdb::get_db_at_path(&config.get_db_path())?;
     lib::check_init(&db)?;
     // TODO check mongo!
     // TODO check endpoints!
