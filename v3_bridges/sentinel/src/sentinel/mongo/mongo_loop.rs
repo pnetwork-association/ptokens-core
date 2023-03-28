@@ -1,7 +1,7 @@
 use std::result::Result;
 
 use lib::{HeartbeatsJson, MongoConfig, MongoMessages, Output, SentinelError};
-use mongodb::{bson::doc, Collection};
+use mongodb::{bson::doc, options::FindOneAndReplaceOptions, Collection};
 use serde::{de::DeserializeOwned, Serialize};
 use tokio::{
     sync::mpsc::Receiver as MpscRx,
@@ -50,9 +50,12 @@ async fn update_in_mongodb<T>(t: &T, id: &str, collection: &Collection<T>) -> Re
 where
     T: std::fmt::Display + Serialize + DeserializeOwned,
 {
+    warn!("Updating _id: {id}",);
     loop {
         let f = doc! { "_id": id };
-        match collection.find_one_and_replace(f, t, None).await {
+        let o = FindOneAndReplaceOptions::builder().upsert(true).build();
+
+        match collection.find_one_and_replace(f, t, o).await {
             Ok(_) => break Ok(()),
             Err(ref e) if e.contains_label(mongodb::error::RETRYABLE_WRITE_ERROR) => {
                 warn!("Error writing `{id}` to mongo, sleeing {MONGO_RETRY_SLEEP_TIME}ms and retrying...");
