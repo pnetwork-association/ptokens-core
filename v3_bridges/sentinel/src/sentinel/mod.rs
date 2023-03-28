@@ -7,7 +7,6 @@ mod processor;
 mod start_sentinel;
 mod syncer;
 
-pub(crate) use self::start_sentinel::start_sentinel;
 use self::{
     broadcaster::broadcaster_loop,
     core::core_loop,
@@ -16,4 +15,8 @@ use self::{
     mongo::mongo_loop,
     processor::processor_loop,
     syncer::syncer_loop,
+};
+pub(crate) use self::{
+    processor::{process_host, process_native},
+    start_sentinel::start_sentinel,
 };

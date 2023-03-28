@@ -14,6 +14,7 @@ pub fn process_host<D: DatabaseInterface>(
     state_manager: &EthAddress,
     is_validating: bool,
     use_db_tx: bool,
+    dry_run: bool,
 ) -> Result<UserOperations, SentinelError> {
     if use_db_tx {
         debug!("Starting db tx in host processor!");
@@ -22,7 +23,12 @@ pub fn process_host<D: DatabaseInterface>(
 
     let n = sub_mat.get_block_number()?;
     let db_utils = HostDbUtils::new(db);
-    append_to_blockchain(&db_utils, sub_mat, is_validating)?;
+
+    if dry_run {
+        warn!("Dry running so skipping block chain appending step!");
+    } else {
+        append_to_blockchain(&db_utils, sub_mat, is_validating)?;
+    }
 
     if !is_in_sync {
         warn!("{SIDE} is not in sync, not processing receipts!");
@@ -60,11 +66,22 @@ pub fn process_host_batch<D: DatabaseInterface>(
     info!("Processing {SIDE} batch of submission material...");
     db.start_transaction()?;
     let use_db_tx = false;
+    let dry_run = false;
 
     let user_ops = UserOperations::from(
         batch
             .iter()
-            .map(|sub_mat| process_host(db, is_in_sync, sub_mat, state_manager, is_validating, use_db_tx))
+            .map(|sub_mat| {
+                process_host(
+                    db,
+                    is_in_sync,
+                    sub_mat,
+                    state_manager,
+                    is_validating,
+                    use_db_tx,
+                    dry_run,
+                )
+            })
             .collect::<Result<Vec<UserOperations>, SentinelError>>()?,
     );
 

@@ -1,5 +1,7 @@
 use std::result::Result;
 
+use common::BridgeSide;
+use ethereum_types::Address as EthAddress;
 use log::Level as LogLevel;
 use serde::Deserialize;
 
@@ -7,6 +9,7 @@ use crate::{
     config::{
         BatchingConfig,
         BatchingToml,
+        ConfigT,
         CoreConfig,
         CoreToml,
         HostConfig,
@@ -81,6 +84,14 @@ impl Config {
 
     pub fn get_native_endpoints(&self) -> Endpoints {
         self.native_config.get_endpoints()
+    }
+
+    pub fn get_state_manager(&self, side: &BridgeSide) -> EthAddress {
+        if side.is_native() {
+            self.native_config.get_state_manager()
+        } else {
+            self.host_config.get_state_manager()
+        }
     }
 }
 

@@ -1,6 +1,13 @@
 use clap::Parser;
 
-use crate::cli::{get_sub_mat::SubMatGetterArgs, init::InitArgs, NonceCliArgs, ResetCliArgs, StartSentinelArgs};
+use crate::cli::{
+    get_sub_mat::SubMatGetterArgs,
+    init::InitArgs,
+    NonceCliArgs,
+    ProcessBlockCliArgs,
+    ResetCliArgs,
+    StartSentinelArgs,
+};
 
 #[derive(Debug, Parser)]
 pub struct CliArgs {
@@ -36,4 +43,7 @@ pub enum SubCommands {
 
     /// Reset the chain
     ResetChain(ResetCliArgs),
+
+    /// Process block
+    ProcessBlock(ProcessBlockCliArgs),
 }
