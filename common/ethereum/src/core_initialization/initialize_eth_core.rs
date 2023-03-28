@@ -52,6 +52,7 @@ fn initialize_eth_core_maybe_with_contract_tx_and_return_state<'a, D: DatabaseIn
     router_contract: Option<&EthAddress>,
     vault_using_core: Option<&VaultUsingCores>,
     is_native: bool,
+    validate: bool,
 ) -> Result<EthState<'a, D>> {
     state
         .add_eth_submission_material(sub_mat)
@@ -63,10 +64,15 @@ fn initialize_eth_core_maybe_with_contract_tx_and_return_state<'a, D: DatabaseIn
             }
         })
         .and_then(|state| {
-            if is_for_eth {
-                validate_eth_block_in_state(state)
+            if validate {
+                if is_for_eth {
+                    validate_eth_block_in_state(state)
+                } else {
+                    validate_evm_block_in_state(state)
+                }
             } else {
-                validate_evm_block_in_state(state)
+                warn!("Not validating init {} block!", if is_native { "native" } else { "host" });
+                Ok(state)
             }
         })
         .and_then(remove_receipts_from_block_in_state)
@@ -182,6 +188,7 @@ pub fn init_v3_host_core<D: DatabaseInterface>(
     chain_id: &EthChainId,
     gas_price: u64,
     confs: u64,
+    validate: bool,
 ) -> Result<()> {
     initialize_eth_core_maybe_with_contract_tx_and_return_state(
         sub_mat,
@@ -194,6 +201,7 @@ pub fn init_v3_host_core<D: DatabaseInterface>(
         None,
         None,
         false,
+        validate,
     )
     .and(Ok(()))
 }
@@ -206,6 +214,7 @@ pub fn init_v3_native_core<D: DatabaseInterface>(
     confs: u64,
     vault: &EthAddress,
     vault_using_core: &VaultUsingCores,
+    validate: bool,
 ) -> Result<()> {
     initialize_eth_core_maybe_with_contract_tx_and_return_state(
         sub_mat,
@@ -218,6 +227,7 @@ pub fn init_v3_native_core<D: DatabaseInterface>(
         Some(&EthAddress::zero()), // NOTE: v3 sentinels do not use a router
         Some(vault_using_core),
         true,
+        validate,
     )
     .and(Ok(()))
 }
@@ -231,6 +241,7 @@ pub fn initialize_eth_core_with_no_contract_tx<'a, D: DatabaseInterface>(
     is_native: bool,
 ) -> Result<EthState<'a, D>> {
     info!("✔ Initializing ETH core with NO contract tx...");
+    let validate = true;
     initialize_eth_core_maybe_with_contract_tx_and_return_state(
         EthSubmissionMaterial::from_str(block_json)?,
         chain_id,
@@ -242,6 +253,7 @@ pub fn initialize_eth_core_with_no_contract_tx<'a, D: DatabaseInterface>(
         None,
         None,
         is_native,
+        validate,
     )
 }
 
@@ -254,6 +266,7 @@ pub fn initialize_evm_core_with_no_contract_tx<'a, D: DatabaseInterface>(
     is_native: bool,
 ) -> Result<EthState<'a, D>> {
     info!("✔ Initializing EVM core with NO contract tx...");
+    let validate = true;
     initialize_eth_core_maybe_with_contract_tx_and_return_state(
         EthSubmissionMaterial::from_str(block_json)?,
         chain_id,
@@ -265,6 +278,7 @@ pub fn initialize_evm_core_with_no_contract_tx<'a, D: DatabaseInterface>(
         None,
         None,
         is_native,
+        validate,
     )
 }
 
@@ -281,6 +295,7 @@ pub fn initialize_eth_core_with_vault_and_router_contracts_and_return_state<'a, 
     is_native: bool,
 ) -> Result<EthState<'a, D>> {
     info!("✔ Initializing core with vault & router contract...");
+    let validate = true;
     initialize_eth_core_maybe_with_contract_tx_and_return_state(
         EthSubmissionMaterial::from_str(block_json)?,
         chain_id,
@@ -292,6 +307,7 @@ pub fn initialize_eth_core_with_vault_and_router_contracts_and_return_state<'a, 
         Some(router_contract),
         Some(vault_using_core),
         is_native,
+        validate,
     )
 }
 
@@ -305,6 +321,7 @@ pub fn initialize_eth_core_with_router_contract_and_return_state<'a, D: Database
     is_native: bool,
 ) -> Result<EthState<'a, D>> {
     info!("✔ Initializing core with vault & router contract...");
+    let validate = true;
     initialize_eth_core_maybe_with_contract_tx_and_return_state(
         EthSubmissionMaterial::from_str(block_json)?,
         chain_id,
@@ -316,6 +333,7 @@ pub fn initialize_eth_core_with_router_contract_and_return_state<'a, D: Database
         Some(router_contract),
         None,
         is_native,
+        validate,
     )
 }
 
