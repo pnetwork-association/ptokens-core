@@ -206,6 +206,7 @@ pub fn init_v3_host_core<D: DatabaseInterface>(
     .and(Ok(()))
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn init_v3_native_core<D: DatabaseInterface>(
     db: &D,
     sub_mat: EthSubmissionMaterial,
