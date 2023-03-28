@@ -25,6 +25,15 @@ async fn get_core_state_from_db(tx: MpscTx<CoreMessages>, core_type: &CoreType) 
         .map(|core_state| warp::reply::json(&core_state))
 }
 
+async fn get_unmatched_user_ops_from_db(tx: MpscTx<CoreMessages>) -> Result<impl warp::Reply, Rejection> {
+    let (msg, rx) = CoreMessages::get_unmatched_user_ops_msg();
+    tx.send(msg).await.map_err(convert_error_to_rejection)?;
+    rx.await
+        .map_err(convert_error_to_rejection)?
+        .map_err(convert_error_to_rejection)
+        .map(|r| warp::reply::json(&r))
+}
+
 async fn get_heartbeat_from_db(tx: MpscTx<MongoMessages>) -> Result<impl warp::Reply, Rejection> {
     let (msg, rx) = MongoMessages::get_heartbeats_msg();
     tx.send(msg).await.map_err(convert_error_to_rejection)?;
@@ -73,6 +82,7 @@ async fn main_loop(
     debug!("server listening!");
     let core_tx_1 = core_tx.clone();
     let core_tx_2 = core_tx.clone();
+    let core_tx_3 = core_tx.clone();
 
     // GET /ping
     let ping = warp::path("ping").map(|| warp::reply::json(&json!({"result": "pTokens Sentinel pong"})));
@@ -107,7 +117,16 @@ async fn main_loop(
         }
     });
 
-    let routes = warp::get().and(ping.or(state).or(bpm).or(sync));
+    // GET /unmatched
+    let unmatched = warp::path("unmatched").and_then(move || {
+        let tx = core_tx_3.clone();
+        #[allow(clippy::redundant_async_block)]
+        async move {
+            get_unmatched_user_ops_from_db(tx).await
+        }
+    });
+
+    let routes = warp::get().and(ping.or(state).or(bpm).or(sync).or(unmatched));
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
     Ok(())
 }

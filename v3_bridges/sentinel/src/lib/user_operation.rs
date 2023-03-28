@@ -10,6 +10,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::SentinelError;
 
+#[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Serialize, Deserialize)]
+pub struct UnmatchedUserOps {
+    native: UserOperations,
+    host: UserOperations,
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Deref, Serialize, Deserialize)]
 pub struct UserOperations(Vec<UserOperation>);
 

@@ -1,7 +1,7 @@
 use common::{BridgeSide, CoreType};
 use tokio::sync::{oneshot, oneshot::Receiver};
 
-use crate::{CoreState, Responder, SentinelError};
+use crate::{CoreState, Responder, SentinelError, UnmatchedUserOps};
 
 #[derive(Debug)]
 pub enum CoreMessages {
@@ -11,6 +11,7 @@ pub enum CoreMessages {
     GetNativeLatestBlockNumber(Responder<u64>),
     GetLatestBlockNumbers(Responder<(u64, u64)>),
     GetCoreState((CoreType, Responder<CoreState>)),
+    GetUnmatchedUserOps(Responder<UnmatchedUserOps>),
 }
 
 impl CoreMessages {
@@ -41,5 +42,10 @@ impl CoreMessages {
     pub fn get_latest_block_numbers_msg() -> (Self, Receiver<Result<(u64, u64), SentinelError>>) {
         let (resp_tx, resp_rx) = oneshot::channel();
         (Self::GetLatestBlockNumbers(resp_tx), resp_rx)
+    }
+
+    pub fn get_unmatched_user_ops_msg() -> (Self, Receiver<Result<UnmatchedUserOps, SentinelError>>) {
+        let (resp_tx, resp_rx) = oneshot::channel();
+        (Self::GetUnmatchedUserOps(resp_tx), resp_rx)
     }
 }

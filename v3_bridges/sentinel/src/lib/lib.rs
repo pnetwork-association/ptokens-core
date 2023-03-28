@@ -52,7 +52,7 @@ pub use self::{
         SyncerMessages,
     },
     native_output::NativeOutput,
-    user_operation::{UserOperation, UserOperations, USER_OPERATION_TOPIC},
+    user_operation::{UnmatchedUserOps, UserOperation, UserOperations, USER_OPERATION_TOPIC},
     utils::get_utc_timestamp,
 };
 
