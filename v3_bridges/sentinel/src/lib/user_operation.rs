@@ -1,12 +1,11 @@
 use std::{convert::TryFrom, fmt, str::FromStr};
 
 use common::{BridgeSide, Byte, Bytes};
-use common_eth::{convert_hex_to_h256, EthLog, EthLogExt, EthSubmissionMaterial};
-use common_metadata::MetadataChainId;
+use common_eth::{EthLog, EthLogExt, EthSubmissionMaterial};
 use derive_more::{Constructor, Deref};
 use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType, Token as EthAbiToken};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
-use ethers_core::abi::{self, encode_packed, Token};
+use ethers_core::abi::{self, Token};
 use serde::{Deserialize, Serialize};
 use tiny_keccak::{Hasher, Keccak};
 use crate::{USER_OPERATION_TOPIC, get_utc_timestamp, SentinelError};
@@ -177,7 +176,6 @@ impl TryFrom<&EthLog> for UserOp {
         let underlying_asset_decimals = Self::get_u256_from_token(&tokens[5])?;
         let underlying_asset_token_address = Self::get_address_from_token(&tokens[6])?;
         let underlying_asset_network_id = Self::get_bytes_from_token(&tokens[7])?;
-        let asset_token_address = Self::get_address_from_token(&tokens[8])?;
         let asset_amount = Self::get_u256_from_token(&tokens[9])?;
         let user_data = Self::get_bytes_from_token(&tokens[10])?;
         let options_mask = Self::get_bytes_from_token(&tokens[11])?;
@@ -306,10 +304,6 @@ impl UserOp {
             },
             _ => Err(SentinelError::Custom("Cannot convert `{t}` to U256!".into())),
         }
-    }
-
-    fn get_metadata_chain_id_from_token(t: &EthAbiToken) -> Result<MetadataChainId, SentinelError> {
-        Self::get_bytes_from_token(t).and_then(|ref bs| Ok(MetadataChainId::from_bytes(bs)?))
     }
 }
 
