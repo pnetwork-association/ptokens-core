@@ -65,7 +65,12 @@ pub async fn start_sentinel(
     let core_thread = tokio::spawn(core_loop(wrapped_db.clone(), core_rx));
     let eth_rpc_thread = tokio::spawn(eth_rpc_loop(eth_rpc_rx, config.clone()));
     let mongo_thread = tokio::spawn(mongo_loop(config.mongo_config.clone(), mongo_rx));
-    let broadcaster_thread = tokio::spawn(broadcaster_loop(broadcaster_rx, config.clone()));
+    let broadcaster_thread = tokio::spawn(broadcaster_loop(
+        broadcaster_rx,
+        mongo_tx.clone(),
+        config.clone(),
+        sentinel_args.disable_broadcaster,
+    ));
     let http_server_thread = tokio::spawn(http_server_loop(core_tx.clone(), mongo_tx.clone(), config.clone()));
     let processor_thread = tokio::spawn(processor_loop(
         wrapped_db.clone(),
