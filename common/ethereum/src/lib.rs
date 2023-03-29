@@ -90,6 +90,7 @@ pub use self::{
         encode_erc20_vault_set_weth_unwrapper_address_fxn_data,
         encode_erc777_mint_fxn_maybe_with_data,
         encode_erc777_mint_with_no_data_fxn,
+        encode_fxn_call,
         encode_mint_by_proxy_tx_data,
         get_signed_erc777_change_pnetwork_tx,
         get_signed_erc777_proxy_change_pnetwork_by_proxy_tx,
