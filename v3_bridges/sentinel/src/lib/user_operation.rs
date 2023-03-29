@@ -1,14 +1,14 @@
 use std::{convert::TryFrom, fmt, str::FromStr};
 
 use common::{Byte, Bytes};
-use common_eth::{convert_hex_to_h256, EthLog, EthLogExt, EthReceipts};
+use common_eth::{convert_hex_to_h256, EthLog, EthLogExt, EthSubmissionMaterial};
 use common_metadata::MetadataChainId;
 use derive_more::{Constructor, Deref};
 use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType, Token as EthAbiToken};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use serde::{Deserialize, Serialize};
 
-use crate::SentinelError;
+use crate::{get_utc_timestamp, SentinelError};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Serialize, Deserialize)]
 pub struct UnmatchedUserOps {
@@ -42,6 +42,7 @@ impl UserOperations {
             );
             let len_after = other_user_ops.len();
 
+            // TODO Check incase > 1 got filtered out? Or should we not care?
             if len_before != len_after {
                 debug!("Found a matching user op:\n{}", self_op);
             } else {
@@ -58,18 +59,23 @@ impl UserOperations {
         Self::default()
     }
 
-    pub fn from_eth_receipts(receipts: &EthReceipts, state_manager: &EthAddress) -> Result<Self, SentinelError> {
+    pub fn from_sub_mat(sub_mat: &EthSubmissionMaterial, state_manager: &EthAddress) -> Result<Self, SentinelError> {
+        let block_hash = sub_mat.get_block_hash()?;
+        let block_timestamp = sub_mat.get_timestamp().as_secs();
+        let witnessed_timestamp = get_utc_timestamp()?;
+
         let mut logs: Vec<EthLog> = vec![];
-        for receipt in receipts.iter() {
+        for receipt in sub_mat.receipts.iter() {
             for log in receipt.logs.iter() {
                 if !log.topics.is_empty() && &log.address == state_manager && log.topics[0] == *USER_OPERATION_TOPIC {
                     logs.push(log.clone());
                 }
             }
         }
+
         Ok(Self::new(
             logs.iter()
-                .map(UserOperation::try_from)
+                .map(|l| UserOperation::from_log(witnessed_timestamp, block_timestamp, block_hash, l))
                 .collect::<Result<Vec<UserOperation>, SentinelError>>()?,
         ))
     }
@@ -110,16 +116,23 @@ get_topics!(
     USER_OPERATION_TOPIC => "375102e6250006aa44e53e96d29b6a719df98a1c40b28c133e684ef40e52b989",
 );
 
-impl TryFrom<EthLog> for UserOperation {
-    type Error = SentinelError;
+#[derive(Clone, Debug, Default, Eq, Serialize, Deserialize)]
+pub struct UserOperation {
+    block_hash: EthHash,
+    block_timestamp: u64,
+    witnessed_timestamp: u64,
+    user_operation: UserOp,
+}
 
-    fn try_from(l: EthLog) -> Result<Self, Self::Error> {
-        Self::try_from(&l)
+impl PartialEq for UserOperation {
+    fn eq(&self, other: &Self) -> bool {
+        // NOTE: We only care about the equality of the user operation from the log itself.
+        self.user_operation == other.user_operation
     }
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
-pub struct UserOperation {
+pub struct UserOp {
     nonce: U256,
     destination_account: String,
     destination_network_id: MetadataChainId,
@@ -133,11 +146,12 @@ pub struct UserOperation {
     options_mask: Bytes,
 }
 
-impl TryFrom<&EthLog> for UserOperation {
+impl TryFrom<&EthLog> for UserOp {
     type Error = SentinelError;
 
     fn try_from(l: &EthLog) -> Result<Self, Self::Error> {
         debug!("Decoding `UserOperation` from `EthLog`...");
+
         let tokens = eth_abi_decode(
             &[
                 EthAbiParamType::Uint(256),
@@ -184,6 +198,22 @@ impl TryFrom<&EthLog> for UserOperation {
 }
 
 impl UserOperation {
+    fn from_log(
+        witnessed_timestamp: u64,
+        block_timestamp: u64,
+        block_hash: EthHash,
+        l: &EthLog,
+    ) -> Result<Self, SentinelError> {
+        Ok(Self {
+            block_hash,
+            block_timestamp,
+            witnessed_timestamp,
+            user_operation: UserOp::try_from(l)?,
+        })
+    }
+}
+
+impl UserOp {
     fn uid() -> EthHash {
         todo!("uid conversion from user operation")
     }
