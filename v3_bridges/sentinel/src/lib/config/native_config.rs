@@ -33,7 +33,7 @@ impl NativeConfig {
             sleep_duration,
             validate: toml.validate,
             state_manager: convert_hex_to_eth_address(&toml.state_manager)?,
-            endpoints: Endpoints::new(false, sleep_duration, toml.endpoints.clone()),
+            endpoints: Endpoints::new(false, sleep_duration, BridgeSide::Native, toml.endpoints.clone()),
             eth_chain_id: match EthChainId::from_str(&toml.eth_chain_id) {
                 Ok(id) => id,
                 Err(e) => {

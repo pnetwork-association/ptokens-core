@@ -1,5 +1,6 @@
 use std::result::Result;
 
+use common::BridgeSide;
 use derive_more::Constructor;
 use jsonrpsee::ws_client::WsClient;
 
@@ -9,6 +10,7 @@ use crate::{config::Error, get_rpc_client, SentinelError};
 pub struct Endpoints {
     is_native: bool,
     sleep_time: u64,
+    side: BridgeSide,
     endpoints: Vec<String>,
 }
 
@@ -31,5 +33,9 @@ impl Endpoints {
 
     pub fn is_empty(&self) -> bool {
         self.endpoints.is_empty()
+    }
+
+    pub fn side(&self) -> BridgeSide {
+        self.side
     }
 }
