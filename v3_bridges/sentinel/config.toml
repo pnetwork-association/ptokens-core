@@ -38,3 +38,4 @@ host_collection = "host" # Name of the host collection
 native_collection = "native" # Name of the host collection
 timeout = 3 # How many seconds to wait when conneting/inserting/reading etc
 uri = "mongodb://127.0.0.1:27017"
+sleep_duration = 60 # How long to sleep between checking mongo for reports to act upon

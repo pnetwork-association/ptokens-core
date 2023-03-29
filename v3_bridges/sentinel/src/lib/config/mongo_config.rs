@@ -10,6 +10,7 @@ pub struct MongoToml {
     uri: String,
     timeout: u32,
     database: String,
+    sleep_duration: u64,
     host_collection: String,
     native_collection: String,
 }
@@ -18,6 +19,7 @@ pub struct MongoToml {
 pub struct MongoConfig {
     uri: String,
     database: String,
+    sleep_duration: u64,
     host_collection: String,
     timeout: Option<Duration>,
     native_collection: String,
@@ -41,6 +43,7 @@ impl MongoConfig {
         Self {
             uri: toml.uri.clone(),
             database: toml.database.clone(),
+            sleep_duration: toml.sleep_duration,
             host_collection: toml.host_collection.clone(),
             timeout: Self::sanity_check_timeout(toml.timeout),
             native_collection: toml.native_collection.clone(),
@@ -77,6 +80,10 @@ impl MongoConfig {
         debug!("Getting heartbeats mongo collection...");
         let db = self.get_db().await?;
         Ok(db.collection("heartbeats"))
+    }
+
+    pub fn sleep_duration(&self) -> u64 {
+        self.sleep_duration
     }
 }
 
