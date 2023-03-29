@@ -1,4 +1,4 @@
-use crate::{BroadcasterMessages, CoreMessages, MongoMessages, ProcessorMessages, SyncerMessages};
+use crate::{BroadcasterMessages, CoreMessages, EthRpcMessages, MongoMessages, ProcessorMessages, SyncerMessages};
 // FIXME Macro or something for the various channel errors?
 
 #[derive(Debug)]
@@ -30,8 +30,9 @@ pub enum SentinelError {
     Receiver(tokio::sync::broadcast::error::RecvError),
     OneshotReceiver(tokio::sync::oneshot::error::RecvError),
     CoreChannel(Box<tokio::sync::mpsc::error::SendError<CoreMessages>>),
-    SyncerChannel(Box<tokio::sync::broadcast::error::SendError<SyncerMessages>>),
     MongoChannel(Box<tokio::sync::mpsc::error::SendError<MongoMessages>>),
+    EthRpcChannel(Box<tokio::sync::mpsc::error::SendError<EthRpcMessages>>),
+    SyncerChannel(Box<tokio::sync::broadcast::error::SendError<SyncerMessages>>),
     ProcessorChannel(Box<tokio::sync::mpsc::error::SendError<ProcessorMessages>>),
     BroadcastChannel(Box<tokio::sync::broadcast::error::SendError<BroadcasterMessages>>),
 }
@@ -63,6 +64,7 @@ impl std::fmt::Display for SentinelError {
             Self::Receiver(ref err) => write!(f, "tokio receive error: {err}"),
             Self::CoreChannel(ref err) => write!(f, "core channel error: {err}"),
             Self::MongoChannel(ref err) => write!(f, "mongo channel error: {err}"),
+            Self::EthRpcChannel(ref err) => write!(f, "eth rpc channel error: {err}"),
             Self::SigInt(ref component) => write!(f, "sigint caught in {component}"),
             Self::SyncerChannel(ref err) => write!(f, "syncer channel error: {err}"),
             Self::OneshotReceiver(ref err) => write!(f, "oneshot receiver error: {err}"),
@@ -102,6 +104,7 @@ impl std::error::Error for SentinelError {
             Self::TokioJoin(ref err) => Some(err),
             Self::SerdeJson(ref err) => Some(err),
             Self::MongoChannel(ref err) => Some(err),
+            Self::EthRpcChannel(ref err) => Some(err),
             Self::SyncerChannel(ref err) => Some(err),
             Self::SentinelConfig(ref err) => Some(err),
             Self::OneshotReceiver(ref err) => Some(err),
@@ -245,5 +248,11 @@ impl From<tokio::sync::mpsc::error::SendError<MongoMessages>> for SentinelError 
 impl From<ethabi::Error> for SentinelError {
     fn from(err: ethabi::Error) -> Self {
         Self::EthAbi(err)
+    }
+}
+
+impl From<tokio::sync::mpsc::error::SendError<EthRpcMessages>> for SentinelError {
+    fn from(err: tokio::sync::mpsc::error::SendError<EthRpcMessages>) -> Self {
+        Self::EthRpcChannel(Box::new(err))
     }
 }
