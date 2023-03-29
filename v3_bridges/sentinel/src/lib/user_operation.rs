@@ -6,12 +6,10 @@ use common_metadata::MetadataChainId;
 use derive_more::{Constructor, Deref};
 use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType, Token as EthAbiToken};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
-//use ethers_core::types::{Address as EthAddress, H256 as EthHash, U256};
 use ethers_core::abi::{self, encode_packed, Token};
 use serde::{Deserialize, Serialize};
 use tiny_keccak::{Hasher, Keccak};
-
-use crate::{get_utc_timestamp, SentinelError};
+use crate::{USER_OPERATION_TOPIC, get_utc_timestamp, SentinelError};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Serialize, Deserialize)]
 pub struct UnmatchedUserOps {
@@ -113,22 +111,6 @@ impl UserOperation {
         self.destination_account = s;
     }
 }
-
-// NOTE: Originally we worked w/ > 1 topic, hence using a macro - bit overkill now.
-macro_rules! get_topics {
-    ($($name:ident => $hex:expr),* $(,)?) => {
-        $(
-            lazy_static! {
-                pub static ref $name: EthHash = convert_hex_to_h256(&$hex)
-                    .expect(&format!("Converting from hex shouldn't fail for {}", stringify!($name)));
-            }
-        )*
-    }
-}
-
-get_topics!(
-    USER_OPERATION_TOPIC => "375102e6250006aa44e53e96d29b6a719df98a1c40b28c133e684ef40e52b989",
-);
 
 #[derive(Clone, Debug, Default, Eq, Serialize, Deserialize)]
 pub struct UserOperation {

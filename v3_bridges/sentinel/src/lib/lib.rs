@@ -28,7 +28,7 @@ pub use self::{
     batching::Batch,
     check_init::check_init,
     config::{Config as SentinelConfig, ConfigT, HostConfig, MongoConfig, NativeConfig},
-    constants::MILLISECONDS_MULTIPLIER,
+    constants::{USER_OPERATION_TOPIC, MILLISECONDS_MULTIPLIER},
     core_state::CoreState,
     db_utils::SentinelDbUtils,
     endpoints::{check_endpoint, Endpoints, Error as EndpointError},
@@ -56,7 +56,7 @@ pub use self::{
     native_output::NativeOutput,
     output::Output,
     push_tx::push_tx,
-    user_operation::{UnmatchedUserOps, UserOperation, UserOperations, USER_OPERATION_TOPIC},
+    user_operation::{UnmatchedUserOps, UserOperation, UserOperations},
     utils::get_utc_timestamp,
 };
 
