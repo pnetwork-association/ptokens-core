@@ -1,6 +1,6 @@
 use std::{convert::TryFrom, fmt, str::FromStr};
 
-use common::{Byte, Bytes};
+use common::{BridgeSide, Byte, Bytes};
 use common_eth::{convert_hex_to_h256, EthLog, EthLogExt, EthSubmissionMaterial};
 use common_metadata::MetadataChainId;
 use derive_more::{Constructor, Deref};
@@ -59,7 +59,11 @@ impl UserOperations {
         Self::default()
     }
 
-    pub fn from_sub_mat(sub_mat: &EthSubmissionMaterial, state_manager: &EthAddress) -> Result<Self, SentinelError> {
+    pub fn from_sub_mat(
+        side: BridgeSide,
+        sub_mat: &EthSubmissionMaterial,
+        state_manager: &EthAddress,
+    ) -> Result<Self, SentinelError> {
         let block_hash = sub_mat.get_block_hash()?;
         let block_timestamp = sub_mat.get_timestamp().as_secs();
         let witnessed_timestamp = get_utc_timestamp()?;
@@ -75,7 +79,7 @@ impl UserOperations {
 
         Ok(Self::new(
             logs.iter()
-                .map(|l| UserOperation::from_log(witnessed_timestamp, block_timestamp, block_hash, l))
+                .map(|l| UserOperation::from_log(side, witnessed_timestamp, block_timestamp, block_hash, l))
                 .collect::<Result<Vec<UserOperation>, SentinelError>>()?,
         ))
     }
@@ -120,6 +124,7 @@ get_topics!(
 pub struct UserOperation {
     block_hash: EthHash,
     block_timestamp: u64,
+    bridge_side: BridgeSide,
     witnessed_timestamp: u64,
     user_operation: UserOp,
 }
@@ -199,12 +204,14 @@ impl TryFrom<&EthLog> for UserOp {
 
 impl UserOperation {
     fn from_log(
+        bridge_side: BridgeSide,
         witnessed_timestamp: u64,
         block_timestamp: u64,
         block_hash: EthHash,
         l: &EthLog,
     ) -> Result<Self, SentinelError> {
         Ok(Self {
+            bridge_side,
             block_hash,
             block_timestamp,
             witnessed_timestamp,

@@ -1,6 +1,6 @@
 use std::result::Result;
 
-use common::DatabaseInterface;
+use common::{BridgeSide, DatabaseInterface};
 use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials, HostDbUtils};
 use ethereum_types::Address as EthAddress;
 use lib::{HostOutput, SentinelDbUtils, SentinelError, UserOperations};
@@ -42,7 +42,7 @@ pub fn process_host<D: DatabaseInterface>(
 
     let r = if is_validating {
         sub_mat.receipts_are_valid()?;
-        UserOperations::from_sub_mat(&sub_mat, state_manager)?
+        UserOperations::from_sub_mat(BridgeSide::Host, &sub_mat, state_manager)?
     } else {
         UserOperations::empty()
     };
