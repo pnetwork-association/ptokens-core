@@ -9,4 +9,8 @@ pub struct StartSentinelArgs {
     /// Disable the native syncer
     #[arg(long)]
     pub disable_native_syncer: bool,
+
+    /// Disable the broadcaster
+    #[arg(long)]
+    pub disable_broadcaster: bool,
 }
