@@ -15,6 +15,16 @@ pub struct Output {
     native_unmatched_user_ops: UserOperations,
 }
 
+impl Output {
+    pub fn host_unmatched_user_ops(&self) -> UserOperations {
+        self.host_unmatched_user_ops.clone()
+    }
+
+    pub fn native_unmatched_user_ops(&self) -> UserOperations {
+        self.native_unmatched_user_ops.clone()
+    }
+}
+
 impl From<(&NativeOutput, &HostOutput)> for Output {
     fn from((n, h): (&NativeOutput, &HostOutput)) -> Self {
         Self {

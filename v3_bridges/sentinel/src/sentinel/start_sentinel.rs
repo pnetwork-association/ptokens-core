@@ -43,7 +43,7 @@ pub async fn start_sentinel(
 
     let (mongo_tx, mongo_rx): (MpscTx<MongoMessages>, MpscRx<MongoMessages>) = mpsc::channel(MAX_CHANNEL_CAPACITY);
 
-    let (_eth_rpc_tx, eth_rpc_rx): (MpscTx<EthRpcMessages>, MpscRx<EthRpcMessages>) =
+    let (eth_rpc_tx, eth_rpc_rx): (MpscTx<EthRpcMessages>, MpscRx<EthRpcMessages>) =
         mpsc::channel(MAX_CHANNEL_CAPACITY);
 
     let (_broadcaster_tx, broadcaster_rx): (MpscTx<BroadcasterMessages>, MpscRx<BroadcasterMessages>) =
@@ -68,6 +68,7 @@ pub async fn start_sentinel(
     let broadcaster_thread = tokio::spawn(broadcaster_loop(
         broadcaster_rx,
         mongo_tx.clone(),
+        eth_rpc_tx.clone(),
         config.clone(),
         sentinel_args.disable_broadcaster,
     ));

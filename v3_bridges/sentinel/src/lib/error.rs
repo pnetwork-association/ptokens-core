@@ -27,6 +27,7 @@ pub enum SentinelError {
     JsonRpc(jsonrpsee::core::error::Error),
     RocksDb(common_rocksdb::RocksdbDatabaseError),
     BlockAlreadyInDb(common::BlockAlreadyInDbError),
+    EncodePacked(ethers_core::abi::EncodePackedError),
     Receiver(tokio::sync::broadcast::error::RecvError),
     OneshotReceiver(tokio::sync::oneshot::error::RecvError),
     CoreChannel(Box<tokio::sync::mpsc::error::SendError<CoreMessages>>),
@@ -64,10 +65,11 @@ impl std::fmt::Display for SentinelError {
             Self::Receiver(ref err) => write!(f, "tokio receive error: {err}"),
             Self::CoreChannel(ref err) => write!(f, "core channel error: {err}"),
             Self::MongoChannel(ref err) => write!(f, "mongo channel error: {err}"),
-            Self::EthRpcChannel(ref err) => write!(f, "eth rpc channel error: {err}"),
             Self::SigInt(ref component) => write!(f, "sigint caught in {component}"),
+            Self::EthRpcChannel(ref err) => write!(f, "eth rpc channel error: {err}"),
             Self::SyncerChannel(ref err) => write!(f, "syncer channel error: {err}"),
             Self::OneshotReceiver(ref err) => write!(f, "oneshot receiver error: {err}"),
+            Self::EncodePacked(ref err) => write!(f, "ethabi encode packed error: {err}"),
             Self::BroadcastChannel(ref err) => write!(f, "broadcast channel error: {err}"),
             Self::ProcessorChannel(ref err) => write!(f, "processor channel error: {err}"),
             Self::SyncerRestart(ref err) => write!(f, "syncer to restart from block {err}"),
@@ -103,6 +105,8 @@ impl std::error::Error for SentinelError {
             Self::ParseInt(ref err) => Some(err),
             Self::TokioJoin(ref err) => Some(err),
             Self::SerdeJson(ref err) => Some(err),
+            Self::CoreChannel(ref err) => Some(err),
+            Self::EncodePacked(ref err) => Some(err),
             Self::MongoChannel(ref err) => Some(err),
             Self::EthRpcChannel(ref err) => Some(err),
             Self::SyncerChannel(ref err) => Some(err),
@@ -110,7 +114,6 @@ impl std::error::Error for SentinelError {
             Self::OneshotReceiver(ref err) => Some(err),
             Self::BroadcastChannel(ref err) => Some(err),
             Self::ProcessorChannel(ref err) => Some(err),
-            Self::CoreChannel(ref err) => Some(err),
         }
     }
 }
@@ -254,5 +257,11 @@ impl From<ethabi::Error> for SentinelError {
 impl From<tokio::sync::mpsc::error::SendError<EthRpcMessages>> for SentinelError {
     fn from(err: tokio::sync::mpsc::error::SendError<EthRpcMessages>) -> Self {
         Self::EthRpcChannel(Box::new(err))
+    }
+}
+
+impl From<ethers_core::abi::EncodePackedError> for SentinelError {
+    fn from(err: ethers_core::abi::EncodePackedError) -> Self {
+        Self::EncodePacked(err)
     }
 }

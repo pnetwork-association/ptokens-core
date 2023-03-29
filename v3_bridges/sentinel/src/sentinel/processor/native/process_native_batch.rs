@@ -6,6 +6,7 @@ use ethereum_types::Address as EthAddress;
 use lib::{NativeOutput, SentinelDbUtils, SentinelError, UserOperations};
 
 const SIDE: &str = "native";
+const ORIGIN_NETWORK_ID: Vec<u8> = vec![]; // FIXME calculate this!
 
 pub fn process_native<D: DatabaseInterface>(
     db: &D,
@@ -42,7 +43,7 @@ pub fn process_native<D: DatabaseInterface>(
 
     let r = if is_validating {
         sub_mat.receipts_are_valid()?;
-        UserOperations::from_sub_mat(BridgeSide::Native, &sub_mat, state_manager)?
+        UserOperations::from_sub_mat(BridgeSide::Native, &sub_mat, state_manager, &ORIGIN_NETWORK_ID)?
     } else {
         UserOperations::empty()
     };
