@@ -71,7 +71,10 @@ fn initialize_eth_core_maybe_with_contract_tx_and_return_state<'a, D: DatabaseIn
                     validate_evm_block_in_state(state)
                 }
             } else {
-                warn!("Not validating init {} block!", if is_native { "native" } else { "host" });
+                warn!(
+                    "Not validating init {} block!",
+                    if is_native { "native" } else { "host" }
+                );
                 Ok(state)
             }
         })

@@ -1,10 +1,11 @@
-use std::fmt;
+use std::{convert::TryFrom, fmt};
 
 use common::{
     constants::MAX_DATA_SENSITIVITY_LEVEL,
     crypto_utils::{generate_random_private_key, keccak_hash_bytes},
     traits::DatabaseInterface,
     types::{Byte, Result},
+    AppError,
 };
 use ethereum_types::H256;
 use secp256k1::{
@@ -21,6 +22,14 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EthPrivateKey(SecretKey);
+
+impl TryFrom<&str> for EthPrivateKey {
+    type Error = AppError;
+
+    fn try_from(s: &str) -> std::result::Result<Self, Self::Error> {
+        Self::from_slice(&hex::decode(s)?)
+    }
+}
 
 impl EthPrivateKey {
     pub fn from_slice(slice: &[Byte]) -> Result<Self> {
