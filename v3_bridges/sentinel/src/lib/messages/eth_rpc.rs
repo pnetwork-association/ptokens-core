@@ -7,7 +7,7 @@ use crate::{Responder, SentinelError};
 
 #[derive(Debug)]
 pub enum EthRpcMessages {
-    PushTx((EthTransaction, Responder<EthHash>)),
+    PushTx((EthTransaction, BridgeSide, Responder<EthHash>)),
     GetLatestBlockNum((BridgeSide, Responder<u64>)),
     GetNonce((BridgeSide, EthAddress, Responder<u64>)),
 }
@@ -23,8 +23,8 @@ impl EthRpcMessages {
         (Self::GetLatestBlockNum((side, tx)), rx)
     }
 
-    pub fn get_push_txs_msg(t: EthTransaction) -> (Self, Receiver<Result<EthHash, SentinelError>>) {
+    pub fn get_push_tx_msg(t: EthTransaction, s: BridgeSide) -> (Self, Receiver<Result<EthHash, SentinelError>>) {
         let (tx, rx) = oneshot::channel();
-        (Self::PushTx((t, tx)), rx)
+        (Self::PushTx((t, s, tx)), rx)
     }
 }
