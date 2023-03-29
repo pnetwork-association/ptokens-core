@@ -19,6 +19,7 @@ mod logging;
 mod messages;
 mod native_output;
 mod output;
+mod push_tx;
 mod test_utils;
 mod user_operation;
 mod utils;
@@ -54,6 +55,7 @@ pub use self::{
     },
     native_output::NativeOutput,
     output::Output,
+    push_tx::push_tx,
     user_operation::{UnmatchedUserOps, UserOperation, UserOperations, USER_OPERATION_TOPIC},
     utils::get_utc_timestamp,
 };
