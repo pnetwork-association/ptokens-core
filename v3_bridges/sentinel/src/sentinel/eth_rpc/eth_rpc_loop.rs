@@ -1,7 +1,7 @@
 use std::result::Result;
 
 use common::BridgeSide;
-use lib::{get_latest_block_num, EthRpcMessages, SentinelConfig, SentinelError};
+use lib::{get_latest_block_num, push_tx, EthRpcMessages, SentinelConfig, SentinelError};
 use tokio::sync::mpsc::Receiver as MpscRx;
 
 pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: SentinelConfig) -> Result<(), SentinelError> {
@@ -19,9 +19,17 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                     let _ = responder.send(r);
                     continue 'eth_rpc_loop
                 },
-                Some(msg) => {
-                    break 'eth_rpc_loop Err(SentinelError::Custom(format!("handling {msg:?} not implemengted")))
+                Some(EthRpcMessages::PushTx((tx, side, responder))) => {
+                    let r = match side {
+                        BridgeSide::Host => push_tx(tx, &host_endpoints),
+                        BridgeSide::Native => push_tx(tx, &native_endpoints),
+                    }.await;
+                    let _ = responder.send(r);
+                    continue 'eth_rpc_loop
                 },
+                Some(EthRpcMessages::GetNonce(_)) => {
+                    break 'eth_rpc_loop Err(SentinelError::Custom("Nonce getter not yet implemented!".into()))
+                }
                 None => {
                     let m = "all eth rpc senders dropped!";
                     warn!("{m}");
