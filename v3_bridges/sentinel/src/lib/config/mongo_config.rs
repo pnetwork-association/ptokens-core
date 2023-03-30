@@ -3,7 +3,7 @@ use std::{result::Result, time::Duration};
 use mongodb::{bson::doc, options::ClientOptions, Client, Collection, Database};
 use serde::Deserialize;
 
-use crate::{HeartbeatsJson, HostOutput, NativeOutput, SentinelError};
+use crate::{MILLISECONDS_MULTIPLIER, HeartbeatsJson, HostOutput, NativeOutput, SentinelError};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct MongoToml {
@@ -43,10 +43,10 @@ impl MongoConfig {
         Self {
             uri: toml.uri.clone(),
             database: toml.database.clone(),
-            sleep_duration: toml.sleep_duration,
             host_collection: toml.host_collection.clone(),
             timeout: Self::sanity_check_timeout(toml.timeout),
             native_collection: toml.native_collection.clone(),
+            sleep_duration: toml.sleep_duration * MILLISECONDS_MULTIPLIER,
         }
     }
 

@@ -12,7 +12,7 @@ use crate::sentinel::{process_host, process_native};
 
 #[derive(Clone, Debug, Default, Args)]
 pub struct ProcessBlockCliArgs {
-    /// Which side of the bridge to reset
+    /// Which side of the bridge to process a block for
     pub side: String,
 
     /// Path to block.
