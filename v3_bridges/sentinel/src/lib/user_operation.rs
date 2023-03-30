@@ -1,7 +1,7 @@
 use std::{convert::TryFrom, fmt, str::FromStr};
 
 use common::{BridgeSide, Byte, Bytes};
-use common_eth::{EthLog, EthLogExt, EthSubmissionMaterial};
+use common_eth::{encode_fxn_call, EthLog, EthLogExt, EthSubmissionMaterial};
 use derive_more::{Constructor, Deref};
 use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType, Token as EthAbiToken};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
@@ -198,6 +198,29 @@ impl TryFrom<&EthLog> for UserOp {
 }
 
 impl UserOperation {
+    pub fn to_cancel_fxn_data(&self) -> Result<Bytes, SentinelError> {
+        const CANCEL_FXN_ABI: &str = "[{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"originBlockHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"originTransactionHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"optionsMask\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"underlyingAssetDecimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"underlyingAssetTokenAddress\",\"type\":\"address\"},{\"internalType\":\"bytes4\",\"name\":\"originNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"bytes4\",\"name\":\"destinationNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"bytes4\",\"name\":\"underlyingAssetNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"string\",\"name\":\"destinationAccount\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"underlyingAssetName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"underlyingAssetSymbol\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"userData\",\"type\":\"bytes\"}],\"internalType\":\"structTest.Operation\",\"name\":\"op\",\"type\":\"tuple\"}],\"name\":\"protocolCancelOperation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]";
+
+        Ok(encode_fxn_call(CANCEL_FXN_ABI, "protocolCancelOperation", &[
+            EthAbiToken::Tuple(vec![
+                EthAbiToken::FixedBytes(self.block_hash.as_bytes().to_vec()),
+                EthAbiToken::FixedBytes(self.tx_hash.as_bytes().to_vec()),
+                EthAbiToken::FixedBytes(self.user_operation.options_mask.clone()),
+                EthAbiToken::Uint(self.user_operation.nonce),
+                EthAbiToken::Uint(self.user_operation.underlying_asset_decimals),
+                EthAbiToken::Uint(self.user_operation.asset_amount),
+                EthAbiToken::Address(self.user_operation.underlying_asset_token_address),
+                EthAbiToken::FixedBytes(self.origin_network_id.clone()),
+                EthAbiToken::FixedBytes(self.user_operation.destination_network_id.clone()),
+                EthAbiToken::FixedBytes(self.user_operation.underlying_asset_network_id.clone()),
+                EthAbiToken::String(self.user_operation.destination_account.clone()),
+                EthAbiToken::String(self.user_operation.underlying_asset_name.clone()),
+                EthAbiToken::String(self.user_operation.underlying_asset_symbol.clone()),
+                EthAbiToken::Bytes(self.user_operation.user_data.clone()),
+            ]),
+        ])?)
+    }
+
     fn from_log(
         bridge_side: BridgeSide,
         witnessed_timestamp: u64,
@@ -357,5 +380,17 @@ impl TryFrom<Bytes> for UserOperations {
 
     fn try_from(b: Bytes) -> Result<Self, Self::Error> {
         Ok(serde_json::from_slice(&b)?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_encode_fxn_data_for_user_op() {
+        let op = UserOperation::default();
+        let result = op.to_cancel_fxn_data();
+        assert!(result.is_ok());
     }
 }

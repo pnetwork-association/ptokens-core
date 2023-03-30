@@ -3,7 +3,7 @@ use std::{result::Result, time::Duration};
 use mongodb::{bson::doc, options::ClientOptions, Client, Collection, Database};
 use serde::Deserialize;
 
-use crate::{MILLISECONDS_MULTIPLIER, HeartbeatsJson, HostOutput, NativeOutput, SentinelError};
+use crate::{HeartbeatsJson, HostOutput, NativeOutput, SentinelError, MILLISECONDS_MULTIPLIER};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct MongoToml {

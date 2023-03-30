@@ -2,16 +2,13 @@ use std::{convert::TryFrom, result::Result};
 
 use common::BridgeSide;
 use common_chain_ids::EthChainId;
-use common_eth::{encode_fxn_call, EthPrivateKey, EthTransaction};
-use ethabi::Token as EthAbiToken;
+use common_eth::{EthPrivateKey, EthTransaction};
 use ethereum_types::Address as EthAddress;
 use lib::{BroadcasterMessages, EthRpcMessages, MongoMessages, SentinelConfig, SentinelError, UserOperation};
 use tokio::{
     sync::mpsc::{Receiver as MpscRx, Sender as MpscTx},
     time::{sleep, Duration},
 };
-
-const CANCEL_FXN_ABI: &str = "{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"operationId\",\"type\":\"bytes32\"}],\"name\":\"protocolCancelOperation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}";
 
 fn get_pk() -> Result<EthPrivateKey, SentinelError> {
     // TODO Handle pk properly
@@ -33,10 +30,7 @@ fn get_tx(
     let gas_limit = 1_000_000; // FIXME
     let gas_price = 2_000_000_000; // FIXME
     let to = *state_manager;
-    let uid = op.to_uid()?;
-    let data = encode_fxn_call(CANCEL_FXN_ABI, "protocolCancelOperation", &[EthAbiToken::FixedBytes(
-        uid.as_bytes().to_vec(),
-    )])?;
+    let data = op.to_cancel_fxn_data()?; //TODO make fxn to convert user op to a cancelling EthTransaction type.
 
     Ok(EthTransaction::new_unsigned(data, nonce, value, to, chain_id, gas_limit, gas_price).sign(&get_pk()?)?)
 }
