@@ -83,9 +83,7 @@ impl CoreType {
     pub fn to_v3_core_type(&self) -> Result<V3CoreType> {
         match self {
             Self::V3(c) => Ok(*c),
-            _ => Err(AppError::Custom(
-                format!("Cannot convert `{self}` to v3 core type!"),
-            )),
+            _ => Err(AppError::Custom(format!("Cannot convert `{self}` to v3 core type!"))),
         }
     }
 

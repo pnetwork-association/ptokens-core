@@ -1,7 +1,7 @@
-#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
 pub enum BridgeSide {
-    Host,
-    Native,
+    Native = 1,
+    Host   = 2,
 }
 
 impl Default for BridgeSide {
@@ -57,5 +57,10 @@ mod tests {
         let b = BridgeSide::Host;
         assert!(b.is_host());
         assert!(!b.is_native());
+    }
+
+    #[test]
+    fn native_should_be_less_than_host() {
+        assert!(BridgeSide::Native < BridgeSide::Host)
     }
 }
