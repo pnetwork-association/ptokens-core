@@ -9,7 +9,7 @@ use ethers_core::abi::{self, Token};
 use serde::{Deserialize, Serialize};
 use tiny_keccak::{Hasher, Keccak};
 
-use crate::{get_utc_timestamp, SentinelError, USER_OPERATION_TOPIC};
+use crate::{get_utc_timestamp, SentinelError, UserOpState, USER_OPERATION_TOPIC};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Serialize, Deserialize)]
 pub struct UnmatchedUserOps {
@@ -119,6 +119,7 @@ impl UserOperation {
 #[derive(Clone, Debug, Default, Eq, Serialize, Deserialize)]
 pub struct UserOperation {
     tx_hash: EthHash,
+    state: UserOpState,
     block_hash: EthHash,
     block_timestamp: u64,
     bridge_side: BridgeSide,
@@ -244,6 +245,7 @@ impl UserOperation {
             block_timestamp,
             witnessed_timestamp,
             user_operation: UserOp::try_from(log)?,
+            state: UserOpState::Witnessed(bridge_side),
             origin_network_id: origin_network_id.to_vec(),
         })
     }

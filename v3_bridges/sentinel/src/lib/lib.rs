@@ -23,6 +23,7 @@ mod output;
 mod push_tx;
 mod test_utils;
 mod user_operation;
+mod user_operation_state;
 mod utils;
 
 pub use self::{
@@ -59,6 +60,7 @@ pub use self::{
     output::Output,
     push_tx::push_tx,
     user_operation::{UnmatchedUserOps, UserOperation, UserOperations},
+    user_operation_state::UserOpState,
     utils::get_utc_timestamp,
 };
 
