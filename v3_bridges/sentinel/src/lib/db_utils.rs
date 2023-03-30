@@ -67,11 +67,7 @@ macro_rules! create_db_keys {
         #[cfg(test)]
         mod tests {
             use super::*;
-            use std::time::Duration;
-            use crate::{
-                UserOperation,
-                get_utc_timestamp,
-            };
+            use crate::UserOperation;
             use common::get_test_database;
 
             paste! {
@@ -91,7 +87,7 @@ macro_rules! create_db_keys {
                         let db_utils = SentinelDbUtils::new(&db);
                         let mut x = UserOperation::default();
                         x.set_destination_account("some account".into());
-                        let mut expected_result = UserOperations::new(vec![x]);
+                        let expected_result = UserOperations::new(vec![x]);
                         db_utils.[< put_ $name:lower >](expected_result.clone()).unwrap();
                         let result = db_utils.[< get_ $name:lower >]().unwrap();
                         assert_eq!(result, expected_result);
@@ -131,6 +127,7 @@ macro_rules! create_db_keys {
                         assert_ne!(xs, ys);
                         db_utils.[< put_ $name:lower >](xs.clone()).unwrap();
                         let mut result = db_utils.[< get_ $name:lower >]().unwrap();
+                        assert_eq!(result, xs);
                         db_utils.[< replace_ $name:lower >](ys.clone()).unwrap();
                         result = db_utils.[< get_ $name:lower >]().unwrap();
                         assert_eq!(result, ys);

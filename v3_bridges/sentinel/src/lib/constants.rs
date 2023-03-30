@@ -19,4 +19,3 @@ macro_rules! get_topics {
 get_topics!(
     USER_OPERATION_TOPIC => "",
 );
-

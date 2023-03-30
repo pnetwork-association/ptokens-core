@@ -11,6 +11,7 @@ pub enum SentinelError {
     SyncerRestart(u64),
     IO(std::io::Error),
     EthAbi(ethabi::Error),
+    Hex(hex::FromHexError),
     Json(serde_json::Value),
     Common(common::AppError),
     Config(config::ConfigError),
@@ -49,6 +50,7 @@ impl std::fmt::Display for SentinelError {
             Self::RocksDb(ref err) => write!(f, "{err}"),
             Self::NoParent(ref err) => write!(f, "{err}"),
             Self::IO(ref err) => write!(f, "IO error: {err}"),
+            Self::Hex(ref err) => write!(f, "hex error: {err}"),
             Self::BlockAlreadyInDb(ref err) => write!(f, "{err}"),
             Self::NoBlock(ref num) => write!(f, "no block {num}"),
             Self::PoisonedLock => write!(f, "posioned lock error!"),
@@ -92,6 +94,7 @@ impl std::error::Error for SentinelError {
             Self::PoisonedLock => None,
             Self::IO(ref err) => Some(err),
             Self::SyncerRestart(_) => None,
+            Self::Hex(ref err) => Some(err),
             Self::Time(ref err) => Some(err),
             Self::BlockAlreadyInDb(_) => None,
             Self::Common(ref err) => Some(err),
@@ -263,5 +266,11 @@ impl From<tokio::sync::mpsc::error::SendError<EthRpcMessages>> for SentinelError
 impl From<ethers_core::abi::EncodePackedError> for SentinelError {
     fn from(err: ethers_core::abi::EncodePackedError) -> Self {
         Self::EncodePacked(err)
+    }
+}
+
+impl From<hex::FromHexError> for SentinelError {
+    fn from(err: hex::FromHexError) -> Self {
+        Self::Hex(err)
     }
 }

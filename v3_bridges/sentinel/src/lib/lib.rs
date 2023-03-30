@@ -1,4 +1,5 @@
 mod batching;
+mod eth_call;
 mod check_init;
 mod config;
 mod constants;
@@ -26,9 +27,10 @@ mod utils;
 
 pub use self::{
     batching::Batch,
+    eth_call::eth_call,
     check_init::check_init,
     config::{Config as SentinelConfig, ConfigT, HostConfig, MongoConfig, NativeConfig},
-    constants::{USER_OPERATION_TOPIC, MILLISECONDS_MULTIPLIER},
+    constants::{MILLISECONDS_MULTIPLIER, USER_OPERATION_TOPIC},
     core_state::CoreState,
     db_utils::SentinelDbUtils,
     endpoints::{check_endpoint, Endpoints, Error as EndpointError},

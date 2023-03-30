@@ -1,6 +1,7 @@
 #![cfg(test)]
 use std::{env, fs::read_to_string, str::FromStr};
 
+use common::BridgeSide;
 use common_eth::EthSubmissionMaterial;
 use dotenv::dotenv;
 use jsonrpsee::ws_client::WsClient;
@@ -26,7 +27,7 @@ pub async fn get_test_endpoints() -> Endpoints {
         .map_err(|_| SentinelError::Custom("Please set env var '{ENV_VAR}' to a working endpoint!".into()))
         .unwrap();
     let urls = vec![url];
-    Endpoints::new(is_native, sleep_time, urls)
+    Endpoints::new(is_native, sleep_time, BridgeSide::Native, urls)
 }
 
 pub fn get_sample_sub_mat_n(n: usize) -> EthSubmissionMaterial {

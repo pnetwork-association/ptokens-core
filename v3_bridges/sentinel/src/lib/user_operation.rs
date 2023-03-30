@@ -8,7 +8,8 @@ use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use ethers_core::abi::{self, Token};
 use serde::{Deserialize, Serialize};
 use tiny_keccak::{Hasher, Keccak};
-use crate::{USER_OPERATION_TOPIC, get_utc_timestamp, SentinelError};
+
+use crate::{get_utc_timestamp, SentinelError, USER_OPERATION_TOPIC};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Serialize, Deserialize)]
 pub struct UnmatchedUserOps {
@@ -107,7 +108,7 @@ impl From<Vec<UserOperations>> for UserOperations {
 #[cfg(test)]
 impl UserOperation {
     pub fn set_destination_account(&mut self, s: String) {
-        self.destination_account = s;
+        self.user_operation.destination_account = s;
     }
 }
 
