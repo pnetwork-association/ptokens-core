@@ -43,7 +43,7 @@ pub fn process_host<D: DatabaseInterface>(
 
     let r = if is_validating {
         sub_mat.receipts_are_valid()?;
-        UserOperations::from_sub_mat(BridgeSide::Host, &sub_mat, state_manager, &ORIGIN_NETWORK_ID)?
+        UserOperations::from_sub_mat(BridgeSide::Host, sub_mat, state_manager, &ORIGIN_NETWORK_ID)?
     } else {
         UserOperations::empty()
     };

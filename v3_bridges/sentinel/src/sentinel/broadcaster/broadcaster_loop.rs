@@ -32,13 +32,13 @@ fn get_tx(
     let value = 0;
     let gas_limit = 1_000_000; // FIXME
     let gas_price = 2_000_000_000; // FIXME
-    let to = state_manager.clone();
+    let to = *state_manager;
     let uid = op.to_uid()?;
     let data = encode_fxn_call(CANCEL_FXN_ABI, "protocolCancelOperation", &[EthAbiToken::FixedBytes(
         uid.as_bytes().to_vec(),
     )])?;
 
-    Ok(EthTransaction::new_unsigned(data, nonce, value, to, &chain_id, gas_limit, gas_price).sign(&get_pk()?)?)
+    Ok(EthTransaction::new_unsigned(data, nonce, value, to, chain_id, gas_limit, gas_price).sign(&get_pk()?)?)
 }
 
 async fn main_loop(

@@ -81,7 +81,7 @@ impl UserOperations {
                         block_timestamp,
                         block_hash,
                         tx_hash,
-                        &origin_network_id,
+                        origin_network_id,
                         log,
                     )?;
                     user_ops.push(op);
@@ -257,12 +257,14 @@ impl UserOperation {
         // that's annoying.
         let mut r = [0u8; 32];
         t.to_big_endian(&mut r);
-        ethers_core::types::U256::from_big_endian(&mut r)
+        ethers_core::types::U256::from_big_endian(&r)
     }
 
     fn convert_address_type(t: EthAddress) -> ethers_core::types::Address {
+        // NOTE: Sigh. The ethabi crate re-exports the ethereum_types which we use elsewhere, so
+        // that's annoying.
         let s = t.as_bytes();
-        ethers_core::types::Address::from_slice(&s)
+        ethers_core::types::Address::from_slice(s)
     }
 }
 
