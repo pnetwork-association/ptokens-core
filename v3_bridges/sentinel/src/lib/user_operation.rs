@@ -245,8 +245,8 @@ impl UserOperation {
             block_timestamp,
             witnessed_timestamp,
             user_operation: UserOp::try_from(log)?,
-            state: UserOpState::Witnessed(bridge_side),
             origin_network_id: origin_network_id.to_vec(),
+            state: UserOpState::Witnessed(bridge_side, tx_hash),
         })
     }
 }

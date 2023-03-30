@@ -17,5 +17,6 @@ macro_rules! get_topics {
 }
 
 get_topics!(
+    // TODO need the enqueue topic etc
     USER_OPERATION_TOPIC => "ba98a314fb19bf102109515e22a4e48acbbe8f5610a657a9ed6cb3327afbc2e2",
 );
