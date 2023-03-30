@@ -74,17 +74,21 @@ impl UserOperations {
         for receipt in sub_mat.receipts.iter() {
             let tx_hash = receipt.transaction_hash;
             for log in receipt.logs.iter() {
-                if !log.topics.is_empty() && &log.address == state_manager && log.topics[0] == *USER_OPERATION_TOPIC {
-                    let op = UserOperation::from_log(
-                        side,
-                        witnessed_timestamp,
-                        block_timestamp,
-                        block_hash,
-                        tx_hash,
-                        origin_network_id,
-                        log,
-                    )?;
-                    user_ops.push(op);
+                if !log.topics.is_empty() && &log.address == state_manager {
+                    for topic in log.topics.iter() {
+                        if topic == &*USER_OPERATION_TOPIC {
+                            let op = UserOperation::from_log(
+                                side,
+                                witnessed_timestamp,
+                                block_timestamp,
+                                block_hash,
+                                tx_hash,
+                                origin_network_id,
+                                log,
+                            )?;
+                            user_ops.push(op);
+                        }
+                    }
                 }
             }
         }
@@ -120,7 +124,7 @@ pub struct UserOperation {
     bridge_side: BridgeSide,
     origin_network_id: Bytes,
     witnessed_timestamp: u64,
-    user_operation: UserOp, // NOTE THis remains separate since we can parse it all from the log
+    user_operation: UserOp, // NOTE This remains separate since we can parse it entirely from the log
 }
 
 impl PartialEq for UserOperation {
@@ -140,6 +144,7 @@ pub struct UserOp {
     underlying_asset_decimals: U256,
     underlying_asset_token_address: EthAddress,
     underlying_asset_network_id: Bytes, // TODO make a type for this!
+    asset_token_address: EthAddress,
     asset_amount: U256,
     user_data: Bytes,
     options_mask: Bytes,
@@ -160,7 +165,7 @@ impl TryFrom<&EthLog> for UserOp {
                 EthAbiParamType::String,
                 EthAbiParamType::Uint(256),
                 EthAbiParamType::Address,
-                EthAbiParamType::Uint(256),
+                EthAbiParamType::FixedBytes(4),
                 EthAbiParamType::Address,
                 EthAbiParamType::Uint(256),
                 EthAbiParamType::Bytes,
@@ -171,21 +176,23 @@ impl TryFrom<&EthLog> for UserOp {
 
         let nonce = Self::get_u256_from_token(&tokens[0])?;
         let destination_account = Self::get_string_from_token(&tokens[1])?;
-        let destination_network_id = Self::get_bytes_from_token(&tokens[2])?;
+        let destination_network_id = Self::get_fixed_bytes_from_token(&tokens[2])?;
         let underlying_asset_name = Self::get_string_from_token(&tokens[3])?;
         let underlying_asset_symbol = Self::get_string_from_token(&tokens[4])?;
         let underlying_asset_decimals = Self::get_u256_from_token(&tokens[5])?;
         let underlying_asset_token_address = Self::get_address_from_token(&tokens[6])?;
-        let underlying_asset_network_id = Self::get_bytes_from_token(&tokens[7])?;
+        let underlying_asset_network_id = Self::get_fixed_bytes_from_token(&tokens[7])?;
+        let asset_token_address = Self::get_address_from_token(&tokens[8])?;
         let asset_amount = Self::get_u256_from_token(&tokens[9])?;
         let user_data = Self::get_bytes_from_token(&tokens[10])?;
-        let options_mask = Self::get_bytes_from_token(&tokens[11])?;
+        let options_mask = Self::get_fixed_bytes_from_token(&tokens[11])?;
 
         Ok(Self {
             nonce,
             user_data,
             asset_amount,
             options_mask,
+            asset_token_address,
             destination_account,
             underlying_asset_name,
             destination_network_id,
@@ -295,21 +302,28 @@ impl UserOp {
     fn get_address_from_token(t: &EthAbiToken) -> Result<EthAddress, SentinelError> {
         match t {
             EthAbiToken::Address(t) => Ok(EthAddress::from_slice(t.as_bytes())),
-            _ => Err(SentinelError::Custom("Cannot convert `{t}` to ETH address!".into())),
+            _ => Err(SentinelError::Custom(format!("Cannot convert `{t}` to ETH address!"))),
         }
     }
 
     fn get_string_from_token(t: &EthAbiToken) -> Result<String, SentinelError> {
         match t {
             EthAbiToken::String(ref t) => Ok(t.clone()),
-            _ => Err(SentinelError::Custom("Cannot convert `{t}` to string!".into())),
+            _ => Err(SentinelError::Custom(format!("Cannot convert `{t}` to string!"))),
         }
     }
 
     fn get_bytes_from_token(t: &EthAbiToken) -> Result<Bytes, SentinelError> {
         match t {
             EthAbiToken::Bytes(b) => Ok(b.clone()),
-            _ => Err(SentinelError::Custom("Cannot convert `{t}` to bytes!".into())),
+            _ => Err(SentinelError::Custom(format!("Cannot convert `{t}` to bytes:"))),
+        }
+    }
+
+    fn get_fixed_bytes_from_token(t: &EthAbiToken) -> Result<Bytes, SentinelError> {
+        match t {
+            EthAbiToken::FixedBytes(b) => Ok(b.to_vec()),
+            _ => Err(SentinelError::Custom(format!("Cannot convert `{t}` to bytes:"))),
         }
     }
 
@@ -317,7 +331,7 @@ impl UserOp {
     fn get_eth_hash_from_token(t: &EthAbiToken) -> Result<EthHash, SentinelError> {
         match t {
             EthAbiToken::FixedBytes(ref b) => Ok(EthHash::from_slice(b)),
-            _ => Err(SentinelError::Custom("Cannot convert `{t}` to EthHash!".into())),
+            _ => Err(SentinelError::Custom(format!("Cannot convert `{t}` to EthHash!"))),
         }
     }
 
@@ -328,7 +342,7 @@ impl UserOp {
                 u.to_big_endian(&mut b);
                 Ok(U256::from_big_endian(&b))
             },
-            _ => Err(SentinelError::Custom("Cannot convert `{t}` to U256!".into())),
+            _ => Err(SentinelError::Custom(format!("Cannot convert `{t}` to U256!"))),
         }
     }
 }
@@ -385,12 +399,27 @@ impl TryFrom<Bytes> for UserOperations {
 
 #[cfg(test)]
 mod tests {
+    use common_eth::convert_hex_to_eth_address;
+
     use super::*;
+    use crate::test_utils::get_sample_sub_mat_n;
 
     #[test]
     fn should_encode_fxn_data_for_user_op() {
         let op = UserOperation::default();
         let result = op.to_cancel_fxn_data();
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn should_get_user_operation_from_sub_mat() {
+        let side = BridgeSide::Native;
+        let sub_mat = get_sample_sub_mat_n(11);
+        let sepolia_network_id = hex::decode("e15503e4").unwrap();
+        let state_manager = convert_hex_to_eth_address("b274d81a823c1912c6884e39c2e4e669e04c83f4").unwrap();
+        let expected_result = 1;
+        let ops = UserOperations::from_sub_mat(side, &sub_mat, &state_manager, &sepolia_network_id).unwrap();
+        let result = ops.len();
+        assert_eq!(result, expected_result);
     }
 }
