@@ -35,10 +35,10 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                     let _ = responder.send(r);
                     continue 'eth_rpc_loop
                 },
-                Some(EthRpcMessages::EthCall((data, side, address, responder))) => {
+                Some(EthRpcMessages::EthCall((data, side, address, default_block_parameter, responder))) => {
                     let r = match side {
-                        BridgeSide::Host => eth_call(&address, &data, &host_endpoints),
-                        BridgeSide::Native => eth_call(&address, &data, &native_endpoints),
+                        BridgeSide::Host => eth_call(&address, &data, &default_block_parameter, &host_endpoints),
+                        BridgeSide::Native => eth_call(&address, &data, &default_block_parameter, &native_endpoints),
                     }.await;
                     let _ = responder.send(r);
                     continue 'eth_rpc_loop
