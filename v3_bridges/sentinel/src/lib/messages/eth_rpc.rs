@@ -1,4 +1,4 @@
-use common::BridgeSide;
+use common::{BridgeSide, Bytes};
 use common_eth::EthTransaction;
 use ethereum_types::{Address as EthAddress, H256 as EthHash};
 use tokio::sync::{oneshot, oneshot::Receiver};
@@ -10,6 +10,7 @@ pub enum EthRpcMessages {
     PushTx((EthTransaction, BridgeSide, Responder<EthHash>)),
     GetLatestBlockNum((BridgeSide, Responder<u64>)),
     GetNonce((BridgeSide, EthAddress, Responder<u64>)),
+    EthCall((Bytes, BridgeSide, EthAddress, Responder<Bytes>)),
 }
 
 impl EthRpcMessages {
@@ -26,5 +27,10 @@ impl EthRpcMessages {
     pub fn get_push_tx_msg(t: EthTransaction, s: BridgeSide) -> (Self, Receiver<Result<EthHash, SentinelError>>) {
         let (tx, rx) = oneshot::channel();
         (Self::PushTx((t, s, tx)), rx)
+    }
+
+    pub fn get_eth_call_msg(d: Bytes, a: EthAddress, b: BridgeSide) -> (Self, Receiver<Result<Bytes, SentinelError>>) {
+        let (tx, rx) = oneshot::channel();
+        (Self::EthCall((d, b, a, tx)), rx)
     }
 }

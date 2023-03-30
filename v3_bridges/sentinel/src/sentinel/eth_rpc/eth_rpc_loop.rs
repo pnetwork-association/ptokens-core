@@ -1,7 +1,7 @@
 use std::result::Result;
 
 use common::BridgeSide;
-use lib::{get_latest_block_num, get_nonce, push_tx, EthRpcMessages, SentinelConfig, SentinelError};
+use lib::{eth_call, get_latest_block_num, get_nonce, push_tx, EthRpcMessages, SentinelConfig, SentinelError};
 use tokio::sync::mpsc::Receiver as MpscRx;
 
 pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: SentinelConfig) -> Result<(), SentinelError> {
@@ -34,7 +34,15 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                     }.await;
                     let _ = responder.send(r);
                     continue 'eth_rpc_loop
-                }
+                },
+                Some(EthRpcMessages::EthCall((data, side, address, responder))) => {
+                    let r = match side {
+                        BridgeSide::Host => eth_call(&address, &data, &host_endpoints),
+                        BridgeSide::Native => eth_call(&address, &data, &native_endpoints),
+                    }.await;
+                    let _ = responder.send(r);
+                    continue 'eth_rpc_loop
+                },
                 None => {
                     let m = "all eth rpc senders dropped!";
                     warn!("{m}");

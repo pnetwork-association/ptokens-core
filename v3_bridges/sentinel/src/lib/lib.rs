@@ -1,5 +1,4 @@
 mod batching;
-mod eth_call;
 mod check_init;
 mod config;
 mod constants;
@@ -7,6 +6,7 @@ mod core_state;
 mod db_utils;
 mod endpoints;
 mod error;
+mod eth_call;
 mod flatten_join_handle;
 mod get_block;
 mod get_latest_block_num;
@@ -27,7 +27,6 @@ mod utils;
 
 pub use self::{
     batching::Batch,
-    eth_call::eth_call,
     check_init::check_init,
     config::{Config as SentinelConfig, ConfigT, HostConfig, MongoConfig, NativeConfig},
     constants::{MILLISECONDS_MULTIPLIER, USER_OPERATION_TOPIC},
@@ -35,6 +34,7 @@ pub use self::{
     db_utils::SentinelDbUtils,
     endpoints::{check_endpoint, Endpoints, Error as EndpointError},
     error::SentinelError,
+    eth_call::eth_call,
     flatten_join_handle::flatten_join_handle,
     get_block::get_block,
     get_latest_block_num::get_latest_block_num,
