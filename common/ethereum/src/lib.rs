@@ -4,6 +4,7 @@ mod append_to_blockchain;
 mod calculate_linker_hash;
 mod check_parent_exists;
 mod core_initialization;
+mod default_block_parameter;
 mod eip_1559;
 mod eth_block;
 mod eth_block_from_json_rpc;
@@ -70,6 +71,7 @@ pub use self::{
         set_evm_latest_block_hash_and_return_state,
         EthInitializationOutput,
     },
+    default_block_parameter::DefaultBlockParameter,
     eth_block::{EthBlock, EthBlockJson},
     eth_block_from_json_rpc::EthBlockJsonFromRpc,
     eth_constants::{
