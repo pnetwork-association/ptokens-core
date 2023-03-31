@@ -6,8 +6,13 @@ use crate::SentinelError;
 const GET_FULL_TRANSACTION: bool = false;
 const GET_BLOCK_BY_NUMBER_RPC_CMD: &str = "eth_getBlockByNumber";
 
+// TODO I guess with any RPC calls we separate them out into an inner fxn, catch the error and
+// sleep & retry upon that error?
+// How to do endpoint roation?
+//
+// TODO this should take endpoint struct
 pub async fn get_block(ws_client: &WsClient, block_num: u64) -> Result<EthBlock, SentinelError> {
-    info!("[+] Getting block num: {block_num}...");
+    info!("Getting block num: {block_num}...");
     let res: jsonrpsee::core::RpcResult<EthBlockJsonFromRpc> = ws_client
         .request(GET_BLOCK_BY_NUMBER_RPC_CMD, rpc_params![
             format!("0x{block_num:x}"),
