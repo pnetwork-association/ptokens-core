@@ -11,6 +11,7 @@ use crate::{config::ConfigT, constants::MILLISECONDS_MULTIPLIER, Endpoints, Sent
 #[derive(Debug, Clone, Deserialize)]
 pub struct NativeToml {
     validate: bool,
+    router: String,
     sleep_duration: u64,
     eth_chain_id: String,
     state_manager: String,
@@ -20,6 +21,7 @@ pub struct NativeToml {
 #[derive(Debug, Clone, Default)]
 pub struct NativeConfig {
     validate: bool,
+    router: EthAddress,
     sleep_duration: u64,
     endpoints: Endpoints,
     eth_chain_id: EthChainId,
@@ -32,6 +34,7 @@ impl NativeConfig {
         Ok(Self {
             sleep_duration,
             validate: toml.validate,
+            router: convert_hex_to_eth_address(&toml.router)?,
             state_manager: convert_hex_to_eth_address(&toml.state_manager)?,
             endpoints: Endpoints::new(false, sleep_duration, BridgeSide::Native, toml.endpoints.clone()),
             eth_chain_id: match EthChainId::from_str(&toml.eth_chain_id) {

@@ -8,7 +8,8 @@ endpoints = [ "ws://162.19.83.219:8546" ]
 sleep_duration = 15 # How long to wait before trying to get the next host block (in seconds)
 contract_addresses = [] # Used to prefilter submission material to reduce total batch size.
 validate = true # Used to turn off validation for this side's chain.
-state_manager = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628"
+state_manager = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628" # Contract where actor emitted events are seen
+router = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628" # Contract where user emitted events are seen
 
 [host]
 eth_chain_id = "1"
@@ -16,7 +17,8 @@ endpoints = [ "ws://162.19.83.219:8546" ]
 sleep_duration = 15 # How long to wait before trying to get the next native block (in seconds)
 contract_addresses = [] # Used to prefilter submission material to reduce total batch size.
 validate = true # Used to turn off validation for this side's chain.
-state_manager = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628"
+state_manager = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628" # Contract where actor emitted events are seen
+router = "0xedB86cd455ef3ca43f0e227e00469C3bDFA40628" # Contract where user emitted events are seen
 
 [batching]
 host_batch_size = 1 # Max number of host blocks to batch before submission
