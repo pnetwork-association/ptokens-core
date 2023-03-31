@@ -355,13 +355,19 @@ mod tests {
             ..Default::default()
         };
         let logs = EthLogs::new(vec![log]);
-        let mut receipt = EthReceipt::default();
-        receipt.logs = logs;
+        let receipt = EthReceipt {
+            logs,
+            ..Default::default()
+        };
         let receipts = EthReceipts::new(vec![receipt]);
-        let mut sub_mat = EthSubmissionMaterial::default();
-        sub_mat.receipts = receipts.clone();
-        let mut batch = Batch::new();
-        batch.state_manager = address;
+        let sub_mat = EthSubmissionMaterial {
+            receipts: receipts.clone(),
+            ..Default::default()
+        };
+        let mut batch = Batch {
+            state_manager: address,
+            ..Default::default()
+        };
         batch.push(sub_mat);
         assert_eq!(batch.batch[0].receipts, receipts);
     }
@@ -375,13 +381,19 @@ mod tests {
             ..Default::default()
         };
         let logs = EthLogs::new(vec![log]);
-        let mut receipt = EthReceipt::default();
-        receipt.logs = logs;
+        let receipt = EthReceipt {
+            logs,
+            ..Default::default()
+        };
         let receipts = EthReceipts::new(vec![receipt]);
-        let mut sub_mat = EthSubmissionMaterial::default();
-        sub_mat.receipts = receipts;
-        let mut batch = Batch::new();
-        batch.state_manager = other_address;
+        let sub_mat = EthSubmissionMaterial {
+            receipts,
+            ..Default::default()
+        };
+        let mut batch = Batch {
+            state_manager: other_address,
+            ..Default::default()
+        };
         batch.push(sub_mat);
         assert!(batch.batch[0].receipts.is_empty());
     }
@@ -443,8 +455,10 @@ mod tests {
 
     #[test]
     fn should_get_native_side_correctly() {
-        let mut batch = Batch::default();
-        batch.side = BridgeSide::Native;
+        let batch = Batch {
+            side: BridgeSide::Native,
+            ..Default::default()
+        };
         let expected_result = BridgeSide::Native;
         let result = batch.side();
         assert_eq!(result, expected_result);
@@ -452,8 +466,10 @@ mod tests {
 
     #[test]
     fn should_get_host_side_correctly() {
-        let mut batch = Batch::default();
-        batch.side = BridgeSide::Host;
+        let batch = Batch {
+            side: BridgeSide::Host,
+            ..Default::default()
+        };
         let expected_result = BridgeSide::Host;
         let result = batch.side();
         assert_eq!(result, expected_result);

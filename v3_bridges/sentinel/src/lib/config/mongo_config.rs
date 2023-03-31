@@ -89,16 +89,13 @@ impl MongoConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+
     use crate::config::Config;
 
     #[test]
     fn should_get_mongo_config() {
-        match Config::new() {
-            Ok(_) => assert!(true),
-            Err(SentinelError::MongoDb(e)) => panic!("error getting config: {e}"),
-            Err(e) => panic!("wrong type of error received: {e}"),
-        }
+        let result = Config::new();
+        assert!(result.is_ok());
     }
 
     #[tokio::test]

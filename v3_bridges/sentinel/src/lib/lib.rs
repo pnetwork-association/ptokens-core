@@ -22,8 +22,7 @@ mod native_output;
 mod output;
 mod push_tx;
 mod test_utils;
-mod user_operation;
-mod user_operation_state;
+mod user_operations;
 mod utils;
 
 pub use self::{
@@ -59,8 +58,7 @@ pub use self::{
     native_output::NativeOutput,
     output::Output,
     push_tx::push_tx,
-    user_operation::{UnmatchedUserOps, UserOperation, UserOperations},
-    user_operation_state::UserOpState,
+    user_operations::{UnmatchedUserOps, UserOpState, UserOperation, UserOperations},
     utils::get_utc_timestamp,
 };
 

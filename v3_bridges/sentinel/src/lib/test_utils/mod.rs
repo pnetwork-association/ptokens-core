@@ -15,8 +15,8 @@ pub async fn get_test_ws_client() -> WsClient {
     let url = env::var(ENV_VAR)
         .map_err(|_| SentinelError::Custom("Please set env var '{ENV_VAR}' to a working endpoint!".into()))
         .unwrap();
-    let ws_client = get_rpc_client(&url).await.unwrap();
-    ws_client
+
+    get_rpc_client(&url).await.unwrap()
 }
 
 pub async fn get_test_endpoints() -> Endpoints {
