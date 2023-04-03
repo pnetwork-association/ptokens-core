@@ -57,10 +57,10 @@ impl ResetArgs {
 
 pub async fn reset_chain_cli(config: &SentinelConfig, cli_args: &ResetCliArgs) -> Result<String, SentinelError> {
     info!("Resetting chain...");
-    if !config.core_config.db_exists() {
+    if !config.core().db_exists() {
         return Err(SentinelError::Custom(format!(
             "Cannot find db @ path: '{}'",
-            config.core_config.db_path
+            config.core().db_path
         )));
     };
     let db = common_rocksdb::get_db_at_path(&config.get_db_path())?;
@@ -69,14 +69,14 @@ pub async fn reset_chain_cli(config: &SentinelConfig, cli_args: &ResetCliArgs) -
     let host_db_utils = EvmDbUtils::new(&db);
 
     let endpoints = if args.side.is_native() {
-        config.native_config.get_endpoints()
+        config.native().get_endpoints()
     } else {
-        config.host_config.get_endpoints()
+        config.host().get_endpoints()
     };
     let ws_client = if args.side.is_native() {
-        config.native_config.get_endpoints().get_rpc_client().await?
+        config.native().get_endpoints().get_rpc_client().await?
     } else {
-        config.host_config.get_endpoints().get_rpc_client().await?
+        config.host().get_endpoints().get_rpc_client().await?
     };
     let sub_mat = match args.block {
         Some(b) => b,

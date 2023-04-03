@@ -109,21 +109,21 @@ impl Batch {
         let res = Self {
             side,
             sleep_duration: if is_native {
-                config.native_config.get_sleep_duration()
+                config.native().get_sleep_duration()
             } else {
-                config.host_config.get_sleep_duration()
+                config.host().get_sleep_duration()
             },
             endpoints: if is_native {
-                config.native_config.get_endpoints()
+                config.native().get_endpoints()
             } else {
-                config.host_config.get_endpoints()
+                config.host().get_endpoints()
             },
-            batch_size: config.batching_config.get_batch_size(is_native),
-            batch_duration: config.batching_config.get_batch_duration(is_native),
+            batch_size: config.batching().get_batch_size(is_native),
+            batch_duration: config.batching().get_batch_duration(is_native),
             state_manager: if is_native {
-                config.native_config.get_state_manager()
+                config.native().get_state_manager()
             } else {
-                config.host_config.get_state_manager()
+                config.host().get_state_manager()
             },
             ..Default::default()
         };

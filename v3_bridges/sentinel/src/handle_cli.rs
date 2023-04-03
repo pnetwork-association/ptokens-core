@@ -23,8 +23,8 @@ use crate::{
 pub async fn handle_cli() -> Result<String, SentinelError> {
     let config = SentinelConfig::new()?;
 
-    if config.log_config.is_enabled() {
-        init_logger(&config.log_config)?;
+    if config.log().is_enabled() {
+        init_logger(&config.log())?;
     };
 
     let cli_args = CliArgs::parse();
@@ -36,11 +36,9 @@ pub async fn handle_cli() -> Result<String, SentinelError> {
         SubCommands::GetNonce(ref args) => get_nonce_cli(&config, args).await,
         SubCommands::ResetChain(ref args) => reset_chain_cli(&config, args).await,
         SubCommands::ProcessBlock(ref args) => process_block(&config, args).await,
-        SubCommands::GetHostSubMat(ref args) => get_host_sub_mat(&config.host_config.get_endpoints(), args).await,
-        SubCommands::GetHostLatestBlockNum => get_host_latest_block_num(&config.host_config.get_endpoints()).await,
-        SubCommands::GetNativeSubMat(ref args) => get_native_sub_mat(&config.native_config.get_endpoints(), args).await,
-        SubCommands::GetNativeLatestBlockNum => {
-            get_native_latest_block_num(&config.native_config.get_endpoints()).await
-        },
+        SubCommands::GetHostSubMat(ref args) => get_host_sub_mat(&config.host().get_endpoints(), args).await,
+        SubCommands::GetHostLatestBlockNum => get_host_latest_block_num(&config.host().get_endpoints()).await,
+        SubCommands::GetNativeSubMat(ref args) => get_native_sub_mat(&config.native().get_endpoints(), args).await,
+        SubCommands::GetNativeLatestBlockNum => get_native_latest_block_num(&config.native().get_endpoints()).await,
     }
 }

@@ -42,7 +42,7 @@ async fn main_loop(
 ) -> Result<(), SentinelError> {
     let mut debug_loop_counter = 0;
 
-    let sleep_duration = config.mongo_config.sleep_duration();
+    let sleep_duration = config.mongo().sleep_duration();
     let address = get_eth_address()?;
     let (n_msg, n_rx) = EthRpcMessages::get_nonce_msg(BridgeSide::Native, address);
     let (h_msg, h_rx) = EthRpcMessages::get_nonce_msg(BridgeSide::Host, address);
@@ -52,8 +52,8 @@ async fn main_loop(
     let mut n_nonce = n_rx.await??;
     let mut h_nonce = h_rx.await??;
 
-    let n_chain_id = config.native_config.get_eth_chain_id();
-    let h_chain_id = config.host_config.get_eth_chain_id();
+    let n_chain_id = config.native().get_eth_chain_id();
+    let h_chain_id = config.host().get_eth_chain_id();
 
     let n_state_manager = config.get_state_manager(&BridgeSide::Native);
     let h_state_manager = config.get_state_manager(&BridgeSide::Host);

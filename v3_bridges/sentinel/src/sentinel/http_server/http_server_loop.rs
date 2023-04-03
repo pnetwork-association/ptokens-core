@@ -94,6 +94,7 @@ async fn main_loop(
     let core_tx_3 = core_tx.clone();
     let mongo_tx_1 = mongo_tx.clone();
     let mongo_tx_2 = mongo_tx.clone();
+    let core_type = config.core().core_type;
 
     // GET /ping
     let ping = warp::path("ping").map(|| warp::reply::json(&json!({"result": "pTokens Sentinel pong"})));
@@ -101,7 +102,6 @@ async fn main_loop(
     // GET /state
     let state = warp::path("state").and_then(move || {
         let tx = core_tx_1.clone();
-        let core_type = config.core_config.core_type;
         #[allow(clippy::redundant_async_block)]
         async move {
             get_core_state_from_db(tx, &core_type).await
@@ -120,8 +120,8 @@ async fn main_loop(
     // GET /sync
     let sync = warp::path("sync").and_then(move || {
         let tx = core_tx_2.clone();
-        let h_endpoints = config.host_config.get_endpoints();
-        let n_endpoints = config.native_config.get_endpoints();
+        let h_endpoints = config.host().get_endpoints();
+        let n_endpoints = config.native().get_endpoints();
         #[allow(clippy::redundant_async_block)]
         async move {
             get_sync_status(&n_endpoints, &h_endpoints, tx).await

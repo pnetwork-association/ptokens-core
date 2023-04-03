@@ -18,10 +18,10 @@ pub async fn processor_loop<D: DatabaseInterface>(
     info!("Starting processor loop...");
 
     let mut heartbeats = Heartbeats::new();
-    let host_is_validating = config.host_config.is_validating();
-    let native_is_validating = config.native_config.is_validating();
-    let host_state_manager = config.host_config.get_state_manager();
-    let native_state_manager = config.native_config.get_state_manager();
+    let host_is_validating = config.host().is_validating();
+    let native_is_validating = config.native().is_validating();
+    let host_state_manager = config.host().get_state_manager();
+    let native_state_manager = config.native().get_state_manager();
 
     'processor_loop: loop {
         tokio::select! {

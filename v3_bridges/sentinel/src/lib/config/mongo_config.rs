@@ -51,9 +51,17 @@ impl MongoConfig {
     }
 
     pub async fn check_mongo_connection(&self) -> Result<(), SentinelError> {
-        self.get_db().await?.run_command(doc! {"ping": 1}, None).await?;
-        debug!("Mongo connected successfully");
-        Ok(())
+        let db = self.get_db().await?;
+        match db.run_command(doc! {"ping": 1}, None).await {
+            Ok(_) => {
+                debug!("Mongo connected successfully");
+                Ok(())
+            },
+            Err(e) => {
+                warn!("Could not connect to mongo db - please check your config!");
+                Err(e.into())
+            },
+        }
     }
 
     async fn get_db(&self) -> Result<Database, SentinelError> {

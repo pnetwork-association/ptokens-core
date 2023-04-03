@@ -2,6 +2,7 @@ use std::{result::Result, sync::Arc};
 
 use common::BridgeSide;
 use lib::{
+    check_init,
     flatten_join_handle,
     Batch,
     BroadcasterMessages,
@@ -31,8 +32,7 @@ pub async fn start_sentinel(
     sentinel_args: &StartSentinelArgs,
 ) -> Result<String, SentinelError> {
     let db = common_rocksdb::get_db_at_path(&config.get_db_path())?;
-    lib::check_init(&db)?;
-    // TODO check mongo!
+    check_init(&db)?;
     // TODO check endpoints!
     let wrapped_db = Arc::new(Mutex::new(db));
 
@@ -64,7 +64,7 @@ pub async fn start_sentinel(
 
     let core_thread = tokio::spawn(core_loop(wrapped_db.clone(), core_rx));
     let eth_rpc_thread = tokio::spawn(eth_rpc_loop(eth_rpc_rx, config.clone()));
-    let mongo_thread = tokio::spawn(mongo_loop(config.mongo_config.clone(), mongo_rx));
+    let mongo_thread = tokio::spawn(mongo_loop(config.mongo().clone(), mongo_rx));
     let broadcaster_thread = tokio::spawn(broadcaster_loop(
         broadcaster_rx,
         mongo_tx.clone(),

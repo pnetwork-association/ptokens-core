@@ -48,17 +48,41 @@ impl ConfigToml {
 
 #[derive(Debug, Clone)]
 pub struct Config {
-    pub log_config: LogConfig,
-    pub host_config: HostConfig,
-    pub core_config: CoreConfig,
-    pub mongo_config: MongoConfig,
-    pub native_config: NativeConfig,
-    pub batching_config: BatchingConfig,
+    log: LogConfig,
+    host: HostConfig,
+    core: CoreConfig,
+    mongo: MongoConfig,
+    native: NativeConfig,
+    batching: BatchingConfig,
 }
 
 impl Config {
+    pub fn mongo(&self) -> &MongoConfig {
+        &self.mongo
+    }
+
+    pub fn host(&self) -> &HostConfig {
+        &self.host
+    }
+
+    pub fn native(&self) -> &NativeConfig {
+        &self.native
+    }
+
+    pub fn log(&self) -> &LogConfig {
+        &self.log
+    }
+
+    pub fn core(&self) -> &CoreConfig {
+        &self.core
+    }
+
+    pub fn batching(&self) -> &BatchingConfig {
+        &self.batching
+    }
+
     pub fn get_db_path(&self) -> String {
-        self.core_config.get_db_path()
+        self.core().get_db_path()
     }
 
     pub fn new() -> Result<Self, SentinelError> {
@@ -69,32 +93,32 @@ impl Config {
 
     fn from_toml(toml: &ConfigToml) -> Result<Self, SentinelError> {
         Ok(Self {
-            log_config: LogConfig::from_toml(&toml.log)?,
-            core_config: CoreConfig::from_toml(&toml.core)?,
-            host_config: HostConfig::from_toml(&toml.host)?,
-            mongo_config: MongoConfig::from_toml(&toml.mongo),
-            native_config: NativeConfig::from_toml(&toml.native)?,
-            batching_config: BatchingConfig::from_toml(&toml.batching)?,
+            log: LogConfig::from_toml(&toml.log)?,
+            core: CoreConfig::from_toml(&toml.core)?,
+            host: HostConfig::from_toml(&toml.host)?,
+            mongo: MongoConfig::from_toml(&toml.mongo),
+            native: NativeConfig::from_toml(&toml.native)?,
+            batching: BatchingConfig::from_toml(&toml.batching)?,
         })
     }
 
     pub fn get_log_level(&self) -> LogLevel {
-        self.log_config.level
+        self.log.level
     }
 
     pub fn get_host_endpoints(&self) -> Endpoints {
-        self.host_config.get_endpoints()
+        self.host.get_endpoints()
     }
 
     pub fn get_native_endpoints(&self) -> Endpoints {
-        self.native_config.get_endpoints()
+        self.native.get_endpoints()
     }
 
     pub fn get_state_manager(&self, side: &BridgeSide) -> EthAddress {
         if side.is_native() {
-            self.native_config.get_state_manager()
+            self.native.get_state_manager()
         } else {
-            self.host_config.get_state_manager()
+            self.host.get_state_manager()
         }
     }
 }
