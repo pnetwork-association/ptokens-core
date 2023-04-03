@@ -570,6 +570,7 @@ dependencies = [
  "simple_logger",
  "strum",
  "strum_macros",
+ "thiserror",
  "tiny-keccak 2.0.2",
  "web3",
 ]

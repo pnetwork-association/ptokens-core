@@ -1,7 +1,6 @@
 use common::{
     constants::MIN_DATA_SENSITIVITY_LEVEL,
     core_type::CoreType,
-    errors::AppError,
     traits::DatabaseInterface,
     types::{Byte, Bytes, Result},
 };
@@ -245,11 +244,11 @@ impl DebugSignatories {
             .next()
             .is_none()
         {
-            Err(AppError::Json(self.to_signature_info_json(
+            Err(self.to_signature_info_json(
                 core_type,
                 debug_command_hash,
                 Some(signature),
-            )?))
+            )?.into())
         } else {
             Ok(())
         }
