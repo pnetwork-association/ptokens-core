@@ -23,9 +23,9 @@ pub enum SentinelError {
     ParseInt(std::num::ParseIntError),
     Endpoint(crate::endpoints::Error),
     TokioJoin(tokio::task::JoinError),
-    SentinelConfig(crate::config::Error),
     Logger(flexi_logger::FlexiLoggerError),
     JsonRpc(jsonrpsee::core::error::Error),
+    SentinelConfig(crate::config::ConfigError),
     RocksDb(common_rocksdb::RocksdbDatabaseError),
     BlockAlreadyInDb(common::BlockAlreadyInDbError),
     EncodePacked(ethers_core::abi::EncodePackedError),
@@ -173,8 +173,8 @@ impl From<tokio::task::JoinError> for SentinelError {
     }
 }
 
-impl From<crate::config::Error> for SentinelError {
-    fn from(err: crate::config::Error) -> Self {
+impl From<crate::config::ConfigError> for SentinelError {
+    fn from(err: crate::config::ConfigError) -> Self {
         Self::SentinelConfig(err)
     }
 }

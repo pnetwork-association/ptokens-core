@@ -2,7 +2,8 @@ use std::result::Result;
 
 use serde::Deserialize;
 
-use crate::{config::Error, SentinelError};
+use super::ConfigError;
+use crate::SentinelError;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct BatchingToml {
@@ -48,7 +49,7 @@ impl BatchingConfig {
         if batch_size > MIN && batch_size <= MAX {
             Ok(batch_size)
         } else {
-            Err(SentinelError::SentinelConfig(Error::BatchSize {
+            Err(SentinelError::SentinelConfig(ConfigError::BatchSize {
                 size: batch_size,
                 min: MIN,
                 max: MAX,
@@ -63,7 +64,7 @@ impl BatchingConfig {
         if batch_duration <= MAX {
             Ok(batch_duration)
         } else {
-            Err(SentinelError::SentinelConfig(Error::BatchDuration {
+            Err(SentinelError::SentinelConfig(ConfigError::BatchDuration {
                 max: MAX,
                 size: batch_duration,
             }))
@@ -104,7 +105,7 @@ mod tests {
         let mut toml = BatchingToml::default();
         let batch_size = u64::MAX;
         toml.host_batch_size = batch_size;
-        let expected_error = Error::BatchSize {
+        let expected_error = ConfigError::BatchSize {
             size: batch_size,
             min: 0,
             max: 1000,

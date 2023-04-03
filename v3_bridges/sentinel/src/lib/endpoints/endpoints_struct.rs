@@ -4,7 +4,7 @@ use common::BridgeSide;
 use derive_more::Constructor;
 use jsonrpsee::ws_client::WsClient;
 
-use crate::{config::Error, get_rpc_client, SentinelError};
+use crate::{config::ConfigError, get_rpc_client, SentinelError};
 
 #[derive(Debug, Default, Clone, Eq, PartialEq, Constructor)]
 pub struct Endpoints {
@@ -19,7 +19,7 @@ impl Endpoints {
         let endpoint_type = if self.is_native { "native" } else { "host" };
         info!("[+] Getting first {endpoint_type} endpoint...");
         if self.endpoints.is_empty() {
-            Err(SentinelError::SentinelConfig(Error::NoEndpoints(self.is_native)))
+            Err(SentinelError::SentinelConfig(ConfigError::NoEndpoints(self.side)))
         } else {
             Ok(self.endpoints[0].clone())
         }

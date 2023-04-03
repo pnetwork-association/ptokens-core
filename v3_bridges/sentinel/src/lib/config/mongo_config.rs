@@ -108,13 +108,15 @@ mod tests {
 
     #[tokio::test]
     async fn should_get_host_collection() {
-        let mongo_config = Config::new().unwrap().mongo_config;
+        let config = Config::new().unwrap();
+        let mongo_config = config.mongo();
         mongo_config.get_host_collection().await.unwrap();
     }
 
     #[tokio::test]
     async fn should_get_native_collection() {
-        let mongo_config = Config::new().unwrap().mongo_config;
+        let config = Config::new().unwrap();
+        let mongo_config = config.mongo();
         mongo_config.get_native_collection().await.unwrap();
     }
 }

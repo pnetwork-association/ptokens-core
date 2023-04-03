@@ -3,7 +3,8 @@ use std::result::Result;
 use log::Level as LogLevel;
 use serde::Deserialize;
 
-use crate::{config::Error, SentinelError};
+use super::ConfigError;
+use crate::SentinelError;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct LogToml {
@@ -48,7 +49,7 @@ impl LogConfig {
         if (MIN..=MAX).contains(&n) {
             Ok(n)
         } else {
-            Err(SentinelError::SentinelConfig(Error::LogNum {
+            Err(SentinelError::SentinelConfig(ConfigError::LogNum {
                 size: n,
                 max: MAX,
                 min: MIN,
@@ -62,7 +63,7 @@ impl LogConfig {
         if (MIN..=MAX).contains(&n) {
             Ok(n)
         } else {
-            Err(SentinelError::SentinelConfig(Error::LogSize {
+            Err(SentinelError::SentinelConfig(ConfigError::LogSize {
                 size: n,
                 max: MAX,
                 min: MIN,
