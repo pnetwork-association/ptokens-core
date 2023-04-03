@@ -6,7 +6,7 @@ use ethereum_types::Address as EthAddress;
 use jsonrpsee::{core::client::ClientT, rpc_params};
 use serde_json::json;
 
-use crate::{endpoints::Error, Endpoints, SentinelError};
+use crate::{endpoints::EndpointError, Endpoints, SentinelError};
 
 const JSON_RPC_CMD: &str = "eth_call";
 
@@ -24,7 +24,7 @@ pub async fn eth_call(
         .await;
     match res {
         Ok(ref s) => Ok(hex::decode(strip_hex_prefix(s))?),
-        Err(e) => Err(SentinelError::Endpoint(Error::Call(e))),
+        Err(e) => Err(SentinelError::Endpoint(EndpointError::Call(e))),
     }
 }
 

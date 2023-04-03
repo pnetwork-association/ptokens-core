@@ -27,7 +27,7 @@ pub use self::{
     constants::{MILLISECONDS_MULTIPLIER, USER_OPERATION_TOPIC},
     core_state::CoreState,
     db_utils::SentinelDbUtils,
-    endpoints::{check_endpoint, Endpoints, Error as EndpointError},
+    endpoints::{check_endpoint, EndpointError, Endpoints},
     error::SentinelError,
     eth_call::eth_call,
     eth_rpc_calls::{get_block, get_latest_block_num, get_nonce, get_receipts, get_sub_mat, push_tx},

@@ -122,7 +122,7 @@ mod tests {
         let mut toml = BatchingToml::default();
         let duration = u64::MAX;
         toml.host_batch_duration = duration;
-        let expected_error = Error::BatchDuration {
+        let expected_error = ConfigError::BatchDuration {
             size: duration,
             max: 600,
         };
