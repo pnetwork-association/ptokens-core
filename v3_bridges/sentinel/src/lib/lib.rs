@@ -17,7 +17,7 @@ mod messages;
 mod native_output;
 mod output;
 mod test_utils;
-mod user_operations;
+mod user_ops;
 mod utils;
 
 pub use self::{
@@ -48,7 +48,7 @@ pub use self::{
     },
     native_output::NativeOutput,
     output::Output,
-    user_operations::{UnmatchedUserOps, UserOpState, UserOperation, UserOperations},
+    user_ops::{UnmatchedUserOps, UserOpState, UserOperation, UserOperations},
     utils::get_utc_timestamp,
 };
 

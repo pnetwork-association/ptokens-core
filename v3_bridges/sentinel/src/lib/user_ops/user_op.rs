@@ -23,10 +23,11 @@ pub struct UserOperation {
     state: UserOpState,
     block_hash: EthHash,
     block_timestamp: u64,
+    user_operation: UserOp, // NOTE This remains separate since we can parse it entirely from the log
     bridge_side: BridgeSide,
     origin_network_id: Bytes,
     witnessed_timestamp: u64,
-    user_operation: UserOp, // NOTE This remains separate since we can parse it entirely from the log
+    previous_states: Vec<UserOpState>,
 }
 
 impl PartialEq for UserOperation {
@@ -145,6 +146,7 @@ impl UserOperation {
             block_hash,
             block_timestamp,
             witnessed_timestamp,
+            previous_states: vec![],
             user_operation: UserOp::try_from(log)?,
             origin_network_id: origin_network_id.to_vec(),
             state: UserOpState::Witnessed(bridge_side, tx_hash),

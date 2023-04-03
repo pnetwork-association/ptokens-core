@@ -24,7 +24,7 @@ pub async fn handle_cli() -> Result<String, SentinelError> {
     let config = SentinelConfig::new()?;
 
     if config.log().is_enabled() {
-        init_logger(&config.log())?;
+        init_logger(config.log())?;
     };
 
     let cli_args = CliArgs::parse();
