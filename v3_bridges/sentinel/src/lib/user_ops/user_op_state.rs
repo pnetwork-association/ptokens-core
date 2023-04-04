@@ -1,13 +1,15 @@
 use std::fmt;
 
-use common::BridgeSide;
+use common::{BridgeSide, Byte};
 use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
+use strum::IntoEnumIterator;
+use strum_macros::EnumIter;
 
 use super::UserOpError;
 
 #[repr(u8)]
-#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Serialize, Deserialize, EnumIter)]
 pub enum UserOpState {
     Witnessed(BridgeSide, EthHash) = 1,
     Enqueued(BridgeSide, EthHash) = 2,
@@ -46,6 +48,15 @@ impl UserOpState {
             Self::Witnessed(side, _) => Ok((self, Self::Cancelled(side, tx_hash))),
             Self::Enqueued(side, _) => Ok((self, Self::Cancelled(side, tx_hash))),
             op_state => Err(UserOpError::CannotCancel(op_state)),
+        }
+    }
+
+    pub fn to_bit_flag_idx(&self) -> u8 {
+        match self {
+            Self::Witnessed(..) => 0,
+            Self::Enqueued(..) => 1,
+            Self::Executed(..) => 2,
+            Self::Cancelled(..) => 3,
         }
     }
 }
