@@ -1,14 +1,116 @@
+use std::fmt;
+
 use common::{get_prefixed_db_key, Byte, Bytes, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
+use derive_more::{Constructor, Deref};
+use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 use crate::{SentinelError, UserOperations};
 
-type DbKey = [Byte; 32];
+pub trait DbUtilsT {
+    fn key(&self) -> DbKey;
+    fn sensitivity_level(&self) -> Option<Byte>;
+    fn bytes(&self) -> Result<Bytes, SentinelError>;
+    fn from_bytes(bytes: &[Byte]) -> Result<Self, SentinelError>
+    where
+        Self: Sized;
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deref, Serialize, Deserialize, Constructor)]
+pub struct DbKey([Byte; 32]);
+
+impl fmt::Display for DbKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "0x{}", hex::encode(&self.0))
+    }
+}
+
+impl From<[u8; 32]> for DbKey {
+    fn from(k: [u8; 32]) -> Self {
+        Self(k)
+    }
+}
+
+impl Into<Bytes> for DbKey {
+    fn into(self) -> Bytes {
+        self.to_vec()
+    }
+}
+
+impl Into<Bytes> for &DbKey {
+    fn into(self) -> Bytes {
+        self.to_vec()
+    }
+}
 
 macro_rules! create_db_keys {
     ($($name:ident),* $(,)?) => {
         lazy_static! {
+            static ref SENTINEL_DB_KEYS: SentinelDbKeys = SentinelDbKeys::new($($name.clone())*);
+            $(static ref $name: DbKey = get_prefixed_db_key(stringify!($name)).into();)*
+        }
+
+        paste! {
+            impl<'a, D: DatabaseInterface> SentinelDbUtils<'a, D> {
+                pub fn put<T: DbUtilsT>(&self, t: &T) -> Result<(), SentinelError> {
+                    Ok(self
+                        .db()
+                        .put(
+                            t.key().into(),
+                            t.bytes()?,
+                            t.sensitivity_level(),
+                        )?
+                    )
+                }
+
+                pub fn get_sensitive<T: DbUtilsT>(&self, key: &DbKey, sensitivity: Option<Byte>) -> Result<T, SentinelError> {
+                    let bs = self.db().get(
+                        key.into(),
+                        if sensitivity.is_none() {
+                            MIN_DATA_SENSITIVITY_LEVEL
+                        } else {
+                            sensitivity
+                        },
+                    )?;
+                    T::from_bytes(&bs)
+                }
+
+                pub fn get<T: DbUtilsT>(&self, key: &DbKey) -> Result<T, SentinelError> {
+                    self.get_sensitive(key, MIN_DATA_SENSITIVITY_LEVEL)
+                }
+
+                $(
+                    fn [< get_ $name:lower _key >]() -> &'a DbKey {
+                        &*$name
+                    }
+                )*
+            }
+
+            #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Constructor)]
+            pub struct SentinelDbKeys {
+                $([< $name:lower >]: DbKey,)*
+            }
+
+            impl fmt::Display for SentinelDbKeys {
+                fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                    let s = json!({
+                        $(stringify!($name): format!("0x{}", hex::encode(&self.[< $name:lower >].to_vec())),)*
+                    }).to_string();
+
+                    write!(f, "{s}")
+                }
+            }
+        }
+    }
+}
+
+create_db_keys!();
+
+macro_rules! create_db_stuff {
+    ($($name:ident),* $(,)?) => {
+        lazy_static! {
             $(
-                static ref $name: DbKey = get_prefixed_db_key(stringify!($name));
+                static ref $name: DbKey = get_prefixed_db_key(stringify!($name)).into();
             )*
         }
 
@@ -138,7 +240,7 @@ macro_rules! create_db_keys {
     }
 }
 
-create_db_keys!(HOST_USER_OPERATIONS, NATIVE_USER_OPERATIONS);
+create_db_stuff!(HOST_USER_OPERATIONS, NATIVE_USER_OPERATIONS);
 
 pub struct SentinelDbUtils<'a, D: DatabaseInterface>(&'a D);
 
