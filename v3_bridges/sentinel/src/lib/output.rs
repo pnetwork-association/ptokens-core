@@ -3,7 +3,7 @@ use std::fmt;
 use derive_more::Constructor;
 use serde::{Deserialize, Serialize};
 
-use crate::{HostOutput, NativeOutput, UserOperations};
+use crate::{HostOutput, NativeOutput, UserOps};
 
 #[derive(Clone, Debug, Default, Constructor, Serialize, Deserialize)]
 pub struct Output {
@@ -11,16 +11,16 @@ pub struct Output {
     native_timestamp: u64,
     host_latest_block_num: u64,
     native_latest_block_num: u64,
-    host_unmatched_user_ops: UserOperations,
-    native_unmatched_user_ops: UserOperations,
+    host_unmatched_user_ops: UserOps,
+    native_unmatched_user_ops: UserOps,
 }
 
 impl Output {
-    pub fn host_unmatched_user_ops(&self) -> UserOperations {
+    pub fn host_unmatched_user_ops(&self) -> UserOps {
         self.host_unmatched_user_ops.clone()
     }
 
-    pub fn native_unmatched_user_ops(&self) -> UserOperations {
+    pub fn native_unmatched_user_ops(&self) -> UserOps {
         self.native_unmatched_user_ops.clone()
     }
 }

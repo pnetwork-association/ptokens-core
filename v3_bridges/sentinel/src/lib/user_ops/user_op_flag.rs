@@ -2,12 +2,20 @@ use common::Byte;
 use derive_more::{Constructor, Deref};
 use serde::{Deserialize, Serialize};
 
-use super::UserOpState;
+use super::{UserOp, UserOpState};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Deref, Constructor, Serialize, Deserialize)]
-pub struct UserOpFlags(Byte);
+pub struct UserOpFlag(Byte);
 
-impl UserOpFlags {
+impl From<&UserOp> for UserOpFlag {
+    fn from(op: &UserOp) -> Self {
+        let mut s = Self::default();
+        s.set_flag(&op.state());
+        s
+    }
+}
+
+impl UserOpFlag {
     fn set_flag(&mut self, state: &UserOpState) {
         match state {
             UserOpState::Witnessed(..) => self.0 |= 0b0000_0001,
@@ -66,48 +74,48 @@ mod tests {
     use super::*;
 
     #[test]
-    fn default_should_have_no_flags_set() {
-        let user_op_flags = UserOpFlags::default();
+    fn default_should_have_no_flag_set() {
+        let user_op_flag = UserOpFlag::default();
         for n in 0..8 {
-            assert!(!user_op_flags.bit_is_set(n))
+            assert!(!user_op_flag.bit_is_set(n))
         }
     }
 
     #[test]
-    fn should_set_flags_for_each_state() {
+    fn should_set_flag_for_each_state() {
         let states = UserOpState::iter().collect::<Vec<UserOpState>>();
         for state in states {
-            let mut user_op_flags = UserOpFlags::default();
-            assert!(!user_op_flags.is_set(&state));
-            user_op_flags.set_flag(&state);
-            assert!(user_op_flags.is_set(&state));
+            let mut user_op_flag = UserOpFlag::default();
+            assert!(!user_op_flag.is_set(&state));
+            user_op_flag.set_flag(&state);
+            assert!(user_op_flag.is_set(&state));
         }
     }
 
     #[test]
     fn should_not_overflow_when_shifting() {
-        let user_op_flags = UserOpFlags::default();
+        let user_op_flag = UserOpFlag::default();
         let n = 155;
         assert!(n > 8);
-        let result = user_op_flags.bit_is_set(n);
+        let result = user_op_flag.bit_is_set(n);
         assert!(!result);
     }
 
     #[test]
-    fn should_be_able_to_have_multiple_flags_set() {
-        let mut user_op_flags = UserOpFlags::default();
+    fn should_be_able_to_have_multiple_flag_set() {
+        let mut user_op_flag = UserOpFlag::default();
         let side = BridgeSide::Native;
         let hash = EthHash::random();
         let s1 = UserOpState::Witnessed(side, hash);
         let s2 = UserOpState::Enqueued(side, hash);
-        user_op_flags.set_flag(&s1);
-        assert!(user_op_flags.is_set(&s1));
-        user_op_flags.set_flag(&s2);
-        assert!(user_op_flags.is_set(&s1));
-        assert!(user_op_flags.is_set(&s2));
-        assert!(user_op_flags.is_witnessed());
-        assert!(user_op_flags.is_enqueued());
-        assert!(!user_op_flags.is_executed());
-        assert!(!user_op_flags.is_cancelled());
+        user_op_flag.set_flag(&s1);
+        assert!(user_op_flag.is_set(&s1));
+        user_op_flag.set_flag(&s2);
+        assert!(user_op_flag.is_set(&s1));
+        assert!(user_op_flag.is_set(&s2));
+        assert!(user_op_flag.is_witnessed());
+        assert!(user_op_flag.is_enqueued());
+        assert!(!user_op_flag.is_executed());
+        assert!(!user_op_flag.is_cancelled());
     }
 }

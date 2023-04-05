@@ -6,12 +6,12 @@ use derive_more::{Constructor, Deref};
 use ethereum_types::Address as EthAddress;
 use serde::{Deserialize, Serialize};
 
-use crate::{get_utc_timestamp, SentinelError, UserOperation, USER_OPERATION_TOPIC};
+use crate::{get_utc_timestamp, SentinelError, UserOp, USER_OPERATION_TOPIC};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Deref, Serialize, Deserialize)]
-pub struct UserOperations(Vec<UserOperation>);
+pub struct UserOps(Vec<UserOp>);
 
-impl UserOperations {
+impl UserOps {
     pub fn add(&mut self, other: Self) {
         let a = self.0.clone();
         let b = other.0;
@@ -19,7 +19,7 @@ impl UserOperations {
     }
 
     pub fn remove_matches(self, other: Self) -> (Self, Self) {
-        let mut self_user_ops: Vec<UserOperation> = vec![];
+        let mut self_user_ops: Vec<UserOp> = vec![];
         let mut other_user_ops = other;
 
         for self_op in self.iter() {
@@ -58,7 +58,7 @@ impl UserOperations {
         let block_timestamp = sub_mat.get_timestamp().as_secs();
         let witnessed_timestamp = get_utc_timestamp()?;
 
-        let mut user_ops: Vec<UserOperation> = vec![];
+        let mut user_ops: Vec<UserOp> = vec![];
 
         for receipt in sub_mat.receipts.iter() {
             let tx_hash = receipt.transaction_hash;
@@ -66,7 +66,7 @@ impl UserOperations {
                 if !log.topics.is_empty() && &log.address == state_manager {
                     for topic in log.topics.iter() {
                         if topic == &*USER_OPERATION_TOPIC {
-                            let op = UserOperation::from_log(
+                            let op = UserOp::from_log(
                                 side,
                                 witnessed_timestamp,
                                 block_timestamp,
@@ -86,9 +86,9 @@ impl UserOperations {
     }
 }
 
-impl From<Vec<UserOperations>> for UserOperations {
-    fn from(v: Vec<UserOperations>) -> Self {
-        let mut user_ops: Vec<UserOperation> = vec![];
+impl From<Vec<UserOps>> for UserOps {
+    fn from(v: Vec<UserOps>) -> Self {
+        let mut user_ops: Vec<UserOp> = vec![];
         for ops in v.into_iter() {
             for op in ops.iter() {
                 user_ops.push(op.clone())
@@ -98,16 +98,16 @@ impl From<Vec<UserOperations>> for UserOperations {
     }
 }
 
-impl fmt::Display for UserOperations {
+impl fmt::Display for UserOps {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match serde_json::to_string_pretty(self) {
             Ok(s) => write!(f, "{s}"),
-            Err(e) => write!(f, "Error convert `UserOperations` to string: {e}",),
+            Err(e) => write!(f, "Error convert `UserOps` to string: {e}",),
         }
     }
 }
 
-impl FromStr for UserOperations {
+impl FromStr for UserOps {
     type Err = SentinelError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -115,7 +115,7 @@ impl FromStr for UserOperations {
     }
 }
 
-impl TryInto<Bytes> for UserOperations {
+impl TryInto<Bytes> for UserOps {
     type Error = SentinelError;
 
     fn try_into(self) -> Result<Bytes, Self::Error> {
@@ -123,7 +123,7 @@ impl TryInto<Bytes> for UserOperations {
     }
 }
 
-impl TryFrom<&[Byte]> for UserOperations {
+impl TryFrom<&[Byte]> for UserOps {
     type Error = SentinelError;
 
     fn try_from(b: &[Byte]) -> Result<Self, Self::Error> {
@@ -131,7 +131,7 @@ impl TryFrom<&[Byte]> for UserOperations {
     }
 }
 
-impl TryFrom<Bytes> for UserOperations {
+impl TryFrom<Bytes> for UserOps {
     type Error = SentinelError;
 
     fn try_from(b: Bytes) -> Result<Self, Self::Error> {
@@ -153,7 +153,7 @@ mod tests {
         let sepolia_network_id = hex::decode("e15503e4").unwrap();
         let state_manager = convert_hex_to_eth_address("b274d81a823c1912c6884e39c2e4e669e04c83f4").unwrap();
         let expected_result = 1;
-        let ops = UserOperations::from_sub_mat(side, &sub_mat, &state_manager, &sepolia_network_id).unwrap();
+        let ops = UserOps::from_sub_mat(side, &sub_mat, &state_manager, &sepolia_network_id).unwrap();
         let result = ops.len();
         assert_eq!(result, expected_result);
     }

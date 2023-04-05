@@ -1,15 +1,14 @@
 use std::fmt;
 
-use common::{BridgeSide, Byte};
+use common::BridgeSide;
 use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
-use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
 use super::UserOpError;
 
 #[repr(u8)]
-#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Serialize, Deserialize, EnumIter)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Serialize, Deserialize, EnumIter)]
 pub enum UserOpState {
     Witnessed(BridgeSide, EthHash) = 1,
     Enqueued(BridgeSide, EthHash) = 2,

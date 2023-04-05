@@ -4,7 +4,7 @@ use common::BridgeSide;
 use common_chain_ids::EthChainId;
 use common_eth::{EthPrivateKey, EthTransaction};
 use ethereum_types::Address as EthAddress;
-use lib::{BroadcasterMessages, EthRpcMessages, MongoMessages, SentinelConfig, SentinelError, UserOperation};
+use lib::{BroadcasterMessages, EthRpcMessages, MongoMessages, SentinelConfig, SentinelError, UserOp};
 use tokio::{
     sync::mpsc::{Receiver as MpscRx, Sender as MpscTx},
     time::{sleep, Duration},
@@ -24,7 +24,7 @@ fn get_tx(
     nonce: u64,
     chain_id: &EthChainId,
     state_manager: &EthAddress,
-    op: &UserOperation,
+    op: &UserOp,
 ) -> Result<EthTransaction, SentinelError> {
     let value = 0;
     let gas_limit = 1_000_000; // FIXME
@@ -74,7 +74,7 @@ async fn main_loop(
             eth_rpc_tx.send(msg).await?;
             let tx_hash = rx.await??;
             n_nonce += 1;
-            //n_unmatched = UserOperations::new(n_unmatched[1..].to_vec()); TODO update in the DB!
+            //n_unmatched = UserOps::new(n_unmatched[1..].to_vec()); TODO update in the DB!
             debug!("native tx pushed: {tx_hash}");
         }
 
@@ -86,7 +86,7 @@ async fn main_loop(
             eth_rpc_tx.send(msg).await?;
             let tx_hash = rx.await??;
             h_nonce += 1;
-            //h_unmatched = UserOperations::new(h_unmatched[1..].to_vec()); // TODO update in the DB
+            //h_unmatched = UserOps::new(h_unmatched[1..].to_vec()); // TODO update in the DB
             debug!("host tx pushed: {tx_hash}");
         }
 

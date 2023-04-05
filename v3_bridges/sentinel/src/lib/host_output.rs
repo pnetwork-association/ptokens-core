@@ -2,14 +2,14 @@ use std::{fmt, result::Result};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{get_utc_timestamp, SentinelError, UserOperations};
+use crate::{get_utc_timestamp, SentinelError, UserOps};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct HostOutput {
     timestamp: u64,
     latest_block_num: u64,
-    host_unmatched_user_ops: UserOperations,
-    native_unmatched_user_ops: UserOperations,
+    host_unmatched_user_ops: UserOps,
+    native_unmatched_user_ops: UserOps,
 }
 
 impl HostOutput {
@@ -17,8 +17,8 @@ impl HostOutput {
         Ok(Self {
             latest_block_num,
             timestamp: get_utc_timestamp()?,
-            host_unmatched_user_ops: UserOperations::empty(),
-            native_unmatched_user_ops: UserOperations::empty(),
+            host_unmatched_user_ops: UserOps::empty(),
+            native_unmatched_user_ops: UserOps::empty(),
         })
     }
 
@@ -30,12 +30,12 @@ impl HostOutput {
         self.latest_block_num
     }
 
-    pub fn add_unmatched_user_ops(&mut self, n: &UserOperations, h: &UserOperations) {
+    pub fn add_unmatched_user_ops(&mut self, n: &UserOps, h: &UserOps) {
         self.host_unmatched_user_ops = h.clone();
         self.native_unmatched_user_ops = n.clone();
     }
 
-    pub fn get_host_unmatched_user_ops(&self) -> UserOperations {
+    pub fn get_host_unmatched_user_ops(&self) -> UserOps {
         self.host_unmatched_user_ops.clone()
     }
 }

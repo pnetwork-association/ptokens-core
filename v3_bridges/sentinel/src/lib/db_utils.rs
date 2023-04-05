@@ -5,7 +5,7 @@ use derive_more::{Constructor, Deref};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::{SentinelError, UserOperations};
+use crate::{SentinelError, UserOps};
 
 pub trait DbUtilsT {
     fn key(&self) -> DbKey;
@@ -21,7 +21,7 @@ pub struct DbKey([Byte; 32]);
 
 impl fmt::Display for DbKey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "0x{}", hex::encode(&self.0))
+        write!(f, "0x{}", hex::encode(self.0))
     }
 }
 
@@ -31,15 +31,15 @@ impl From<[u8; 32]> for DbKey {
     }
 }
 
-impl Into<Bytes> for DbKey {
-    fn into(self) -> Bytes {
-        self.to_vec()
+impl From<DbKey> for Bytes {
+    fn from(val: DbKey) -> Self {
+        val.to_vec()
     }
 }
 
-impl Into<Bytes> for &DbKey {
-    fn into(self) -> Bytes {
-        self.to_vec()
+impl From<&DbKey> for Bytes {
+    fn from(val: &DbKey) -> Self {
+        val.to_vec()
     }
 }
 
@@ -125,23 +125,23 @@ macro_rules! create_db_stuff {
                         $name.to_vec()
                     }
 
-                    pub fn [< get_ $name:lower >](&self) -> Result<UserOperations, SentinelError> {
+                    pub fn [< get_ $name:lower >](&self) -> Result<UserOps, SentinelError> {
                         let result = self.db().get(
                             Self::[< get_ $name:lower _key >](),
                             MIN_DATA_SENSITIVITY_LEVEL
                         );
 
                         match result {
-                            Ok(bytes) => UserOperations::try_from(bytes),
+                            Ok(bytes) => UserOps::try_from(bytes),
                             Err(e) => {
                                 warn!("Error getting {} from db, defaulting to empty set: {e}", stringify!([< $name:camel >]));
-                                Ok(UserOperations::default())
+                                Ok(UserOps::default())
                             },
                         }
 
                     }
 
-                    pub fn [< put_ $name:lower >](&self, ops: UserOperations) -> Result<(), SentinelError> {
+                    pub fn [< put_ $name:lower >](&self, ops: UserOps) -> Result<(), SentinelError> {
                         self.db().put(
                             Self::[< get_ $name:lower _key >](),
                             ops.try_into()?,
@@ -150,14 +150,14 @@ macro_rules! create_db_stuff {
                         Ok(())
                     }
 
-                    pub fn [< replace_ $name:lower >](&self, ops: UserOperations) -> Result<(), SentinelError> {
+                    pub fn [< replace_ $name:lower >](&self, ops: UserOps) -> Result<(), SentinelError> {
                         let key = Self::[< get_ $name:lower _key >]();
                         self.db().delete(key.clone())?;
                         self.db().put(key, ops.try_into()?, MIN_DATA_SENSITIVITY_LEVEL)?;
                         Ok(())
                     }
 
-                    pub fn [< add_ $name:lower >](&self, ops: UserOperations) -> Result<(), SentinelError> {
+                    pub fn [< add_ $name:lower >](&self, ops: UserOps) -> Result<(), SentinelError> {
                         let mut ops_from_db = self.[< get_ $name:lower >]()?;
                         ops_from_db.add(ops);
                         self.[< put_ $name:lower >](ops_from_db)
@@ -179,7 +179,7 @@ macro_rules! create_db_stuff {
                         let db = get_test_database();
                         let db_utils = SentinelDbUtils::new(&db);
                         let result = db_utils.[< get_ $name:lower >]().unwrap();
-                        let expected_result = UserOperations::default();
+                        let expected_result = UserOps::default();
                         assert_eq!(result, expected_result);
                     }
 
@@ -189,7 +189,7 @@ macro_rules! create_db_stuff {
                         let db_utils = SentinelDbUtils::new(&db);
                         let mut x = UserOperation::default();
                         x.set_destination_account("some account".into());
-                        let expected_result = UserOperations::new(vec![x]);
+                        let expected_result = UserOps::new(vec![x]);
                         db_utils.[< put_ $name:lower >](expected_result.clone()).unwrap();
                         let result = db_utils.[< get_ $name:lower >]().unwrap();
                         assert_eq!(result, expected_result);
@@ -201,15 +201,15 @@ macro_rules! create_db_stuff {
                         let db_utils = SentinelDbUtils::new(&db);
                         let mut x = UserOperation::default();
                         x.set_destination_account("some account".into());
-                        let xs = UserOperations::new(vec![x.clone()]);
+                        let xs = UserOps::new(vec![x.clone()]);
                         db_utils.[< put_ $name:lower >](xs.clone()).unwrap();
                         let mut result = db_utils.[< get_ $name:lower >]().unwrap();
                         assert_eq!(result, xs);
                         let mut y = UserOperation::default();
                         y.set_destination_account("some other account".into());
-                        let ys = UserOperations::new(vec![y.clone()]);
+                        let ys = UserOps::new(vec![y.clone()]);
                         assert_ne!(x, y);
-                        let expected_result = UserOperations::new(vec![x, y]);
+                        let expected_result = UserOps::new(vec![x, y]);
                         db_utils.[< add_ $name:lower >](ys).unwrap();
                         result = db_utils.[< get_ $name:lower >]().unwrap();
                         assert_eq!(result, expected_result);
@@ -224,8 +224,8 @@ macro_rules! create_db_stuff {
                         let mut y = UserOperation::default();
                         y.set_destination_account("some other account".into());
                         assert_ne!(x, y);
-                        let xs = UserOperations::new(vec![x.clone()]);
-                        let ys = UserOperations::new(vec![y.clone()]);
+                        let xs = UserOps::new(vec![x.clone()]);
+                        let ys = UserOps::new(vec![y.clone()]);
                         assert_ne!(xs, ys);
                         db_utils.[< put_ $name:lower >](xs.clone()).unwrap();
                         let mut result = db_utils.[< get_ $name:lower >]().unwrap();

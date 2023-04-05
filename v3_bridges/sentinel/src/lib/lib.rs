@@ -48,7 +48,7 @@ pub use self::{
     },
     native_output::NativeOutput,
     output::Output,
-    user_ops::{UnmatchedUserOps, UserOpState, UserOperation, UserOperations},
+    user_ops::{UnmatchedUserOps, UserOp, UserOpState, UserOps},
     utils::get_utc_timestamp,
 };
 

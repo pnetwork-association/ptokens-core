@@ -3,7 +3,7 @@ use std::result::Result;
 use common::{BridgeSide, DatabaseInterface};
 use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials, NativeDbUtils};
 use ethereum_types::Address as EthAddress;
-use lib::{NativeOutput, SentinelDbUtils, SentinelError, UserOperations};
+use lib::{NativeOutput, SentinelDbUtils, SentinelError, UserOps};
 
 const SIDE: &str = "native";
 const ORIGIN_NETWORK_ID: Vec<u8> = vec![]; // FIXME calculate this!
@@ -16,7 +16,7 @@ pub fn process_native<D: DatabaseInterface>(
     is_validating: bool,
     use_db_tx: bool,
     dry_run: bool,
-) -> Result<UserOperations, SentinelError> {
+) -> Result<UserOps, SentinelError> {
     if use_db_tx {
         debug!("Starting db tx in host processor!");
         db.start_transaction()?;
@@ -33,19 +33,19 @@ pub fn process_native<D: DatabaseInterface>(
 
     if !is_in_sync {
         warn!("{SIDE} is not in sync, not processing receipts!");
-        return Ok(UserOperations::empty());
+        return Ok(UserOps::empty());
     }
 
     if sub_mat.receipts.is_empty() {
         debug!("Native block {n} had no receipts to process!");
-        return Ok(UserOperations::empty());
+        return Ok(UserOps::empty());
     }
 
     let r = if is_validating {
         sub_mat.receipts_are_valid()?;
-        UserOperations::from_sub_mat(BridgeSide::Native, sub_mat, state_manager, &ORIGIN_NETWORK_ID)?
+        UserOps::from_sub_mat(BridgeSide::Native, sub_mat, state_manager, &ORIGIN_NETWORK_ID)?
     } else {
-        UserOperations::empty()
+        UserOps::empty()
     };
 
     if use_db_tx {
@@ -69,7 +69,7 @@ pub fn process_native_batch<D: DatabaseInterface>(
     let use_db_tx = false;
     let dry_run = false;
 
-    let user_ops = UserOperations::from(
+    let user_ops = UserOps::from(
         batch
             .iter()
             .map(|sub_mat| {
@@ -83,7 +83,7 @@ pub fn process_native_batch<D: DatabaseInterface>(
                     dry_run,
                 )
             })
-            .collect::<Result<Vec<UserOperations>, SentinelError>>()?,
+            .collect::<Result<Vec<UserOps>, SentinelError>>()?,
     );
 
     let mut output = NativeOutput::new(batch.get_last_block_num()?)?;
