@@ -8,12 +8,33 @@ use serde_json::json;
 use crate::{SentinelError, UserOps};
 
 pub trait DbUtilsT {
-    fn key(&self) -> DbKey;
-    fn sensitivity_level(&self) -> Option<Byte>;
-    fn bytes(&self) -> Result<Bytes, SentinelError>;
+    fn key() -> DbKey;
+    fn sensitivity_level() -> Option<Byte>;
     fn from_bytes(bytes: &[Byte]) -> Result<Self, SentinelError>
     where
         Self: Sized;
+
+    // TODO have Deserialize in the where clause so we can impl this here in the trait.
+    fn bytes(&self) -> Result<Bytes, SentinelError>
+    where
+        Self: Serialize,
+    {
+        Ok(serde_json::to_vec(&self)?)
+    }
+
+    fn put<D: DatabaseInterface>(&self, db_utils: &SentinelDbUtils<D>) -> Result<(), SentinelError>
+    where
+        Self: Sized + Serialize,
+    {
+        db_utils.put(self)
+    }
+
+    fn get<D: DatabaseInterface>(db_utils: &SentinelDbUtils<D>) -> Result<Self, SentinelError>
+    where
+        Self: Sized,
+    {
+        db_utils.get_sensitive(&Self::key(), Self::sensitivity_level())
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deref, Serialize, Deserialize, Constructor)]
@@ -46,19 +67,19 @@ impl From<&DbKey> for Bytes {
 macro_rules! create_db_keys {
     ($($name:ident),* $(,)?) => {
         lazy_static! {
-            static ref SENTINEL_DB_KEYS: SentinelDbKeys = SentinelDbKeys::new($($name.clone())*);
-            $(static ref $name: DbKey = get_prefixed_db_key(stringify!($name)).into();)*
+            pub(crate) static ref SENTINEL_DB_KEYS: SentinelDbKeys = SentinelDbKeys::new($($name.clone())*);
+            pub(crate) $(static ref $name: DbKey = get_prefixed_db_key(stringify!($name)).into();)*
         }
 
         paste! {
             impl<'a, D: DatabaseInterface> SentinelDbUtils<'a, D> {
-                pub fn put<T: DbUtilsT>(&self, t: &T) -> Result<(), SentinelError> {
+                pub fn put<T: DbUtilsT + Serialize>(&self, t: &T) -> Result<(), SentinelError> {
                     Ok(self
                         .db()
                         .put(
-                            t.key().into(),
+                            T::key().into(),
                             t.bytes()?,
-                            t.sensitivity_level(),
+                            T::sensitivity_level(),
                         )?
                     )
                 }
@@ -104,7 +125,7 @@ macro_rules! create_db_keys {
     }
 }
 
-create_db_keys!();
+create_db_keys!(USER_OP_LIST);
 
 macro_rules! create_db_stuff {
     ($($name:ident),* $(,)?) => {
@@ -169,7 +190,7 @@ macro_rules! create_db_stuff {
         #[cfg(test)]
         mod tests {
             use super::*;
-            use crate::UserOperation;
+            use crate::UserOp;
             use common::get_test_database;
 
             paste! {
@@ -187,7 +208,7 @@ macro_rules! create_db_stuff {
                     fn [< should_get_and_put_ $name:lower _in_db>]() {
                         let db = get_test_database();
                         let db_utils = SentinelDbUtils::new(&db);
-                        let mut x = UserOperation::default();
+                        let mut x = UserOp::default();
                         x.set_destination_account("some account".into());
                         let expected_result = UserOps::new(vec![x]);
                         db_utils.[< put_ $name:lower >](expected_result.clone()).unwrap();
@@ -199,13 +220,13 @@ macro_rules! create_db_stuff {
                     fn [< should_add_ $name:lower in_db>]() {
                         let db = get_test_database();
                         let db_utils = SentinelDbUtils::new(&db);
-                        let mut x = UserOperation::default();
+                        let mut x = UserOp::default();
                         x.set_destination_account("some account".into());
                         let xs = UserOps::new(vec![x.clone()]);
                         db_utils.[< put_ $name:lower >](xs.clone()).unwrap();
                         let mut result = db_utils.[< get_ $name:lower >]().unwrap();
                         assert_eq!(result, xs);
-                        let mut y = UserOperation::default();
+                        let mut y = UserOp::default();
                         y.set_destination_account("some other account".into());
                         let ys = UserOps::new(vec![y.clone()]);
                         assert_ne!(x, y);
@@ -219,9 +240,9 @@ macro_rules! create_db_stuff {
                     fn [< should_replace_ $name:lower _in_db >]() {
                         let db = get_test_database();
                         let db_utils = SentinelDbUtils::new(&db);
-                        let mut x = UserOperation::default();
+                        let mut x = UserOp::default();
                         x.set_destination_account("some account".into());
-                        let mut y = UserOperation::default();
+                        let mut y = UserOp::default();
                         y.set_destination_account("some other account".into());
                         assert_ne!(x, y);
                         let xs = UserOps::new(vec![x.clone()]);
