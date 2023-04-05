@@ -2,14 +2,15 @@ use std::fmt;
 
 use common::{get_prefixed_db_key, Byte, Bytes, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
 use derive_more::{Constructor, Deref};
+use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{SentinelError, UserOps};
 
 pub trait DbUtilsT {
-    fn key() -> DbKey;
-    fn sensitivity_level() -> Option<Byte>;
+    fn key(&self) -> Result<DbKey, SentinelError>;
+    fn sensitivity() -> Option<Byte>;
     fn from_bytes(bytes: &[Byte]) -> Result<Self, SentinelError>
     where
         Self: Sized;
@@ -22,18 +23,18 @@ pub trait DbUtilsT {
         Ok(serde_json::to_vec(&self)?)
     }
 
-    fn put<D: DatabaseInterface>(&self, db_utils: &SentinelDbUtils<D>) -> Result<(), SentinelError>
+    fn put_in_db<D: DatabaseInterface>(&self, db_utils: &SentinelDbUtils<D>) -> Result<(), SentinelError>
     where
         Self: Sized + Serialize,
     {
-        db_utils.put(self)
+        db_utils.put(self, &self.key()?)
     }
 
-    fn get<D: DatabaseInterface>(db_utils: &SentinelDbUtils<D>) -> Result<Self, SentinelError>
+    fn get_from_db<D: DatabaseInterface>(db_utils: &SentinelDbUtils<D>, key: DbKey) -> Result<Self, SentinelError>
     where
         Self: Sized,
     {
-        db_utils.get_sensitive(&Self::key(), Self::sensitivity_level())
+        db_utils.get_sensitive(&key, Self::sensitivity())
     }
 }
 
@@ -49,6 +50,12 @@ impl fmt::Display for DbKey {
 impl From<[u8; 32]> for DbKey {
     fn from(k: [u8; 32]) -> Self {
         Self(k)
+    }
+}
+
+impl From<EthHash> for DbKey {
+    fn from(h: EthHash) -> Self {
+        Self(h.0)
     }
 }
 
@@ -73,13 +80,13 @@ macro_rules! create_db_keys {
 
         paste! {
             impl<'a, D: DatabaseInterface> SentinelDbUtils<'a, D> {
-                pub fn put<T: DbUtilsT + Serialize>(&self, t: &T) -> Result<(), SentinelError> {
+                pub fn put<T: DbUtilsT + Serialize>(&self, t: &T, key: &DbKey) -> Result<(), SentinelError> {
                     Ok(self
                         .db()
                         .put(
-                            T::key().into(),
+                            key.into(),
                             t.bytes()?,
-                            T::sensitivity_level(),
+                            T::sensitivity(),
                         )?
                     )
                 }

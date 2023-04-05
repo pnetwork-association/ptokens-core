@@ -1,16 +1,26 @@
+use std::cmp::Ordering;
+
 use common::Byte;
 use derive_more::{Constructor, Deref};
 use serde::{Deserialize, Serialize};
 
 use super::{UserOp, UserOpState};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Deref, Constructor, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, PartialOrd, Deref, Constructor, Serialize, Deserialize)]
 pub struct UserOpFlag(Byte);
 
 impl From<&UserOp> for UserOpFlag {
     fn from(op: &UserOp) -> Self {
         let mut s = Self::default();
         s.set_flag(&op.state());
+        s
+    }
+}
+
+impl From<&UserOpState> for UserOpFlag {
+    fn from(state: &UserOpState) -> Self {
+        let mut s = Self::default();
+        s.set_flag(&state);
         s
     }
 }
@@ -56,11 +66,11 @@ impl UserOpFlag {
         self.bit_is_set(1)
     }
 
-    fn is_executed(&self) -> bool {
+    pub fn is_executed(&self) -> bool {
         self.bit_is_set(2)
     }
 
-    fn is_cancelled(&self) -> bool {
+    pub fn is_cancelled(&self) -> bool {
         self.bit_is_set(3)
     }
 }
@@ -117,5 +127,16 @@ mod tests {
         assert!(user_op_flag.is_enqueued());
         assert!(!user_op_flag.is_executed());
         assert!(!user_op_flag.is_cancelled());
+    }
+
+    #[test]
+    fn flags_should_be_orderable() {
+        let states = UserOpState::iter().collect::<Vec<UserOpState>>();
+        let flags = states.iter().map(UserOpFlag::from).collect::<Vec<_>>();
+        flags.iter().enumerate().for_each(|(i, flag)| {
+            if i < flags.len() - 1 {
+                assert!(flag < &flags[i + 1])
+            }
+        })
     }
 }

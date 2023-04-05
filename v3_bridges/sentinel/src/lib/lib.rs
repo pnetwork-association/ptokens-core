@@ -26,7 +26,7 @@ pub use self::{
     config::{Config as SentinelConfig, ConfigT, HostConfig, MongoConfig, NativeConfig},
     constants::{MILLISECONDS_MULTIPLIER, USER_OPERATION_TOPIC},
     core_state::CoreState,
-    db_utils::SentinelDbUtils,
+    db_utils::{DbKey, DbUtilsT, SentinelDbUtils},
     endpoints::{check_endpoint, EndpointError, Endpoints},
     error::SentinelError,
     eth_call::eth_call,

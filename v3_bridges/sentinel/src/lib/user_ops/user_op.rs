@@ -1,6 +1,6 @@
 use std::{convert::TryFrom, fmt};
 
-use common::{BridgeSide, Byte, Bytes};
+use common::{BridgeSide, Byte, Bytes, MIN_DATA_SENSITIVITY_LEVEL};
 use common_eth::{encode_fxn_call, EthLog, EthLogExt};
 use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType, Token as EthAbiToken};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
@@ -9,7 +9,21 @@ use serde::{Deserialize, Serialize};
 use tiny_keccak::{Hasher, Keccak};
 
 use super::{UserOpFlag, UserOpLog, UserOpState};
-use crate::SentinelError;
+use crate::{DbKey, DbUtilsT, SentinelError};
+
+impl DbUtilsT for UserOp {
+    fn key(&self) -> Result<DbKey, SentinelError> {
+        Ok(self.to_uid()?.into())
+    }
+
+    fn sensitivity() -> Option<Byte> {
+        MIN_DATA_SENSITIVITY_LEVEL
+    }
+
+    fn from_bytes(bytes: &[Byte]) -> Result<Self, SentinelError> {
+        Ok(serde_json::from_slice(bytes)?)
+    }
+}
 
 #[cfg(test)]
 impl UserOp {
