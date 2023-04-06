@@ -1,5 +1,6 @@
-use common::Byte;
+use common::{BridgeSide, Byte};
 use derive_more::{Constructor, Deref};
+use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 
 use super::{UserOp, UserOpState};
@@ -20,6 +21,31 @@ impl From<&UserOpState> for UserOpFlag {
         let mut s = Self::default();
         s.set_flag(state);
         s
+    }
+}
+
+impl From<&UserOpFlag> for UserOpState {
+    fn from(flag: &UserOpFlag) -> Self {
+        let n: u8 = **flag;
+        let side = BridgeSide::default();
+        let zero_hash = EthHash::default();
+
+        let max_witnessed: u8 = 0b0000_0001;
+        let max_enqueued: u8 = 0b0000_0011;
+        let max_executed: u8 = 0b0000_0111;
+
+        match n {
+            _x if n <= max_witnessed => Self::Witnessed(side, zero_hash),
+            _x if n <= max_enqueued => Self::Enqueued(side, zero_hash),
+            _x if n <= max_executed => Self::Executed(side, zero_hash),
+            _ => Self::Cancelled(side, zero_hash),
+        }
+    }
+}
+
+impl From<UserOpFlag> for UserOpState {
+    fn from(flag: UserOpFlag) -> Self {
+        Self::from(&flag)
     }
 }
 
@@ -57,13 +83,11 @@ impl UserOpFlag {
         }
     }
 
-    #[allow(unused)]
-    fn is_witnessed(&self) -> bool {
+    pub fn is_witnessed(&self) -> bool {
         self.bit_is_set(0)
     }
 
-    #[allow(unused)]
-    fn is_enqueued(&self) -> bool {
+    pub fn is_enqueued(&self) -> bool {
         self.bit_is_set(1)
     }
 
@@ -139,5 +163,13 @@ mod tests {
                 assert!(flag < &flags[i + 1])
             }
         })
+    }
+
+    #[test]
+    fn flags_should_convert_to_state_correctly() {
+        let states = UserOpState::iter().collect::<Vec<UserOpState>>();
+        let flags = states.iter().map(UserOpFlag::from).collect::<Vec<_>>();
+        let result = flags.iter().map(|f| f.into()).collect::<Vec<UserOpState>>();
+        assert_eq!(result, states);
     }
 }
