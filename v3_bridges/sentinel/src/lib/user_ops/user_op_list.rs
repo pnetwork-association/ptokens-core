@@ -1,5 +1,3 @@
-#![allow(unused)] // FIXME rm
-                  //
 use std::{cmp::PartialEq, fmt};
 
 use common::{Byte, Bytes, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
@@ -7,7 +5,7 @@ use derive_more::{Constructor, Deref, DerefMut};
 use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 
-use super::{UserOp, UserOpError, UserOpFlag, UserOps};
+use super::{UserOp, UserOpError, UserOpFlag, UserOpState, UserOps};
 use crate::{
     db_utils::{DbKey, DbUtilsT, USER_OP_LIST},
     get_utc_timestamp,
@@ -93,48 +91,71 @@ impl UserOpList {
         None
     }
 
-    fn process_op<D: DatabaseInterface>(db_utils: &SentinelDbUtils<D>, op: &UserOp) -> Result<(), UserOpError> {
-        let uid = op.to_uid()?;
-        let entry = UserOpListEntry::try_from(op)?;
-        let flag = op.to_flag();
-        let mut list = Self::get_from_db(db_utils, USER_OP_LIST.clone())?;
-
-        match list.get(&uid) {
-            Some(entry) => {
-                debug!("user op found in db");
-                if entry.flag.is_cancelled() {
-                    warn!("user op found in db is cancelled - doing nothing");
-                    Ok(())
-                } else if entry.flag.is_executed() {
-                    warn!("user op found in db is already exectuted - doing nothing");
-                    Ok(())
-                } else if entry.flag >= flag {
-                    warn!("user op entry is <= that one in the database - doing nothing");
-                    Ok(())
-                } else if entry.flag < flag {
-                    unimplemented!("TODO");
-                    // if exist op is < this op, update existing one in the db, and update this list with new
-                    // flag & timestamp etc
-                    Ok(())
-                } else {
-                    Err(UserOpError::Process("Should never reach here!".into()))
-                }
+    fn handle_is_not_in_list<D: DatabaseInterface>(
+        db_utils: &SentinelDbUtils<D>,
+        op: UserOp,
+        mut list: Self,
+    ) -> Result<Option<UserOp>, UserOpError> {
+        match op.state() {
+            UserOpState::Enqueued(..) => {
+                warn!("enqueued event found but not witnessed!");
+                // NOTE: We return this because it'll require a cancellation signature
+                Ok(Some(op))
             },
-            None => {
-                debug!("Adding new user op to db");
-                list.push(entry);
+            _ => {
+                debug!("adding user op to db: {op}");
+                list.push(UserOpListEntry::try_from(&op)?);
                 op.put_in_db(db_utils)?;
                 list.put_in_db(db_utils)?;
+                Ok(None)
+            },
+        }
+    }
+
+    fn handle_is_in_list<D: DatabaseInterface>(
+        db_utils: &SentinelDbUtils<D>,
+        op: UserOp,
+        mut list: Self,
+        list_entry_from_db: UserOpListEntry,
+    ) -> Result<(), UserOpError> {
+        debug!("user op found in db");
+        let user_op_state = op.state();
+        let db_user_op_state: UserOpState = list_entry_from_db.flag.into();
+
+        match (db_user_op_state, user_op_state) {
+            (a, b) if a >= b => {
+                warn!("user op already in db in same or more advanced state - doing nothing");
+                Ok(())
+            },
+            _ => {
+                debug!("updating user op in db to {op}");
+                op.update_in_db(db_utils)?;
                 Ok(())
             },
         }
     }
 
-    fn process_ops<D: DatabaseInterface>(db_utils: &SentinelDbUtils<D>, ops: UserOps) -> Result<(), UserOpError> {
-        ops.iter()
-            .map(|op| Self::process_op(db_utils, op))
-            .collect::<Result<Vec<_>, UserOpError>>()?;
-        Ok(())
+    fn process_op<D: DatabaseInterface>(
+        db_utils: &SentinelDbUtils<D>,
+        op: UserOp,
+    ) -> Result<Option<UserOp>, UserOpError> {
+        let list = Self::get_from_db(db_utils, &USER_OP_LIST)?;
+        if let Some(entry) = list.get(&op.to_uid()?) {
+            Self::handle_is_in_list(db_utils, op, list, entry)?;
+            Ok(None)
+        } else {
+            Self::handle_is_not_in_list(db_utils, op, list)
+        }
+    }
+
+    fn process_ops<D: DatabaseInterface>(db_utils: &SentinelDbUtils<D>, ops: UserOps) -> Result<UserOps, UserOpError> {
+        let mut ops_to_cancel = vec![];
+        for op in ops.iter().cloned() {
+            if let Some(returned_op) = Self::process_op(db_utils, op)? {
+                ops_to_cancel.push(returned_op)
+            }
+        }
+        Ok(UserOps::new(ops_to_cancel))
     }
 }
 
