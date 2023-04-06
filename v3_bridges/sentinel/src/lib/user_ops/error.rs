@@ -9,4 +9,13 @@ pub enum UserOpError {
 
     #[error("cannot cancel user op state from: '{0}'")]
     CannotCancel(UserOpState),
+
+    #[error("user op processing error: {0}")]
+    Process(String),
+
+    #[error("{0}")]
+    Sentinel(#[from] crate::SentinelError),
+
+    #[error("infallible error: {0}")]
+    Infallible(#[from] std::convert::Infallible),
 }

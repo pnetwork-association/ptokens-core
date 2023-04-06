@@ -1,3 +1,5 @@
+#![allow(unused)] // FIXME rm
+                  //
 use std::{cmp::PartialEq, fmt};
 
 use common::{Byte, Bytes, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
@@ -5,7 +7,7 @@ use derive_more::{Constructor, Deref, DerefMut};
 use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 
-use super::{UserOp, UserOpFlag};
+use super::{UserOp, UserOpError, UserOpFlag, UserOps};
 use crate::{
     db_utils::{DbKey, DbUtilsT, USER_OP_LIST},
     get_utc_timestamp,
@@ -21,14 +23,14 @@ pub struct UserOpListEntry {
 }
 
 impl PartialEq for UserOpListEntry {
-    // NOTE: We only are about the uid when testing for equality!
     fn eq(&self, other: &Self) -> bool {
+        // NOTE: We only are about the uid when testing for equality!
         self.uid == other.uid
     }
 }
 
 impl TryFrom<&UserOp> for UserOpListEntry {
-    type Error = SentinelError;
+    type Error = UserOpError;
 
     fn try_from(o: &UserOp) -> Result<Self, Self::Error> {
         Ok(Self::new(o.to_uid()?, get_utc_timestamp()?, o.to_flag()))
@@ -91,15 +93,11 @@ impl UserOpList {
         None
     }
 
-    fn process_op<D: DatabaseInterface>(
-        mut self,
-        db_utils: &SentinelDbUtils<D>,
-        op: UserOp,
-    ) -> Result<(), SentinelError> {
+    fn process_op<D: DatabaseInterface>(db_utils: &SentinelDbUtils<D>, op: &UserOp) -> Result<(), UserOpError> {
         let uid = op.to_uid()?;
-        let entry = UserOpListEntry::try_from(&op)?;
+        let entry = UserOpListEntry::try_from(op)?;
         let flag = op.to_flag();
-        let mut list = Self::get_from_db(&db_utils, self.key()?)?;
+        let mut list = Self::get_from_db(db_utils, USER_OP_LIST.clone())?;
 
         match list.get(&uid) {
             Some(entry) => {
@@ -111,25 +109,32 @@ impl UserOpList {
                     warn!("user op found in db is already exectuted - doing nothing");
                     Ok(())
                 } else if entry.flag >= flag {
-                    //  if existing op is > this op, do nothing. (why have we gone back in time though??)
+                    warn!("user op entry is <= that one in the database - doing nothing");
                     Ok(())
                 } else if entry.flag < flag {
-                    //  if exist op is < this op, update existing one in the db, and update this list with new
-                    //  flag & timestamp etc
+                    unimplemented!("TODO");
+                    // if exist op is < this op, update existing one in the db, and update this list with new
+                    // flag & timestamp etc
                     Ok(())
                 } else {
-                    Err(SentinelError::Custom("Should never reach here!".into())) // FIXME make error type for this
-                                                                                  // stuff
+                    Err(UserOpError::Process("Should never reach here!".into()))
                 }
             },
             None => {
                 debug!("Adding new user op to db");
                 list.push(entry);
-                op.put_in_db(&db_utils)?;
-                list.put_in_db(&db_utils)?;
+                op.put_in_db(db_utils)?;
+                list.put_in_db(db_utils)?;
                 Ok(())
             },
         }
+    }
+
+    fn process_ops<D: DatabaseInterface>(db_utils: &SentinelDbUtils<D>, ops: UserOps) -> Result<(), UserOpError> {
+        ops.iter()
+            .map(|op| Self::process_op(db_utils, op))
+            .collect::<Result<Vec<_>, UserOpError>>()?;
+        Ok(())
     }
 }
 

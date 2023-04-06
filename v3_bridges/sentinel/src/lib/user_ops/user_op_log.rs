@@ -1,14 +1,11 @@
-use std::{convert::TryFrom, fmt};
+use std::convert::TryFrom;
 
-use common::{BridgeSide, Byte, Bytes};
-use common_eth::{encode_fxn_call, EthLog, EthLogExt};
+use common::Bytes;
+use common_eth::{EthLog, EthLogExt};
 use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType, Token as EthAbiToken};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
-use ethers_core::abi::{self, Token};
 use serde::{Deserialize, Serialize};
-use tiny_keccak::{Hasher, Keccak};
 
-use super::{UserOp, UserOpFlag, UserOpState};
 use crate::SentinelError;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]

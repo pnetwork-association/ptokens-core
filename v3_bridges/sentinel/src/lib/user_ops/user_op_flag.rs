@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-
 use common::Byte;
 use derive_more::{Constructor, Deref};
 use serde::{Deserialize, Serialize};
@@ -20,7 +18,7 @@ impl From<&UserOp> for UserOpFlag {
 impl From<&UserOpState> for UserOpFlag {
     fn from(state: &UserOpState) -> Self {
         let mut s = Self::default();
-        s.set_flag(&state);
+        s.set_flag(state);
         s
     }
 }
@@ -35,6 +33,7 @@ impl UserOpFlag {
         }
     }
 
+    #[allow(unused)]
     fn is_set(&self, state: &UserOpState) -> bool {
         self.bit_is_set(state.to_bit_flag_idx())
     }
@@ -58,10 +57,12 @@ impl UserOpFlag {
         }
     }
 
+    #[allow(unused)]
     fn is_witnessed(&self) -> bool {
         self.bit_is_set(0)
     }
 
+    #[allow(unused)]
     fn is_enqueued(&self) -> bool {
         self.bit_is_set(1)
     }

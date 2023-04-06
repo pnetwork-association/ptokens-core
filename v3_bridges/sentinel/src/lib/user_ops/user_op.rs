@@ -1,8 +1,8 @@
 use std::{convert::TryFrom, fmt};
 
 use common::{BridgeSide, Byte, Bytes, MIN_DATA_SENSITIVITY_LEVEL};
-use common_eth::{encode_fxn_call, EthLog, EthLogExt};
-use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType, Token as EthAbiToken};
+use common_eth::{encode_fxn_call, EthLog};
+use ethabi::Token as EthAbiToken;
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use ethers_core::abi::{self, Token};
 use serde::{Deserialize, Serialize};
