@@ -114,9 +114,16 @@ macro_rules! create_db_keys {
                 )*
             }
 
-            #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Constructor)]
+            #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
             pub struct SentinelDbKeys {
                 $([< $name:lower >]: DbKey,)*
+            }
+
+            impl SentinelDbKeys {
+                pub fn new($([< $name:lower >]: DbKey,)*) -> Self {
+                    Self { $([< $name:lower >])*, }
+                }
+
             }
 
             impl fmt::Display for SentinelDbKeys {

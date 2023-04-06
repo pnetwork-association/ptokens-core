@@ -4,6 +4,9 @@ use crate::{BroadcasterMessages, CoreMessages, EthRpcMessages, MongoMessages, Pr
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("{0}")]
+    NetworkId(#[from] crate::network_id::NetworkIdError),
+
     #[error("poisoned lock encountered")]
     PoisonedLock,
 

@@ -18,6 +18,7 @@ path = "src/main.rs"
 non-validating = ["common/non-validating"] # NOTE: Disables block & recepit validation
 
 [dependencies]
+sha3 = "0.10.6"
 log = "0.4.17"
 warp = "0.3.3"
 config = "0.13.3"

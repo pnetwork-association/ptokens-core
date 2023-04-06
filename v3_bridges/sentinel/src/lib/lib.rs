@@ -15,6 +15,7 @@ mod host_output;
 mod logging;
 mod messages;
 mod native_output;
+mod network_id;
 mod output;
 mod test_utils;
 mod user_ops;
@@ -47,6 +48,7 @@ pub use self::{
         SyncerMessages,
     },
     native_output::NativeOutput,
+    network_id::NetworkId,
     output::Output,
     user_ops::{UnmatchedUserOps, UserOp, UserOpState, UserOps},
     utils::get_utc_timestamp,
