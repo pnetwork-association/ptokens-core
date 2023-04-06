@@ -7,6 +7,7 @@ use strum::IntoEnumIterator;
 
 use super::NetworkIdError;
 
+#[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter, Serialize, Deserialize)]
 pub enum ProtocolId {
     Ethereum = 0,
