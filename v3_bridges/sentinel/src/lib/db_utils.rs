@@ -27,14 +27,26 @@ pub trait DbUtilsT {
     where
         Self: Sized + Serialize,
     {
+        let key = self.key()?;
+        if Self::get_from_db(db_utils, &key).is_ok() {
+            Err(SentinelError::KeyExists(key))
+        } else {
+            db_utils.put(self, &key)
+        }
+    }
+
+    fn update_in_db<D: DatabaseInterface>(&self, db_utils: &SentinelDbUtils<D>) -> Result<(), SentinelError>
+    where
+        Self: Sized + Serialize,
+    {
         db_utils.put(self, &self.key()?)
     }
 
-    fn get_from_db<D: DatabaseInterface>(db_utils: &SentinelDbUtils<D>, key: DbKey) -> Result<Self, SentinelError>
+    fn get_from_db<D: DatabaseInterface>(db_utils: &SentinelDbUtils<D>, key: &DbKey) -> Result<Self, SentinelError>
     where
         Self: Sized,
     {
-        db_utils.get_sensitive(&key, Self::sensitivity())
+        db_utils.get_sensitive(key, Self::sensitivity())
     }
 }
 
@@ -107,7 +119,13 @@ macro_rules! create_db_keys {
                     self.get_sensitive(key, MIN_DATA_SENSITIVITY_LEVEL)
                 }
 
+                pub fn key_exists<T: DbUtilsT>(&self, key: &DbKey) -> bool {
+                    let r: Result<_, _> = self.db().get(key.into(), MIN_DATA_SENSITIVITY_LEVEL);
+                    r.is_ok()
+                }
+
                 $(
+                    #[allow(unused)] // NOTE: Not all key getters are used.
                     fn [< get_ $name:lower _key >]() -> &'a DbKey {
                         &*$name
                     }

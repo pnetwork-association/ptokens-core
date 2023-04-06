@@ -1,9 +1,20 @@
 use thiserror::Error;
 
-use crate::{BroadcasterMessages, CoreMessages, EthRpcMessages, MongoMessages, ProcessorMessages, SyncerMessages};
+use crate::{
+    BroadcasterMessages,
+    CoreMessages,
+    DbKey,
+    EthRpcMessages,
+    MongoMessages,
+    ProcessorMessages,
+    SyncerMessages,
+};
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("key exists in db: {0}")]
+    KeyExists(DbKey),
+
     #[error("{0}")]
     NetworkId(#[from] crate::network_id::NetworkIdError),
 
