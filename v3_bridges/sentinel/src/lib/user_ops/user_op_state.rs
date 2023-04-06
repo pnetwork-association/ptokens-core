@@ -7,6 +7,8 @@ use strum_macros::EnumIter;
 
 use super::UserOpError;
 
+// TODO Make a struct for the args for each enum field?
+
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Serialize, Deserialize, EnumIter)]
 pub enum UserOpState {
@@ -34,6 +36,19 @@ impl Default for UserOpState {
 }
 
 impl UserOpState {
+    #[rustfmt::skip]
+    pub fn is_same_state_as(&self, other: Self) -> bool {
+        // NOTE: The derived == allows for a strict equality, whereas this method allows us to
+        // check equality of the state and nothing else.
+        matches!(
+            (self, other),
+            (Self::Witnessed(..), Self::Witnessed(..)) |
+            (Self::Enqueued(..), Self::Enqueued(..)) |
+            (Self::Executed(..), Self::Executed(..)) |
+            (Self::Cancelled(..), Self::Cancelled(..))
+        )
+    }
+
     pub fn update(self, tx_hash: EthHash) -> Result<(Self, Self), UserOpError> {
         match self {
             Self::Witnessed(side, _) => Ok((self, Self::Enqueued(side, tx_hash))),
@@ -122,5 +137,19 @@ mod tests {
             Err(UserOpError::CannotCancel(e)) => assert_eq!(e, user_op_state),
             Err(e) => panic!("wrong error received: {e}"),
         };
+    }
+
+    #[test]
+    fn should_have_stateful_equality() {
+        let h_1 = EthHash::random();
+        let h_2 = EthHash::random();
+        let b_1 = BridgeSide::Native;
+        let b_2 = BridgeSide::Host;
+        let a = UserOpState::Witnessed(b_1, h_1);
+        let b = UserOpState::Witnessed(b_2, h_2);
+        assert_ne!(a, b);
+        assert!(a.is_same_state_as(b));
+        assert!(a <= b);
+        assert!(!(a > b));
     }
 }
