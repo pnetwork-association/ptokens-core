@@ -3,7 +3,7 @@ use std::result::Result;
 use common::{BridgeSide, DatabaseInterface};
 use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials, NativeDbUtils};
 use ethereum_types::Address as EthAddress;
-use lib::{NativeOutput, SentinelDbUtils, SentinelError, UserOps};
+use lib::{NativeOutput, SentinelDbUtils, SentinelError, UserOpList, UserOps};
 
 const SIDE: &str = "native";
 const ORIGIN_NETWORK_ID: Vec<u8> = vec![]; // FIXME calculate this!
@@ -86,21 +86,10 @@ pub fn process_native_batch<D: DatabaseInterface>(
             .collect::<Result<Vec<UserOps>, SentinelError>>()?,
     );
 
-    let mut output = NativeOutput::new(batch.get_last_block_num()?)?;
-    if !user_ops.is_empty() {
-        let db_utils = SentinelDbUtils::new(db);
+    let _ops_requiring_txs = UserOpList::process_ops(&SentinelDbUtils::new(db), user_ops)?;
 
-        let host_user_ops = db_utils.get_host_user_operations()?;
-        let mut native_user_ops = db_utils.get_native_user_operations()?;
-        native_user_ops.add(user_ops);
+    let output = NativeOutput::new(batch.get_last_block_num()?)?;
 
-        let (native, host) = native_user_ops.remove_matches(host_user_ops);
-
-        output.add_unmatched_user_ops(&native, &host);
-
-        db_utils.add_native_user_operations(native)?;
-        db_utils.add_host_user_operations(host)?;
-    };
     db.end_transaction()?;
 
     info!("Finished processing {SIDE} submission material!");

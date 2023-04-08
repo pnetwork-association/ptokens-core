@@ -12,6 +12,9 @@ use crate::{
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("{0}")]
+    UserOp(Box<crate::user_ops::UserOpError>),
+
     #[error("key exists in db: {0}")]
     KeyExists(DbKey),
 
@@ -153,5 +156,11 @@ impl From<tokio::sync::mpsc::error::SendError<MongoMessages>> for SentinelError 
 impl From<tokio::sync::mpsc::error::SendError<EthRpcMessages>> for SentinelError {
     fn from(e: tokio::sync::mpsc::error::SendError<EthRpcMessages>) -> Self {
         Self::EthRpcChannel(Box::new(e))
+    }
+}
+
+impl From<crate::user_ops::UserOpError> for SentinelError {
+    fn from(e: crate::user_ops::UserOpError) -> Self {
+        Self::UserOp(Box::new(e))
     }
 }

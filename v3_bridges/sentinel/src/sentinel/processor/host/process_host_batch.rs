@@ -3,7 +3,7 @@ use std::result::Result;
 use common::{BridgeSide, DatabaseInterface};
 use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials, HostDbUtils};
 use ethereum_types::Address as EthAddress;
-use lib::{HostOutput, SentinelDbUtils, SentinelError, UserOps};
+use lib::{HostOutput, SentinelDbUtils, SentinelError, UserOpList, UserOps};
 
 const SIDE: &str = "host";
 const ORIGIN_NETWORK_ID: Vec<u8> = vec![]; // FIXME calculate this!
@@ -86,22 +86,9 @@ pub fn process_host_batch<D: DatabaseInterface>(
             .collect::<Result<Vec<UserOps>, SentinelError>>()?,
     );
 
-    let mut output = HostOutput::new(batch.get_last_block_num()?)?;
+    let _ops_requiring_txs = UserOpList::process_ops(&SentinelDbUtils::new(db), user_ops)?;
 
-    if !user_ops.is_empty() {
-        let db_utils = SentinelDbUtils::new(db);
-
-        let mut host_user_ops = db_utils.get_host_user_operations()?;
-        let native_user_ops = db_utils.get_native_user_operations()?;
-        host_user_ops.add(user_ops);
-
-        let (native, host) = native_user_ops.remove_matches(host_user_ops);
-        output.add_unmatched_user_ops(&native, &host);
-
-        // TODO need to send native and host to mongo since these are our currently unmatched user ops!
-        db_utils.add_native_user_operations(native)?;
-        db_utils.add_host_user_operations(host)?;
-    }
+    let output = HostOutput::new(batch.get_last_block_num()?)?;
 
     db.end_transaction()?;
 

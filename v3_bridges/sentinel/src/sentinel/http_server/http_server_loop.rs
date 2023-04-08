@@ -82,7 +82,6 @@ async fn main_loop(
     debug!("server listening!");
     let core_tx_1 = core_tx.clone();
     let core_tx_2 = core_tx.clone();
-    let core_tx_3 = core_tx.clone();
     let mongo_tx_1 = mongo_tx.clone();
     let mongo_tx_2 = mongo_tx.clone();
     let core_type = config.core().core_type;

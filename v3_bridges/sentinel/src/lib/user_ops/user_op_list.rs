@@ -148,7 +148,11 @@ impl UserOpList {
         }
     }
 
-    fn process_ops<D: DatabaseInterface>(db_utils: &SentinelDbUtils<D>, ops: UserOps) -> Result<UserOps, UserOpError> {
+    pub fn process_ops<D: DatabaseInterface>(
+        db_utils: &SentinelDbUtils<D>,
+        ops: UserOps,
+    ) -> Result<UserOps, SentinelError> {
+        // FIXME get the list once!
         let mut ops_to_cancel = vec![];
         for op in ops.iter().cloned() {
             if let Some(returned_op) = Self::process_op(db_utils, op)? {
