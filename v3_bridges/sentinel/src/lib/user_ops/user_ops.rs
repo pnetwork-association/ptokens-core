@@ -6,7 +6,8 @@ use derive_more::{Constructor, Deref};
 use ethereum_types::Address as EthAddress;
 use serde::{Deserialize, Serialize};
 
-use crate::{get_utc_timestamp, SentinelError, UserOp, USER_OPERATION_TOPIC};
+use super::UserOp;
+use crate::{get_utc_timestamp, SentinelError, USER_OPERATION_TOPIC};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Deref, Serialize, Deserialize)]
 pub struct UserOps(Vec<UserOp>);

@@ -50,7 +50,7 @@ pub use self::{
     native_output::NativeOutput,
     network_id::NetworkId,
     output::Output,
-    user_ops::{UnmatchedUserOps, UserOp, UserOpState, UserOps},
+    user_ops::{UserOp, UserOpList, UserOps},
     utils::get_utc_timestamp,
 };
 

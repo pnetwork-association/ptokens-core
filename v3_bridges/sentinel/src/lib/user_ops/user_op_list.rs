@@ -1,6 +1,6 @@
 use std::{cmp::PartialEq, fmt};
 
-use common::{Byte, Bytes, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
+use common::{Byte, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
 use derive_more::{Constructor, Deref, DerefMut};
 use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
@@ -115,7 +115,7 @@ impl UserOpList {
     fn handle_is_in_list<D: DatabaseInterface>(
         db_utils: &SentinelDbUtils<D>,
         op: UserOp,
-        mut list: Self,
+        _list: Self,
         list_entry_from_db: UserOpListEntry,
     ) -> Result<(), UserOpError> {
         debug!("user op found in db");
