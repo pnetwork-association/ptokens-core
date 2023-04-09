@@ -6,8 +6,8 @@ use derive_more::{Constructor, Deref};
 use ethereum_types::Address as EthAddress;
 use serde::{Deserialize, Serialize};
 
-use super::UserOp;
-use crate::{get_utc_timestamp, SentinelError, USER_OPERATION_TOPIC};
+use super::{UserOp, WITNESSED_USER_OP_TOPIC};
+use crate::{get_utc_timestamp, SentinelError};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Deref, Serialize, Deserialize)]
 pub struct UserOps(Vec<UserOp>);
@@ -66,7 +66,7 @@ impl UserOps {
             for log in receipt.logs.iter() {
                 if !log.topics.is_empty() && &log.address == state_manager {
                     for topic in log.topics.iter() {
-                        if topic == &*USER_OPERATION_TOPIC {
+                        if topic == &*WITNESSED_USER_OP_TOPIC {
                             let op = UserOp::from_log(
                                 side,
                                 witnessed_timestamp,
@@ -143,7 +143,6 @@ impl TryFrom<Bytes> for UserOps {
 #[cfg(test)]
 mod tests {
     use common_eth::{convert_hex_to_eth_address, convert_hex_to_h256};
-    use ethereum_types::H256 as EthHash;
 
     use super::*;
     use crate::{test_utils::get_sample_sub_mat_n, user_ops::UserOpState};
