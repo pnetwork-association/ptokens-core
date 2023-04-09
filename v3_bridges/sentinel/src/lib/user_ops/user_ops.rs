@@ -142,20 +142,25 @@ impl TryFrom<Bytes> for UserOps {
 
 #[cfg(test)]
 mod tests {
-    use common_eth::convert_hex_to_eth_address;
+    use common_eth::{convert_hex_to_eth_address, convert_hex_to_h256};
+    use ethereum_types::H256 as EthHash;
 
     use super::*;
-    use crate::test_utils::get_sample_sub_mat_n;
+    use crate::{test_utils::get_sample_sub_mat_n, user_ops::UserOpState};
 
     #[test]
-    fn should_get_user_operation_from_sub_mat() {
+    fn should_get_witnessed_user_operation_from_sub_mat() {
         let side = BridgeSide::Native;
-        let sub_mat = get_sample_sub_mat_n(11);
+        let sub_mat = get_sample_sub_mat_n(10);
         let sepolia_network_id = hex::decode("e15503e4").unwrap();
         let state_manager = convert_hex_to_eth_address("b274d81a823c1912c6884e39c2e4e669e04c83f4").unwrap();
         let expected_result = 1;
         let ops = UserOps::from_sub_mat(side, &sub_mat, &state_manager, &sepolia_network_id).unwrap();
         let result = ops.len();
         assert_eq!(result, expected_result);
+        let side = BridgeSide::Native;
+        let hash = convert_hex_to_h256("0xf6f24a42e1bfa9ab963786a9d2e146da7a6afad0ed188daa7a88e37bf42db789").unwrap();
+        let expected_state = UserOpState::Witnessed(side, hash);
+        assert_eq!(ops[0].state(), expected_state);
     }
 }

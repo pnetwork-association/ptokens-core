@@ -181,7 +181,7 @@ mod tests {
         let list = UserOpList::new(vec![list_entry]);
         list.put_in_db(&db_utils).unwrap();
         let key = UserOpList::default().key().unwrap();
-        let list_from_db = UserOpList::get_from_db(&db_utils, key).unwrap();
+        let list_from_db = UserOpList::get_from_db(&db_utils, &key).unwrap();
         assert_eq!(list_from_db, list);
     }
 
