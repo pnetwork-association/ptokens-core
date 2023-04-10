@@ -4,7 +4,9 @@ use common::Bytes;
 use common_eth::{EthLog, EthLogExt};
 use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType, Token as EthAbiToken};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
+use ethers_core::abi::{self, Token};
 use serde::{Deserialize, Serialize};
+use tiny_keccak::{Hasher, Keccak};
 
 use crate::SentinelError;
 
@@ -30,7 +32,7 @@ impl TryFrom<&EthLog> for UserOpLogFromStateManager {
     type Error = SentinelError;
 
     fn try_from(l: &EthLog) -> Result<Self, Self::Error> {
-        debug!("Decoding `UserOp` from `EthLog`...");
+        debug!("Decoding `StateManagerUserOp` from `EthLog`...");
 
         let tuple_of_tokens = eth_abi_decode(
             &[
@@ -91,8 +93,52 @@ impl TryFrom<&EthLog> for UserOpLogFromStateManager {
     }
 }
 
-// FIXME rm this repetition!
+// FIXME rm repetition in this!
 impl UserOpLogFromStateManager {
+    pub fn to_uid(&self) -> Result<EthHash, SentinelError> {
+        let mut hasher = Keccak::v256();
+        let input = self.abi_encode_packed()?;
+        let mut output = [0u8; 32];
+        hasher.update(&input);
+        hasher.finalize(&mut output);
+        Ok(EthHash::from_slice(&output))
+    }
+
+    // TODO Question for Alessandro: should this be encoded _packed_?
+    fn abi_encode_packed(&self) -> Result<Bytes, SentinelError> {
+        Ok(abi::encode(&[
+            Token::FixedBytes(self.origin_block_hash.as_bytes().to_vec()),
+            Token::FixedBytes(self.origin_transaction_hash.as_bytes().to_vec()),
+            Token::FixedBytes(self.origin_network_id.clone()),
+            Token::Uint(Self::convert_u256_type(self.nonce)),
+            Token::String(self.destination_account.clone()),
+            Token::FixedBytes(self.destination_network_id.clone()),
+            Token::String(self.underlying_asset_name.clone()),
+            Token::String(self.underlying_asset_symbol.clone()),
+            Token::Uint(Self::convert_u256_type(self.underlying_asset_decimals)),
+            Token::Address(Self::convert_address_type(self.underlying_asset_token_address)),
+            Token::FixedBytes(self.underlying_asset_network_id.clone()),
+            Token::Uint(Self::convert_u256_type(self.amount)),
+            Token::Bytes(self.user_data.clone()),
+            Token::FixedBytes(self.options_mask.as_bytes().to_vec()),
+        ]))
+    }
+
+    fn convert_u256_type(t: U256) -> ethers_core::types::U256 {
+        // NOTE: Sigh. The ethabi crate re-exports the ethereum_types which we use elsewhere, so
+        // that's annoying.
+        let mut r = [0u8; 32];
+        t.to_big_endian(&mut r);
+        ethers_core::types::U256::from_big_endian(&r)
+    }
+
+    fn convert_address_type(t: EthAddress) -> ethers_core::types::Address {
+        // NOTE: Sigh. The ethabi crate re-exports the ethereum_types which we use elsewhere, so
+        // that's annoying.
+        let s = t.as_bytes();
+        ethers_core::types::Address::from_slice(s)
+    }
+
     fn get_tuple_from_token(t: &EthAbiToken) -> Result<Vec<EthAbiToken>, SentinelError> {
         match t {
             EthAbiToken::Tuple(v) => Ok(v.to_vec()),
@@ -158,6 +204,10 @@ mod tests {
         user_ops::{CANCELLED_USER_OP_TOPIC, ENQUEUED_USER_OP_TOPIC, EXECUTED_USER_OP_TOPIC},
     };
 
+    fn get_sample_enqueued_log() -> EthLog {
+        get_sample_sub_mat_n(11).receipts[1].logs[0].clone()
+    }
+
     fn get_expected_user_op_log_from_state_manager() -> UserOpLogFromStateManager {
         UserOpLogFromStateManager {
             origin_block_hash: convert_hex_to_h256(
@@ -186,7 +236,7 @@ mod tests {
 
     #[test]
     fn should_parse_user_op_log_from_state_manager_enqueued_event_correctly() {
-        let log = get_sample_sub_mat_n(11).receipts[1].logs[0].clone();
+        let log = get_sample_enqueued_log();
         assert_eq!(log.topics[0], *ENQUEUED_USER_OP_TOPIC);
         let result = UserOpLogFromStateManager::try_from(&log).unwrap();
         assert_eq!(result, get_expected_user_op_log_from_state_manager());
@@ -206,5 +256,22 @@ mod tests {
         assert_eq!(log.topics[0], *CANCELLED_USER_OP_TOPIC);
         let result = UserOpLogFromStateManager::try_from(&log).unwrap();
         assert_eq!(result, get_expected_user_op_log_from_state_manager());
+    }
+
+    #[test]
+    fn should_get_abi_encoded_data_correctly_from_state_manager_log() {
+        let user_op_log = UserOpLogFromStateManager::try_from(&get_sample_enqueued_log()).unwrap();
+        let expected_result = hex::decode("81803894d2305fd729ac0b90a4262a85c4d11b70b8bea98c40ee68bf56c8a1c2eb5cbe8387d5e9e247ea886459bcd0e599732e1a4e02a38b235cd93cac96bf300102030400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a00000000000000000000000000000000000000000000000000000000000001c0040302010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002200000000000000000000000000000000000000000000000000000000000000260000000000000000000000000000000000000000000000000000000000000000400000000000000000000000089ab32156e46f46d02ade3fecbe5fc4243b9aaed0103030700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000053900000000000000000000000000000000000000000000000000000000000002a00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a30784441464541343932443963363733336165336435366237456431414442363036393263393842633500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a736f6d6520746f6b656e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000353544b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003c0ffee0000000000000000000000000000000000000000000000000000000000").unwrap();
+        let result = user_op_log.abi_encode_packed().unwrap();
+        assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    fn should_get_uid_correctly_from_state_manager_log() {
+        let user_op_log = UserOpLogFromStateManager::try_from(&get_sample_enqueued_log()).unwrap();
+        let expected_result =
+            convert_hex_to_h256("be0a969cf68c8a51804458b2d841df79e2c7fa2f0e94b72b2859c5f8d660083d").unwrap();
+        let result = user_op_log.to_uid().unwrap();
+        assert_eq!(result, expected_result);
     }
 }
