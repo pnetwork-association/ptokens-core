@@ -155,7 +155,7 @@ mod tests {
     use super::*;
     use crate::{
         test_utils::get_sample_sub_mat_n,
-        user_ops::{ENQUEUED_USER_OP_TOPIC, EXECUTED_USER_OP_TOPIC},
+        user_ops::{CANCELLED_USER_OP_TOPIC, ENQUEUED_USER_OP_TOPIC, EXECUTED_USER_OP_TOPIC},
     };
 
     fn get_expected_user_op_log_from_state_manager() -> UserOpLogFromStateManager {
@@ -196,6 +196,14 @@ mod tests {
     fn should_parse_user_op_log_from_state_manager_executed_event_correctly() {
         let log = get_sample_sub_mat_n(12).receipts[8].logs[0].clone();
         assert_eq!(log.topics[0], *EXECUTED_USER_OP_TOPIC);
+        let result = UserOpLogFromStateManager::try_from(&log).unwrap();
+        assert_eq!(result, get_expected_user_op_log_from_state_manager());
+    }
+
+    #[test]
+    fn should_parse_user_op_log_from_state_manager_cancelled_event_correctly() {
+        let log = get_sample_sub_mat_n(13).receipts[14].logs[0].clone();
+        assert_eq!(log.topics[0], *CANCELLED_USER_OP_TOPIC);
         let result = UserOpLogFromStateManager::try_from(&log).unwrap();
         assert_eq!(result, get_expected_user_op_log_from_state_manager());
     }

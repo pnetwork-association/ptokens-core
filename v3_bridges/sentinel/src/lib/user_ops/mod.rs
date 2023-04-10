@@ -12,7 +12,12 @@ mod user_ops;
 
 pub use self::{error::UserOpError, user_op::UserOp, user_op_list::UserOpList, user_ops::UserOps};
 use self::{
-    user_op_constants::{ENQUEUED_USER_OP_TOPIC, EXECUTED_USER_OP_TOPIC, WITNESSED_USER_OP_TOPIC},
+    user_op_constants::{
+        CANCELLED_USER_OP_TOPIC,
+        ENQUEUED_USER_OP_TOPIC,
+        EXECUTED_USER_OP_TOPIC,
+        WITNESSED_USER_OP_TOPIC,
+    },
     user_op_flag::UserOpFlag,
     user_op_log::UserOpLog,
     user_op_state::UserOpState,
