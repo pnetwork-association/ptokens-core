@@ -61,7 +61,7 @@ impl UserOpFlag {
 
     #[allow(unused)]
     fn is_set(&self, state: &UserOpState) -> bool {
-        self.bit_is_set(state.to_bit_flag_idx())
+        self.bit_is_set(state.get_bit_flag_idx())
     }
 
     #[allow(unused)]

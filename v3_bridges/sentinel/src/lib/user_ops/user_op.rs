@@ -80,7 +80,7 @@ impl UserOp {
         ])?)
     }
 
-    pub fn from_log(
+    pub fn from_witnessed_log(
         bridge_side: BridgeSide,
         witnessed_timestamp: u64,
         block_timestamp: u64,

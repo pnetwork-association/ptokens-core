@@ -6,7 +6,7 @@ use derive_more::{Constructor, Deref};
 use ethereum_types::Address as EthAddress;
 use serde::{Deserialize, Serialize};
 
-use super::{UserOp, WITNESSED_USER_OP_TOPIC};
+use super::{UserOp, ENQUEUED_USER_OP_TOPIC, WITNESSED_USER_OP_TOPIC};
 use crate::{get_utc_timestamp, SentinelError};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Deref, Serialize, Deserialize)]
@@ -64,10 +64,12 @@ impl UserOps {
         for receipt in sub_mat.receipts.iter() {
             let tx_hash = receipt.transaction_hash;
             for log in receipt.logs.iter() {
+                // FIXME need to look at 2 diff contracts depending on bridge side!
+
                 if !log.topics.is_empty() && &log.address == state_manager {
                     for topic in log.topics.iter() {
                         if topic == &*WITNESSED_USER_OP_TOPIC {
-                            let op = UserOp::from_log(
+                            let op = UserOp::from_witnessed_log(
                                 side,
                                 witnessed_timestamp,
                                 block_timestamp,
@@ -77,7 +79,12 @@ impl UserOps {
                                 log,
                             )?;
                             user_ops.push(op);
-                        }
+                        };
+
+                        if topic == &*ENQUEUED_USER_OP_TOPIC {
+                            let op = UserOp::default(); // FIXME Real parser!
+                            user_ops.push(op);
+                        };
                     }
                 }
             }
@@ -161,5 +168,23 @@ mod tests {
         let hash = convert_hex_to_h256("0xf6f24a42e1bfa9ab963786a9d2e146da7a6afad0ed188daa7a88e37bf42db789").unwrap();
         let expected_state = UserOpState::Witnessed(side, hash);
         assert_eq!(ops[0].state(), expected_state);
+    }
+
+    #[test]
+    fn should_get_enqueued_user_operation_from_sub_mat() {
+        let side = BridgeSide::Native;
+        let sub_mat = get_sample_sub_mat_n(11);
+        let sepolia_network_id = hex::decode("e15503e4").unwrap();
+        let state_manager = convert_hex_to_eth_address("0xBcBC92efE0a3C3ca99deBa708CEc92c785AfFB15").unwrap();
+        let expected_result = 1;
+        let ops = UserOps::from_sub_mat(side, &sub_mat, &state_manager, &sepolia_network_id).unwrap();
+        let result = ops.len();
+        assert_eq!(result, expected_result);
+        /*
+        let side = BridgeSide::Native;
+        let hash = convert_hex_to_h256("0xf6f24a42e1bfa9ab963786a9d2e146da7a6afad0ed188daa7a88e37bf42db789").unwrap();
+        let expected_state = UserOpState::Witnessed(side, hash);
+        assert_eq!(ops[0].state(), expected_state);
+        */
     }
 }

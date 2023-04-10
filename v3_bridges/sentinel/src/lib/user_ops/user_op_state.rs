@@ -65,7 +65,7 @@ impl UserOpState {
         }
     }
 
-    pub fn to_bit_flag_idx(&self) -> u8 {
+    pub fn get_bit_flag_idx(&self) -> u8 {
         match self {
             Self::Witnessed(..) => 0,
             Self::Enqueued(..) => 1,
@@ -95,7 +95,7 @@ mod tests {
         let hash_1 = EthHash::random();
         let user_op_state = UserOpState::Witnessed(side, hash_1);
         let hash_2 = EthHash::random();
-        let (prev, result) = user_op_state.clone().update(hash_2).unwrap();
+        let (prev, result) = user_op_state.update(hash_2).unwrap();
         assert_eq!(prev, user_op_state);
         let expected_result = UserOpState::Enqueued(side, hash_2);
         assert_eq!(result, expected_result);
@@ -107,7 +107,7 @@ mod tests {
         let hash_1 = EthHash::random();
         let user_op_state = UserOpState::Executed(side, hash_1);
         let hash_2 = EthHash::random();
-        match user_op_state.clone().update(hash_2) {
+        match user_op_state.update(hash_2) {
             Ok(_) => panic!("should not have succeeded!"),
             Err(UserOpError::CannotUpdate(e)) => assert_eq!(e, user_op_state),
             Err(e) => panic!("wrong error received: {e}"),
@@ -120,7 +120,7 @@ mod tests {
         let hash_1 = EthHash::random();
         let user_op_state = UserOpState::Witnessed(side, hash_1);
         let hash_2 = EthHash::random();
-        let (prev, result) = user_op_state.clone().cancel(hash_2).unwrap();
+        let (prev, result) = user_op_state.cancel(hash_2).unwrap();
         assert_eq!(prev, user_op_state);
         let expected_result = UserOpState::Cancelled(side, hash_2);
         assert_eq!(result, expected_result);
@@ -132,7 +132,7 @@ mod tests {
         let hash_1 = EthHash::random();
         let user_op_state = UserOpState::Executed(side, hash_1);
         let hash_2 = EthHash::random();
-        match user_op_state.clone().cancel(hash_2) {
+        match user_op_state.cancel(hash_2) {
             Ok(_) => panic!("should not have succeeded!"),
             Err(UserOpError::CannotCancel(e)) => assert_eq!(e, user_op_state),
             Err(e) => panic!("wrong error received: {e}"),
