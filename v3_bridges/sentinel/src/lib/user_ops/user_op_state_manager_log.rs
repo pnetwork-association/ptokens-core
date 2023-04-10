@@ -153,13 +153,13 @@ mod tests {
     use common_eth::{convert_hex_to_eth_address, convert_hex_to_h256};
 
     use super::*;
-    use crate::{test_utils::get_sample_sub_mat_n, user_ops::ENQUEUED_USER_OP_TOPIC};
+    use crate::{
+        test_utils::get_sample_sub_mat_n,
+        user_ops::{ENQUEUED_USER_OP_TOPIC, EXECUTED_USER_OP_TOPIC},
+    };
 
-    #[test]
-    fn should_parse_user_op_log_from_state_manager_enqueued_event_correctly() {
-        let log = get_sample_sub_mat_n(11).receipts[1].logs[0].clone();
-        assert_eq!(log.topics[0], *ENQUEUED_USER_OP_TOPIC);
-        let expected_result = UserOpLogFromStateManager {
+    fn get_expected_user_op_log_from_state_manager() -> UserOpLogFromStateManager {
+        UserOpLogFromStateManager {
             origin_block_hash: convert_hex_to_h256(
                 "0x81803894d2305fd729ac0b90a4262a85c4d11b70b8bea98c40ee68bf56c8a1c2",
             )
@@ -181,8 +181,22 @@ mod tests {
             underlying_asset_name: "some token".to_string(),
             underlying_asset_symbol: "STK".to_string(),
             user_data: hex::decode("c0ffee").unwrap(),
-        };
+        }
+    }
+
+    #[test]
+    fn should_parse_user_op_log_from_state_manager_enqueued_event_correctly() {
+        let log = get_sample_sub_mat_n(11).receipts[1].logs[0].clone();
+        assert_eq!(log.topics[0], *ENQUEUED_USER_OP_TOPIC);
         let result = UserOpLogFromStateManager::try_from(&log).unwrap();
-        assert_eq!(result, expected_result);
+        assert_eq!(result, get_expected_user_op_log_from_state_manager());
+    }
+
+    #[test]
+    fn should_parse_user_op_log_from_state_manager_executed_event_correctly() {
+        let log = get_sample_sub_mat_n(12).receipts[8].logs[0].clone();
+        assert_eq!(log.topics[0], *EXECUTED_USER_OP_TOPIC);
+        let result = UserOpLogFromStateManager::try_from(&log).unwrap();
+        assert_eq!(result, get_expected_user_op_log_from_state_manager());
     }
 }
