@@ -201,7 +201,7 @@ mod tests {
     use crate::{
         get_utc_timestamp,
         test_utils::get_sample_sub_mat_n,
-        user_ops::test_utils::get_sample_enqueued_user_op,
+        user_ops::test_utils::{get_sample_enqueued_user_op, get_sample_witnessed_user_op},
     };
 
     #[test]
@@ -230,10 +230,19 @@ mod tests {
     }
 
     #[test]
-    fn should_get_uid() {
+    fn should_get_enqueued_user_op_uid() {
         let user_op = get_sample_enqueued_user_op();
         let expected_uid =
             convert_hex_to_h256("c8e8f5ae17a23427f1cce51c1683c7488c722809fedf29c51c08c4461531baaa").unwrap();
+        let uid = user_op.uid();
+        assert_eq!(uid, expected_uid);
+    }
+
+    #[test]
+    fn should_get_witnessed_user_op_uid() {
+        let user_op = get_sample_witnessed_user_op();
+        let expected_uid =
+            convert_hex_to_h256("68387313a7d1eacdbc7b8e8f6125bc4c6efaece93eee4d93ce6c1324ecb85c8c").unwrap();
         let uid = user_op.uid();
         assert_eq!(uid, expected_uid);
     }

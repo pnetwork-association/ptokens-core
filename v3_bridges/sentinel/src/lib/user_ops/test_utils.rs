@@ -6,7 +6,6 @@ use ethereum_types::Address as EthAddress;
 use super::{UserOp, UserOps};
 use crate::test_utils::get_sample_sub_mat_n;
 
-#[allow(unused)]
 pub fn get_sample_witnessed_user_op() -> UserOp {
     let side = BridgeSide::Native;
     let sub_mat = get_sample_sub_mat_n(10);
