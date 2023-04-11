@@ -69,7 +69,7 @@ impl UserOps {
                 if !log.topics.is_empty() && &log.address == state_manager {
                     for topic in log.topics.iter() {
                         if topic == &*WITNESSED_USER_OP_TOPIC {
-                            let op = UserOp::from_witnessed_log(
+                            let op = UserOp::from_log(
                                 side,
                                 witnessed_timestamp,
                                 block_timestamp,

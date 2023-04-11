@@ -4,6 +4,7 @@ mod user_op;
 mod user_op_constants;
 mod user_op_flag;
 mod user_op_list;
+mod user_op_log;
 mod user_op_router_log;
 mod user_op_state;
 mod user_op_state_manager_log;
@@ -19,6 +20,8 @@ use self::{
         WITNESSED_USER_OP_TOPIC,
     },
     user_op_flag::UserOpFlag,
+    user_op_log::UserOpLog,
     user_op_router_log::UserOpRouterLog,
     user_op_state::UserOpState,
+    user_op_state_manager_log::UserOpStateManagerLog,
 };

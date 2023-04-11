@@ -1,3 +1,4 @@
+use ethereum_types::H256 as EthHash;
 use thiserror::Error;
 
 use super::UserOpState;
@@ -18,4 +19,10 @@ pub enum UserOpError {
 
     #[error("infallible error: {0}")]
     Infallible(#[from] std::convert::Infallible),
+
+    #[error("no topics in log")]
+    NoTopics,
+
+    #[error("unrecognized topic hash: {0}")]
+    UnrecognizedTopic(EthHash),
 }

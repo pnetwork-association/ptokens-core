@@ -8,12 +8,12 @@ use ethers_core::abi::{self, Token};
 use serde::{Deserialize, Serialize};
 use tiny_keccak::{Hasher, Keccak};
 
-use super::{UserOpFlag, UserOpRouterLog, UserOpState};
+use super::{UserOpError, UserOpFlag, UserOpLog, UserOpState};
 use crate::{DbKey, DbUtilsT, SentinelError};
 
 impl DbUtilsT for UserOp {
     fn key(&self) -> Result<DbKey, SentinelError> {
-        Ok(self.to_uid()?.into())
+        Ok(self.to_uid().into())
     }
 
     fn sensitivity() -> Option<Byte> {
@@ -38,10 +38,10 @@ pub struct UserOp {
     state: UserOpState,
     block_hash: EthHash,
     block_timestamp: u64,
+    user_op_log: UserOpLog,
     bridge_side: BridgeSide,
     origin_network_id: Bytes,
     witnessed_timestamp: u64,
-    user_op_log: UserOpRouterLog, // NOTE This remains separate since we can parse it entirely from the log
     previous_states: Vec<UserOpState>,
 }
 
@@ -64,10 +64,10 @@ impl UserOp {
             EthAbiToken::Tuple(vec![
                 EthAbiToken::FixedBytes(self.block_hash.as_bytes().to_vec()),
                 EthAbiToken::FixedBytes(self.tx_hash.as_bytes().to_vec()),
-                EthAbiToken::FixedBytes(self.user_op_log.options_mask.clone()),
+                EthAbiToken::FixedBytes(self.user_op_log.options_mask.as_bytes().to_vec()),
                 EthAbiToken::Uint(self.user_op_log.nonce),
                 EthAbiToken::Uint(self.user_op_log.underlying_asset_decimals),
-                EthAbiToken::Uint(self.user_op_log.asset_amount),
+                EthAbiToken::Uint(self.user_op_log.amount),
                 EthAbiToken::Address(self.user_op_log.underlying_asset_token_address),
                 EthAbiToken::FixedBytes(self.origin_network_id.clone()),
                 EthAbiToken::FixedBytes(self.user_op_log.destination_network_id.clone()),
@@ -80,7 +80,7 @@ impl UserOp {
         ])?)
     }
 
-    pub fn from_witnessed_log(
+    pub fn from_log(
         bridge_side: BridgeSide,
         witnessed_timestamp: u64,
         block_timestamp: u64,
@@ -88,17 +88,17 @@ impl UserOp {
         tx_hash: EthHash,
         origin_network_id: &[Byte],
         log: &EthLog,
-    ) -> Result<Self, SentinelError> {
+    ) -> Result<Self, UserOpError> {
         Ok(Self {
             tx_hash,
-            bridge_side,
             block_hash,
+            bridge_side,
             block_timestamp,
             witnessed_timestamp,
             previous_states: vec![],
-            user_op_log: UserOpRouterLog::try_from(log)?,
+            user_op_log: UserOpLog::try_from(log)?,
             origin_network_id: origin_network_id.to_vec(),
-            state: UserOpState::Witnessed(bridge_side, tx_hash),
+            state: UserOpState::try_from_log(bridge_side, tx_hash, log)?,
         })
     }
 }
@@ -108,17 +108,17 @@ impl UserOp {
         self.state
     }
 
-    pub fn to_uid(&self) -> Result<EthHash, SentinelError> {
+    pub fn to_uid(&self) -> EthHash {
         let mut hasher = Keccak::v256();
-        let input = self.abi_encode_packed()?;
+        let input = self.abi_encode();
         let mut output = [0u8; 32];
         hasher.update(&input);
         hasher.finalize(&mut output);
-        Ok(EthHash::from_slice(&output))
+        EthHash::from_slice(&output)
     }
 
-    fn abi_encode_packed(&self) -> Result<Bytes, SentinelError> {
-        Ok(abi::encode_packed(&[
+    fn abi_encode(&self) -> Bytes {
+        abi::encode(&[
             Token::FixedBytes(self.block_hash.as_bytes().to_vec()),
             Token::FixedBytes(self.tx_hash.as_bytes().to_vec()),
             Token::FixedBytes(self.origin_network_id.clone()),
@@ -132,10 +132,10 @@ impl UserOp {
                 self.user_op_log.underlying_asset_token_address,
             )),
             Token::FixedBytes(self.user_op_log.underlying_asset_network_id.clone()),
-            Token::Uint(Self::convert_u256_type(self.user_op_log.asset_amount)),
+            Token::Uint(Self::convert_u256_type(self.user_op_log.amount)),
             Token::Bytes(self.user_op_log.user_data.clone()),
-            Token::FixedBytes(self.user_op_log.options_mask.clone()),
-        ])?)
+            Token::FixedBytes(self.user_op_log.options_mask.as_bytes().to_vec()),
+        ])
     }
 }
 
@@ -167,13 +167,40 @@ impl fmt::Display for UserOp {
 
 #[cfg(test)]
 mod tests {
+    use common_eth::convert_hex_to_h256;
 
     use super::*;
+    use crate::{get_utc_timestamp, test_utils::get_sample_sub_mat_n};
 
     #[test]
     fn should_encode_fxn_data_for_user_op() {
         let op = UserOp::default();
         let result = op.to_cancel_fxn_data();
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn should_get_user_op_correctly_from_log() {
+        let sub_mat = get_sample_sub_mat_n(11);
+        let bridge_side = BridgeSide::Native;
+        let witnessed_timestamp = get_utc_timestamp().unwrap();
+        let block_timestamp = sub_mat.get_timestamp().as_secs() as u64;
+        let block_hash = sub_mat.block.unwrap().hash.clone();
+        let receipt = sub_mat.receipts[1].clone();
+        let tx_hash = receipt.transaction_hash.clone();
+        let origin_network_id = hex::decode("01020304").unwrap();
+        let log = receipt.logs[0].clone();
+        let result = UserOp::from_log(
+            bridge_side,
+            witnessed_timestamp,
+            block_timestamp,
+            block_hash,
+            tx_hash,
+            &origin_network_id,
+            &log,
+        )
+        .unwrap();
+        let expected_state = UserOpState::Enqueued(bridge_side, tx_hash);
+        assert_eq!(result.state, expected_state);
     }
 }

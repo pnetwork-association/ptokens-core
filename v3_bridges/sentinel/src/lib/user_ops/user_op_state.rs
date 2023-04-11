@@ -1,11 +1,18 @@
 use std::fmt;
 
 use common::BridgeSide;
+use common_eth::EthLog;
 use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumIter;
 
-use super::UserOpError;
+use super::{
+    UserOpError,
+    CANCELLED_USER_OP_TOPIC,
+    ENQUEUED_USER_OP_TOPIC,
+    EXECUTED_USER_OP_TOPIC,
+    WITNESSED_USER_OP_TOPIC,
+};
 
 // TODO Make a struct for the args for each enum field?
 
@@ -36,6 +43,24 @@ impl Default for UserOpState {
 }
 
 impl UserOpState {
+    pub fn try_from_log(side: BridgeSide, tx_hash: EthHash, log: &EthLog) -> Result<Self, UserOpError> {
+        if log.topics.is_empty() {
+            return Err(UserOpError::NoTopics);
+        };
+
+        if log.topics[0] == *WITNESSED_USER_OP_TOPIC {
+            Ok(Self::Witnessed(side, tx_hash))
+        } else if log.topics[0] == *ENQUEUED_USER_OP_TOPIC {
+            Ok(Self::Enqueued(side, tx_hash))
+        } else if log.topics[0] == *EXECUTED_USER_OP_TOPIC {
+            Ok(Self::Executed(side, tx_hash))
+        } else if log.topics[0] == *CANCELLED_USER_OP_TOPIC {
+            Ok(Self::Cancelled(side, tx_hash))
+        } else {
+            Err(UserOpError::UnrecognizedTopic(log.topics[0]))
+        }
+    }
+
     #[rustfmt::skip]
     pub fn is_same_state_as(&self, other: Self) -> bool {
         // NOTE: The derived == allows for a strict equality, whereas this method allows us to

@@ -11,24 +11,24 @@ use tiny_keccak::{Hasher, Keccak};
 use crate::SentinelError;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
-pub struct UserOpRouterLogFromStateManager {
-    origin_block_hash: EthHash,
-    origin_transaction_hash: EthHash,
-    options_mask: EthHash,
-    nonce: U256,
-    underlying_asset_decimals: U256,
-    amount: U256,
-    underlying_asset_token_address: EthAddress,
-    origin_network_id: Bytes,           // TODO use type for this!
-    destination_network_id: Bytes,      // TODO use type for this!
-    underlying_asset_network_id: Bytes, // TODO use type for this!
-    destination_account: String,
-    underlying_asset_name: String,
-    underlying_asset_symbol: String,
-    user_data: Bytes,
+pub struct UserOpStateManagerLog {
+    pub(super) origin_block_hash: EthHash,
+    pub(super) origin_transaction_hash: EthHash,
+    pub(super) options_mask: EthHash,
+    pub(super) nonce: U256,
+    pub(super) underlying_asset_decimals: U256,
+    pub(super) amount: U256,
+    pub(super) underlying_asset_token_address: EthAddress,
+    pub(super) origin_network_id: Bytes,           // TODO use type for this!
+    pub(super) destination_network_id: Bytes,      // TODO use type for this!
+    pub(super) underlying_asset_network_id: Bytes, // TODO use type for this!
+    pub(super) destination_account: String,
+    pub(super) underlying_asset_name: String,
+    pub(super) underlying_asset_symbol: String,
+    pub(super) user_data: Bytes,
 }
 
-impl TryFrom<&EthLog> for UserOpRouterLogFromStateManager {
+impl TryFrom<&EthLog> for UserOpStateManagerLog {
     type Error = SentinelError;
 
     fn try_from(l: &EthLog) -> Result<Self, Self::Error> {
@@ -94,7 +94,7 @@ impl TryFrom<&EthLog> for UserOpRouterLogFromStateManager {
 }
 
 // FIXME rm repetition in this!
-impl UserOpRouterLogFromStateManager {
+impl UserOpStateManagerLog {
     pub fn to_uid(&self) -> Result<EthHash, SentinelError> {
         let mut hasher = Keccak::v256();
         let input = self.abi_encode_packed()?;
@@ -208,8 +208,8 @@ mod tests {
         get_sample_sub_mat_n(11).receipts[1].logs[0].clone()
     }
 
-    fn get_expected_user_op_log_from_state_manager() -> UserOpRouterLogFromStateManager {
-        UserOpRouterLogFromStateManager {
+    fn get_expected_user_op_log_from_state_manager() -> UserOpStateManagerLog {
+        UserOpStateManagerLog {
             origin_block_hash: convert_hex_to_h256(
                 "0x81803894d2305fd729ac0b90a4262a85c4d11b70b8bea98c40ee68bf56c8a1c2",
             )
@@ -238,7 +238,7 @@ mod tests {
     fn should_parse_user_op_log_from_state_manager_enqueued_event_correctly() {
         let log = get_sample_enqueued_log();
         assert_eq!(log.topics[0], *ENQUEUED_USER_OP_TOPIC);
-        let result = UserOpRouterLogFromStateManager::try_from(&log).unwrap();
+        let result = UserOpStateManagerLog::try_from(&log).unwrap();
         assert_eq!(result, get_expected_user_op_log_from_state_manager());
     }
 
@@ -246,7 +246,7 @@ mod tests {
     fn should_parse_user_op_log_from_state_manager_executed_event_correctly() {
         let log = get_sample_sub_mat_n(12).receipts[8].logs[0].clone();
         assert_eq!(log.topics[0], *EXECUTED_USER_OP_TOPIC);
-        let result = UserOpRouterLogFromStateManager::try_from(&log).unwrap();
+        let result = UserOpStateManagerLog::try_from(&log).unwrap();
         assert_eq!(result, get_expected_user_op_log_from_state_manager());
     }
 
@@ -254,13 +254,13 @@ mod tests {
     fn should_parse_user_op_log_from_state_manager_cancelled_event_correctly() {
         let log = get_sample_sub_mat_n(13).receipts[14].logs[0].clone();
         assert_eq!(log.topics[0], *CANCELLED_USER_OP_TOPIC);
-        let result = UserOpRouterLogFromStateManager::try_from(&log).unwrap();
+        let result = UserOpStateManagerLog::try_from(&log).unwrap();
         assert_eq!(result, get_expected_user_op_log_from_state_manager());
     }
 
     #[test]
     fn should_get_abi_encoded_data_correctly_from_state_manager_log() {
-        let user_op_log = UserOpRouterLogFromStateManager::try_from(&get_sample_enqueued_log()).unwrap();
+        let user_op_log = UserOpStateManagerLog::try_from(&get_sample_enqueued_log()).unwrap();
         let expected_result = hex::decode("81803894d2305fd729ac0b90a4262a85c4d11b70b8bea98c40ee68bf56c8a1c2eb5cbe8387d5e9e247ea886459bcd0e599732e1a4e02a38b235cd93cac96bf300102030400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a00000000000000000000000000000000000000000000000000000000000001c0040302010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002200000000000000000000000000000000000000000000000000000000000000260000000000000000000000000000000000000000000000000000000000000000400000000000000000000000089ab32156e46f46d02ade3fecbe5fc4243b9aaed0103030700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000053900000000000000000000000000000000000000000000000000000000000002a00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a30784441464541343932443963363733336165336435366237456431414442363036393263393842633500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a736f6d6520746f6b656e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000353544b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003c0ffee0000000000000000000000000000000000000000000000000000000000").unwrap();
         let result = user_op_log.abi_encode_packed().unwrap();
         assert_eq!(result, expected_result);
@@ -268,7 +268,7 @@ mod tests {
 
     #[test]
     fn should_get_uid_correctly_from_state_manager_log() {
-        let user_op_log = UserOpRouterLogFromStateManager::try_from(&get_sample_enqueued_log()).unwrap();
+        let user_op_log = UserOpStateManagerLog::try_from(&get_sample_enqueued_log()).unwrap();
         let expected_result =
             convert_hex_to_h256("be0a969cf68c8a51804458b2d841df79e2c7fa2f0e94b72b2859c5f8d660083d").unwrap();
         let result = user_op_log.to_uid().unwrap();

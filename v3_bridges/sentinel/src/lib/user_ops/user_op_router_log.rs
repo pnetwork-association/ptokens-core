@@ -21,7 +21,7 @@ pub struct UserOpRouterLog {
     pub(super) asset_token_address: EthAddress,
     pub(super) asset_amount: U256,
     pub(super) user_data: Bytes,
-    pub(super) options_mask: Bytes,
+    pub(super) options_mask: EthHash,
 }
 
 impl TryFrom<&EthLog> for UserOpRouterLog {
@@ -59,7 +59,7 @@ impl TryFrom<&EthLog> for UserOpRouterLog {
         let asset_token_address = Self::get_address_from_token(&tokens[8])?;
         let asset_amount = Self::get_u256_from_token(&tokens[9])?;
         let user_data = Self::get_bytes_from_token(&tokens[10])?;
-        let options_mask = Self::get_fixed_bytes_from_token(&tokens[11])?;
+        let options_mask = Self::get_eth_hash_from_token(&tokens[11])?;
 
         Ok(Self {
             nonce,
@@ -107,7 +107,6 @@ impl UserOpRouterLog {
         }
     }
 
-    #[allow(unused)]
     fn get_eth_hash_from_token(t: &EthAbiToken) -> Result<EthHash, SentinelError> {
         match t {
             EthAbiToken::FixedBytes(ref b) => Ok(EthHash::from_slice(b)),
