@@ -112,6 +112,20 @@ impl UserOpState {
             _ => false,
         }
     }
+
+    pub fn is_witnessed(&self) -> bool {
+        match self {
+            Self::Witnessed(..) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_enqueued(&self) -> bool {
+        match self {
+            Self::Enqueued(..) => true,
+            _ => false,
+        }
+    }
 }
 
 #[cfg(test)]

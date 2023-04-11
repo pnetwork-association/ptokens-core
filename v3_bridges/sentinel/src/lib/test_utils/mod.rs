@@ -45,7 +45,8 @@ pub fn get_sample_sub_mat_n(n: usize) -> EthSubmissionMaterial {
         11 => "sepolia-native-sub-mat-num-3256520.json",
         12 => "sepolia-native-sub-mat-num-3264438.json",
         13 => "sepolia-native-sub-mat-num-3264465.json",
-        _ => "sepolia-native-sub-mat-num-3270755.json",
+        14 => "sepolia-native-sub-mat-num-3270755.json",
+        _ => "sepolia-native-sub-mat-num-3270818.json",
     };
     let prefix = "src/lib/test_utils/";
     let path = format!("{prefix}{suffix}");

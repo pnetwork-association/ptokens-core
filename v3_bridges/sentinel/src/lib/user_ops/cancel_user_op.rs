@@ -4,7 +4,7 @@ use common_eth::{encode_fxn_call, EthPrivateKey, EthTransaction};
 use ethabi::Token as EthAbiToken;
 use ethereum_types::Address as EthAddress;
 
-use super::{UserOp, UserOpError, UserOpState};
+use super::{UserOp, UserOpError};
 
 impl UserOp {
     fn to_cancel_fxn_data(&self) -> Result<Bytes, UserOpError> {
@@ -58,6 +58,7 @@ mod tests {
     use crate::user_ops::test_utils::{
         get_sample_cancelled_user_op,
         get_sample_enqueued_user_op,
+        get_sample_executed_user_op,
         get_sample_witnessed_user_op,
     };
 
@@ -103,6 +104,23 @@ mod tests {
     fn should_not_be_able_to_cancel_cancelled_user_op() {
         let user_op = get_sample_cancelled_user_op();
         assert!(user_op.state().is_cancelled());
+        let nonce = 9;
+        let gas_limit = 100_000;
+        let pk = get_sample_pk();
+        let gas_price = 20_000_000_000;
+        let to = convert_hex_to_eth_address("0xc2926f4e511dd26e51d5ce1231e3f26012fd1caf").unwrap();
+        let chain_id = EthChainId::Sepolia;
+        match user_op.cancel(nonce, gas_price, &to, gas_limit, &pk, &chain_id) {
+            Ok(_) => panic!("should not have succeeded"),
+            Err(UserOpError::CannotCancel(user_op_state)) => assert_eq!(user_op_state, user_op.state),
+            Err(e) => panic!("wrong error received: {e}"),
+        }
+    }
+
+    #[test]
+    fn should_not_be_able_to_cancel_executed_user_op() {
+        let user_op = get_sample_executed_user_op();
+        assert!(user_op.state().is_executed());
         let nonce = 9;
         let gas_limit = 100_000;
         let pk = get_sample_pk();
