@@ -114,11 +114,19 @@ impl Config {
         self.native.get_endpoints()
     }
 
-    pub fn get_state_manager(&self, side: &BridgeSide) -> EthAddress {
+    pub fn state_manager(&self, side: &BridgeSide) -> EthAddress {
         if side.is_native() {
-            self.native.get_state_manager()
+            self.native.state_manager()
         } else {
-            self.host.get_state_manager()
+            self.host.state_manager()
+        }
+    }
+
+    pub fn router(&self, side: &BridgeSide) -> EthAddress {
+        if side.is_native() {
+            self.native.router()
+        } else {
+            self.host.router()
         }
     }
 }

@@ -55,13 +55,15 @@ pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliAr
     let args = ProcessBlockArgs::try_from(cli_args)?;
     let db = get_db_at_path(&config.get_db_path())?;
     let is_in_sync = true;
-    let state_manager = config.get_state_manager(&args.side);
+    let state_manager = config.state_manager(&args.side);
+    let router = config.router(&args.side);
     let is_validating = true;
     let use_db_tx = !args.dry_run;
     let output = if args.side.is_native() {
         process_native(
             &db,
             is_in_sync,
+            &router,
             &args.sub_mat,
             &state_manager,
             is_validating,
@@ -72,6 +74,7 @@ pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliAr
         process_host(
             &db,
             is_in_sync,
+            &router,
             &args.sub_mat,
             &state_manager,
             is_validating,

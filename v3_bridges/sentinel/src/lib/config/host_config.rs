@@ -76,7 +76,11 @@ impl ConfigT for HostConfig {
         self.validate
     }
 
-    fn get_state_manager(&self) -> EthAddress {
+    fn state_manager(&self) -> EthAddress {
         self.state_manager
+    }
+
+    fn router(&self) -> EthAddress {
+        self.router
     }
 }

@@ -11,6 +11,7 @@ const ORIGIN_NETWORK_ID: Vec<u8> = vec![]; // FIXME calculate this!
 pub fn process_host<D: DatabaseInterface>(
     db: &D,
     is_in_sync: bool,
+    router: &EthAddress,
     sub_mat: &EthSubmissionMaterial,
     state_manager: &EthAddress,
     is_validating: bool,
@@ -43,7 +44,7 @@ pub fn process_host<D: DatabaseInterface>(
 
     let r = if is_validating {
         sub_mat.receipts_are_valid()?;
-        UserOps::from_sub_mat(BridgeSide::Host, sub_mat, state_manager, &ORIGIN_NETWORK_ID)?
+        UserOps::from_sub_mat(BridgeSide::Host, state_manager, &ORIGIN_NETWORK_ID, router, sub_mat)?
     } else {
         UserOps::empty()
     };
@@ -59,6 +60,7 @@ pub fn process_host<D: DatabaseInterface>(
 
 pub fn process_host_batch<D: DatabaseInterface>(
     db: &D,
+    router: &EthAddress,
     is_in_sync: bool,
     state_manager: &EthAddress,
     batch: &EthSubmissionMaterials,
@@ -76,6 +78,7 @@ pub fn process_host_batch<D: DatabaseInterface>(
                 process_host(
                     db,
                     is_in_sync,
+                    router,
                     sub_mat,
                     state_manager,
                     is_validating,

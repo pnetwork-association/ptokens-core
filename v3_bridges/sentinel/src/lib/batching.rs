@@ -121,9 +121,9 @@ impl Batch {
             batch_size: config.batching().get_batch_size(is_native),
             batch_duration: config.batching().get_batch_duration(is_native),
             state_manager: if is_native {
-                config.native().get_state_manager()
+                config.native().state_manager()
             } else {
-                config.host().get_state_manager()
+                config.host().state_manager()
             },
             ..Default::default()
         };

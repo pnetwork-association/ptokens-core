@@ -18,10 +18,15 @@ pub async fn processor_loop<D: DatabaseInterface>(
     info!("Starting processor loop...");
 
     let mut heartbeats = Heartbeats::new();
+
+    let host_router = config.host().router();
+    let native_router = config.native().router();
+
     let host_is_validating = config.host().is_validating();
     let native_is_validating = config.native().is_validating();
-    let host_state_manager = config.host().get_state_manager();
-    let native_state_manager = config.native().get_state_manager();
+
+    let host_state_manager = config.host().state_manager();
+    let native_state_manager = config.native().state_manager();
 
     'processor_loop: loop {
         tokio::select! {
@@ -33,6 +38,7 @@ pub async fn processor_loop<D: DatabaseInterface>(
                         // NOTE If we match on the process fxn call directly, we get tokio errors!
                         let result =  process_native_batch(
                             &*db,
+                            &native_router,
                             matches!(args.is_in_sync(), Ok(true)),
                             &native_state_manager,
                             &args.batch,
@@ -67,6 +73,7 @@ pub async fn processor_loop<D: DatabaseInterface>(
                         // NOTE If we match on the process fxn call directly, we get tokio errors!
                         let result = process_host_batch(
                             &*db,
+                            &host_router,
                             matches!(args.is_in_sync(), Ok(true)),
                             &host_state_manager,
                             &args.batch,
