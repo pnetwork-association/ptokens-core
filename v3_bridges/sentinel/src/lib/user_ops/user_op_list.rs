@@ -96,19 +96,17 @@ impl UserOpList {
         op: UserOp,
         mut list: Self,
     ) -> Result<Option<UserOp>, UserOpError> {
+        debug!("adding user op to db: {op}");
+        list.push(UserOpListEntry::try_from(&op)?);
+        op.put_in_db(db_utils)?;
+        list.put_in_db(db_utils)?;
         match op.state() {
             UserOpState::Enqueued(..) => {
-                warn!("enqueued event found but not witnessed!");
                 // NOTE: We return this because it'll require a cancellation signature
+                warn!("enqueued event found but not witnessed!");
                 Ok(Some(op))
             },
-            _ => {
-                debug!("adding user op to db: {op}");
-                list.push(UserOpListEntry::try_from(&op)?);
-                op.put_in_db(db_utils)?;
-                list.put_in_db(db_utils)?;
-                Ok(None)
-            },
+            _ => Ok(None)
         }
     }
 
