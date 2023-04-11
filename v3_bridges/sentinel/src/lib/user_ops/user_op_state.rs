@@ -14,8 +14,6 @@ use super::{
     WITNESSED_USER_OP_TOPIC,
 };
 
-// TODO Make a struct for the args for each enum field?
-
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Serialize, Deserialize, EnumIter)]
 pub enum UserOpState {
@@ -78,7 +76,10 @@ impl UserOpState {
         match self {
             Self::Witnessed(side, _) => Ok((self, Self::Enqueued(side, tx_hash))),
             Self::Enqueued(side, _) => Ok((self, Self::Executed(side, tx_hash))),
-            op_state => Err(UserOpError::CannotUpdate(op_state)),
+            op_state => Err(UserOpError::CannotUpdate {
+                from: op_state,
+                to: UserOpState::Cancelled(op_state.side(), tx_hash),
+            }),
         }
     }
 
@@ -87,6 +88,15 @@ impl UserOpState {
             Self::Witnessed(side, _) => Ok((self, Self::Cancelled(side, tx_hash))),
             Self::Enqueued(side, _) => Ok((self, Self::Cancelled(side, tx_hash))),
             op_state => Err(UserOpError::CannotCancel(op_state)),
+        }
+    }
+
+    pub fn side(&self) -> BridgeSide {
+        match self {
+            Self::Witnessed(side, _) => *side,
+            Self::Enqueued(side, _) => *side,
+            Self::Executed(side, _) => *side,
+            Self::Cancelled(side, _) => *side,
         }
     }
 
@@ -100,31 +110,19 @@ impl UserOpState {
     }
 
     pub fn is_cancelled(&self) -> bool {
-        match self {
-            Self::Cancelled(..) => true,
-            _ => false,
-        }
+        matches!(self, Self::Cancelled(..))
     }
 
     pub fn is_executed(&self) -> bool {
-        match self {
-            Self::Executed(..) => true,
-            _ => false,
-        }
+        matches!(self, Self::Executed(..))
     }
 
     pub fn is_witnessed(&self) -> bool {
-        match self {
-            Self::Witnessed(..) => true,
-            _ => false,
-        }
+        matches!(self, Self::Witnessed(..))
     }
 
     pub fn is_enqueued(&self) -> bool {
-        match self {
-            Self::Enqueued(..) => true,
-            _ => false,
-        }
+        matches!(self, Self::Enqueued(..))
     }
 }
 

@@ -8,6 +8,7 @@ use lib::{HostOutput, SentinelDbUtils, SentinelError, UserOpList, UserOps};
 const SIDE: &str = "host";
 const ORIGIN_NETWORK_ID: Vec<u8> = vec![]; // FIXME calculate this!
 
+#[allow(clippy::too_many_arguments)]
 pub fn process_host<D: DatabaseInterface>(
     db: &D,
     is_in_sync: bool,

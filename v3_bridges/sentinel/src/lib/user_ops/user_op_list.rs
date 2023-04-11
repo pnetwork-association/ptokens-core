@@ -106,7 +106,7 @@ impl UserOpList {
                 warn!("enqueued event found but not witnessed!");
                 Ok(Some(op))
             },
-            _ => Ok(None)
+            _ => Ok(None),
         }
     }
 
@@ -127,7 +127,9 @@ impl UserOpList {
             },
             _ => {
                 debug!("updating user op in db to {op}");
-                op.update_in_db(db_utils)?;
+                let mut op_from_db = UserOp::get_from_db(db_utils, &op.key()?)?;
+                op_from_db.update_state(op)?;
+                op_from_db.update_in_db(db_utils)?;
                 Ok(())
             },
         }

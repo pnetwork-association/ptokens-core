@@ -8,6 +8,7 @@ use lib::{NativeOutput, SentinelDbUtils, SentinelError, UserOpList, UserOps};
 const SIDE: &str = "native";
 const ORIGIN_NETWORK_ID: Vec<u8> = vec![]; // FIXME calculate this!
 
+#[allow(clippy::too_many_arguments)]
 pub fn process_native<D: DatabaseInterface>(
     db: &D,
     is_in_sync: bool,

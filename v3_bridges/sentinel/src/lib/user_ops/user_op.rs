@@ -81,6 +81,25 @@ impl UserOp {
 }
 
 impl UserOp {
+    pub fn update_state(&mut self, other: Self) -> Result<(), UserOpError> {
+        debug!("updating user op state from {} to {}", self.state(), other.state());
+        if self.uid() != other.uid() {
+            Err(UserOpError::UidMismatch {
+                a: self.uid(),
+                b: other.uid(),
+            })
+        } else if self.state() >= other.state() {
+            Err(UserOpError::CannotUpdate {
+                from: self.state(),
+                to: other.state(),
+            })
+        } else {
+            self.previous_states.push(self.state());
+            self.state = other.state();
+            Ok(())
+        }
+    }
+
     pub fn state(&self) -> UserOpState {
         self.state
     }

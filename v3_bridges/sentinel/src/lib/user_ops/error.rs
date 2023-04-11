@@ -5,8 +5,8 @@ use super::UserOpState;
 
 #[derive(Error, Debug)]
 pub enum UserOpError {
-    #[error("cannot update user op state from: '{0}'")]
-    CannotUpdate(UserOpState),
+    #[error("cannot update user op state from: '{from}' to {to}")]
+    CannotUpdate { from: UserOpState, to: UserOpState },
 
     #[error("user op processing error: {0}")]
     Process(String),
@@ -28,4 +28,7 @@ pub enum UserOpError {
 
     #[error("cannot cancel because user op was {0}")]
     CannotCancel(UserOpState),
+
+    #[error("user ops UIDs do not match ({a} != {b})")]
+    UidMismatch { a: EthHash, b: EthHash },
 }
