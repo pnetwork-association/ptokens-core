@@ -31,7 +31,7 @@ impl TryFrom<&UserOp> for UserOpListEntry {
     type Error = UserOpError;
 
     fn try_from(o: &UserOp) -> Result<Self, Self::Error> {
-        Ok(Self::new(o.to_uid(), get_utc_timestamp()?, o.to_flag()))
+        Ok(Self::new(o.uid(), get_utc_timestamp()?, o.to_flag()))
     }
 }
 
@@ -140,7 +140,7 @@ impl UserOpList {
         op: UserOp,
     ) -> Result<Option<UserOp>, UserOpError> {
         let list = Self::get_from_db(db_utils, &USER_OP_LIST)?;
-        if let Some(entry) = list.get(&op.to_uid()) {
+        if let Some(entry) = list.get(&op.uid()) {
             Self::handle_is_in_list(db_utils, op, list, entry)?;
             Ok(None)
         } else {

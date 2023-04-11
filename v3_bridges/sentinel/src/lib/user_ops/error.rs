@@ -25,4 +25,7 @@ pub enum UserOpError {
 
     #[error("unrecognized topic hash: {0}")]
     UnrecognizedTopic(EthHash),
+
+    #[error("{0}")]
+    AppError(#[from] common::AppError),
 }

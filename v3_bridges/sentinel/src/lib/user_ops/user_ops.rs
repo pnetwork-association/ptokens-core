@@ -6,7 +6,7 @@ use derive_more::{Constructor, Deref};
 use ethereum_types::Address as EthAddress;
 use serde::{Deserialize, Serialize};
 
-use super::{UserOp, ENQUEUED_USER_OP_TOPIC, WITNESSED_USER_OP_TOPIC};
+use super::{UserOp, CANCELLED_USER_OP_TOPIC, ENQUEUED_USER_OP_TOPIC, EXECUTED_USER_OP_TOPIC, WITNESSED_USER_OP_TOPIC};
 use crate::{get_utc_timestamp, SentinelError};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Deref, Serialize, Deserialize)]
@@ -51,24 +51,29 @@ impl UserOps {
 
     pub fn from_sub_mat(
         side: BridgeSide,
-        sub_mat: &EthSubmissionMaterial,
+        _router: &EthAddress,
+        origin_network_id: &[Byte], // TODO get this from the BridgeSide? Or the config?
         state_manager: &EthAddress,
-        origin_network_id: &[Byte],
+        sub_mat: &EthSubmissionMaterial,
     ) -> Result<Self, SentinelError> {
         let block_hash = sub_mat.get_block_hash()?;
         let block_timestamp = sub_mat.get_timestamp().as_secs();
         let witnessed_timestamp = get_utc_timestamp()?;
+        let topics = vec![
+            *CANCELLED_USER_OP_TOPIC,
+            *ENQUEUED_USER_OP_TOPIC,
+            *EXECUTED_USER_OP_TOPIC,
+            *WITNESSED_USER_OP_TOPIC,
+        ];
 
         let mut user_ops: Vec<UserOp> = vec![];
 
         for receipt in sub_mat.receipts.iter() {
             let tx_hash = receipt.transaction_hash;
             for log in receipt.logs.iter() {
-                // FIXME need to look at 2 diff contracts depending on bridge side!
-
-                if !log.topics.is_empty() && &log.address == state_manager {
+                if &log.address == state_manager {
                     for topic in log.topics.iter() {
-                        if topic == &*WITNESSED_USER_OP_TOPIC {
+                        if topics.contains(topic) {
                             let op = UserOp::from_log(
                                 side,
                                 witnessed_timestamp,
@@ -78,11 +83,6 @@ impl UserOps {
                                 origin_network_id,
                                 log,
                             )?;
-                            user_ops.push(op);
-                        };
-
-                        if topic == &*ENQUEUED_USER_OP_TOPIC {
-                            let op = UserOp::default(); // FIXME Real parser!
                             user_ops.push(op);
                         };
                     }
@@ -160,8 +160,9 @@ mod tests {
         let sub_mat = get_sample_sub_mat_n(10);
         let sepolia_network_id = hex::decode("e15503e4").unwrap();
         let state_manager = convert_hex_to_eth_address("b274d81a823c1912c6884e39c2e4e669e04c83f4").unwrap();
+        let router = EthAddress::random();
         let expected_result = 1;
-        let ops = UserOps::from_sub_mat(side, &sub_mat, &state_manager, &sepolia_network_id).unwrap();
+        let ops = UserOps::from_sub_mat(side, &router, &sepolia_network_id, &state_manager, &sub_mat).unwrap();
         let result = ops.len();
         assert_eq!(result, expected_result);
         let side = BridgeSide::Native;
@@ -176,15 +177,14 @@ mod tests {
         let sub_mat = get_sample_sub_mat_n(11);
         let sepolia_network_id = hex::decode("e15503e4").unwrap();
         let state_manager = convert_hex_to_eth_address("0xBcBC92efE0a3C3ca99deBa708CEc92c785AfFB15").unwrap();
+        let router = EthAddress::random();
         let expected_result = 1;
-        let ops = UserOps::from_sub_mat(side, &sub_mat, &state_manager, &sepolia_network_id).unwrap();
+        let ops = UserOps::from_sub_mat(side, &router, &sepolia_network_id, &state_manager, &sub_mat).unwrap();
         let result = ops.len();
         assert_eq!(result, expected_result);
-        /*
         let side = BridgeSide::Native;
-        let hash = convert_hex_to_h256("0xf6f24a42e1bfa9ab963786a9d2e146da7a6afad0ed188daa7a88e37bf42db789").unwrap();
-        let expected_state = UserOpState::Witnessed(side, hash);
+        let hash = convert_hex_to_h256("0xc2e677e7e8c73834dc86c237f79f94ad3e4899d6aa7e561a8110a6117d13e8d5").unwrap();
+        let expected_state = UserOpState::Enqueued(side, hash);
         assert_eq!(ops[0].state(), expected_state);
-        */
     }
 }

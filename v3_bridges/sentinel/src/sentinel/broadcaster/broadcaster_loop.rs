@@ -1,10 +1,7 @@
-use std::{convert::TryFrom, result::Result};
+use std::result::Result;
 
 use common::BridgeSide;
-use common_chain_ids::EthChainId;
-use common_eth::{EthPrivateKey, EthTransaction};
-use ethereum_types::Address as EthAddress;
-use lib::{BroadcasterMessages, EthRpcMessages, MongoMessages, SentinelConfig, SentinelError, UserOp};
+use lib::{BroadcasterMessages, EthRpcMessages, MongoMessages, SentinelConfig, SentinelError};
 use tokio::{
     sync::mpsc::{Receiver as MpscRx, Sender as MpscTx},
     time::{sleep, Duration},
@@ -24,19 +21,19 @@ async fn main_loop(
     eth_rpc_tx.send(n_msg).await?;
     eth_rpc_tx.send(h_msg).await?;
 
-    let mut n_nonce = n_rx.await??;
-    let mut h_nonce = h_rx.await??;
+    let _n_nonce = n_rx.await??;
+    let _h_nonce = h_rx.await??;
 
-    let n_chain_id = config.native().get_eth_chain_id();
-    let h_chain_id = config.host().get_eth_chain_id();
+    let _n_chain_id = config.native().get_eth_chain_id();
+    let _h_chain_id = config.host().get_eth_chain_id();
 
-    let n_state_manager = config.state_manager(&BridgeSide::Native);
-    let h_state_manager = config.state_manager(&BridgeSide::Host);
+    let _n_state_manager = config.state_manager(&BridgeSide::Native);
+    let _h_state_manager = config.state_manager(&BridgeSide::Host);
 
     'broadcaster_loop: loop {
         let (msg, rx) = MongoMessages::get_output_msg();
         mongo_tx.send(msg).await?;
-        let output = rx.await??;
+        let _output = rx.await??;
 
         /*
         let h_unmatched = output.host_unmatched_user_ops();
