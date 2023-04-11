@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::SentinelError;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
-pub struct UserOpLog {
+pub struct UserOpRouterLog {
     pub(super) nonce: U256,
     pub(super) destination_account: String,
     pub(super) destination_network_id: Bytes,
@@ -24,7 +24,7 @@ pub struct UserOpLog {
     pub(super) options_mask: Bytes,
 }
 
-impl TryFrom<&EthLog> for UserOpLog {
+impl TryFrom<&EthLog> for UserOpRouterLog {
     type Error = SentinelError;
 
     fn try_from(l: &EthLog) -> Result<Self, Self::Error> {
@@ -78,7 +78,7 @@ impl TryFrom<&EthLog> for UserOpLog {
     }
 }
 
-impl UserOpLog {
+impl UserOpRouterLog {
     fn get_address_from_token(t: &EthAbiToken) -> Result<EthAddress, SentinelError> {
         match t {
             EthAbiToken::Address(t) => Ok(EthAddress::from_slice(t.as_bytes())),

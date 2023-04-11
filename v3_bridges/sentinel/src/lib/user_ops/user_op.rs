@@ -8,7 +8,7 @@ use ethers_core::abi::{self, Token};
 use serde::{Deserialize, Serialize};
 use tiny_keccak::{Hasher, Keccak};
 
-use super::{UserOpFlag, UserOpLog, UserOpState};
+use super::{UserOpFlag, UserOpRouterLog, UserOpState};
 use crate::{DbKey, DbUtilsT, SentinelError};
 
 impl DbUtilsT for UserOp {
@@ -41,7 +41,7 @@ pub struct UserOp {
     bridge_side: BridgeSide,
     origin_network_id: Bytes,
     witnessed_timestamp: u64,
-    user_op_log: UserOpLog, // NOTE This remains separate since we can parse it entirely from the log
+    user_op_log: UserOpRouterLog, // NOTE This remains separate since we can parse it entirely from the log
     previous_states: Vec<UserOpState>,
 }
 
@@ -96,7 +96,7 @@ impl UserOp {
             block_timestamp,
             witnessed_timestamp,
             previous_states: vec![],
-            user_op_log: UserOpLog::try_from(log)?,
+            user_op_log: UserOpRouterLog::try_from(log)?,
             origin_network_id: origin_network_id.to_vec(),
             state: UserOpState::Witnessed(bridge_side, tx_hash),
         })
