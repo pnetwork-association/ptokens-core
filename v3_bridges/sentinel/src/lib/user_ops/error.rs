@@ -8,9 +8,6 @@ pub enum UserOpError {
     #[error("cannot update user op state from: '{0}'")]
     CannotUpdate(UserOpState),
 
-    #[error("cannot cancel user op state from: '{0}'")]
-    CannotCancel(UserOpState),
-
     #[error("user op processing error: {0}")]
     Process(String),
 
@@ -28,4 +25,7 @@ pub enum UserOpError {
 
     #[error("{0}")]
     AppError(#[from] common::AppError),
+
+    #[error("cannot cancel because user op was {0}")]
+    CannotCancel(UserOpState),
 }

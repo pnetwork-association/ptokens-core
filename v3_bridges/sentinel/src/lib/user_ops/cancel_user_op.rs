@@ -4,7 +4,7 @@ use common_eth::{encode_fxn_call, EthPrivateKey, EthTransaction};
 use ethabi::Token as EthAbiToken;
 use ethereum_types::Address as EthAddress;
 
-use super::{UserOp, UserOpError};
+use super::{UserOp, UserOpError, UserOpState};
 
 impl UserOp {
     fn to_cancel_fxn_data(&self) -> Result<Bytes, UserOpError> {
@@ -30,7 +30,7 @@ impl UserOp {
         ])?)
     }
 
-    fn cancel(
+    pub fn cancel(
         &self,
         nonce: u64,
         gas_price: u64,
@@ -39,9 +39,13 @@ impl UserOp {
         pk: &EthPrivateKey,
         chain_id: &EthChainId,
     ) -> Result<EthTransaction, UserOpError> {
-        let value = 0;
-        let data = self.to_cancel_fxn_data()?;
-        Ok(EthTransaction::new_unsigned(data, nonce, value, *to, chain_id, gas_limit, gas_price).sign(pk)?)
+        if self.state().is_cancelled() || self.state().is_executed() {
+            Err(UserOpError::CannotCancel(self.state))
+        } else {
+            let value = 0;
+            let data = self.to_cancel_fxn_data()?;
+            Ok(EthTransaction::new_unsigned(data, nonce, value, *to, chain_id, gas_limit, gas_price).sign(pk)?)
+        }
     }
 }
 
@@ -51,7 +55,11 @@ mod tests {
     use common_eth::convert_hex_to_eth_address;
 
     use super::*;
-    use crate::user_ops::test_utils::{get_sample_enqueued_user_op, get_sample_witnessed_user_op};
+    use crate::user_ops::test_utils::{
+        get_sample_cancelled_user_op,
+        get_sample_enqueued_user_op,
+        get_sample_witnessed_user_op,
+    };
 
     fn get_sample_pk() -> EthPrivateKey {
         EthPrivateKey::try_from("64aaa58f496810ef053e25a734d1fbd90ddf5d33838bb3700014ceb59ca3204d").unwrap()
@@ -89,5 +97,22 @@ mod tests {
         let expected_result = "f9034f098504a817c800830186a094c2926f4e511dd26e51d5ce1231e3f26012fd1caf80b902e40aa0f13200000000000000000000000000000000000000000000000000000000000000205f4ac87dc7aad4d188fbecc0117915d99901a621d69f2a1c771f3bffc6e4b19cf6f24a42e1bfa9ab963786a9d2e146da7a6afad0ed188daa7a88e37bf42db789000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000195e700000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000056bc75e2d6310000000000000000000000000000025a7fc8a2400d9aaafe149750c176a4d84a666c0e15503e400000000000000000000000000000000000000000000000000000000953835d900000000000000000000000000000000000000000000000000000000953835d90000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001c00000000000000000000000000000000000000000000000000000000000000220000000000000000000000000000000000000000000000000000000000000026000000000000000000000000000000000000000000000000000000000000002a0000000000000000000000000000000000000000000000000000000000000002a307861343136353762663232354638456337453230313043383963334630383431373239343832363444000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005546f6b656e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003544b4e000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008401546d72a0040fe686385b1df6e4cce714102eb7a6b0ab9a135cd36f89c11ecc1d369c183fa03a269471b87fa624f5a4f33ccbb50ccf7723cbf6fbe2274e40a1dd303f09b9eb".to_string();
         let result = tx.serialize_hex();
         assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    fn should_not_be_able_to_cancel_cancelled_user_op() {
+        let user_op = get_sample_cancelled_user_op();
+        assert!(user_op.state().is_cancelled());
+        let nonce = 9;
+        let gas_limit = 100_000;
+        let pk = get_sample_pk();
+        let gas_price = 20_000_000_000;
+        let to = convert_hex_to_eth_address("0xc2926f4e511dd26e51d5ce1231e3f26012fd1caf").unwrap();
+        let chain_id = EthChainId::Sepolia;
+        match user_op.cancel(nonce, gas_price, &to, gas_limit, &pk, &chain_id) {
+            Ok(_) => panic!("should not have succeeded"),
+            Err(UserOpError::CannotCancel(user_op_state)) => assert_eq!(user_op_state, user_op.state),
+            Err(e) => panic!("wrong error received: {e}"),
+        }
     }
 }

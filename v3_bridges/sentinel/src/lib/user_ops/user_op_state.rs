@@ -98,6 +98,20 @@ impl UserOpState {
             Self::Cancelled(..) => 3,
         }
     }
+
+    pub fn is_cancelled(&self) -> bool {
+        match self {
+            Self::Cancelled(..) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_executed(&self) -> bool {
+        match self {
+            Self::Executed(..) => true,
+            _ => false,
+        }
+    }
 }
 
 #[cfg(test)]

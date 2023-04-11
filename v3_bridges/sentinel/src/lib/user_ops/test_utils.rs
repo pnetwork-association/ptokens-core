@@ -24,3 +24,12 @@ pub fn get_sample_enqueued_user_op() -> UserOp {
     let router = EthAddress::random();
     UserOps::from_sub_mat(side, &router, &sepolia_network_id, &state_manager, &sub_mat).unwrap()[0].clone()
 }
+
+pub fn get_sample_cancelled_user_op() -> UserOp {
+    let side = BridgeSide::Native;
+    let sub_mat = get_sample_sub_mat_n(14);
+    let sepolia_network_id = hex::decode("e15503e4").unwrap();
+    let state_manager = convert_hex_to_eth_address("0xc2926f4e511dd26e51d5ce1231e3f26012fd1caf").unwrap();
+    let router = EthAddress::random();
+    UserOps::from_sub_mat(side, &router, &sepolia_network_id, &state_manager, &sub_mat).unwrap()[0].clone()
+}
