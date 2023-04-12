@@ -34,7 +34,8 @@ async fn insert_into_mongodb<T: std::fmt::Display + serde::Serialize>(
 async fn update_heartbeat(h: &HeartbeatsJson, collection: &Collection<HeartbeatsJson>) -> Result<(), SentinelError> {
     loop {
         let f = doc! {"_id":"heartbeats"};
-        match collection.find_one_and_replace(f, h, None).await {
+        let o = FindOneAndReplaceOptions::builder().upsert(true).build();
+        match collection.find_one_and_replace(f, h, o).await {
             Ok(_) => break Ok(()),
             Err(ref e) if e.contains_label(mongodb::error::RETRYABLE_WRITE_ERROR) => {
                 warn!("Error writing heartbeat to mongo, sleeing {MONGO_RETRY_SLEEP_TIME}ms and retrying...");
