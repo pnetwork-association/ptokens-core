@@ -43,14 +43,13 @@ pub fn process_host<D: DatabaseInterface>(
         return Ok(UserOps::empty());
     }
 
-    let r = if is_validating {
+    if is_validating {
         sub_mat.receipts_are_valid()?;
-        UserOps::from_sub_mat(BridgeSide::Host, state_manager, &ORIGIN_NETWORK_ID, router, sub_mat)?
-    } else {
-        UserOps::empty()
     };
 
-    debug!("Finished processing {SIDE} block {n}!");
+    let r = UserOps::from_sub_mat(BridgeSide::Host, state_manager, &ORIGIN_NETWORK_ID, router, sub_mat)?;
+
+    debug!("Finished processing {SIDE} block {n} - user ops: {r}");
 
     if use_db_tx {
         debug!("Ending db tx in host processor!");

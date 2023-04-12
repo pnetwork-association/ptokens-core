@@ -6,7 +6,10 @@ use ethereum_types::Address as EthAddress;
 use lib::{NativeOutput, SentinelDbUtils, SentinelError, UserOpList, UserOps};
 
 const SIDE: &str = "native";
-const ORIGIN_NETWORK_ID: Vec<u8> = vec![]; // FIXME calculate this!
+
+lazy_static::lazy_static! {
+    static ref ORIGIN_NETWORK_ID: Vec<u8> = hex::decode("e15503e4").unwrap();// FIXME calculate this!
+}
 
 #[allow(clippy::too_many_arguments)]
 pub fn process_native<D: DatabaseInterface>(
@@ -43,19 +46,18 @@ pub fn process_native<D: DatabaseInterface>(
         return Ok(UserOps::empty());
     }
 
-    let r = if is_validating {
+    if is_validating {
         sub_mat.receipts_are_valid()?;
-        UserOps::from_sub_mat(BridgeSide::Native, state_manager, &ORIGIN_NETWORK_ID, router, sub_mat)?
-    } else {
-        UserOps::empty()
     };
+
+    let r = UserOps::from_sub_mat(BridgeSide::Native, state_manager, &ORIGIN_NETWORK_ID, router, sub_mat)?;
 
     if use_db_tx {
         debug!("Ending db tx in host processor!");
         db.end_transaction()?;
     }
 
-    debug!("Finished processing {SIDE} block {n}!");
+    debug!("finished processing {SIDE} block {n} - user ops: {r}");
     Ok(r)
 }
 
