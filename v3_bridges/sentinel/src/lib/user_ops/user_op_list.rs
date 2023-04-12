@@ -20,6 +20,12 @@ pub struct UserOpListEntry {
     flag: UserOpFlag,
 }
 
+impl UserOpListEntry {
+    fn uid(&self) -> EthHash {
+        self.uid
+    }
+}
+
 impl PartialEq for UserOpListEntry {
     fn eq(&self, other: &Self) -> bool {
         // NOTE: We only are about the uid when testing for equality!
@@ -160,6 +166,15 @@ impl UserOpList {
             }
         }
         Ok(UserOps::new(ops_to_cancel))
+    }
+
+    pub fn user_ops<D: DatabaseInterface>(db_utils: &SentinelDbUtils<D>) -> Result<UserOps, SentinelError> {
+        let list = Self::get_from_db(db_utils, &USER_OP_LIST)?;
+        let ops = list
+            .iter()
+            .map(|entry| UserOp::get_from_db(db_utils, &entry.uid().into()))
+            .collect::<Result<Vec<UserOp>, SentinelError>>()?;
+        Ok(UserOps::new(ops))
     }
 }
 
