@@ -7,33 +7,34 @@ use crate::{HostOutput, NativeOutput, UserOps};
 
 #[derive(Clone, Debug, Default, Constructor, Serialize, Deserialize)]
 pub struct Output {
+    user_ops: UserOps,
     host_timestamp: u64,
     native_timestamp: u64,
     host_latest_block_num: u64,
     native_latest_block_num: u64,
-    host_unmatched_user_ops: UserOps,
-    native_unmatched_user_ops: UserOps,
 }
 
 impl Output {
-    pub fn host_unmatched_user_ops(&self) -> UserOps {
-        self.host_unmatched_user_ops.clone()
-    }
-
-    pub fn native_unmatched_user_ops(&self) -> UserOps {
-        self.native_unmatched_user_ops.clone()
+    pub fn user_ops(&self) -> UserOps {
+        self.user_ops.clone()
     }
 }
 
 impl From<(&NativeOutput, &HostOutput)> for Output {
     fn from((n, h): (&NativeOutput, &HostOutput)) -> Self {
+        let host_timestamp = h.timestamp();
+        let native_timestamp = n.timestamp();
+        let user_ops = if native_timestamp > host_timestamp {
+            n.user_ops()
+        } else {
+            h.user_ops()
+        };
         Self {
-            host_timestamp: h.get_timestamp(),
-            native_timestamp: n.get_timestamp(),
-            host_latest_block_num: h.get_latest_block_num(),
-            native_latest_block_num: n.get_latest_block_num(),
-            host_unmatched_user_ops: h.get_host_unmatched_user_ops(),
-            native_unmatched_user_ops: n.get_native_unmatched_user_ops(),
+            user_ops,
+            host_timestamp,
+            native_timestamp,
+            host_latest_block_num: h.latest_block_num(),
+            native_latest_block_num: n.latest_block_num(),
         }
     }
 }

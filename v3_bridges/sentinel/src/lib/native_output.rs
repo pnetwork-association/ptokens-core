@@ -8,42 +8,35 @@ use crate::{get_utc_timestamp, SentinelError, UserOps};
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct NativeOutput {
     timestamp: u64,
+    user_ops: UserOps,
     latest_block_num: u64,
-    host_unmatched_user_ops: UserOps,
-    native_unmatched_user_ops: UserOps,
 }
 
 impl NativeOutput {
-    pub fn new(latest_block_num: u64) -> Result<Self, SentinelError> {
+    pub fn new(latest_block_num: u64, user_ops: UserOps) -> Result<Self, SentinelError> {
         Ok(Self {
+            user_ops,
             latest_block_num,
             timestamp: get_utc_timestamp()?,
-            host_unmatched_user_ops: UserOps::empty(),
-            native_unmatched_user_ops: UserOps::empty(),
         })
     }
 
-    pub fn get_timestamp(&self) -> u64 {
+    pub fn timestamp(&self) -> u64 {
         self.timestamp
     }
 
-    pub fn get_latest_block_num(&self) -> u64 {
+    pub fn latest_block_num(&self) -> u64 {
         self.latest_block_num
     }
 
-    pub fn add_unmatched_user_ops(&mut self, n: &UserOps, h: &UserOps) {
-        self.host_unmatched_user_ops = h.clone();
-        self.native_unmatched_user_ops = n.clone();
-    }
-
-    pub fn get_native_unmatched_user_ops(&self) -> UserOps {
-        self.native_unmatched_user_ops.clone()
+    pub fn user_ops(&self) -> UserOps {
+        self.user_ops.clone()
     }
 }
 
 impl fmt::Display for NativeOutput {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match serde_json::to_string(self) {
+        let s = match serde_json::to_string_pretty(self) {
             Ok(s) => s,
             _ => "could not convert `NativeOutput` to json".to_string(),
         };

@@ -90,9 +90,9 @@ pub fn process_native_batch<D: DatabaseInterface>(
             .collect::<Result<Vec<UserOps>, SentinelError>>()?,
     );
 
-    let _ops_requiring_txs = UserOpList::process_ops(&SentinelDbUtils::new(db), user_ops)?;
+    let ops_requiring_txs = UserOpList::process_ops(&SentinelDbUtils::new(db), user_ops)?;
 
-    let output = NativeOutput::new(batch.get_last_block_num()?)?;
+    let output = NativeOutput::new(batch.get_last_block_num()?, ops_requiring_txs)?;
 
     db.end_transaction()?;
 

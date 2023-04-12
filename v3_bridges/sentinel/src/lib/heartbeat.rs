@@ -44,24 +44,24 @@ impl Default for HeartbeatsJson {
 pub struct HeartbeatInfo((Timestamp, LatestBlockNum));
 
 impl HeartbeatInfo {
-    fn get_timestamp(&self) -> u64 {
+    fn timestamp(&self) -> u64 {
         self.0 .0
     }
 
-    fn get_latest_block_num(&self) -> u64 {
+    fn latest_block_num(&self) -> u64 {
         self.0 .1
     }
 }
 
 impl From<&NativeOutput> for HeartbeatInfo {
     fn from(v: &NativeOutput) -> Self {
-        Self((v.get_timestamp(), v.get_latest_block_num()))
+        Self((v.timestamp(), v.latest_block_num()))
     }
 }
 
 impl From<&HostOutput> for HeartbeatInfo {
     fn from(v: &HostOutput) -> Self {
-        Self((v.get_timestamp(), v.get_latest_block_num()))
+        Self((v.timestamp(), v.latest_block_num()))
     }
 }
 
@@ -88,25 +88,25 @@ impl Heartbeats {
         }
     }
 
-    fn get_last_native_timestamp(&self) -> u64 {
+    fn last_native_timestamp(&self) -> u64 {
         if self.native_deque.is_empty() {
             0
         } else {
-            self.native_deque[self.native_deque.len() - 1].get_timestamp()
+            self.native_deque[self.native_deque.len() - 1].timestamp()
         }
     }
 
-    fn get_last_host_timestamp(&self) -> u64 {
+    fn last_host_timestamp(&self) -> u64 {
         if self.host_deque.is_empty() {
             0
         } else {
-            self.host_deque[self.host_deque.len() - 1].get_timestamp()
+            self.host_deque[self.host_deque.len() - 1].timestamp()
         }
     }
 
     pub fn push_native(&mut self, o: &NativeOutput) {
-        let last_timestamp = self.get_last_native_timestamp();
-        let this_timestamp = o.get_timestamp();
+        let last_timestamp = self.last_native_timestamp();
+        let this_timestamp = o.timestamp();
 
         if this_timestamp > last_timestamp {
             self.native_deque.push_back(HeartbeatInfo::from(o));
@@ -114,8 +114,8 @@ impl Heartbeats {
     }
 
     pub fn push_host(&mut self, o: &HostOutput) {
-        let last_timestamp = self.get_last_host_timestamp();
-        let this_timestamp = o.get_timestamp();
+        let last_timestamp = self.last_host_timestamp();
+        let this_timestamp = o.timestamp();
         if this_timestamp > last_timestamp {
             self.host_deque.push_back(HeartbeatInfo::from(o));
         }
@@ -132,8 +132,8 @@ impl Heartbeats {
                     if i == 0 {
                         None
                     } else {
-                        let time_delta = (e.get_timestamp() - deque[i - 1].get_timestamp()) as f64;
-                        let block_delta = (e.get_latest_block_num() - deque[i - 1].get_latest_block_num()) as f64;
+                        let time_delta = (e.timestamp() - deque[i - 1].timestamp()) as f64;
+                        let block_delta = (e.latest_block_num() - deque[i - 1].latest_block_num()) as f64;
                         let bpm: f64 = block_delta / (time_delta / 60.0);
                         Some(bpm)
                     }
@@ -152,26 +152,26 @@ impl Heartbeats {
         }
     }
 
-    fn get_host_heartbeat(&self) -> String {
-        Self::calc_bpm_string(self.get_host_deque())
+    fn host_heartbeat(&self) -> String {
+        Self::calc_bpm_string(self.host_deque())
     }
 
-    fn get_native_heartbeat(&self) -> String {
-        Self::calc_bpm_string(self.get_native_deque())
+    fn native_heartbeat(&self) -> String {
+        Self::calc_bpm_string(self.native_deque())
     }
 
-    fn get_host_deque(&self) -> &BoundedVecDeque<HeartbeatInfo> {
+    fn host_deque(&self) -> &BoundedVecDeque<HeartbeatInfo> {
         &self.host_deque
     }
 
-    fn get_native_deque(&self) -> &BoundedVecDeque<HeartbeatInfo> {
+    fn native_deque(&self) -> &BoundedVecDeque<HeartbeatInfo> {
         &self.native_deque
     }
 
     pub fn to_output(&self) -> HeartbeatsOutput {
         HeartbeatsOutput {
-            host_bpm: self.get_host_heartbeat(),
-            native_bpm: self.get_native_heartbeat(),
+            host_bpm: self.host_heartbeat(),
+            native_bpm: self.native_heartbeat(),
             host_data: self.host_deque.iter().cloned().collect::<Vec<_>>(),
             native_data: self.native_deque.iter().cloned().collect::<Vec<_>>(),
         }
@@ -194,8 +194,8 @@ pub struct HeartbeatsOutput {
 
 impl fmt::Display for Heartbeats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let h = self.get_host_heartbeat();
-        let n = self.get_native_heartbeat();
+        let h = self.host_heartbeat();
+        let n = self.native_heartbeat();
         let j = json!({ "native_bpm": format!("{n}"), "host_bpm": format!("{h}")});
         write!(f, "{j}")
     }
