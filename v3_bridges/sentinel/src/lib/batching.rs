@@ -17,6 +17,7 @@ pub struct Batch {
     block_num: u64,
     batch_size: u64,
     side: BridgeSide,
+    router: EthAddress,
     sleep_duration: u64,
     batch_duration: u64,
     endpoints: Endpoints,
@@ -37,6 +38,7 @@ impl Default for Batch {
             batch_duration: 300, // NOTE: 5mins
             side: BridgeSide::default(),
             batching_is_disabled: false,
+            router: EthAddress::default(),
             single_submissions_flag: false,
             endpoints: Endpoints::default(),
             state_manager: EthAddress::default(),
@@ -125,6 +127,11 @@ impl Batch {
             } else {
                 config.host().state_manager()
             },
+            router: if is_native {
+                config.native().router()
+            } else {
+                config.host().router()
+            },
             ..Default::default()
         };
         if res.endpoints.is_empty() {
@@ -156,7 +163,7 @@ impl Batch {
 
     pub fn push(&mut self, sub_mat: EthSubmissionMaterial) {
         self.batch
-            .push(sub_mat.remove_receipts_if_no_logs_from_addresses(&[self.state_manager]));
+            .push(sub_mat.remove_receipts_if_no_logs_from_addresses(&[self.state_manager, self.router]));
     }
 
     pub fn get_state_manager(&self) -> &EthAddress {
