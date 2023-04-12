@@ -38,8 +38,8 @@ async fn process_message<D: DatabaseInterface>(
             let _ = responder.send(Ok((n as u64, h as u64)));
         },
         CoreMessages::GetUserOps(responder) => {
-            let ops = UserOpList::user_ops(&SentinelDbUtils::new(&*db));
-            let _ = responder.send(ops);
+            let ops = UserOpList::user_ops(&SentinelDbUtils::new(&*db))?;
+            let _ = responder.send(Ok(ops));
         },
     }
 

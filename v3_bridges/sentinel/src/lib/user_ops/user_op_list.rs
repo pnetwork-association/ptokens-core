@@ -169,7 +169,7 @@ impl UserOpList {
     }
 
     pub fn user_ops<D: DatabaseInterface>(db_utils: &SentinelDbUtils<D>) -> Result<UserOps, SentinelError> {
-        let list = Self::get_from_db(db_utils, &USER_OP_LIST)?;
+        let list = Self::get_from_db(db_utils, &USER_OP_LIST).unwrap_or_default();
         let ops = list
             .iter()
             .map(|entry| UserOp::get_from_db(db_utils, &entry.uid().into()))

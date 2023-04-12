@@ -138,8 +138,8 @@ async fn main_loop(
         }
     });
 
-    // GET /user_ops
-    let user_ops = warp::path("user_ops").and_then(move || {
+    // GET /ops
+    let ops = warp::path("ops").and_then(move || {
         let tx = core_tx_3.clone();
         #[allow(clippy::redundant_async_block)]
         async move {
@@ -147,7 +147,7 @@ async fn main_loop(
         }
     });
 
-    let routes = warp::get().and(ping.or(state).or(bpm).or(sync).or(output).or(user_ops));
+    let routes = warp::get().and(ping.or(state).or(bpm).or(sync).or(output).or(ops));
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
     Ok(())
 }
