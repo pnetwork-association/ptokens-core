@@ -1,7 +1,6 @@
 mod cancel_user_op;
 mod error;
 mod test_utils;
-mod unmatched_user_ops;
 mod user_op;
 mod user_op_constants;
 mod user_op_flag;

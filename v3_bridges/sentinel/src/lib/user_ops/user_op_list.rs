@@ -79,6 +79,7 @@ impl DbUtilsT for UserOpList {
 }
 
 impl UserOpList {
+    #[allow(unused)]
     fn includes(&self, uid: &EthHash) -> bool {
         for entry in self.iter() {
             if &entry.uid == uid {
