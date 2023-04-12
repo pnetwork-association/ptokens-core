@@ -146,7 +146,7 @@ impl UserOpList {
         db_utils: &SentinelDbUtils<D>,
         op: UserOp,
     ) -> Result<Option<UserOp>, UserOpError> {
-        let list = Self::get_from_db(db_utils, &USER_OP_LIST)?;
+        let list = Self::get_from_db(db_utils, &USER_OP_LIST).unwrap_or_default();
         if let Some(entry) = list.get(&op.uid()) {
             Self::handle_is_in_list(db_utils, op, list, entry)?;
             Ok(None)
@@ -161,11 +161,13 @@ impl UserOpList {
     ) -> Result<UserOps, SentinelError> {
         // FIXME get the list once!
         let mut ops_to_cancel = vec![];
+
         for op in ops.iter().cloned() {
             if let Some(returned_op) = Self::process_op(db_utils, op)? {
                 ops_to_cancel.push(returned_op)
             }
         }
+
         Ok(UserOps::new(ops_to_cancel))
     }
 
