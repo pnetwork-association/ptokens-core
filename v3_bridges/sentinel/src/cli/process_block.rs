@@ -57,7 +57,7 @@ pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliAr
     let is_in_sync = true;
     let state_manager = config.state_manager(&args.side);
     let router = config.router(&args.side);
-    let is_validating = true;
+    let is_validating = config.is_validating(&args.side);
     let use_db_tx = !args.dry_run;
     let output = if args.side.is_native() {
         process_native(
