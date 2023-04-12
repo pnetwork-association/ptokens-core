@@ -51,7 +51,7 @@ impl UserOps {
 
     pub fn from_sub_mat(
         side: BridgeSide,
-        _router: &EthAddress,
+        router: &EthAddress,
         origin_network_id: &[Byte], // TODO get this from the BridgeSide? Or the config?
         state_manager: &EthAddress,
         sub_mat: &EthSubmissionMaterial,
@@ -66,12 +66,14 @@ impl UserOps {
             *WITNESSED_USER_OP_TOPIC,
         ];
 
+        let addresses = vec![router, state_manager];
+
         let mut user_ops: Vec<UserOp> = vec![];
 
         for receipt in sub_mat.receipts.iter() {
             let tx_hash = receipt.transaction_hash;
             for log in receipt.logs.iter() {
-                if &log.address == state_manager {
+                if addresses.contains(&&log.address) {
                     for topic in log.topics.iter() {
                         if topics.contains(topic) {
                             let op = UserOp::from_log(
