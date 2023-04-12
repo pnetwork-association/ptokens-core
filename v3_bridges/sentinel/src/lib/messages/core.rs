@@ -1,12 +1,13 @@
 use common::{BridgeSide, CoreType};
 use tokio::sync::{oneshot, oneshot::Receiver};
 
-use crate::{CoreState, Responder, SentinelError};
+use crate::{CoreState, Responder, SentinelError, UserOps};
 
 #[derive(Debug)]
 pub enum CoreMessages {
     GetHostConfs(Responder<u64>),
     GetNativeConfs(Responder<u64>),
+    GetUserOps(Responder<UserOps>),
     GetHostLatestBlockNumber(Responder<u64>),
     GetNativeLatestBlockNumber(Responder<u64>),
     GetLatestBlockNumbers(Responder<(u64, u64)>),
@@ -14,6 +15,11 @@ pub enum CoreMessages {
 }
 
 impl CoreMessages {
+    pub fn get_core_user_ops_msg() -> (Self, Receiver<Result<UserOps, SentinelError>>) {
+        let (resp_tx, resp_rx) = oneshot::channel();
+        (Self::GetUserOps(resp_tx), resp_rx)
+    }
+
     pub fn get_latest_block_num_msg(side: &BridgeSide) -> (Self, Receiver<Result<u64, SentinelError>>) {
         let (resp_tx, resp_rx) = oneshot::channel();
         if side.is_native() {

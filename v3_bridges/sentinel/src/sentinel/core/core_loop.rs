@@ -2,7 +2,7 @@ use std::{result::Result, sync::Arc};
 
 use common::DatabaseInterface;
 use common_eth::{EthDbUtilsExt, HostDbUtils, NativeDbUtils};
-use lib::{CoreMessages, CoreState, SentinelError};
+use lib::{CoreMessages, CoreState, SentinelDbUtils, SentinelError, UserOpList};
 use tokio::sync::{mpsc::Receiver as MpscRx, Mutex};
 
 async fn process_message<D: DatabaseInterface>(
@@ -36,6 +36,10 @@ async fn process_message<D: DatabaseInterface>(
             let n = NativeDbUtils::new(&*db).get_latest_eth_block_number()?;
             let h = HostDbUtils::new(&*db).get_latest_eth_block_number()?;
             let _ = responder.send(Ok((n as u64, h as u64)));
+        },
+        CoreMessages::GetUserOps(responder) => {
+            let ops = UserOpList::user_ops(&SentinelDbUtils::new(&*db));
+            let _ = responder.send(ops);
         },
     }
 
