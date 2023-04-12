@@ -122,6 +122,14 @@ impl Config {
         }
     }
 
+    pub fn is_validating(&self, side: &BridgeSide) -> bool {
+        if side.is_native() {
+            self.native.is_validating()
+        } else {
+            self.host.is_validating()
+        }
+    }
+
     pub fn router(&self, side: &BridgeSide) -> EthAddress {
         if side.is_native() {
             self.native.router()
