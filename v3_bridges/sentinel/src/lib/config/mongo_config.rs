@@ -3,7 +3,7 @@ use std::{result::Result, time::Duration};
 use mongodb::{bson::doc, options::ClientOptions, Client, Collection, Database};
 use serde::Deserialize;
 
-use crate::{HeartbeatsJson, HostOutput, NativeOutput, SentinelError, MILLISECONDS_MULTIPLIER};
+use crate::{HeartbeatsJson, SentinelError, MILLISECONDS_MULTIPLIER};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct MongoToml {
@@ -11,8 +11,6 @@ pub struct MongoToml {
     timeout: u32,
     database: String,
     sleep_duration: u64,
-    host_collection: String,
-    native_collection: String,
 }
 
 #[derive(Debug, Clone)]
@@ -20,9 +18,7 @@ pub struct MongoConfig {
     uri: String,
     database: String,
     sleep_duration: u64,
-    host_collection: String,
     timeout: Option<Duration>,
-    native_collection: String,
 }
 
 impl MongoConfig {
@@ -43,9 +39,7 @@ impl MongoConfig {
         Self {
             uri: toml.uri.clone(),
             database: toml.database.clone(),
-            host_collection: toml.host_collection.clone(),
             timeout: Self::sanity_check_timeout(toml.timeout),
-            native_collection: toml.native_collection.clone(),
             sleep_duration: toml.sleep_duration * MILLISECONDS_MULTIPLIER,
         }
     }
@@ -72,18 +66,6 @@ impl MongoConfig {
         Ok(client.database(&self.database))
     }
 
-    pub async fn get_host_collection(&self) -> Result<Collection<HostOutput>, SentinelError> {
-        debug!("Getting host mongo collection @ '{}'...", self.host_collection);
-        let db = self.get_db().await?;
-        Ok(db.collection(&self.host_collection))
-    }
-
-    pub async fn get_native_collection(&self) -> Result<Collection<NativeOutput>, SentinelError> {
-        debug!("Getting native mongo collection @ '{}'...", self.native_collection);
-        let db = self.get_db().await?;
-        Ok(db.collection(&self.native_collection))
-    }
-
     pub async fn get_heartbeats_collection(&self) -> Result<Collection<HeartbeatsJson>, SentinelError> {
         debug!("Getting heartbeats mongo collection...");
         let db = self.get_db().await?;
@@ -104,19 +86,5 @@ mod tests {
     fn should_get_mongo_config() {
         let result = Config::new();
         assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn should_get_host_collection() {
-        let config = Config::new().unwrap();
-        let mongo_config = config.mongo();
-        mongo_config.get_host_collection().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn should_get_native_collection() {
-        let config = Config::new().unwrap();
-        let mongo_config = config.mongo();
-        mongo_config.get_native_collection().await.unwrap();
     }
 }

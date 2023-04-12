@@ -1,41 +1,42 @@
 use std::fmt;
 
-use derive_more::Constructor;
+use common::BridgeSide;
 use serde::{Deserialize, Serialize};
 
-use crate::{HostOutput, NativeOutput, UserOps};
+use crate::{get_utc_timestamp, SentinelError, UserOps};
 
-#[derive(Clone, Debug, Default, Constructor, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Output {
+    timestamp: u64,
+    side: BridgeSide,
     user_ops: UserOps,
-    host_timestamp: u64,
-    native_timestamp: u64,
-    host_latest_block_num: u64,
-    native_latest_block_num: u64,
+    latest_block_num: u64,
 }
 
 impl Output {
+    pub fn new(side: BridgeSide, latest_block_num: u64, user_ops: UserOps) -> Result<Self, SentinelError> {
+        Ok(Self {
+            side,
+            user_ops,
+            latest_block_num,
+            timestamp: get_utc_timestamp()?,
+        })
+    }
+
     pub fn user_ops(&self) -> UserOps {
         self.user_ops.clone()
     }
-}
 
-impl From<(&NativeOutput, &HostOutput)> for Output {
-    fn from((n, h): (&NativeOutput, &HostOutput)) -> Self {
-        let host_timestamp = h.timestamp();
-        let native_timestamp = n.timestamp();
-        let user_ops = if native_timestamp > host_timestamp {
-            n.user_ops()
-        } else {
-            h.user_ops()
-        };
-        Self {
-            user_ops,
-            host_timestamp,
-            native_timestamp,
-            host_latest_block_num: h.latest_block_num(),
-            native_latest_block_num: n.latest_block_num(),
-        }
+    pub fn timestamp(&self) -> u64 {
+        self.timestamp
+    }
+
+    pub fn latest_block_num(&self) -> u64 {
+        self.latest_block_num
+    }
+
+    pub fn side(&self) -> BridgeSide {
+        self.side
     }
 }
 

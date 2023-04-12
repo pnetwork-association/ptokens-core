@@ -4,7 +4,7 @@ use bounded_vec_deque::BoundedVecDeque;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::{HostOutput, NativeOutput};
+use crate::Output;
 
 type Timestamp = u64;
 type LatestBlockNum = u64;
@@ -53,14 +53,8 @@ impl HeartbeatInfo {
     }
 }
 
-impl From<&NativeOutput> for HeartbeatInfo {
-    fn from(v: &NativeOutput) -> Self {
-        Self((v.timestamp(), v.latest_block_num()))
-    }
-}
-
-impl From<&HostOutput> for HeartbeatInfo {
-    fn from(v: &HostOutput) -> Self {
+impl From<&Output> for HeartbeatInfo {
+    fn from(v: &Output) -> Self {
         Self((v.timestamp(), v.latest_block_num()))
     }
 }
@@ -104,20 +98,20 @@ impl Heartbeats {
         }
     }
 
-    pub fn push_native(&mut self, o: &NativeOutput) {
-        let last_timestamp = self.last_native_timestamp();
-        let this_timestamp = o.timestamp();
-
-        if this_timestamp > last_timestamp {
-            self.native_deque.push_back(HeartbeatInfo::from(o));
-        }
-    }
-
-    pub fn push_host(&mut self, o: &HostOutput) {
-        let last_timestamp = self.last_host_timestamp();
+    pub fn push(&mut self, o: &Output) {
+        let is_native = o.side().is_native();
+        let last_timestamp = if is_native {
+            self.last_native_timestamp()
+        } else {
+            self.last_host_timestamp()
+        };
         let this_timestamp = o.timestamp();
         if this_timestamp > last_timestamp {
-            self.host_deque.push_back(HeartbeatInfo::from(o));
+            if is_native {
+                self.native_deque.push_back(HeartbeatInfo::from(o));
+            } else {
+                self.host_deque.push_back(HeartbeatInfo::from(o));
+            }
         }
     }
 

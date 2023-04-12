@@ -11,10 +11,8 @@ mod eth_rpc_calls;
 mod flatten_join_handle;
 mod get_rpc_client;
 mod heartbeat;
-mod host_output;
 mod logging;
 mod messages;
-mod native_output;
 mod network_id;
 mod output;
 mod test_utils;
@@ -35,7 +33,6 @@ pub use self::{
     flatten_join_handle::flatten_join_handle,
     get_rpc_client::get_rpc_client,
     heartbeat::{HeartbeatInfo, Heartbeats, HeartbeatsJson},
-    host_output::HostOutput,
     logging::init_logger,
     messages::{
         BroadcasterMessages,
@@ -47,7 +44,6 @@ pub use self::{
         Responder,
         SyncerMessages,
     },
-    native_output::NativeOutput,
     network_id::NetworkId,
     output::Output,
     user_ops::{UserOp, UserOpList, UserOps},

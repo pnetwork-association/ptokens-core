@@ -16,7 +16,4 @@ use self::{
     processor::processor_loop,
     syncer::syncer_loop,
 };
-pub(crate) use self::{
-    processor::{process_host, process_native},
-    start_sentinel::start_sentinel,
-};
+pub(crate) use self::{processor::process_single, start_sentinel::start_sentinel};

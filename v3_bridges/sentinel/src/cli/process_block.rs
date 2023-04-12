@@ -8,7 +8,7 @@ use derive_more::Constructor;
 use lib::{SentinelConfig, SentinelError};
 use serde_json::json;
 
-use crate::sentinel::{process_host, process_native};
+use crate::sentinel::process_single;
 
 #[derive(Clone, Debug, Default, Args)]
 pub struct ProcessBlockCliArgs {
@@ -59,29 +59,17 @@ pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliAr
     let router = config.router(&args.side);
     let is_validating = config.is_validating(&args.side);
     let use_db_tx = !args.dry_run;
-    let output = if args.side.is_native() {
-        process_native(
-            &db,
-            is_in_sync,
-            &router,
-            &args.sub_mat,
-            &state_manager,
-            is_validating,
-            use_db_tx,
-            args.dry_run,
-        )?
-    } else {
-        process_host(
-            &db,
-            is_in_sync,
-            &router,
-            &args.sub_mat,
-            &state_manager,
-            is_validating,
-            use_db_tx,
-            args.dry_run,
-        )?
-    };
+    let output = process_single(
+        &db,
+        is_in_sync,
+        &router,
+        &args.sub_mat,
+        &state_manager,
+        is_validating,
+        use_db_tx,
+        args.dry_run,
+        args.side,
+    )?;
     let latest_block_num = args.sub_mat.get_block_number()?;
     let r = json!({
         "jsonrpc": "2.0",
