@@ -11,6 +11,7 @@ use crate::{
         get_native_latest_block_num,
         get_native_sub_mat,
         get_nonce_cli,
+        get_user_ops,
         init,
         process_block,
         reset_chain_cli,
@@ -30,6 +31,7 @@ pub async fn handle_cli() -> Result<String, SentinelError> {
     let cli_args = CliArgs::parse();
 
     match cli_args.sub_commands {
+        SubCommands::GetUserOps => get_user_ops(&config),
         SubCommands::GetCoreState => get_core_state(&config),
         SubCommands::Init(ref args) => init(&config, args).await,
         SubCommands::Start(ref args) => start_sentinel(&config, args).await,

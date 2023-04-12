@@ -46,4 +46,7 @@ pub enum SubCommands {
 
     /// Process block
     ProcessBlock(ProcessBlockCliArgs),
+
+    /// Get user ops
+    GetUserOps,
 }
