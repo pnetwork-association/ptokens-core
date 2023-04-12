@@ -41,6 +41,7 @@ bounded-vec-deque = "0.1.1"
 hex = { version = "0.4.3", features = [ "serde" ] }
 tokio = { version = "1.25.0", features = [ "full" ] }
 clap = { version = "4.1.6", features = [ "derive" ] }
+serde_with = { version = "2.3.2", features = ["hex"] }
 reqwest = { version =  "0.11.14", features = [ "json" ] }
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 jsonrpsee = { version = "0.16.2", features = [ "ws-client" ]}

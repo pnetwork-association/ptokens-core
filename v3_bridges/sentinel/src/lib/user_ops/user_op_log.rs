@@ -2,6 +2,7 @@ use common::Bytes;
 use common_eth::EthLog;
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
 
 use super::{
     UserOpError,
@@ -13,6 +14,7 @@ use super::{
     WITNESSED_USER_OP_TOPIC,
 };
 
+#[serde_as]
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct UserOpLog {
     // TODO should have the state inside it? Or the topic hash?
@@ -23,12 +25,15 @@ pub struct UserOpLog {
     pub(super) underlying_asset_decimals: U256,
     pub(super) amount: U256,
     pub(super) underlying_asset_token_address: EthAddress,
-    pub(super) origin_network_id: Option<Bytes>,   // TODO use type for this!
-    pub(super) destination_network_id: Bytes,      // TODO use type for this!
+    pub(super) origin_network_id: Option<Bytes>, // TODO use type for this!
+    #[serde_as(as = "serde_with::hex::Hex")]
+    pub(super) destination_network_id: Bytes, // TODO use type for this!
+    #[serde_as(as = "serde_with::hex::Hex")]
     pub(super) underlying_asset_network_id: Bytes, // TODO use type for this!
     pub(super) destination_account: String,
     pub(super) underlying_asset_name: String,
     pub(super) underlying_asset_symbol: String,
+    #[serde_as(as = "serde_with::hex::Hex")]
     pub(super) user_data: Bytes,
 }
 

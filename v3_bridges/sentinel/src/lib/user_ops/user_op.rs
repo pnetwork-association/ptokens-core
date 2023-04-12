@@ -6,6 +6,7 @@ use ethabi::Token as EthAbiToken;
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use ethers_core::abi::{self, Token};
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
 use tiny_keccak::{Hasher, Keccak};
 
 use super::{UserOpError, UserOpFlag, UserOpLog, UserOpState};
@@ -32,6 +33,7 @@ impl UserOp {
     }
 }
 
+#[serde_as]
 #[derive(Clone, Debug, Default, Eq, Serialize, Deserialize)]
 pub struct UserOp {
     pub(super) tx_hash: EthHash,
@@ -40,6 +42,7 @@ pub struct UserOp {
     pub(super) block_timestamp: u64,
     pub(super) user_op_log: UserOpLog,
     pub(super) bridge_side: BridgeSide,
+    #[serde_as(as = "serde_with::hex::Hex")]
     pub(super) origin_network_id: Bytes,
     pub(super) witnessed_timestamp: u64,
     pub(super) previous_states: Vec<UserOpState>,
