@@ -15,7 +15,7 @@ pub enum CoreMessages {
 }
 
 impl CoreMessages {
-    pub fn get_core_user_ops_msg() -> (Self, Receiver<Result<UserOps, SentinelError>>) {
+    pub fn get_user_ops_msg() -> (Self, Receiver<Result<UserOps, SentinelError>>) {
         let (resp_tx, resp_rx) = oneshot::channel();
         (Self::GetUserOps(resp_tx), resp_rx)
     }

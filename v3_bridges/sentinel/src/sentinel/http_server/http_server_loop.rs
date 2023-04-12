@@ -16,8 +16,18 @@ fn convert_error_to_rejection<T: core::fmt::Display>(e: T) -> Rejection {
     reject::custom(Error(e.to_string()))
 }
 
+// TODO rm duplicate code form here
 async fn get_core_state_from_db(tx: MpscTx<CoreMessages>, core_type: &CoreType) -> Result<impl warp::Reply, Rejection> {
     let (msg, rx) = CoreMessages::get_core_state_msg(core_type);
+    tx.send(msg).await.map_err(convert_error_to_rejection)?;
+    rx.await
+        .map_err(convert_error_to_rejection)?
+        .map_err(convert_error_to_rejection)
+        .map(|core_state| warp::reply::json(&core_state))
+}
+
+async fn get_user_ops_from_core(tx: MpscTx<CoreMessages>) -> Result<impl warp::Reply, Rejection> {
+    let (msg, rx) = CoreMessages::get_user_ops_msg();
     tx.send(msg).await.map_err(convert_error_to_rejection)?;
     rx.await
         .map_err(convert_error_to_rejection)?
@@ -82,6 +92,7 @@ async fn main_loop(
     debug!("server listening!");
     let core_tx_1 = core_tx.clone();
     let core_tx_2 = core_tx.clone();
+    let core_tx_3 = core_tx.clone();
     let mongo_tx_1 = mongo_tx.clone();
     let mongo_tx_2 = mongo_tx.clone();
     let core_type = config.core().core_type;
@@ -127,7 +138,16 @@ async fn main_loop(
         }
     });
 
-    let routes = warp::get().and(ping.or(state).or(bpm).or(sync).or(output));
+    // GET /user_ops
+    let user_ops = warp::path("user_ops").and_then(move || {
+        let tx = core_tx_3.clone();
+        #[allow(clippy::redundant_async_block)]
+        async move {
+            get_user_ops_from_core(tx).await
+        }
+    });
+
+    let routes = warp::get().and(ping.or(state).or(bpm).or(sync).or(output).or(user_ops));
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
     Ok(())
 }
