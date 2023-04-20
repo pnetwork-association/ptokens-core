@@ -48,7 +48,7 @@ pub enum SentinelError {
     #[error("hex error: {0}")]
     Hex(#[from] hex::FromHexError),
 
-    #[error("json error: {}", 0.to_string())]
+    #[error("{0}")]
     Json(serde_json::Value),
 
     #[error("common error: {0}")]
