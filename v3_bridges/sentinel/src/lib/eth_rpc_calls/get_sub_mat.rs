@@ -6,8 +6,7 @@ use crate::{get_block, get_receipts, Endpoints, SentinelError};
 
 pub async fn get_sub_mat(endpoints: &Endpoints, block_num: u64) -> Result<EthSubmissionMaterial, SentinelError> {
     let block = get_block(endpoints, block_num).await?;
-    let ws_client = endpoints.get_rpc_client().await?;
-    let receipts = get_receipts(&ws_client, &block.transactions).await?;
+    let receipts = get_receipts(endpoints, &block.transactions).await?;
     Ok(EthSubmissionMaterial::default()
         .add_block(block)
         .and_then(|sub_mat| sub_mat.add_receipts(receipts))?)

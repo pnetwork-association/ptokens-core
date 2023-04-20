@@ -23,7 +23,7 @@ async fn get_sub_mat_cli(
 ) -> Result<String, SentinelError> {
     let sub_mat_type = if is_native { "native" } else { "host" };
     info!("Getting {sub_mat_type} submission material...");
-    let sub_mat = get_sub_mat(&endpoints, args.block_num).await?;
+    let sub_mat = get_sub_mat(endpoints, args.block_num).await?;
     let block_num = sub_mat.get_block_number()?;
     let s = serde_json::to_string(&sub_mat)?;
     let path = args.path.clone().unwrap_or_else(|| ".".into());

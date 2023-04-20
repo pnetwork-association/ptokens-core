@@ -9,7 +9,7 @@ const GET_BLOCK_BY_NUMBER_RPC_CMD: &str = "eth_getBlockByNumber";
 // TODO I guess with any RPC calls we separate them out into an inner fxn, catch the error and
 // sleep & retry upon that error?
 // How to do endpoint rotation?
-//
+
 pub async fn get_block(endpoints: &Endpoints, block_num: u64) -> Result<EthBlock, SentinelError> {
     debug!("Getting block num: {block_num}...");
     let ws_client = endpoints.get_rpc_client().await?;

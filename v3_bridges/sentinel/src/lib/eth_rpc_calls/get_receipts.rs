@@ -10,7 +10,7 @@ use jsonrpsee::{
 };
 use serde_json::Value as JsonValue;
 
-use crate::SentinelError;
+use crate::{Endpoints, SentinelError};
 
 const MAX_CONCURRENT_REQUESTS: usize = 250;
 const GET_RECEIPT_RPC_CMD: &str = "eth_getTransactionReceipt";
@@ -30,10 +30,11 @@ fn get_receipt_futures<'a>(
     stream::iter(tx_hashes).then(|tx_hash| get_receipt_future(ws_client, tx_hash))
 }
 
-pub async fn get_receipts(ws_client: &WsClient, tx_hashes: &[EthHash]) -> Result<EthReceipts, SentinelError> {
+pub async fn get_receipts(endpoints: &Endpoints, tx_hashes: &[EthHash]) -> Result<EthReceipts, SentinelError> {
     // TODO can I unwrap the future stream via try stream?
     // https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.4/futures/stream/trait.TryStreamExt.html
-    let jsons = get_receipt_futures(ws_client, tx_hashes)
+    let ws_client = endpoints.get_rpc_client().await?;
+    let jsons = get_receipt_futures(&ws_client, tx_hashes)
         .buffered(MAX_CONCURRENT_REQUESTS)
         .collect::<Vec<_>>()
         .await;
@@ -49,20 +50,15 @@ pub async fn get_receipts(ws_client: &WsClient, tx_hashes: &[EthHash]) -> Result
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        get_block,
-        get_latest_block_num,
-        test_utils::{get_test_endpoints, get_test_ws_client},
-    };
+    use crate::{get_block, get_latest_block_num, test_utils::get_test_endpoints};
 
     #[tokio::test]
     async fn should_get_receipts() {
-        let ws_client = get_test_ws_client().await;
         let endpoints = get_test_endpoints().await;
         let block_num = get_latest_block_num(&endpoints).await.unwrap();
         let block = get_block(&endpoints, block_num).await.unwrap();
         let tx_hashes = block.transactions;
-        let result = get_receipts(&ws_client, &tx_hashes).await;
+        let result = get_receipts(&endpoints, &tx_hashes).await;
         assert!(result.is_ok());
         let receipts_root = result.unwrap().get_merkle_root().unwrap();
         assert_eq!(receipts_root, block.receipts_root);
