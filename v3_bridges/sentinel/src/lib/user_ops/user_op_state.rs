@@ -160,7 +160,10 @@ mod tests {
         let hash_2 = EthHash::random();
         match user_op_state.update(hash_2) {
             Ok(_) => panic!("should not have succeeded!"),
-            Err(UserOpError::CannotUpdate(e)) => assert_eq!(e, user_op_state),
+            Err(UserOpError::CannotUpdate { from, to }) => {
+                assert_eq!(from, user_op_state);
+                assert_eq!(to, UserOpState::Cancelled(side, hash_2));
+            },
             Err(e) => panic!("wrong error received: {e}"),
         }
     }
