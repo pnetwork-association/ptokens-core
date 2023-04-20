@@ -69,20 +69,15 @@ pub async fn reset_chain_cli(config: &SentinelConfig, cli_args: &ResetCliArgs) -
     let host_db_utils = EvmDbUtils::new(&db);
 
     let endpoints = if args.side.is_native() {
-        config.native().get_endpoints()
+        config.native().endpoints()
     } else {
-        config.host().get_endpoints()
-    };
-    let ws_client = if args.side.is_native() {
-        config.native().get_endpoints().get_rpc_client().await?
-    } else {
-        config.host().get_endpoints().get_rpc_client().await?
+        config.host().endpoints()
     };
     let sub_mat = match args.block {
         Some(b) => b,
         None => {
             let n = get_latest_block_num(&endpoints).await?;
-            get_sub_mat(&ws_client, n).await?
+            get_sub_mat(&endpoints, n).await?
         },
     };
     let block_num = sub_mat.get_block_number()?;

@@ -111,8 +111,8 @@ async fn main_loop(
     // GET /sync
     let sync = warp::path("sync").and_then(move || {
         let tx = core_tx_2.clone();
-        let h_endpoints = config.host().get_endpoints();
-        let n_endpoints = config.native().get_endpoints();
+        let h_endpoints = config.host().endpoints();
+        let n_endpoints = config.native().endpoints();
         #[allow(clippy::redundant_async_block)]
         async move {
             get_sync_status(&n_endpoints, &h_endpoints, tx).await

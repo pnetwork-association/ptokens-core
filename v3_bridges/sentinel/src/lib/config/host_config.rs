@@ -53,8 +53,7 @@ impl HostConfig {
         self.endpoints.get_first_endpoint()
     }
 
-    pub fn get_endpoints(&self) -> Endpoints {
-        info!("Getting host endpoints!");
+    pub fn endpoints(&self) -> Endpoints {
         self.endpoints.clone()
     }
 

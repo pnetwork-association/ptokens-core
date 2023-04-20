@@ -101,7 +101,7 @@ impl Batch {
         self.sleep_duration
     }
 
-    pub fn get_endpoints(&self) -> Endpoints {
+    pub fn endpoints(&self) -> Endpoints {
         self.endpoints.clone()
     }
 
@@ -116,9 +116,9 @@ impl Batch {
                 config.host().get_sleep_duration()
             },
             endpoints: if is_native {
-                config.native().get_endpoints()
+                config.native().endpoints()
             } else {
-                config.host().get_endpoints()
+                config.host().endpoints()
             },
             batch_size: config.batching().get_batch_size(is_native),
             batch_duration: config.batching().get_batch_duration(is_native),

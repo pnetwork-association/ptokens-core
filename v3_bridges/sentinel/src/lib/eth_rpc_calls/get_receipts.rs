@@ -60,7 +60,7 @@ mod tests {
         let ws_client = get_test_ws_client().await;
         let endpoints = get_test_endpoints().await;
         let block_num = get_latest_block_num(&endpoints).await.unwrap();
-        let block = get_block(&ws_client, block_num).await.unwrap();
+        let block = get_block(&endpoints, block_num).await.unwrap();
         let tx_hashes = block.transactions;
         let result = get_receipts(&ws_client, &tx_hashes).await;
         assert!(result.is_ok());

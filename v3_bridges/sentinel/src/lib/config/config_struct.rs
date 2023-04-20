@@ -107,11 +107,11 @@ impl Config {
     }
 
     pub fn get_host_endpoints(&self) -> Endpoints {
-        self.host.get_endpoints()
+        self.host.endpoints()
     }
 
     pub fn get_native_endpoints(&self) -> Endpoints {
-        self.native.get_endpoints()
+        self.native.endpoints()
     }
 
     pub fn state_manager(&self, side: &BridgeSide) -> EthAddress {

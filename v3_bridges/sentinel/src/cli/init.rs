@@ -30,9 +30,8 @@ async fn init_native<D: DatabaseInterface>(
 ) -> Result<(), SentinelError> {
     info!("Initializing native core...");
     let endpoints = config.get_native_endpoints();
-    let ws_client = endpoints.get_rpc_client().await?;
     let latest_block_num = get_latest_block_num(&endpoints).await?;
-    let sub_mat = get_sub_mat(&ws_client, latest_block_num).await?;
+    let sub_mat = get_sub_mat(&endpoints, latest_block_num).await?;
 
     init_v3_native_core(
         db,
@@ -55,9 +54,8 @@ async fn init_host<D: DatabaseInterface>(
 ) -> Result<(), SentinelError> {
     info!("Initializing host core...");
     let endpoints = config.get_host_endpoints();
-    let ws_client = endpoints.get_rpc_client().await?;
     let latest_block_num = get_latest_block_num(&endpoints).await?;
-    let sub_mat = get_sub_mat(&ws_client, latest_block_num).await?;
+    let sub_mat = get_sub_mat(&endpoints, latest_block_num).await?;
 
     init_v3_host_core(
         db,
