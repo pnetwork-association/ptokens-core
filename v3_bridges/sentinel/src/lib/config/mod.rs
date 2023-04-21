@@ -1,5 +1,6 @@
 mod batching_config;
-mod config_struct;
+#[allow(clippy::module_inception)]
+mod config;
 mod config_traits;
 mod core_config;
 mod error;
@@ -10,7 +11,7 @@ mod native_config;
 
 pub use self::{
     batching_config::{BatchingConfig, BatchingToml},
-    config_struct::Config,
+    config::Config,
     config_traits::ConfigT,
     core_config::{CoreConfig, CoreToml},
     error::ConfigError,
