@@ -85,8 +85,8 @@ impl Batch {
         Self::default()
     }
 
-    pub async fn get_web_socket(&self) -> Result<WsClient, SentinelError> {
-        self.endpoints.get_web_socket().await
+    pub async fn get_ws_client(&self) -> Result<WsClient, SentinelError> {
+        self.endpoints.get_ws_client().await
     }
 
     pub fn is_native(&self) -> bool {

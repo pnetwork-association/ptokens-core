@@ -1,9 +1,10 @@
 use std::result::Result;
 
-use common::CoreType;
-use lib::{get_latest_block_num, CoreMessages, Endpoints, MongoMessages, SentinelConfig, SentinelError};
+use common::{BridgeSide, CoreType};
+use jsonrpsee::ws_client::WsClient;
+use lib::{get_latest_block_num, CoreMessages, MongoMessages, SentinelConfig, SentinelError};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{json, Value as JsonValue};
 use tokio::sync::mpsc::Sender as MpscTx;
 use warp::{reject, reject::Reject, Filter, Rejection};
 
@@ -45,14 +46,14 @@ async fn get_heartbeat_from_mongo(tx: MpscTx<MongoMessages>) -> Result<impl warp
 }
 
 async fn get_sync_status(
-    n_endpoints: &Endpoints,
-    h_endpoints: &Endpoints,
+    n_ws_client: &WsClient,
+    h_ws_client: &WsClient,
     tx: MpscTx<CoreMessages>,
 ) -> Result<impl warp::Reply, Rejection> {
-    let n_e = get_latest_block_num(n_endpoints)
+    let n_e = get_latest_block_num(n_ws_client)
         .await
         .map_err(convert_error_to_rejection)?;
-    let h_e = get_latest_block_num(h_endpoints)
+    let h_e = get_latest_block_num(h_ws_client)
         .await
         .map_err(convert_error_to_rejection)?;
 
@@ -87,6 +88,9 @@ async fn main_loop(
     let mongo_tx_1 = mongo_tx.clone();
     let core_type = config.core().core_type;
 
+    let h_endpoints = config.host().endpoints().clone();
+    let n_endpoints = config.native().endpoints().clone();
+
     // GET /ping
     let ping = warp::path("ping").map(|| warp::reply::json(&json!({"result": "pTokens Sentinel pong"})));
 
@@ -105,9 +109,24 @@ async fn main_loop(
     // GET /sync
     let sync = warp::path("sync").and_then(move || {
         let tx = core_tx_2.clone();
-        let h_endpoints = config.host().endpoints();
-        let n_endpoints = config.native().endpoints();
-        async move { get_sync_status(&n_endpoints, &h_endpoints, tx).await }
+        let he = h_endpoints.clone();
+        let ne = n_endpoints.clone();
+        async move {
+            fn get_err(side: BridgeSide) -> JsonValue {
+                json!({ "jsonrpc": "2.0", "error": format!("error getting {side} websocket - check your config")})
+            }
+
+            let h_ws_client = he.get_ws_client().await;
+            let n_ws_client = ne.get_ws_client().await;
+
+            if h_ws_client.is_err() {
+                Err(reject::custom(Error(get_err(BridgeSide::Host).to_string())))
+            } else if n_ws_client.is_err() {
+                Err(reject::custom(Error(get_err(BridgeSide::Native).to_string())))
+            } else {
+                get_sync_status(&n_ws_client.unwrap(), &h_ws_client.unwrap(), tx).await
+            }
+        }
     });
 
     // GET /ops

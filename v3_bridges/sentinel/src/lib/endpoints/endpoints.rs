@@ -25,7 +25,7 @@ impl Endpoints {
         }
     }
 
-    pub async fn get_web_socket(&self) -> Result<WsClient, SentinelError> {
+    pub async fn get_ws_client(&self) -> Result<WsClient, SentinelError> {
         let endpoint = self.get_first_endpoint()?;
         let rpc_client = get_rpc_client(&endpoint).await?;
         Ok(rpc_client)

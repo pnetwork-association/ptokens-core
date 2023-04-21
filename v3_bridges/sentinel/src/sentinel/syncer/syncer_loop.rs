@@ -8,11 +8,12 @@ use tokio::{
 
 async fn main_loop(mut batch: Batch, processor_tx: MpscTx<ProcessorMessages>) -> Result<(), SentinelError> {
     let log_prefix = format!("{} syncer", batch.side());
-    let endpoints = batch.endpoints();
+    let ws_client = batch.endpoints().get_ws_client().await?;
+
     let sleep_duration = batch.get_sleep_duration();
 
     'main_loop: loop {
-        match get_sub_mat(&endpoints, batch.get_block_num()).await {
+        match get_sub_mat(&ws_client, batch.get_block_num()).await {
             Ok(block) => {
                 batch.push(block);
                 if !batch.is_ready_to_submit() {

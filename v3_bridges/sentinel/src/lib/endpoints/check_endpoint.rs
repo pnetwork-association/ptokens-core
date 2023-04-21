@@ -6,7 +6,8 @@ use crate::{get_latest_block_num, Endpoints, SentinelError};
 
 pub async fn check_endpoint(endpoints: &Endpoints, time_limit: u64) -> Result<(), SentinelError> {
     info!("Checking endpoint is working using a {time_limit}ms time limit...");
-    match timeout(Duration::from_millis(time_limit), get_latest_block_num(endpoints)).await {
+    let ws_client = endpoints.get_ws_client().await?;
+    match timeout(Duration::from_millis(time_limit), get_latest_block_num(&ws_client)).await {
         Ok(_) => {
             info!("Endpoint check passed!");
             Ok(())

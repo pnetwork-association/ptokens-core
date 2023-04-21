@@ -1,7 +1,7 @@
 use common_eth::{EthBlock, EthBlockJsonFromRpc};
-use jsonrpsee::{core::client::ClientT, rpc_params};
+use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
 
-use crate::{Endpoints, SentinelError};
+use crate::SentinelError;
 
 const GET_FULL_TRANSACTION: bool = false;
 const GET_BLOCK_BY_NUMBER_RPC_CMD: &str = "eth_getBlockByNumber";
@@ -10,9 +10,8 @@ const GET_BLOCK_BY_NUMBER_RPC_CMD: &str = "eth_getBlockByNumber";
 // sleep & retry upon that error?
 // How to do endpoint rotation?
 
-pub async fn get_block(endpoints: &Endpoints, block_num: u64) -> Result<EthBlock, SentinelError> {
+pub async fn get_block(ws_client: &WsClient, block_num: u64) -> Result<EthBlock, SentinelError> {
     debug!("Getting block num: {block_num}...");
-    let ws_client = endpoints.get_web_socket().await?;
     let res: jsonrpsee::core::RpcResult<EthBlockJsonFromRpc> = ws_client
         .request(GET_BLOCK_BY_NUMBER_RPC_CMD, rpc_params![
             format!("0x{block_num:x}"),
@@ -31,21 +30,21 @@ pub async fn get_block(endpoints: &Endpoints, block_num: u64) -> Result<EthBlock
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{get_latest_block_num, test_utils::get_test_endpoints};
+    use crate::{get_latest_block_num, test_utils::get_test_ws_client};
 
     #[tokio::test]
     async fn should_get_block() {
-        let endpoints = get_test_endpoints().await;
-        let block_num = get_latest_block_num(&endpoints).await.unwrap();
-        let result = get_block(&endpoints, block_num).await;
+        let ws_client = get_test_ws_client().await;
+        let block_num = get_latest_block_num(&ws_client).await.unwrap();
+        let result = get_block(&ws_client, block_num).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn should_fail_to_get_block_with_correct_error() {
-        let endpoints = get_test_endpoints().await;
+        let ws_client = get_test_ws_client().await;
         let block_num = i64::MAX as u64;
-        match get_block(&endpoints, block_num).await {
+        match get_block(&ws_client, block_num).await {
             Err(SentinelError::NoBlock(num)) => assert_eq!(num, block_num),
             Ok(_) => panic!("Should not have succeeded!"),
             Err(e) => panic!("Wrong error received: {e}"),
