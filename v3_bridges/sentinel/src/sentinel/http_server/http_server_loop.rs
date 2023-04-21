@@ -93,19 +93,13 @@ async fn main_loop(
     // GET /state
     let state = warp::path("state").and_then(move || {
         let tx = core_tx_1.clone();
-        #[allow(clippy::redundant_async_block)]
-        async move {
-            get_core_state_from_db(tx, &core_type).await
-        }
+        async move { get_core_state_from_db(tx, &core_type).await }
     });
 
     // GET /bpm
     let bpm = warp::path("bpm").and_then(move || {
         let tx = mongo_tx_1.clone();
-        #[allow(clippy::redundant_async_block)]
-        async move {
-            get_heartbeat_from_mongo(tx).await
-        }
+        async move { get_heartbeat_from_mongo(tx).await }
     });
 
     // GET /sync
@@ -113,19 +107,13 @@ async fn main_loop(
         let tx = core_tx_2.clone();
         let h_endpoints = config.host().endpoints();
         let n_endpoints = config.native().endpoints();
-        #[allow(clippy::redundant_async_block)]
-        async move {
-            get_sync_status(&n_endpoints, &h_endpoints, tx).await
-        }
+        async move { get_sync_status(&n_endpoints, &h_endpoints, tx).await }
     });
 
     // GET /ops
     let ops = warp::path("ops").and_then(move || {
         let tx = core_tx_3.clone();
-        #[allow(clippy::redundant_async_block)]
-        async move {
-            get_user_ops_from_core(tx).await
-        }
+        async move { get_user_ops_from_core(tx).await }
     });
 
     let routes = warp::get().and(ping.or(state).or(bpm).or(sync).or(ops));
