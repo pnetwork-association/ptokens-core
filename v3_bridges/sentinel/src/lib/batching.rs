@@ -11,7 +11,7 @@ use crate::{
     SentinelError,
 };
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Batch {
     confs: u64,
     block_num: u64,

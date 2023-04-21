@@ -6,7 +6,7 @@ use jsonrpsee::ws_client::WsClient;
 
 use crate::{config::ConfigError, get_rpc_client, SentinelError};
 
-#[derive(Debug, Default, Clone, Eq, PartialEq, Constructor)]
+#[derive(Debug, Default, Clone)]
 pub struct Endpoints {
     is_native: bool,
     sleep_time: u64,
@@ -15,11 +15,15 @@ pub struct Endpoints {
 }
 
 impl Endpoints {
+    pub fn new(is_native: bool, sleep_time: u64, side: BridgeSide, endpoints: Vec<String>) -> Self {
+        Self { is_native, sleep_time, side, endpoints }
+    }
+
     pub fn get_first_endpoint(&self) -> Result<String, SentinelError> {
         let endpoint_type = if self.is_native { "native" } else { "host" };
         info!("[+] Getting first {endpoint_type} endpoint...");
         if self.endpoints.is_empty() {
-            Err(SentinelError::SentinelConfig(ConfigError::NoEndpoints(self.side)))
+            Err(ConfigError::NoEndpoints(self.side).into())
         } else {
             Ok(self.endpoints[0].clone())
         }
