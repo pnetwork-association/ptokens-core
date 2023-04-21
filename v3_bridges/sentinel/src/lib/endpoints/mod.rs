@@ -1,5 +1,6 @@
 mod check_endpoint;
-mod endpoints_struct;
+#[allow(clippy::module_inception)]
+mod endpoints;
 mod error;
 
-pub use self::{check_endpoint::check_endpoint, endpoints_struct::Endpoints, error::EndpointError};
+pub use self::{check_endpoint::check_endpoint, endpoints::Endpoints, error::EndpointError};
