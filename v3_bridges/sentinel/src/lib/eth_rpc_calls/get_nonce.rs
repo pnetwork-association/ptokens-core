@@ -9,7 +9,7 @@ use crate::{Endpoints, SentinelError};
 const GET_NONCE_RPC_CMD: &str = "eth_getTransactionCount";
 
 pub async fn get_nonce(endpoints: &Endpoints, address: &EthAddress) -> Result<u64, SentinelError> {
-    let client = endpoints.get_rpc_client().await?;
+    let client = endpoints.get_web_socket().await?;
     let block_to_get_nonce_from = "latest";
     let nonce_hex: jsonrpsee::core::RpcResult<String> = client
         .request(GET_NONCE_RPC_CMD, rpc_params![

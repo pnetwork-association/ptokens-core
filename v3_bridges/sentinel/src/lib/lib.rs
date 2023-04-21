@@ -6,7 +6,6 @@ mod core_state;
 mod db_utils;
 mod endpoints;
 mod error;
-mod eth_call;
 mod eth_rpc_calls;
 mod flatten_join_handle;
 mod get_rpc_client;
@@ -28,8 +27,7 @@ pub use self::{
     db_utils::{DbKey, DbUtilsT, SentinelDbUtils},
     endpoints::{check_endpoint, EndpointError, Endpoints},
     error::SentinelError,
-    eth_call::eth_call,
-    eth_rpc_calls::{get_block, get_latest_block_num, get_nonce, get_receipts, get_sub_mat, push_tx},
+    eth_rpc_calls::{eth_call, get_block, get_latest_block_num, get_nonce, get_receipts, get_sub_mat, push_tx},
     flatten_join_handle::flatten_join_handle,
     get_rpc_client::get_rpc_client,
     heartbeat::{HeartbeatInfo, Heartbeats, HeartbeatsJson},

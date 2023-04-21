@@ -12,7 +12,7 @@ const GET_BLOCK_BY_NUMBER_RPC_CMD: &str = "eth_getBlockByNumber";
 
 pub async fn get_block(endpoints: &Endpoints, block_num: u64) -> Result<EthBlock, SentinelError> {
     debug!("Getting block num: {block_num}...");
-    let ws_client = endpoints.get_rpc_client().await?;
+    let ws_client = endpoints.get_web_socket().await?;
     let res: jsonrpsee::core::RpcResult<EthBlockJsonFromRpc> = ws_client
         .request(GET_BLOCK_BY_NUMBER_RPC_CMD, rpc_params![
             format!("0x{block_num:x}"),

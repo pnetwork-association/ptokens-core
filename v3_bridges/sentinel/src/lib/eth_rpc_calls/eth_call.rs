@@ -17,7 +17,7 @@ pub async fn eth_call(
     endpoints: &Endpoints,
 ) -> Result<Bytes, SentinelError> {
     debug!("Calling read only method in contract...");
-    let client = endpoints.get_rpc_client().await?;
+    let client = endpoints.get_web_socket().await?;
     let params = json!({ "to": format!("0x{:x}", to), "data": format!("0x{}", hex::encode(call_data)) });
     let res: jsonrpsee::core::RpcResult<String> = client
         .request(JSON_RPC_CMD, rpc_params![params, default_block_parameter.to_string()])

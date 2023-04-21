@@ -33,7 +33,7 @@ fn get_receipt_futures<'a>(
 pub async fn get_receipts(endpoints: &Endpoints, tx_hashes: &[EthHash]) -> Result<EthReceipts, SentinelError> {
     // TODO can I unwrap the future stream via try stream?
     // https://rust-lang-nursery.github.io/futures-api-docs/0.3.0-alpha.4/futures/stream/trait.TryStreamExt.html
-    let ws_client = endpoints.get_rpc_client().await?;
+    let ws_client = endpoints.get_web_socket().await?;
     let jsons = get_receipt_futures(&ws_client, tx_hashes)
         .buffered(MAX_CONCURRENT_REQUESTS)
         .collect::<Vec<_>>()
