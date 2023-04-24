@@ -11,6 +11,7 @@ pub enum EthRpcMessages {
     GetLatestBlockNum((BridgeSide, Responder<u64>)),
     GetNonce((BridgeSide, EthAddress, Responder<u64>)),
     EthCall((Bytes, BridgeSide, EthAddress, DefaultBlockParameter, Responder<Bytes>)),
+    GetGasPrice((BridgeSide, Responder<u64>)),
 }
 
 impl EthRpcMessages {
@@ -20,6 +21,11 @@ impl EthRpcMessages {
     }
 
     pub fn get_latest_block_num_msg(side: BridgeSide) -> (Self, Receiver<Result<u64, SentinelError>>) {
+        let (tx, rx) = oneshot::channel();
+        (Self::GetLatestBlockNum((side, tx)), rx)
+    }
+
+    pub fn get_gas_price_msg(side: BridgeSide) -> (Self, Receiver<Result<u64, SentinelError>>) {
         let (tx, rx) = oneshot::channel();
         (Self::GetLatestBlockNum((side, tx)), rx)
     }

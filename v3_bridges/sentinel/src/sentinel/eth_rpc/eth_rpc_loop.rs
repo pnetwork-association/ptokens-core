@@ -1,7 +1,16 @@
 use std::result::Result;
 
 use common::BridgeSide;
-use lib::{eth_call, get_latest_block_num, get_nonce, push_tx, EthRpcMessages, SentinelConfig, SentinelError};
+use lib::{
+    eth_call,
+    get_gas_price,
+    get_latest_block_num,
+    get_nonce,
+    push_tx,
+    EthRpcMessages,
+    SentinelConfig,
+    SentinelError,
+};
 use tokio::sync::mpsc::Receiver as MpscRx;
 
 pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: SentinelConfig) -> Result<(), SentinelError> {
@@ -17,6 +26,14 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                     let r = match side {
                         BridgeSide::Host => get_latest_block_num(&h_ws_client),
                         BridgeSide::Native => get_latest_block_num(&n_ws_client),
+                    }.await;
+                    let _ = responder.send(r);
+                    continue 'eth_rpc_loop
+                },
+                Some(EthRpcMessages::GetGasPrice((side, responder))) => {
+                    let r = match side {
+                        BridgeSide::Host => get_gas_price(&h_ws_client),
+                        BridgeSide::Native => get_gas_price(&n_ws_client),
                     }.await;
                     let _ = responder.send(r);
                     continue 'eth_rpc_loop
