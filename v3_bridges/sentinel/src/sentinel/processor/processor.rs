@@ -12,7 +12,6 @@ lazy_static::lazy_static! {
 #[allow(clippy::too_many_arguments)]
 pub fn process_single<D: DatabaseInterface>(
     db: &D,
-    is_in_sync: bool,
     router: &EthAddress,
     sub_mat: &EthSubmissionMaterial,
     state_manager: &EthAddress,
@@ -34,11 +33,6 @@ pub fn process_single<D: DatabaseInterface>(
         append_to_blockchain(&NativeDbUtils::new(db), sub_mat, is_validating)?;
     } else {
         append_to_blockchain(&HostDbUtils::new(db), sub_mat, is_validating)?;
-    }
-
-    if !is_in_sync {
-        warn!("{side} is not in sync, not processing receipts!");
-        return Ok(UserOps::empty());
     }
 
     if sub_mat.receipts.is_empty() {
@@ -64,7 +58,6 @@ pub fn process_single<D: DatabaseInterface>(
 pub fn process_batch<D: DatabaseInterface>(
     db: &D,
     router: &EthAddress,
-    is_in_sync: bool,
     state_manager: &EthAddress,
     batch: &EthSubmissionMaterials,
     is_validating: bool,
@@ -82,7 +75,6 @@ pub fn process_batch<D: DatabaseInterface>(
             .map(|sub_mat| {
                 process_single(
                     db,
-                    is_in_sync,
                     router,
                     sub_mat,
                     state_manager,

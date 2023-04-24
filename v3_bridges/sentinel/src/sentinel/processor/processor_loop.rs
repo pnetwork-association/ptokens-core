@@ -31,7 +31,6 @@ pub async fn processor_loop<D: DatabaseInterface>(
                         let result =  process_batch(
                             &*db,
                             &config.router(&side),
-                            matches!(args.is_in_sync(), Ok(true)),
                             &config.state_manager(&side),
                             &args.batch,
                             config.is_validating(&side),

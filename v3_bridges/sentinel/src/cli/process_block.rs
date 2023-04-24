@@ -54,14 +54,12 @@ impl TryFrom<&ProcessBlockCliArgs> for ProcessBlockArgs {
 pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliArgs) -> Result<String, SentinelError> {
     let args = ProcessBlockArgs::try_from(cli_args)?;
     let db = get_db_at_path(&config.get_db_path())?;
-    let is_in_sync = true;
     let state_manager = config.state_manager(&args.side);
     let router = config.router(&args.side);
     let is_validating = config.is_validating(&args.side);
     let use_db_tx = !args.dry_run;
     let output = process_single(
         &db,
-        is_in_sync,
         &router,
         &args.sub_mat,
         &state_manager,

@@ -17,7 +17,8 @@ impl ProcessArgs {
         self.side
     }
 
-    pub fn is_in_sync(&self) -> Result<bool, SentinelError> {
+    #[allow(unused)]
+    fn is_in_sync(&self) -> Result<bool, SentinelError> {
         // NOTE: We define the core as being in sync if the about-to-be-submitted batch's last
         // block timestamp is within ~ an hour of now.
         let last_block_timestamp = self.batch.get_last_block_timestamp()?.as_secs();

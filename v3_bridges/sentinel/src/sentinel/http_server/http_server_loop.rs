@@ -88,8 +88,8 @@ async fn main_loop(
     let mongo_tx_1 = mongo_tx.clone();
     let core_type = config.core().core_type;
 
-    let h_endpoints = config.host().endpoints().clone();
-    let n_endpoints = config.native().endpoints().clone();
+    let h_endpoints = config.host().endpoints();
+    let n_endpoints = config.native().endpoints();
 
     // GET /ping
     let ping = warp::path("ping").map(|| warp::reply::json(&json!({"result": "pTokens Sentinel pong"})));
