@@ -33,7 +33,6 @@ pub async fn start_sentinel(
 ) -> Result<String, SentinelError> {
     let db = common_rocksdb::get_db_at_path(&config.get_db_path())?;
     check_init(&db)?;
-    // TODO check endpoints!
     let wrapped_db = Arc::new(Mutex::new(db));
 
     let (processor_tx, processor_rx): (MpscTx<ProcessorMessages>, MpscRx<ProcessorMessages>) =
@@ -46,7 +45,7 @@ pub async fn start_sentinel(
     let (eth_rpc_tx, eth_rpc_rx): (MpscTx<EthRpcMessages>, MpscRx<EthRpcMessages>) =
         mpsc::channel(MAX_CHANNEL_CAPACITY);
 
-    let (_broadcaster_tx, broadcaster_rx): (MpscTx<BroadcasterMessages>, MpscRx<BroadcasterMessages>) =
+    let (broadcaster_tx, broadcaster_rx): (MpscTx<BroadcasterMessages>, MpscRx<BroadcasterMessages>) =
         mpsc::channel(MAX_CHANNEL_CAPACITY);
 
     let native_syncer_thread = tokio::spawn(syncer_loop(
@@ -77,6 +76,7 @@ pub async fn start_sentinel(
         wrapped_db.clone(),
         processor_rx,
         mongo_tx.clone(),
+        broadcaster_tx.clone(),
         config.clone(),
     ));
 

@@ -120,8 +120,11 @@ pub enum SentinelError {
     #[error("processor channel error: {0}")]
     ProcessorChannel(Box<tokio::sync::mpsc::error::SendError<ProcessorMessages>>),
 
-    #[error("broadcaster channel error: {0}")]
+    #[error("broadcast channel error: {0}")]
     BroadcastChannel(Box<tokio::sync::broadcast::error::SendError<BroadcasterMessages>>),
+
+    #[error("broadcaster channel error: {0}")]
+    BroadcasterChannel(Box<tokio::sync::mpsc::error::SendError<BroadcasterMessages>>),
 }
 
 impl From<tokio::sync::broadcast::error::SendError<BroadcasterMessages>> for SentinelError {
@@ -141,6 +144,7 @@ impl From<tokio::sync::broadcast::error::SendError<SyncerMessages>> for Sentinel
         Self::SyncerChannel(Box::new(e))
     }
 }
+
 impl From<tokio::sync::mpsc::error::SendError<ProcessorMessages>> for SentinelError {
     fn from(e: tokio::sync::mpsc::error::SendError<ProcessorMessages>) -> Self {
         Self::ProcessorChannel(Box::new(e))
@@ -150,6 +154,12 @@ impl From<tokio::sync::mpsc::error::SendError<ProcessorMessages>> for SentinelEr
 impl From<tokio::sync::mpsc::error::SendError<MongoMessages>> for SentinelError {
     fn from(e: tokio::sync::mpsc::error::SendError<MongoMessages>) -> Self {
         Self::MongoChannel(Box::new(e))
+    }
+}
+
+impl From<tokio::sync::mpsc::error::SendError<BroadcasterMessages>> for SentinelError {
+    fn from(e: tokio::sync::mpsc::error::SendError<BroadcasterMessages>) -> Self {
+        Self::BroadcasterChannel(Box::new(e))
     }
 }
 
