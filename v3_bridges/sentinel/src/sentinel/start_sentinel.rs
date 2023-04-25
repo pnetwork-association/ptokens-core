@@ -68,6 +68,7 @@ pub async fn start_sentinel(
         broadcaster_rx,
         mongo_tx.clone(),
         eth_rpc_tx.clone(),
+        core_tx.clone(),
         config.clone(),
         sentinel_args.disable_broadcaster,
     ));

@@ -1,8 +1,8 @@
 use std::{result::Result, sync::Arc};
 
-use common::DatabaseInterface;
+use common::{BridgeSide, DatabaseInterface};
 use common_eth::{EthDbUtilsExt, HostDbUtils, NativeDbUtils};
-use lib::{CoreMessages, CoreState, SentinelDbUtils, SentinelError, UserOpList};
+use lib::{CoreMessages, CoreState, SentinelDbUtils, SentinelError, UserOpList, USER_OP_CANCEL_TX_GAS_LIMIT};
 use tokio::sync::{mpsc::Receiver as MpscRx, Mutex};
 
 async fn process_message<D: DatabaseInterface>(
@@ -40,6 +40,36 @@ async fn process_message<D: DatabaseInterface>(
         CoreMessages::GetUserOps(responder) => {
             let ops = UserOpList::user_ops(&SentinelDbUtils::new(&*db))?;
             let _ = responder.send(Ok(ops));
+        },
+        CoreMessages::GetAddress { side, responder } => {
+            let a = match side {
+                BridgeSide::Native => HostDbUtils::new(&*db).get_public_eth_address_from_db()?,
+                BridgeSide::Host => NativeDbUtils::new(&*db).get_public_eth_address_from_db()?,
+            };
+            let _ = responder.send(Ok(a));
+        },
+        CoreMessages::GetCancellationTx {
+            op,
+            gas_price,
+            nonce,
+            responder,
+            state_manager,
+        } => {
+            let h = HostDbUtils::new(&*db);
+            let n = HostDbUtils::new(&*db);
+            let (chain_id, pk) = match op.side() {
+                BridgeSide::Host => (h.get_eth_chain_id_from_db()?, h.get_eth_private_key_from_db()?),
+                BridgeSide::Native => (n.get_eth_chain_id_from_db()?, n.get_eth_private_key_from_db()?),
+            };
+            let tx = op.cancel(
+                nonce,
+                gas_price,
+                &state_manager,
+                USER_OP_CANCEL_TX_GAS_LIMIT as usize,
+                &pk,
+                &chain_id,
+            )?;
+            let _ = responder.send(Ok(tx));
         },
     }
 

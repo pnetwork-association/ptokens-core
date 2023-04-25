@@ -56,6 +56,10 @@ impl PartialEq for UserOp {
 }
 
 impl UserOp {
+    pub fn side(&self) -> BridgeSide {
+        self.bridge_side
+    }
+
     pub fn to_flag(&self) -> UserOpFlag {
         self.into()
     }

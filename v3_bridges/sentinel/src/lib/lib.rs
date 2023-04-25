@@ -22,7 +22,7 @@ pub use self::{
     batching::Batch,
     check_init::check_init,
     config::{Config as SentinelConfig, ConfigT, HostConfig, MongoConfig, NativeConfig},
-    constants::MILLISECONDS_MULTIPLIER,
+    constants::{MILLISECONDS_MULTIPLIER, USER_OP_CANCEL_TX_GAS_LIMIT},
     core_state::CoreState,
     db_utils::{DbKey, DbUtilsT, SentinelDbUtils},
     endpoints::{check_endpoint, EndpointError, Endpoints},

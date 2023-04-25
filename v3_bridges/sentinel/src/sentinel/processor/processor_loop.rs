@@ -1,7 +1,7 @@
 use std::{result::Result, sync::Arc};
 
 use common::DatabaseInterface;
-use lib::{Heartbeats, MongoMessages, ProcessorMessages, SentinelConfig, SentinelError, BroadcasterMessages};
+use lib::{BroadcasterMessages, Heartbeats, MongoMessages, ProcessorMessages, SentinelConfig, SentinelError};
 use tokio::sync::{
     mpsc::{Receiver as MpscRx, Sender as MpscTx},
     Mutex,
