@@ -38,6 +38,10 @@ impl Output {
     pub fn side(&self) -> BridgeSide {
         self.side
     }
+
+    pub fn has_user_ops(&self) -> bool {
+        !self.user_ops.is_empty()
+    }
 }
 
 impl fmt::Display for Output {
