@@ -54,7 +54,7 @@ pub use self::{
     network_id::NetworkId,
     output::Output,
     user_ops::{UserOp, UserOpList, UserOps},
-    utils::get_utc_timestamp,
+    utils::{get_utc_timestamp, run_timer},
 };
 
 #[macro_use]
