@@ -13,4 +13,10 @@ pub enum EndpointError {
 
     #[error("could not push tx to endpoint: {0}")]
     PushTx(jsonrpsee::core::Error),
+
+    #[error("ws client has disconnected whilst {0}")]
+    WsClientDisconnected(String),
+
+    #[error("endpoint timed out whilst {0}")]
+    TimeOut(String),
 }
