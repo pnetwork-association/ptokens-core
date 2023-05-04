@@ -44,7 +44,7 @@ clap = { version = "4.1.6", features = [ "derive" ] }
 serde_with = { version = "2.3.2", features = ["hex"] }
 reqwest = { version =  "0.11.14", features = [ "json" ] }
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
-jsonrpsee = { version = "0.16.2", features = [ "ws-client" ]}
+jsonrpsee = { version = "0.18.1", features = [ "ws-client" ]}
 mongodb = { version = "2.4.0", features = ["tokio-runtime"] }
 flexi_logger = { version = "0.25.2", features = ["async", "compress"] }
 

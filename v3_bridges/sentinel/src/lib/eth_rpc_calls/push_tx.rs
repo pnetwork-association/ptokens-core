@@ -10,7 +10,7 @@ const PUSH_TX_RPC_CMD: &str = "eth_sendRawTransaction";
 
 pub async fn push_tx(tx: EthTransaction, ws_client: &WsClient) -> Result<H256, SentinelError> {
     debug!("Pushing tx...");
-    let res: jsonrpsee::core::RpcResult<String> = ws_client
+    let res: Result<String, jsonrpsee::core::Error> = ws_client
         .request(PUSH_TX_RPC_CMD, rpc_params![tx.serialize_hex()])
         .await;
     match res {
