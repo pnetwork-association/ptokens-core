@@ -1,3 +1,4 @@
+mod constants;
 mod eth_call;
 mod get_block;
 mod get_chain_id;
@@ -8,6 +9,7 @@ mod get_receipts;
 mod get_sub_mat;
 mod push_tx;
 
+use self::constants::ETH_RPC_CALL_TIME_LIMIT;
 pub use self::{
     eth_call::eth_call,
     get_block::get_block,
