@@ -31,7 +31,7 @@ impl IntOnEosIntTxInfos {
 }
 
 impl IntOnEosIntTxInfo {
-    pub fn to_signed_tx(
+    fn to_signed_tx(
         &self,
         nonce: u64,
         gas_price: u64,

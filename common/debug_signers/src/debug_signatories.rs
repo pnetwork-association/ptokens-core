@@ -244,11 +244,9 @@ impl DebugSignatories {
             .next()
             .is_none()
         {
-            Err(self.to_signature_info_json(
-                core_type,
-                debug_command_hash,
-                Some(signature),
-            )?.into())
+            Err(self
+                .to_signature_info_json(core_type, debug_command_hash, Some(signature))?
+                .into())
         } else {
             Ok(())
         }

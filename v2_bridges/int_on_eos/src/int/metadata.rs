@@ -24,7 +24,7 @@ impl IntOnEosEosTxInfo {
         ))
     }
 
-    #[allow(unused)]
+    #[allow(unused)] // NOTE: Metadata not currently supported on EOS
     pub fn to_metadata_bytes(&self) -> Result<Bytes> {
         self.to_metadata()?.to_bytes_for_protocol(&MetadataProtocolId::Eos)
     }
