@@ -33,6 +33,7 @@ mod tests {
     use crate::test_utils::get_test_ws_client;
 
     #[tokio::test]
+    #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_get_chain_id_inner() {
         let ws_client = get_test_ws_client().await;
         let result = get_chain_id_inner(&ws_client).await;
@@ -41,6 +42,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_get_chain_id() {
         let ws_client = get_test_ws_client().await;
         let result = get_chain_id(&ws_client).await;

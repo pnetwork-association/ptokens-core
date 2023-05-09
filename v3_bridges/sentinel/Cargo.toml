@@ -16,6 +16,7 @@ path = "src/main.rs"
 
 [features]
 non-validating = ["common/non-validating"] # NOTE: Disables block & recepit validation
+test-eth-rpc = [] # NOTE: Means the RPC fxns can only be tested if this feature is enabled
 
 [dependencies]
 sha3 = "0.10.6"

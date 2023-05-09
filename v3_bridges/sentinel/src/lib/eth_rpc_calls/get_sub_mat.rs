@@ -19,6 +19,7 @@ mod tests {
     use crate::{get_latest_block_num, test_utils::get_test_ws_client};
 
     #[tokio::test]
+    #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_get_sub_mat() {
         let ws_client = get_test_ws_client().await;
         let block_num = get_latest_block_num(&ws_client).await.unwrap();

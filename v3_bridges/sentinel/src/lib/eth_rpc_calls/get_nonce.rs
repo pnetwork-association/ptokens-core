@@ -46,6 +46,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_get_latest_block_num() {
         let ws_client = get_test_ws_client().await;
         let result = get_nonce(&ws_client, &*ADDRESS).await;
@@ -53,6 +54,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_get_latest_block_num_inner() {
         let ws_client = get_test_ws_client().await;
         let result = get_nonce_inner(&ws_client, &*ADDRESS).await;

@@ -39,6 +39,7 @@ mod tests {
     use crate::{get_latest_block_num, test_utils::get_test_ws_client};
 
     #[tokio::test]
+    #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_get_block_inner() {
         let ws_client = get_test_ws_client().await;
         let block_num = get_latest_block_num(&ws_client).await.unwrap();
@@ -47,6 +48,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_get_block() {
         let ws_client = get_test_ws_client().await;
         let block_num = get_latest_block_num(&ws_client).await.unwrap();
@@ -55,6 +57,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_fail_to_get_block_with_correct_error() {
         let ws_client = get_test_ws_client().await;
         let block_num = i64::MAX as u64;

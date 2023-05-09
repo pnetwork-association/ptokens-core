@@ -50,6 +50,7 @@ mod tests {
     use crate::test_utils::get_test_ws_client;
 
     #[tokio::test]
+    #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_make_eth_call_inner() {
         let default_block_parameter = DefaultBlockParameter::Latest;
         let to = convert_hex_to_eth_address("0x89Ab32156e46F46D02ade3FEcbe5Fc4243B9AAeD").unwrap();
@@ -64,6 +65,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_make_eth_call() {
         let default_block_parameter = DefaultBlockParameter::Latest;
         let to = convert_hex_to_eth_address("0x89Ab32156e46F46D02ade3FEcbe5Fc4243B9AAeD").unwrap();
