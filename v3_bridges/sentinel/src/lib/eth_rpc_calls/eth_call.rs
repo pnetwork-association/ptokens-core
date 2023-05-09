@@ -9,7 +9,7 @@ use serde_json::json;
 use super::ETH_RPC_CALL_TIME_LIMIT;
 use crate::{run_timer, EndpointError, SentinelError};
 
-const JSON_RPC_CMD: &str = "eth_call_inner";
+const JSON_RPC_CMD: &str = "eth_call";
 
 async fn eth_call_inner(
     to: &EthAddress,
