@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use common::{core_type::CoreType, traits::DatabaseInterface, types::Result};
 use common_chain_ids::EthChainId;
 use ethereum_types::Address as EthAddress;
@@ -31,16 +33,16 @@ use crate::{
         generate_eth_private_key::{generate_and_store_eth_private_key, generate_and_store_evm_private_key},
     },
     eth_database_utils::EthDbUtilsExt,
-    eth_submission_material::parse_eth_submission_material_and_put_in_state,
     validate_eth_block_in_state,
     validate_evm_block_in_state,
     vault_using_cores::VaultUsingCores,
     EthState,
+    EthSubmissionMaterial,
 };
 
 #[allow(clippy::too_many_arguments)]
 fn initialize_eth_core_maybe_with_contract_tx_and_return_state<'a, D: DatabaseInterface>(
-    block_json: &str,
+    sub_mat: EthSubmissionMaterial,
     chain_id: &EthChainId,
     gas_price: u64,
     canon_to_tip_length: u64,
@@ -51,7 +53,8 @@ fn initialize_eth_core_maybe_with_contract_tx_and_return_state<'a, D: DatabaseIn
     vault_using_core: Option<&VaultUsingCores>,
     is_native: bool,
 ) -> Result<EthState<'a, D>> {
-    parse_eth_submission_material_and_put_in_state(block_json, state)
+    state
+        .add_eth_submission_material(sub_mat)
         .and_then(|state| {
             if is_for_eth {
                 put_eth_chain_id_in_db_and_return_state(chain_id, state)
@@ -173,6 +176,52 @@ fn initialize_eth_core_maybe_with_contract_tx_and_return_state<'a, D: DatabaseIn
         })
 }
 
+pub fn init_v3_host_core<D: DatabaseInterface>(
+    db: &D,
+    sub_mat: EthSubmissionMaterial,
+    chain_id: &EthChainId,
+    gas_price: u64,
+    confs: u64,
+) -> Result<()> {
+    initialize_eth_core_maybe_with_contract_tx_and_return_state(
+        sub_mat,
+        chain_id,
+        gas_price,
+        confs,
+        EthState::init(db),
+        false,
+        None,
+        None,
+        None,
+        false,
+    )
+    .and(Ok(()))
+}
+
+pub fn init_v3_native_core<D: DatabaseInterface>(
+    db: &D,
+    sub_mat: EthSubmissionMaterial,
+    chain_id: &EthChainId,
+    gas_price: u64,
+    confs: u64,
+    vault: &EthAddress,
+    vault_using_core: &VaultUsingCores,
+) -> Result<()> {
+    initialize_eth_core_maybe_with_contract_tx_and_return_state(
+        sub_mat,
+        chain_id,
+        gas_price,
+        confs,
+        EthState::init(db),
+        true,
+        None,
+        Some(vault),
+        Some(vault_using_core),
+        true,
+    )
+    .and(Ok(()))
+}
+
 pub fn initialize_eth_core_with_no_contract_tx<'a, D: DatabaseInterface>(
     block_json: &str,
     chain_id: &EthChainId,
@@ -183,7 +232,7 @@ pub fn initialize_eth_core_with_no_contract_tx<'a, D: DatabaseInterface>(
 ) -> Result<EthState<'a, D>> {
     info!("✔ Initializing ETH core with NO contract tx...");
     initialize_eth_core_maybe_with_contract_tx_and_return_state(
-        block_json,
+        EthSubmissionMaterial::from_str(block_json)?,
         chain_id,
         gas_price,
         canon_to_tip_length,
@@ -206,7 +255,7 @@ pub fn initialize_evm_core_with_no_contract_tx<'a, D: DatabaseInterface>(
 ) -> Result<EthState<'a, D>> {
     info!("✔ Initializing EVM core with NO contract tx...");
     initialize_eth_core_maybe_with_contract_tx_and_return_state(
-        block_json,
+        EthSubmissionMaterial::from_str(block_json)?,
         chain_id,
         gas_price,
         canon_to_tip_length,
@@ -233,7 +282,7 @@ pub fn initialize_eth_core_with_vault_and_router_contracts_and_return_state<'a, 
 ) -> Result<EthState<'a, D>> {
     info!("✔ Initializing core with vault & router contract...");
     initialize_eth_core_maybe_with_contract_tx_and_return_state(
-        block_json,
+        EthSubmissionMaterial::from_str(block_json)?,
         chain_id,
         gas_price,
         canon_to_tip_length,
@@ -257,7 +306,7 @@ pub fn initialize_eth_core_with_router_contract_and_return_state<'a, D: Database
 ) -> Result<EthState<'a, D>> {
     info!("✔ Initializing core with vault & router contract...");
     initialize_eth_core_maybe_with_contract_tx_and_return_state(
-        block_json,
+        EthSubmissionMaterial::from_str(block_json)?,
         chain_id,
         gas_price,
         canon_to_tip_length,

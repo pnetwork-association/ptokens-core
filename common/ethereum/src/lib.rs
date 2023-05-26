@@ -51,6 +51,8 @@ pub use self::{
         add_eth_block_to_db_and_return_state,
         add_evm_block_to_db_and_return_state,
         generate_and_store_eos_on_eth_contract_address,
+        init_v3_host_core,
+        init_v3_native_core,
         initialize_eth_core_with_no_contract_tx,
         initialize_eth_core_with_router_contract_and_return_state,
         initialize_eth_core_with_vault_and_router_contracts_and_return_state,
