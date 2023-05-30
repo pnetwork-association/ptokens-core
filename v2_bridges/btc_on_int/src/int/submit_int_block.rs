@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn should_submit_int_blocks_to_core() {
-        // Init the BTC common...
+        // Init the BTC side...
         let btc_pk = "93GJ65qHNjGFHzQVTzEEAdBS7vMxe3XASfWE8RUASSfd3EtfmzP";
         let db = get_test_database();
         let btc_db_utils = BtcDbUtils::new(&db);
@@ -148,7 +148,7 @@ mod tests {
             .put_btc_pub_key_slice_in_db(&btc_pk.to_public_key_slice())
             .unwrap();
 
-        // Init the ETH common...
+        // Init the ETH side...
         let eth_block_0 = get_sample_int_submission_material_json_str_n(0);
         let eth_state = EthState::init(&db);
         let eth_chain_id = 3;
