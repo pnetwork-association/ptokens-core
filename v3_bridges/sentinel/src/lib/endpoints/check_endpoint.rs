@@ -22,6 +22,7 @@ mod tests {
     use crate::test_utils::get_test_endpoints;
 
     #[tokio::test]
+    #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn working_endpoint_should_pass_endpoint_check() {
         let time_limit = 5000;
         let endpoints = get_test_endpoints().await;

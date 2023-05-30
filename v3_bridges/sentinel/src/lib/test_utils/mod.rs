@@ -63,6 +63,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_get_test_ws_client() {
         get_test_ws_client().await;
     }

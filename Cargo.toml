@@ -9,6 +9,7 @@ members = [
     "common/ethereum",
     "common/chain_ids",
     "common/file_logger",
+    "v3_bridges/sentinel",
     "common/enclave_info",
     "common/stderr_logger",
     "common/docopt_macros",
