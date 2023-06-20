@@ -99,10 +99,6 @@ impl RelayTransactions {
 }
 
 #[cfg(test)]
-use std::str::FromStr;
-#[cfg(test)]
-use common::AppError;
-#[cfg(test)]
 impl FromStr for RelayTransaction {
     type Err = AppError;
 
