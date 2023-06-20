@@ -15,47 +15,47 @@ name = "sentinel"
 path = "src/main.rs"
 
 [features]
-non-validating = ["common/non-validating"] # NOTE: Disables block & recepit validation
+non-validating = ["common_eth/non-validating"] # NOTE: Disables block & recepit validation
 test-eth-rpc = [] # NOTE: Means the RPC fxns can only be tested if this feature is enabled
 
 [dependencies]
-sha3 = "0.10.6"
-log = "0.4.17"
-warp = "0.3.3"
-config = "0.13.3"
-anyhow = "1.0.69"
-paste = "1.0.12"
-strum = "0.24.1"
-ethabi = "15.0.0"
-serde = "1.0.152"
-futures = "0.3.26"
-thiserror = "1.0.40"
-lazy_static = "1.4.0"
-ethers-core = "2.0.2"
-serde_json = "1.0.68"
-derive_more = "0.99.17"
-strum_macros = "0.24.3"
-futures-retry = "0.6.0"
-serde_derive = "1.0.152"
-ethereum-types = "0.12.1"
-bounded-vec-deque = "0.1.1"
-hex = { version = "0.4.3", features = [ "serde" ] }
-tokio = { version = "1.25.0", features = [ "full" ] }
-clap = { version = "4.1.6", features = [ "derive" ] }
-serde_with = { version = "2.3.2", features = ["hex"] }
-reqwest = { version =  "0.11.14", features = [ "json" ] }
-tiny-keccak = { version = "2.0.2", features = ["keccak"] }
-jsonrpsee = { version = "0.18.1", features = [ "ws-client" ]}
-mongodb = { version = "2.4.0", features = ["tokio-runtime"] }
-flexi_logger = { version = "0.25.2", features = ["async", "compress"] }
+hex = { workspace = true }
+log = { workspace = true }
+clap = { workspace = true }
+warp = { workspace = true }
+sha3 = { workspace = true }
+tokio = { workspace = true }
+paste = { workspace = true }
+strum = { workspace = true }
+serde = { workspace = true }
+ethabi = { workspace = true }
+config = { workspace = true }
+anyhow = { workspace = true }
+futures = { workspace = true }
+mongodb = { workspace = true }
+reqwest = { workspace = true }
+thiserror = { workspace = true }
+jsonrpsee = { workspace = true }
+serde_with = { workspace = true }
+serde_json = { workspace = true }
+tiny-keccak = { workspace = true }
+derive_more = { workspace = true }
+lazy_static = { workspace = true }
+ethers-core = { workspace = true }
+strum_macros = { workspace = true }
+serde_derive = { workspace = true }
+flexi_logger = { workspace = true }
+futures-retry = { workspace = true }
+ethereum-types = { workspace = true }
+bounded-vec-deque = { workspace = true }
 
-common = { path = "../../common/common" }
-common_eth = { package = "ethereum", path = "../../common/ethereum" }
-common_metadata = { package = "metadata", path = "../../common/metadata" }
-common_chain_ids = { package = "chain_ids", path = "../../common/chain_ids" }
-common_enclave_info = { package = "enclave_info", path = "../../common/enclave_info" }
-common_eth_debug = { package = "ethereum_debug", path = "../../common/ethereum_debug" }
-common_rocksdb = { package = "rocksdb_database", path = "../../common/rocksdb_database" }
+common = { workspace = true }
+common_eth = { workspace = true }
+common_metadata = { workspace = true }
+common_chain_ids = { workspace = true }
+common_eth_debug = { workspace = true }
+common_enclave_info = { workspace = true }
+common_rocksdb_database = { workspace = true }
 
 [dev-dependencies]
-dotenv = "0.15.0"
+dotenv = { workspace = true }

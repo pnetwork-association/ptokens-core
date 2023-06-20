@@ -3,7 +3,7 @@ use std::{convert::TryFrom, fs::read_to_string, path::Path, str::FromStr};
 use clap::Args;
 use common::BridgeSide;
 use common_eth::EthSubmissionMaterial;
-use common_rocksdb::get_db_at_path;
+use common_rocksdb_database::get_db_at_path;
 use derive_more::Constructor;
 use lib::{SentinelConfig, SentinelError};
 use serde_json::json;

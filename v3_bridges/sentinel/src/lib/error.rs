@@ -91,7 +91,7 @@ pub enum SentinelError {
     SentinelConfig(#[from] crate::config::ConfigError),
 
     #[error("rocksdb error {0}")]
-    RocksDb(#[from] common_rocksdb::RocksdbDatabaseError),
+    RocksDb(#[from] common_rocksdb_database::RocksdbDatabaseError),
 
     #[error("{0}")]
     BlockAlreadyInDb(common::BlockAlreadyInDbError),

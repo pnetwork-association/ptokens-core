@@ -1,4 +1,4 @@
-use common_rocksdb::get_db_at_path;
+use common_rocksdb_database::get_db_at_path;
 use lib::{check_init, CoreState, SentinelConfig, SentinelError};
 use serde_json::json;
 

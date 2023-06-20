@@ -31,7 +31,7 @@ pub async fn start_sentinel(
     config: &SentinelConfig,
     sentinel_args: &StartSentinelArgs,
 ) -> Result<String, SentinelError> {
-    let db = common_rocksdb::get_db_at_path(&config.get_db_path())?;
+    let db = common_rocksdb_database::get_db_at_path(&config.get_db_path())?;
     check_init(&db)?;
     let wrapped_db = Arc::new(Mutex::new(db));
 

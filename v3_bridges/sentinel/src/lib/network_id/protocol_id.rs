@@ -1,7 +1,6 @@
 use std::{fmt, str::FromStr};
 
 use serde::{Deserialize, Serialize};
-use strum::EnumIter;
 #[cfg(test)]
 use strum::IntoEnumIterator;
 
