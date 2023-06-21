@@ -15,12 +15,12 @@ async fn insert_into_mongodb<T: std::fmt::Display + serde::Serialize>(
     output: T,
     collection: &Collection<T>,
 ) -> Result<(), SentinelError> {
-    debug!("Adding output to mongo: {output}");
+    debug!("adding output to mongo: {output}");
     loop {
         match collection.insert_one(&output, None).await {
             Ok(_) => break Ok(()),
             Err(ref e) if e.contains_label(mongodb::error::RETRYABLE_WRITE_ERROR) => {
-                warn!("Error writing to mongo, sleeing {MONGO_RETRY_SLEEP_TIME}ms and retrying...");
+                warn!("error writing to mongo, sleeing {MONGO_RETRY_SLEEP_TIME}ms and retrying...");
                 sleep(Duration::from_millis(MONGO_RETRY_SLEEP_TIME)).await;
                 continue;
             },
@@ -36,7 +36,7 @@ async fn update_heartbeat(h: &HeartbeatsJson, collection: &Collection<Heartbeats
         match collection.find_one_and_replace(f, h, o).await {
             Ok(_) => break Ok(()),
             Err(ref e) if e.contains_label(mongodb::error::RETRYABLE_WRITE_ERROR) => {
-                warn!("Error writing heartbeat to mongo, sleeing {MONGO_RETRY_SLEEP_TIME}ms and retrying...");
+                warn!("error writing heartbeat to mongo, sleeing {MONGO_RETRY_SLEEP_TIME}ms and retrying...");
                 sleep(Duration::from_millis(MONGO_RETRY_SLEEP_TIME)).await;
                 continue;
             },
@@ -57,7 +57,7 @@ where
         match collection.find_one_and_replace(f, t, o).await {
             Ok(_) => break Ok(()),
             Err(ref e) if e.contains_label(mongodb::error::RETRYABLE_WRITE_ERROR) => {
-                warn!("Error writing `{id}` to mongo, sleeing {MONGO_RETRY_SLEEP_TIME}ms and retrying...");
+                warn!("error writing `{id}` to mongo, sleeing {MONGO_RETRY_SLEEP_TIME}ms and retrying...");
                 sleep(Duration::from_millis(MONGO_RETRY_SLEEP_TIME)).await;
                 continue;
             },
@@ -80,10 +80,23 @@ where
     Ok(collection.find_one(f, None).await?.unwrap_or_default())
 }
 
+async fn handle_message(msg: MongoMessages, collection: &Collection<HeartbeatsJson>) -> Result<(), SentinelError> {
+    match msg {
+        MongoMessages::PutHeartbeats(msg) => {
+            update_heartbeat(&msg, &collection).await?;
+        },
+        MongoMessages::GetHeartbeats(responder) => {
+            let r = get_heartbeats(&collection).await;
+            let _ = responder.send(r);
+        },
+    }
+    Ok(())
+}
+
 pub async fn mongo_loop(mongo_config: MongoConfig, mut mongo_rx: MpscRx<MongoMessages>) -> Result<(), SentinelError> {
-    info!("Checking mongo config...");
+    info!("checking mongo config...");
     mongo_config.check_mongo_connection().await?;
-    info!("Mongo listening!");
+    info!("mongo listening");
 
     let heartbeats_collection = mongo_config.get_heartbeats_collection().await?;
     update_heartbeat(&HeartbeatsJson::default(), &heartbeats_collection).await?;
@@ -91,17 +104,12 @@ pub async fn mongo_loop(mongo_config: MongoConfig, mut mongo_rx: MpscRx<MongoMes
     'mongo_loop: loop {
         tokio::select! {
             r = mongo_rx.recv() => match r {
-                Some(MongoMessages::PutHeartbeats(msg)) => {
-                    update_heartbeat(&msg, &heartbeats_collection).await?;
-                    continue 'mongo_loop
-                },
-                Some(MongoMessages::GetHeartbeats(responder)) => {
-                    let r = get_heartbeats(&heartbeats_collection).await;
-                    let _ = responder.send(r);
+                Some(msg) => {
+                    handle_message(msg, &heartbeats_collection).await?;
                     continue 'mongo_loop
                 },
                 None => {
-                    let m = "all mongo senders dropped!";
+                    let m = "all mongo senders dropped";
                     warn!("{m}");
                     break 'mongo_loop Err(SentinelError::Custom(m.into()))
                 },
