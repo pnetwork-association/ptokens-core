@@ -1,6 +1,7 @@
 use std::result::Result;
 
 use common::BridgeSide;
+use jsonrpsee::ws_client::WsClient;
 use lib::{
     eth_call,
     get_gas_price,
@@ -13,6 +14,51 @@ use lib::{
 };
 use tokio::sync::mpsc::Receiver as MpscRx;
 
+async fn handle_message(n_ws_client: &WsClient, h_ws_client: &WsClient, msg: EthRpcMessages) -> () {
+    match msg {
+        EthRpcMessages::GetLatestBlockNum((side, responder)) => {
+            let r = match side {
+                BridgeSide::Host => get_latest_block_num(&h_ws_client),
+                BridgeSide::Native => get_latest_block_num(&n_ws_client),
+            }
+            .await;
+            let _ = responder.send(r);
+        },
+        EthRpcMessages::GetGasPrice((side, responder)) => {
+            let r = match side {
+                BridgeSide::Host => get_gas_price(&h_ws_client),
+                BridgeSide::Native => get_gas_price(&n_ws_client),
+            }
+            .await;
+            let _ = responder.send(r);
+        },
+        EthRpcMessages::PushTx((tx, side, responder)) => {
+            let r = match side {
+                BridgeSide::Host => push_tx(tx, &h_ws_client),
+                BridgeSide::Native => push_tx(tx, &n_ws_client),
+            }
+            .await;
+            let _ = responder.send(r);
+        },
+        EthRpcMessages::GetNonce((side, address, responder)) => {
+            let r = match side {
+                BridgeSide::Host => get_nonce(&h_ws_client, &address),
+                BridgeSide::Native => get_nonce(&n_ws_client, &address),
+            }
+            .await;
+            let _ = responder.send(r);
+        },
+        EthRpcMessages::EthCall((data, side, address, default_block_parameter, responder)) => {
+            let r = match side {
+                BridgeSide::Host => eth_call(&address, &data, &default_block_parameter, &h_ws_client),
+                BridgeSide::Native => eth_call(&address, &data, &default_block_parameter, &n_ws_client),
+            }
+            .await;
+            let _ = responder.send(r);
+        },
+    }
+}
+
 pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: SentinelConfig) -> Result<(), SentinelError> {
     let host_endpoints = config.get_host_endpoints();
     let native_endpoints = config.get_native_endpoints();
@@ -22,44 +68,8 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
     'eth_rpc_loop: loop {
         tokio::select! {
             r = eth_rpc_rx.recv() => match r {
-                Some(EthRpcMessages::GetLatestBlockNum((side, responder))) => {
-                    let r = match side {
-                        BridgeSide::Host => get_latest_block_num(&h_ws_client),
-                        BridgeSide::Native => get_latest_block_num(&n_ws_client),
-                    }.await;
-                    let _ = responder.send(r);
-                    continue 'eth_rpc_loop
-                },
-                Some(EthRpcMessages::GetGasPrice((side, responder))) => {
-                    let r = match side {
-                        BridgeSide::Host => get_gas_price(&h_ws_client),
-                        BridgeSide::Native => get_gas_price(&n_ws_client),
-                    }.await;
-                    let _ = responder.send(r);
-                    continue 'eth_rpc_loop
-                },
-                Some(EthRpcMessages::PushTx((tx, side, responder))) => {
-                    let r = match side {
-                        BridgeSide::Host => push_tx(tx, &h_ws_client),
-                        BridgeSide::Native => push_tx(tx, &n_ws_client),
-                    }.await;
-                    let _ = responder.send(r);
-                    continue 'eth_rpc_loop
-                },
-                Some(EthRpcMessages::GetNonce((side, address, responder))) => {
-                    let r = match side {
-                        BridgeSide::Host => get_nonce(&h_ws_client, &address),
-                        BridgeSide::Native => get_nonce(&n_ws_client, &address),
-                    }.await;
-                    let _ = responder.send(r);
-                    continue 'eth_rpc_loop
-                },
-                Some(EthRpcMessages::EthCall((data, side, address, default_block_parameter, responder))) => {
-                    let r = match side {
-                        BridgeSide::Host => eth_call(&address, &data, &default_block_parameter, &h_ws_client),
-                        BridgeSide::Native => eth_call(&address, &data, &default_block_parameter, &n_ws_client),
-                    }.await;
-                    let _ = responder.send(r);
+                Some(msg) => {
+                    handle_message(&n_ws_client, &h_ws_client, msg).await;
                     continue 'eth_rpc_loop
                 },
                 None => {

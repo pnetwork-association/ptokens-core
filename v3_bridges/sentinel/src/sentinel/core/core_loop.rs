@@ -5,7 +5,7 @@ use common_eth::{EthDbUtilsExt, HostDbUtils, NativeDbUtils};
 use lib::{CoreMessages, CoreState, SentinelDbUtils, SentinelError, UserOpList, USER_OP_CANCEL_TX_GAS_LIMIT};
 use tokio::sync::{mpsc::Receiver as MpscRx, Mutex};
 
-async fn process_message<D: DatabaseInterface>(
+async fn handle_message<D: DatabaseInterface>(
     guarded_db: Arc<Mutex<D>>,
     msg: CoreMessages,
 ) -> Result<(), SentinelError> {
@@ -86,7 +86,7 @@ pub async fn core_loop<D: DatabaseInterface>(
         tokio::select! {
             r = core_rx.recv() => {
                 if let Some(msg) = r {
-                    process_message(guarded_db.clone(), msg).await?;
+                    handle_message(guarded_db.clone(), msg).await?;
                     continue 'core_loop
                 } else {
                     let m = "all core senders dropped!";
