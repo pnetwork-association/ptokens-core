@@ -2,7 +2,7 @@ use std::result::Result;
 
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
 
-use super::constants::ETH_RPC_CALL_TIME_LIMIT;
+use super::constants::{ETH_RPC_CALL_TIME_LIMIT, MAX_RPC_CALL_ATTEMPTS};
 use crate::{constants::HEX_RADIX, endpoints::EndpointError, utils::run_timer, SentinelError};
 
 const GET_LATEST_BLOCK_NUM_RPC_CMD: &str = "eth_blockNumber";
@@ -17,12 +17,33 @@ async fn get_latest_block_num_inner(ws_client: &WsClient) -> Result<u64, Sentine
 }
 
 pub async fn get_latest_block_num(ws_client: &WsClient) -> Result<u64, SentinelError> {
-    let m = "getting latest block num".to_string();
+    let mut attempt = 1;
+    let m = format!("getting latest block num attempt #{attempt}");
     debug!("{m}");
-    tokio::select! {
-        res = get_latest_block_num_inner(ws_client) => res,
-        _ = run_timer(ETH_RPC_CALL_TIME_LIMIT) => Err(EndpointError::TimeOut(m).into()),
-        _ = ws_client.on_disconnect() => Err(EndpointError::WsClientDisconnected(m).into()),
+
+    loop {
+        let r = tokio::select! {
+            res = get_latest_block_num_inner(ws_client) => res,
+            _ = run_timer(ETH_RPC_CALL_TIME_LIMIT) => Err(EndpointError::TimeOut(m.clone()).into()),
+            _ = ws_client.on_disconnect() => Err(EndpointError::WsClientDisconnected(m.clone()).into()),
+        };
+
+        match r {
+            Ok(r) => break Ok(r),
+            Err(e) => match e {
+                SentinelError::Endpoint(EndpointError::WsClientDisconnected(_)) => {
+                    break Err(e);
+                },
+                _ => {
+                    if attempt < MAX_RPC_CALL_ATTEMPTS {
+                        attempt += 1;
+                        continue;
+                    } else {
+                        break Err(e);
+                    }
+                },
+            },
+        }
     }
 }
 
