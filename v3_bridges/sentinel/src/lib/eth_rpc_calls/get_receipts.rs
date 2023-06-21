@@ -10,6 +10,7 @@ use jsonrpsee::{
 };
 use serde_json::Value as JsonValue;
 
+use super::MAX_RPC_CALL_ATTEMPTS;
 use crate::{run_timer, EndpointError, SentinelError};
 
 const MAX_CONCURRENT_REQUESTS: usize = 250;
@@ -48,12 +49,33 @@ async fn get_receipts_inner(ws_client: &WsClient, tx_hashes: &[EthHash]) -> Resu
 
 pub async fn get_receipts(ws_client: &WsClient, tx_hashes: &[EthHash]) -> Result<EthReceipts, SentinelError> {
     const TIME_LIMIT: u64 = 10 * 1000;
-    let m = "getting receipts".to_string();
+    let mut attempt = 1;
+    let m = format!("getting receipts attempt #{attempt}");
     debug!("{m}");
-    tokio::select! {
-        res = get_receipts_inner(ws_client, tx_hashes) => res,
-        _ = run_timer(TIME_LIMIT) => Err(EndpointError::TimeOut(m).into()),
-        _ = ws_client.on_disconnect() => Err(EndpointError::WsClientDisconnected(m).into()),
+
+    loop {
+        let r = tokio::select! {
+            res = get_receipts_inner(ws_client, tx_hashes) => res,
+            _ = run_timer(TIME_LIMIT) => Err(EndpointError::TimeOut(m.clone()).into()),
+            _ = ws_client.on_disconnect() => Err(EndpointError::WsClientDisconnected(m.clone()).into()),
+        };
+
+        match r {
+            Ok(r) => break Ok(r),
+            Err(e) => match e {
+                SentinelError::Endpoint(EndpointError::WsClientDisconnected(_)) => {
+                    break Err(e);
+                },
+                _ => {
+                    if attempt < MAX_RPC_CALL_ATTEMPTS {
+                        attempt += 1;
+                        continue;
+                    } else {
+                        break Err(e);
+                    }
+                },
+            },
+        }
     }
 }
 
