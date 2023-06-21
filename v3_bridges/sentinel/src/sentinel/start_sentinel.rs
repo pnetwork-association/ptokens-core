@@ -52,12 +52,14 @@ pub async fn start_sentinel(
         Batch::new_from_config(BridgeSide::Native, config)?,
         processor_tx.clone(),
         core_tx.clone(),
+        eth_rpc_tx.clone(),
         sentinel_args.disable_native_syncer,
     ));
     let host_syncer_thread = tokio::spawn(syncer_loop(
         Batch::new_from_config(BridgeSide::Host, config)?,
         processor_tx,
         core_tx.clone(),
+        eth_rpc_tx.clone(),
         sentinel_args.disable_host_syncer,
     ));
 

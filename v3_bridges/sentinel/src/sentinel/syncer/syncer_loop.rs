@@ -1,19 +1,24 @@
 use std::result::Result;
 
-use lib::{get_sub_mat, Batch, CoreMessages, ProcessorMessages, SentinelError};
+use lib::{Batch, CoreMessages, EthRpcMessages, ProcessorMessages, SentinelError};
 use tokio::{
     sync::mpsc::Sender as MpscTx,
     time::{sleep, Duration},
 };
 
-async fn main_loop(mut batch: Batch, processor_tx: MpscTx<ProcessorMessages>) -> Result<(), SentinelError> {
-    let log_prefix = format!("{} syncer", batch.side());
-    let ws_client = batch.endpoints().get_ws_client().await?;
-
+async fn main_loop(
+    mut batch: Batch,
+    processor_tx: MpscTx<ProcessorMessages>,
+    eth_rpc_tx: MpscTx<EthRpcMessages>,
+) -> Result<(), SentinelError> {
+    let side = batch.side();
+    let log_prefix = format!("{} syncer", side);
     let sleep_duration = batch.get_sleep_duration();
 
     'main_loop: loop {
-        match get_sub_mat(&ws_client, batch.get_block_num()).await {
+        let (msg, rx) = EthRpcMessages::get_sub_mat_msg(side, batch.get_block_num());
+        eth_rpc_tx.send(msg).await?;
+        match rx.await? {
             Ok(block) => {
                 batch.push(block);
                 if !batch.is_ready_to_submit() {
@@ -69,6 +74,7 @@ pub async fn syncer_loop(
     mut batch: Batch,
     processor_tx: MpscTx<ProcessorMessages>,
     core_tx: MpscTx<CoreMessages>,
+    eth_rpc_tx: MpscTx<EthRpcMessages>,
     disable_syncer: bool,
 ) -> Result<(), SentinelError> {
     let side = batch.side();
@@ -92,7 +98,7 @@ pub async fn syncer_loop(
         }
     } else {
         tokio::select! {
-            res = main_loop(batch, processor_tx) => res,
+            res = main_loop(batch, processor_tx, eth_rpc_tx) => res,
             _ = tokio::signal::ctrl_c() => {
                 warn!("{side} syncer shutting down...");
                 Err(SentinelError::SigInt("{side} syncer".into()))
