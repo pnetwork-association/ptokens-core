@@ -5,11 +5,10 @@ use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
 use super::constants::{ETH_RPC_CALL_TIME_LIMIT, MAX_RPC_CALL_ATTEMPTS};
 use crate::{constants::HEX_RADIX, endpoints::EndpointError, utils::run_timer, SentinelError};
 
-const GET_LATEST_BLOCK_NUM_RPC_CMD: &str = "eth_blockNumber";
+const RPC_CMD: &str = "eth_blockNumber";
 
 async fn get_latest_block_num_inner(ws_client: &WsClient) -> Result<u64, SentinelError> {
-    let res: Result<String, jsonrpsee::core::Error> =
-        ws_client.request(GET_LATEST_BLOCK_NUM_RPC_CMD, rpc_params![]).await;
+    let res: Result<String, jsonrpsee::core::Error> = ws_client.request(RPC_CMD, rpc_params![]).await;
     match res {
         Err(_) => Err(EndpointError::NoLatestBlock.into()),
         Ok(ref s) => Ok(u64::from_str_radix(&s.replace("0x", ""), HEX_RADIX)?),
@@ -18,10 +17,10 @@ async fn get_latest_block_num_inner(ws_client: &WsClient) -> Result<u64, Sentine
 
 pub async fn get_latest_block_num(ws_client: &WsClient) -> Result<u64, SentinelError> {
     let mut attempt = 1;
-    let m = format!("getting latest block num attempt #{attempt}");
-    debug!("{m}");
-
     loop {
+        let m = format!("getting latest block num attempt #{attempt}");
+        debug!("{m}");
+
         let r = tokio::select! {
             res = get_latest_block_num_inner(ws_client) => res,
             _ = run_timer(ETH_RPC_CALL_TIME_LIMIT) => Err(EndpointError::TimeOut(m.clone()).into()),
@@ -32,6 +31,7 @@ pub async fn get_latest_block_num(ws_client: &WsClient) -> Result<u64, SentinelE
             Ok(r) => break Ok(r),
             Err(e) => match e {
                 SentinelError::Endpoint(EndpointError::WsClientDisconnected(_)) => {
+                    warn!("{RPC_CMD} failed due to web socket dropping");
                     break Err(e);
                 },
                 _ => {
@@ -39,6 +39,7 @@ pub async fn get_latest_block_num(ws_client: &WsClient) -> Result<u64, SentinelE
                         attempt += 1;
                         continue;
                     } else {
+                        warn!("{RPC_CMD} failed after {attempt} attempts");
                         break Err(e);
                     }
                 },

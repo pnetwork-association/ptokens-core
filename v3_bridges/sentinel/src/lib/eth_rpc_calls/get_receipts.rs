@@ -14,14 +14,14 @@ use super::MAX_RPC_CALL_ATTEMPTS;
 use crate::{run_timer, EndpointError, SentinelError};
 
 const MAX_CONCURRENT_REQUESTS: usize = 250;
-const GET_RECEIPT_RPC_CMD: &str = "eth_getTransactionReceipt";
+const RPC_CMD: &str = "eth_getTransactionReceipt";
 
 async fn get_receipt_future<'a>(
     ws_client: &'a WsClient,
     tx_hash: &'a EthHash,
 ) -> impl Future<Output = Result<JsonValue, JsonRpseeError>> + 'a {
     trace!("getting receipts for tx hash: 0x{tx_hash:x}...");
-    ws_client.request(GET_RECEIPT_RPC_CMD, rpc_params![format!("0x{tx_hash:x}")])
+    ws_client.request(RPC_CMD, rpc_params![format!("0x{tx_hash:x}")])
 }
 
 fn get_receipt_futures<'a>(
@@ -50,10 +50,10 @@ async fn get_receipts_inner(ws_client: &WsClient, tx_hashes: &[EthHash]) -> Resu
 pub async fn get_receipts(ws_client: &WsClient, tx_hashes: &[EthHash]) -> Result<EthReceipts, SentinelError> {
     const TIME_LIMIT: u64 = 10 * 1000;
     let mut attempt = 1;
-    let m = format!("getting receipts attempt #{attempt}");
-    debug!("{m}");
-
     loop {
+        let m = format!("getting receipts attempt #{attempt}");
+        debug!("{m}");
+
         let r = tokio::select! {
             res = get_receipts_inner(ws_client, tx_hashes) => res,
             _ = run_timer(TIME_LIMIT) => Err(EndpointError::TimeOut(m.clone()).into()),
@@ -64,6 +64,7 @@ pub async fn get_receipts(ws_client: &WsClient, tx_hashes: &[EthHash]) -> Result
             Ok(r) => break Ok(r),
             Err(e) => match e {
                 SentinelError::Endpoint(EndpointError::WsClientDisconnected(_)) => {
+                    warn!("{RPC_CMD} failed due to web socket dropping");
                     break Err(e);
                 },
                 _ => {
@@ -71,6 +72,7 @@ pub async fn get_receipts(ws_client: &WsClient, tx_hashes: &[EthHash]) -> Result
                         attempt += 1;
                         continue;
                     } else {
+                        warn!("{RPC_CMD} failed after {attempt} attempts");
                         break Err(e);
                     }
                 },

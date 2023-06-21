@@ -7,15 +7,12 @@ use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
 use super::{ETH_RPC_CALL_TIME_LIMIT, MAX_RPC_CALL_ATTEMPTS};
 use crate::{run_timer, EndpointError, SentinelError};
 
-const GET_NONCE_RPC_CMD: &str = "eth_getTransactionCount";
+const RPC_CMD: &str = "eth_getTransactionCount";
 
 async fn get_nonce_inner(ws_client: &WsClient, address: &EthAddress) -> Result<u64, SentinelError> {
     let block_to_get_nonce_from = "latest";
     let nonce_hex: Result<String, jsonrpsee::core::Error> = ws_client
-        .request(GET_NONCE_RPC_CMD, rpc_params![
-            format!("0x{address:x}"),
-            block_to_get_nonce_from
-        ])
+        .request(RPC_CMD, rpc_params![format!("0x{address:x}"), block_to_get_nonce_from])
         .await;
     match nonce_hex {
         Err(e) => Err(SentinelError::JsonRpc(e)),
@@ -25,10 +22,10 @@ async fn get_nonce_inner(ws_client: &WsClient, address: &EthAddress) -> Result<u
 
 pub async fn get_nonce(ws_client: &WsClient, address: &EthAddress) -> Result<u64, SentinelError> {
     let mut attempt = 1;
-    let m = format!("getting nonce for addresss {address} attempt #{attempt}");
-    debug!("{m}");
-
     loop {
+        let m = format!("getting nonce for addresss {address} attempt #{attempt}");
+        debug!("{m}");
+
         let r = tokio::select! {
             res = get_nonce_inner(ws_client, address) => res,
             _ = run_timer(ETH_RPC_CALL_TIME_LIMIT) => Err(EndpointError::TimeOut(m.clone()).into()),
@@ -39,6 +36,7 @@ pub async fn get_nonce(ws_client: &WsClient, address: &EthAddress) -> Result<u64
             Ok(r) => break Ok(r),
             Err(e) => match e {
                 SentinelError::Endpoint(EndpointError::WsClientDisconnected(_)) => {
+                    warn!("{RPC_CMD} failed due to web socket dropping");
                     break Err(e);
                 },
                 _ => {
@@ -46,6 +44,7 @@ pub async fn get_nonce(ws_client: &WsClient, address: &EthAddress) -> Result<u64
                         attempt += 1;
                         continue;
                     } else {
+                        warn!("{RPC_CMD} failed after {attempt} attempts");
                         break Err(e);
                     }
                 },

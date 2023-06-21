@@ -19,9 +19,10 @@ async fn get_chain_id_inner(ws_client: &WsClient) -> Result<u64, SentinelError> 
 
 pub async fn get_chain_id(ws_client: &WsClient) -> Result<u64, SentinelError> {
     let mut attempt = 1;
-    let m = format!("getting chain id attempt #{attempt}");
-    debug!("{m}");
     loop {
+        let m = format!("getting chain id attempt #{attempt}");
+        debug!("{m}");
+
         let r = tokio::select! {
             res = get_chain_id_inner(ws_client) => res,
             _ = run_timer(ETH_RPC_CALL_TIME_LIMIT) => Err(EndpointError::TimeOut(m.clone()).into()),
@@ -32,6 +33,7 @@ pub async fn get_chain_id(ws_client: &WsClient) -> Result<u64, SentinelError> {
             Ok(r) => break Ok(r),
             Err(e) => match e {
                 SentinelError::Endpoint(EndpointError::WsClientDisconnected(_)) => {
+                    warn!("{RPC_CMD} failed due to web socket dropping");
                     break Err(e);
                 },
                 _ => {
@@ -39,6 +41,7 @@ pub async fn get_chain_id(ws_client: &WsClient) -> Result<u64, SentinelError> {
                         attempt += 1;
                         continue;
                     } else {
+                        warn!("{RPC_CMD} failed after {attempt} attempts");
                         break Err(e);
                     }
                 },

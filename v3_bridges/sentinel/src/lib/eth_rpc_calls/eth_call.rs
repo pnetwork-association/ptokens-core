@@ -9,7 +9,7 @@ use serde_json::json;
 use super::{ETH_RPC_CALL_TIME_LIMIT, MAX_RPC_CALL_ATTEMPTS};
 use crate::{run_timer, EndpointError, SentinelError};
 
-const JSON_RPC_CMD: &str = "eth_call";
+const RPC_CMD: &str = "eth_call";
 
 async fn eth_call_inner(
     to: &EthAddress,
@@ -19,7 +19,7 @@ async fn eth_call_inner(
 ) -> Result<Bytes, SentinelError> {
     let params = json!({ "to": format!("0x{:x}", to), "data": format!("0x{}", hex::encode(call_data)) });
     let res: Result<String, jsonrpsee::core::Error> = ws_client
-        .request(JSON_RPC_CMD, rpc_params![params, default_block_parameter.to_string()])
+        .request(RPC_CMD, rpc_params![params, default_block_parameter.to_string()])
         .await;
     match res {
         Ok(ref s) => Ok(hex::decode(strip_hex_prefix(s))?),
@@ -34,10 +34,10 @@ pub async fn eth_call(
     ws_client: &WsClient,
 ) -> Result<Bytes, SentinelError> {
     let mut attempt = 1;
-    let m = format!("making eth call attempt #{attempt}");
-    debug!("{m}");
-
     loop {
+        let m = format!("making eth call attempt #{attempt}");
+        debug!("{m}");
+
         let r = tokio::select! {
             res = eth_call_inner(to, call_data, default_block_parameter, ws_client) => res,
             _ = run_timer(ETH_RPC_CALL_TIME_LIMIT) => Err(EndpointError::TimeOut(m.clone()).into()),
@@ -48,6 +48,7 @@ pub async fn eth_call(
             Ok(r) => break Ok(r),
             Err(e) => match e {
                 SentinelError::Endpoint(EndpointError::WsClientDisconnected(_)) => {
+                    warn!("{RPC_CMD} failed due to web socket dropping");
                     break Err(e);
                 },
                 _ => {
@@ -55,6 +56,7 @@ pub async fn eth_call(
                         attempt += 1;
                         continue;
                     } else {
+                        warn!("{RPC_CMD} failed after {attempt} attempts");
                         break Err(e);
                     }
                 },
