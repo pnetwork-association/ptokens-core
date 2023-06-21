@@ -48,7 +48,7 @@ async fn get_receipts_inner(ws_client: &WsClient, tx_hashes: &[EthHash]) -> Resu
 
 pub async fn get_receipts(ws_client: &WsClient, tx_hashes: &[EthHash]) -> Result<EthReceipts, SentinelError> {
     const TIME_LIMIT: u64 = 10 * 1000;
-    let m = format!("getting receipts");
+    let m = "getting receipts".to_string();
     debug!("{m}");
     tokio::select! {
         res = get_receipts_inner(ws_client, tx_hashes) => res,
