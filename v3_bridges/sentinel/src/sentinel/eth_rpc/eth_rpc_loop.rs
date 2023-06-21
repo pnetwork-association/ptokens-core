@@ -7,6 +7,7 @@ use lib::{
     get_gas_price,
     get_latest_block_num,
     get_nonce,
+    get_sub_mat,
     push_tx,
     EthRpcMessages,
     SentinelConfig,
@@ -52,6 +53,14 @@ async fn handle_message(n_ws_client: &WsClient, h_ws_client: &WsClient, msg: Eth
             let r = match side {
                 BridgeSide::Host => eth_call(&address, &data, &default_block_parameter, &h_ws_client),
                 BridgeSide::Native => eth_call(&address, &data, &default_block_parameter, &n_ws_client),
+            }
+            .await;
+            let _ = responder.send(r);
+        },
+        EthRpcMessages::GetSubMat((side, block_num, responder)) => {
+            let r = match side {
+                BridgeSide::Host => get_sub_mat(&h_ws_client, block_num),
+                BridgeSide::Native => get_sub_mat(&n_ws_client, block_num),
             }
             .await;
             let _ = responder.send(r);
