@@ -106,8 +106,11 @@ impl Batch {
     }
 
     pub fn new_from_config(side: BridgeSide, config: &Config) -> Result<Self, SentinelError> {
-        info!("Getting Batch from config...");
         let is_native = side.is_native();
+        info!(
+            "getting {} batch from config...",
+            if is_native { "native" } else { "host" }
+        );
         let res = Self {
             side,
             sleep_duration: if is_native {
@@ -193,7 +196,7 @@ impl Batch {
             Err(e) => {
                 // NOTE: We default to u64::MAX here because that will mean the batch is always ready
                 // to submit in case of this error, which is preferable to the batch never being ready!
-                warn!("Error getting time since last submission: {e}");
+                warn!("error getting time since last submission: {e}");
                 u64::MAX
             },
         }
@@ -201,40 +204,49 @@ impl Batch {
 
     pub fn is_ready_to_submit(&self) -> bool {
         if self.is_empty() {
-            info!("Batch not ready to submit because it's empty");
+            info!("{} batch not ready to submit because it's empty", self.side());
             return false;
         } else if self.single_submissions_flag {
-            info!("Batch set to single submission so it's ready to submit");
+            info!("{} batch set to single submission so it's ready to submit", self.side());
             return true;
         }
 
         let size = self.size_in_blocks();
         let size_limit = self.batch_size;
         if size >= size_limit {
-            info!("Batch has sufficient blocks to submit! (blocks: {size}, limit: {size_limit})");
+            info!(
+                "{} batch has sufficient blocks to submit! (blocks: {size}, limit: {size_limit})",
+                self.side()
+            );
             return true;
         }
 
         let time_limit = self.batch_duration;
         let time = self.get_seconds_since_last_submission();
         if time >= time_limit {
-            info!("Ready to submit because enough time has elapsed");
+            info!("{} batch ready to submit because enough time has elapsed", self.side());
             return true;
         }
 
         let pct_full = (size as f64 / size_limit as f64) * 100_f64;
         let pct_time = (time as f64 / time_limit as f64) * 100_f64;
-        info!("Batch not ready to submit yet! ({pct_full:.2}% full, {pct_time:.2}% time)");
+        info!(
+            "{} batch not ready to submit yet! ({pct_full:.2}% full, {pct_time:.2}% time)",
+            self.side()
+        );
         false
     }
 
     pub fn check_is_chained(self) -> Result<Self, SentinelError> {
         let num_blocks_in_batch = self.size_in_blocks() as usize;
         if num_blocks_in_batch < 2 {
-            info!("No need to check batch chaining - it contains too few blocks to matter!");
+            info!(
+                "no need to check {} batch chaining - it contains too few blocks to matter!",
+                self.side()
+            );
             Ok(self)
         } else {
-            info!("Checking batch is chained correctly...");
+            info!("checking {} batch is chained correctly...", self.side());
             let mut i = num_blocks_in_batch - 1;
             while i > 0 {
                 if self.batch[i].get_parent_hash()? != self.batch[i - 1].get_block_hash()? {
@@ -247,7 +259,7 @@ impl Batch {
                 }
                 i -= 1;
             }
-            info!("Batch is chained correctly!");
+            info!("{} batch is chained correctly", self.side());
             Ok(self)
         }
     }
@@ -275,7 +287,7 @@ impl std::fmt::Display for Error {
             } => write!(f, "block num {b} is not chained correctly to {p}"),
             Self::NoEndpoint(ref is_native) => write!(
                 f,
-                "Cannot create {} sub mat batch - no endpoints!",
+                "cannot create {} sub mat batch - no endpoints!",
                 if is_native == &true { "native" } else { "host" },
             ),
         }
