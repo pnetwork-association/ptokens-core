@@ -3,7 +3,7 @@ use std::result::Result;
 use common::strip_hex_prefix;
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
 
-use super::ETH_RPC_CALL_TIME_LIMIT;
+use super::{ETH_RPC_CALL_TIME_LIMIT, MAX_RPC_CALL_ATTEMPTS};
 use crate::{run_timer, EndpointError, SentinelError};
 
 const RPC_CMD: &str = "eth_gasPrice";
@@ -17,12 +17,32 @@ async fn get_gas_price_inner(ws_client: &WsClient) -> Result<u64, SentinelError>
 }
 
 pub async fn get_gas_price(ws_client: &WsClient) -> Result<u64, SentinelError> {
-    let m = "getting gas price".to_string();
+    let mut attempt = 1;
+    let m = format!("getting gas price attempt #{attempt}");
     debug!("{m}");
-    tokio::select! {
-        res = get_gas_price_inner(ws_client) => res,
-        _ = run_timer(ETH_RPC_CALL_TIME_LIMIT) => Err(EndpointError::TimeOut(m).into()),
-        _ = ws_client.on_disconnect() => Err(EndpointError::WsClientDisconnected(m).into()),
+    loop {
+        let r = tokio::select! {
+            res = get_gas_price_inner(ws_client) => res,
+            _ = run_timer(ETH_RPC_CALL_TIME_LIMIT) => Err(EndpointError::TimeOut(m.clone()).into()),
+            _ = ws_client.on_disconnect() => Err(EndpointError::WsClientDisconnected(m.clone()).into()),
+        };
+
+        match r {
+            Ok(r) => break Ok(r),
+            Err(e) => match e {
+                SentinelError::Endpoint(EndpointError::WsClientDisconnected(_)) => {
+                    break Err(e);
+                },
+                _ => {
+                    if attempt < MAX_RPC_CALL_ATTEMPTS {
+                        attempt += 1;
+                        continue;
+                    } else {
+                        break Err(e);
+                    }
+                },
+            },
+        }
     }
 }
 
