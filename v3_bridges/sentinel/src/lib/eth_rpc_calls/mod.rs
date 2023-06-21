@@ -9,7 +9,7 @@ mod get_receipts;
 mod get_sub_mat;
 mod push_tx;
 
-use self::constants::ETH_RPC_CALL_TIME_LIMIT;
+use self::constants::{ETH_RPC_CALL_TIME_LIMIT, MAX_RPC_CALL_ATTEMPTS};
 pub use self::{
     eth_call::eth_call,
     get_block::get_block,

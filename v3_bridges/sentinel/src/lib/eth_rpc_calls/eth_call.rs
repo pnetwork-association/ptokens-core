@@ -6,7 +6,7 @@ use ethereum_types::Address as EthAddress;
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
 use serde_json::json;
 
-use super::ETH_RPC_CALL_TIME_LIMIT;
+use super::{ETH_RPC_CALL_TIME_LIMIT, MAX_RPC_CALL_ATTEMPTS};
 use crate::{run_timer, EndpointError, SentinelError};
 
 const JSON_RPC_CMD: &str = "eth_call";
@@ -33,12 +33,33 @@ pub async fn eth_call(
     default_block_parameter: &DefaultBlockParameter,
     ws_client: &WsClient,
 ) -> Result<Bytes, SentinelError> {
-    let m = "making eth call".to_string();
+    let mut attempt = 1;
+    let m = format!("making eth call attempt #{attempt}");
     debug!("{m}");
-    tokio::select! {
-        res = eth_call_inner(to, call_data, default_block_parameter, ws_client) => res,
-        _ = run_timer(ETH_RPC_CALL_TIME_LIMIT) => Err(EndpointError::TimeOut(m).into()),
-        _ = ws_client.on_disconnect() => Err(EndpointError::WsClientDisconnected(m).into()),
+
+    loop {
+        let r = tokio::select! {
+            res = eth_call_inner(to, call_data, default_block_parameter, ws_client) => res,
+            _ = run_timer(ETH_RPC_CALL_TIME_LIMIT) => Err(EndpointError::TimeOut(m.clone()).into()),
+            _ = ws_client.on_disconnect() => Err(EndpointError::WsClientDisconnected(m.clone()).into()),
+        };
+
+        match r {
+            Ok(r) => break Ok(r),
+            Err(e) => match e {
+                SentinelError::Endpoint(EndpointError::WsClientDisconnected(_)) => {
+                    break Err(e);
+                },
+                _ => {
+                    if attempt < MAX_RPC_CALL_ATTEMPTS {
+                        attempt += 1;
+                        continue;
+                    } else {
+                        break Err(e);
+                    }
+                },
+            },
+        }
     }
 }
 
