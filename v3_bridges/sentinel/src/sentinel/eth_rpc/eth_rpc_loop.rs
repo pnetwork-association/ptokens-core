@@ -1,7 +1,5 @@
 use std::result::Result;
 
-use common::BridgeSide;
-use jsonrpsee::ws_client::WsClient;
 use lib::{
     eth_call,
     get_gas_price,
@@ -9,77 +7,158 @@ use lib::{
     get_nonce,
     get_sub_mat,
     push_tx,
+    EndpointError,
     EthRpcMessages,
     SentinelConfig,
     SentinelError,
 };
 use tokio::sync::mpsc::Receiver as MpscRx;
 
-async fn handle_message(n_ws_client: &WsClient, h_ws_client: &WsClient, msg: EthRpcMessages) -> () {
-    match msg {
-        EthRpcMessages::GetLatestBlockNum((side, responder)) => {
-            let r = match side {
-                BridgeSide::Host => get_latest_block_num(&h_ws_client),
-                BridgeSide::Native => get_latest_block_num(&n_ws_client),
-            }
-            .await;
-            let _ = responder.send(r);
-        },
-        EthRpcMessages::GetGasPrice((side, responder)) => {
-            let r = match side {
-                BridgeSide::Host => get_gas_price(&h_ws_client),
-                BridgeSide::Native => get_gas_price(&n_ws_client),
-            }
-            .await;
-            let _ = responder.send(r);
-        },
-        EthRpcMessages::PushTx((tx, side, responder)) => {
-            let r = match side {
-                BridgeSide::Host => push_tx(tx, &h_ws_client),
-                BridgeSide::Native => push_tx(tx, &n_ws_client),
-            }
-            .await;
-            let _ = responder.send(r);
-        },
-        EthRpcMessages::GetNonce((side, address, responder)) => {
-            let r = match side {
-                BridgeSide::Host => get_nonce(&h_ws_client, &address),
-                BridgeSide::Native => get_nonce(&n_ws_client, &address),
-            }
-            .await;
-            let _ = responder.send(r);
-        },
-        EthRpcMessages::EthCall((data, side, address, default_block_parameter, responder)) => {
-            let r = match side {
-                BridgeSide::Host => eth_call(&address, &data, &default_block_parameter, &h_ws_client),
-                BridgeSide::Native => eth_call(&address, &data, &default_block_parameter, &n_ws_client),
-            }
-            .await;
-            let _ = responder.send(r);
-        },
-        EthRpcMessages::GetSubMat((side, block_num, responder)) => {
-            let r = match side {
-                BridgeSide::Host => get_sub_mat(&h_ws_client, block_num),
-                BridgeSide::Native => get_sub_mat(&n_ws_client, block_num),
-            }
-            .await;
-            let _ = responder.send(r);
-        },
-    }
-}
+// NOTE: The underlying RPC calls have both retry & timeout logic, however in the event of a websocket disconnect, they
+// immediately return with an error. That error is handled in each of the arms below, via rotating the endpoint to get a
+// new socket.
+
+// TODO DRY out the repeat code below, though it's not trivial due to having to replace the mutable websocket clients
+// upon endpoint rotation.
 
 pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: SentinelConfig) -> Result<(), SentinelError> {
-    let host_endpoints = config.get_host_endpoints();
-    let native_endpoints = config.get_native_endpoints();
-    let h_ws_client = host_endpoints.get_ws_client().await?;
-    let n_ws_client = native_endpoints.get_ws_client().await?;
+    let mut host_endpoints = config.get_host_endpoints();
+    let mut native_endpoints = config.get_native_endpoints();
+    let mut h_ws_client = host_endpoints.get_ws_client().await?;
+    let mut n_ws_client = native_endpoints.get_ws_client().await?;
 
     'eth_rpc_loop: loop {
         tokio::select! {
             r = eth_rpc_rx.recv() => match r {
                 Some(msg) => {
-                    handle_message(&n_ws_client, &h_ws_client, msg).await;
-                    continue 'eth_rpc_loop
+                    match msg {
+                        EthRpcMessages::GetLatestBlockNum((side, responder)) => {
+                            'inner: loop {
+                                let r = get_latest_block_num(if side.is_native() { &n_ws_client } else { &h_ws_client }).await;
+                                match r {
+                                    Ok(r) => {
+                                        let _ = responder.send(Ok(r));
+                                        continue 'eth_rpc_loop
+                                    },
+                                    Err(SentinelError::Endpoint(EndpointError::WsClientDisconnected(_))) => {
+                                        warn!("{side} web socket dropped, rotating endpoint");
+                                        if side.is_native() {
+                                            n_ws_client = native_endpoints.rotate().await?;
+                                        } else {
+                                            h_ws_client = host_endpoints.rotate().await?;
+                                        };
+                                        continue 'inner
+                                    },
+                                    Err(e) => break 'eth_rpc_loop Err(e),
+                                }
+                            }
+                        },
+                        EthRpcMessages::GetGasPrice((side, responder)) => {
+                            'inner: loop {
+                                let r = get_gas_price(if side.is_native() { &n_ws_client } else { &h_ws_client }).await;
+                                match r {
+                                    Ok(r) => {
+                                        let _ = responder.send(Ok(r));
+                                        continue 'eth_rpc_loop
+                                    },
+                                    Err(SentinelError::Endpoint(EndpointError::WsClientDisconnected(_))) => {
+                                        warn!("{side} web socket dropped, rotating endpoint");
+                                        if side.is_native() {
+                                            n_ws_client = native_endpoints.rotate().await?;
+                                        } else {
+                                            h_ws_client = host_endpoints.rotate().await?;
+                                        };
+                                        continue 'inner
+                                    },
+                                    Err(e) => break 'eth_rpc_loop Err(e),
+                                }
+                            }
+                        },
+                        EthRpcMessages::PushTx((tx, side, responder)) => {
+                            'inner: loop {
+                                let r = push_tx(&tx, if side.is_native() { &n_ws_client } else { &h_ws_client }).await;
+                                match r {
+                                    Ok(r) => {
+                                        let _ = responder.send(Ok(r));
+                                        continue 'eth_rpc_loop
+                                    },
+                                    Err(SentinelError::Endpoint(EndpointError::WsClientDisconnected(_))) => {
+                                        warn!("{side} web socket dropped, rotating endpoint");
+                                        if side.is_native() {
+                                            n_ws_client = native_endpoints.rotate().await?;
+                                        } else {
+                                            h_ws_client = host_endpoints.rotate().await?;
+                                        };
+                                        continue 'inner
+                                    },
+                                    Err(e) => break 'eth_rpc_loop Err(e),
+                                }
+                            }
+                        },
+                        EthRpcMessages::GetNonce((side, address, responder)) => {
+                            'inner: loop {
+                                let r = get_nonce(if side.is_native() { &n_ws_client } else { &h_ws_client}, &address).await;
+                                match r {
+                                    Ok(r) => {
+                                        let _ = responder.send(Ok(r));
+                                        continue 'eth_rpc_loop
+                                    },
+                                    Err(SentinelError::Endpoint(EndpointError::WsClientDisconnected(_))) => {
+                                        warn!("{side} web socket dropped, rotating endpoint");
+                                        if side.is_native() {
+                                            n_ws_client = native_endpoints.rotate().await?;
+                                        } else {
+                                            h_ws_client = host_endpoints.rotate().await?;
+                                        };
+                                        continue 'inner
+                                    },
+                                    Err(e) => break 'eth_rpc_loop Err(e),
+                                }
+                            }
+                        },
+                        EthRpcMessages::EthCall((data, side, address, default_block_parameter, responder)) => {
+                            'inner: loop {
+                                let r = eth_call(&address, &data, &default_block_parameter, if side.is_native() { &n_ws_client } else { &h_ws_client }).await;
+                                match r {
+                                    Ok(r) => {
+                                        let _ = responder.send(Ok(r));
+                                        continue 'eth_rpc_loop
+                                    },
+                                    Err(SentinelError::Endpoint(EndpointError::WsClientDisconnected(_))) => {
+                                        warn!("{side} web socket dropped, rotating endpoint");
+                                        if side.is_native() {
+                                            n_ws_client = native_endpoints.rotate().await?;
+                                        } else {
+                                            h_ws_client = host_endpoints.rotate().await?;
+                                        };
+                                        continue 'inner
+                                    },
+                                    Err(e) => break 'eth_rpc_loop Err(e),
+                                }
+                            }
+                        },
+                        EthRpcMessages::GetSubMat((side, block_num, responder)) => {
+                            'inner: loop {
+                                let r = get_sub_mat(if side.is_native() { &n_ws_client } else { &h_ws_client }, block_num).await;
+                                match r {
+                                    Ok(r) => {
+                                        let _ = responder.send(Ok(r));
+                                        continue 'eth_rpc_loop
+                                    }
+                                    Err(SentinelError::Endpoint(EndpointError::WsClientDisconnected(_))) => {
+                                        warn!("{side} web socket dropped, rotating endpoint");
+                                        if side.is_native() {
+                                            n_ws_client = native_endpoints.rotate().await?;
+                                        } else {
+                                            h_ws_client = host_endpoints.rotate().await?;
+                                        };
+                                        continue 'inner
+                                    },
+                                    Err(e) => break 'eth_rpc_loop Err(e),
+                                }
+                            }
+                        },
+                    }
                 },
                 None => {
                     let m = "all eth rpc senders dropped!";
