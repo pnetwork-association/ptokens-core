@@ -17,14 +17,14 @@ async fn push_tx_inner(tx: &EthTransaction, ws_client: &WsClient) -> Result<H256
     }
 }
 
-pub async fn push_tx(tx: EthTransaction, ws_client: &WsClient) -> Result<H256, SentinelError> {
+pub async fn push_tx(tx: &EthTransaction, ws_client: &WsClient) -> Result<H256, SentinelError> {
     let mut attempt = 1;
     loop {
         let m = format!("pushing tx attempt #{attempt}");
         debug!("{m}");
 
         let r = tokio::select! {
-            res = push_tx_inner(&tx, ws_client) => res,
+            res = push_tx_inner(tx, ws_client) => res,
             _ = run_timer(ETH_RPC_CALL_TIME_LIMIT) => Err(EndpointError::TimeOut(m.clone()).into()),
             _ = ws_client.on_disconnect() => Err(EndpointError::WsClientDisconnected(m.clone()).into()),
         };
