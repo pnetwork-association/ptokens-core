@@ -1,3 +1,4 @@
+use common::BridgeSide;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -19,4 +20,7 @@ pub enum EndpointError {
 
     #[error("endpoint timed out whilst {0}")]
     TimeOut(String),
+
+    #[error("max number of {0} endpoint rotations of {1} reached")]
+    MaxRotations(BridgeSide, usize),
 }

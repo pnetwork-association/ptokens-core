@@ -48,11 +48,6 @@ impl HostConfig {
         })
     }
 
-    pub fn get_first_endpoint(&self) -> Result<String, SentinelError> {
-        info!("Getting first host endpoint");
-        self.endpoints.get_first_endpoint()
-    }
-
     pub fn endpoints(&self) -> Endpoints {
         self.endpoints.clone()
     }
