@@ -18,8 +18,6 @@ pub struct Endpoints {
     rotations: usize,
 }
 
-// TODO this file should return endpoint errors, not sentinel ones!
-
 impl Endpoints {
     pub fn new(is_native: bool, sleep_time: u64, side: BridgeSide, endpoints: Vec<String>) -> Self {
         Self {
@@ -31,10 +29,10 @@ impl Endpoints {
         }
     }
 
-    fn get_first_endpoint(&self) -> Result<String, SentinelError> {
+    fn get_first_endpoint(&self) -> Result<String, ConfigError> {
         info!("getting first {} endpoint...", self.side());
         if self.endpoints.is_empty() {
-            Err(ConfigError::NoEndpoints(self.side).into())
+            Err(ConfigError::NoEndpoints(self.side))
         } else {
             Ok(self.endpoints[0].clone())
         }
