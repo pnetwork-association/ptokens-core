@@ -29,7 +29,7 @@ async fn init_native<D: DatabaseInterface>(
     args: &InitArgs,
 ) -> Result<(), SentinelError> {
     info!("Initializing native core...");
-    let ws_client = config.get_native_endpoints().get_ws_client().await?;
+    let ws_client = config.get_native_endpoints().get_first_ws_client().await?;
     let latest_block_num = get_latest_block_num(&ws_client).await?;
     let sub_mat = get_sub_mat(&ws_client, latest_block_num).await?;
 
@@ -53,7 +53,7 @@ async fn init_host<D: DatabaseInterface>(
     args: &InitArgs,
 ) -> Result<(), SentinelError> {
     info!("Initializing host core...");
-    let ws_client = config.get_host_endpoints().get_ws_client().await?;
+    let ws_client = config.get_host_endpoints().get_first_ws_client().await?;
     let latest_block_num = get_latest_block_num(&ws_client).await?;
     let sub_mat = get_sub_mat(&ws_client, latest_block_num).await?;
 

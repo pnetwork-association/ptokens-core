@@ -30,8 +30,8 @@ pub async fn handle_cli() -> Result<String, SentinelError> {
 
     let cli_args = CliArgs::parse();
 
-    let h_ws_client = config.host().endpoints().get_ws_client().await?;
-    let n_ws_client = config.native().endpoints().get_ws_client().await?;
+    let h_ws_client = config.host().endpoints().get_first_ws_client().await?;
+    let n_ws_client = config.native().endpoints().get_first_ws_client().await?;
 
     match cli_args.sub_commands {
         SubCommands::GetUserOps => get_user_ops(&config),

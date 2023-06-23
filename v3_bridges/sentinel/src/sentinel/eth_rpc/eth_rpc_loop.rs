@@ -24,8 +24,8 @@ use tokio::sync::mpsc::Receiver as MpscRx;
 pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: SentinelConfig) -> Result<(), SentinelError> {
     let mut host_endpoints = config.get_host_endpoints();
     let mut native_endpoints = config.get_native_endpoints();
-    let mut h_ws_client = host_endpoints.get_ws_client().await?;
-    let mut n_ws_client = native_endpoints.get_ws_client().await?;
+    let mut h_ws_client = host_endpoints.get_first_ws_client().await?;
+    let mut n_ws_client = native_endpoints.get_first_ws_client().await?;
 
     'eth_rpc_loop: loop {
         tokio::select! {

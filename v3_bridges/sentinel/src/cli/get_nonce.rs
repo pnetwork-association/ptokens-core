@@ -36,8 +36,8 @@ pub async fn get_nonce_cli(config: &SentinelConfig, cli_args: &NonceCliArgs) -> 
     let NonceArgs { address, side } = NonceArgs::from_cli_args(cli_args)?;
     info!("Getting {side} nonce for address {address}...");
     let ws_client = match side {
-        BridgeSide::Host => config.get_host_endpoints().get_ws_client().await?,
-        BridgeSide::Native => config.get_native_endpoints().get_ws_client().await?,
+        BridgeSide::Host => config.get_host_endpoints().get_first_ws_client().await?,
+        BridgeSide::Native => config.get_native_endpoints().get_first_ws_client().await?,
     };
     let nonce = get_nonce(&ws_client, &address).await?;
     Ok(json!({ "jsonrpc": "2.0", "result": { "nonce": nonce, "address": address, "side": side}}).to_string())

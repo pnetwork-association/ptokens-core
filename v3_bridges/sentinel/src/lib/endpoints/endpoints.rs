@@ -40,8 +40,7 @@ impl Endpoints {
         }
     }
 
-    // TODO rename to get_first_ws_client
-    pub async fn get_ws_client(&self) -> Result<WsClient, SentinelError> {
+    pub async fn get_first_ws_client(&self) -> Result<WsClient, SentinelError> {
         let endpoint = self.get_first_endpoint()?;
         let rpc_client = get_rpc_client(&endpoint).await?;
         Ok(rpc_client)

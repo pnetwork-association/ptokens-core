@@ -116,8 +116,8 @@ async fn main_loop(
                 json!({ "jsonrpc": "2.0", "error": format!("error getting {side} websocket - check your config")})
             }
 
-            let h_ws_client = he.get_ws_client().await;
-            let n_ws_client = ne.get_ws_client().await;
+            let h_ws_client = he.get_first_ws_client().await;
+            let n_ws_client = ne.get_first_ws_client().await;
 
             if h_ws_client.is_err() {
                 Err(reject::custom(Error(get_err(BridgeSide::Host).to_string())))
