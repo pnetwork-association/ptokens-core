@@ -1,5 +1,6 @@
 use common_eth::{EthBlock, EthBlockJsonFromRpc};
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
+use tokio::time::{sleep, Duration};
 
 use super::constants::{ETH_RPC_CALL_TIME_LIMIT, MAX_RPC_CALL_ATTEMPTS};
 use crate::{run_timer, EndpointError, SentinelError};
@@ -20,7 +21,7 @@ async fn get_block_inner(ws_client: &WsClient, block_num: u64) -> Result<EthBloc
     }
 }
 
-pub async fn get_block(ws_client: &WsClient, block_num: u64) -> Result<EthBlock, SentinelError> {
+pub async fn get_block(ws_client: &WsClient, block_num: u64, sleep_time: u64) -> Result<EthBlock, SentinelError> {
     let mut attempt = 1;
     loop {
         let m = format!("getting block num {block_num} attempt #{attempt}");
@@ -42,6 +43,8 @@ pub async fn get_block(ws_client: &WsClient, block_num: u64) -> Result<EthBlock,
                 _ => {
                     if attempt < MAX_RPC_CALL_ATTEMPTS {
                         attempt += 1;
+                        warn!("sleeping for {sleep_time}ms before retrying...");
+                        sleep(Duration::from_millis(sleep_time)).await;
                         continue;
                     } else {
                         warn!("{RPC_CMD} failed after {attempt} attempts");

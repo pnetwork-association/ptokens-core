@@ -73,11 +73,16 @@ pub async fn reset_chain_cli(config: &SentinelConfig, cli_args: &ResetCliArgs) -
     } else {
         config.host().endpoints().get_first_ws_client().await?
     };
+    let sleep_time = if args.side.is_native() {
+        config.native().endpoints().sleep_time()
+    } else {
+        config.host().endpoints().sleep_time()
+    };
     let sub_mat = match args.block {
         Some(b) => b,
         None => {
             let n = get_latest_block_num(&ws_client).await?;
-            get_sub_mat(&ws_client, n).await?
+            get_sub_mat(&ws_client, n, sleep_time).await?
         },
     };
     let block_num = sub_mat.get_block_number()?;

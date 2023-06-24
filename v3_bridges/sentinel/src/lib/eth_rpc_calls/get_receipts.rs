@@ -9,6 +9,7 @@ use jsonrpsee::{
     ws_client::WsClient,
 };
 use serde_json::Value as JsonValue;
+use tokio::time::{sleep, Duration};
 
 use super::MAX_RPC_CALL_ATTEMPTS;
 use crate::{run_timer, EndpointError, SentinelError};
@@ -47,7 +48,11 @@ async fn get_receipts_inner(ws_client: &WsClient, tx_hashes: &[EthHash]) -> Resu
     ))
 }
 
-pub async fn get_receipts(ws_client: &WsClient, tx_hashes: &[EthHash]) -> Result<EthReceipts, SentinelError> {
+pub async fn get_receipts(
+    ws_client: &WsClient,
+    tx_hashes: &[EthHash],
+    sleep_time: u64,
+) -> Result<EthReceipts, SentinelError> {
     const TIME_LIMIT: u64 = 10 * 1000;
     let mut attempt = 1;
     loop {
@@ -70,6 +75,8 @@ pub async fn get_receipts(ws_client: &WsClient, tx_hashes: &[EthHash]) -> Result
                 _ => {
                     if attempt < MAX_RPC_CALL_ATTEMPTS {
                         attempt += 1;
+                        warn!("sleeping for {sleep_time}ms before retrying...");
+                        sleep(Duration::from_millis(sleep_time)).await;
                         continue;
                     } else {
                         warn!("{RPC_CMD} failed after {attempt} attempts");

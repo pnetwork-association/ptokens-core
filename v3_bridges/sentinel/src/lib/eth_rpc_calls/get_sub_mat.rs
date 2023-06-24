@@ -5,9 +5,13 @@ use jsonrpsee::ws_client::WsClient;
 
 use crate::{get_block, get_receipts, SentinelError};
 
-pub async fn get_sub_mat(ws_client: &WsClient, block_num: u64) -> Result<EthSubmissionMaterial, SentinelError> {
-    let block = get_block(ws_client, block_num).await?;
-    let receipts = get_receipts(ws_client, &block.transactions).await?;
+pub async fn get_sub_mat(
+    ws_client: &WsClient,
+    block_num: u64,
+    sleep_time: u64,
+) -> Result<EthSubmissionMaterial, SentinelError> {
+    let block = get_block(ws_client, block_num, sleep_time).await?;
+    let receipts = get_receipts(ws_client, &block.transactions, sleep_time).await?;
     Ok(EthSubmissionMaterial::default()
         .add_block(block)
         .and_then(|sub_mat| sub_mat.add_receipts(receipts))?)
