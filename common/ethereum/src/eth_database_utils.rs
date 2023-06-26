@@ -416,7 +416,7 @@ pub trait EthDbUtilsExt<D: DatabaseInterface> {
     }
 
     fn maybe_get_parent_eth_submission_material(&self, block_hash: &EthHash) -> Option<EthSubmissionMaterial> {
-        debug!("✔ Maybe getting parent ETH block from db...");
+        trace!("✔ Maybe getting parent ETH block from db...");
         self.maybe_get_nth_ancestor_eth_submission_material(block_hash, 1)
             .ok()?
     }
@@ -426,7 +426,7 @@ pub trait EthDbUtilsExt<D: DatabaseInterface> {
         block_hash: &EthHash,
         n: u64,
     ) -> Result<Option<EthSubmissionMaterial>> {
-        debug!("✔ Getting {}th ancestor ETH block from db...", n);
+        trace!("✔ Getting {}th ancestor ETH block from db...", n);
         match self.maybe_get_eth_submission_material_from_db(block_hash) {
             None => Ok(None),
             Some(block_and_receipts) => match n {
@@ -438,7 +438,7 @@ pub trait EthDbUtilsExt<D: DatabaseInterface> {
 
     fn maybe_get_eth_submission_material_from_db(&self, block_hash: &EthHash) -> Option<EthSubmissionMaterial> {
         let key = self.normalize_key(convert_h256_to_bytes(*block_hash));
-        debug!(
+        trace!(
             "✔ Maybe getting ETH block and receipts from db under hash: {}",
             hex::encode(&key)
         );
@@ -446,7 +446,7 @@ pub trait EthDbUtilsExt<D: DatabaseInterface> {
             Err(_) => None,
             Ok(bytes) => match EthSubmissionMaterial::from_bytes(&bytes) {
                 Ok(block_and_receipts) => {
-                    debug!("✔ Decoded eth block and receipts from db!");
+                    trace!("✔ Decoded eth block and receipts from db!");
                     Some(block_and_receipts)
                 },
                 Err(_) => {
