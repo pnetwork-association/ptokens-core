@@ -1,6 +1,6 @@
 use std::result::Result;
 
-use common::strip_hex_prefix;
+use common::{strip_hex_prefix, BridgeSide};
 use ethereum_types::Address as EthAddress;
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
 use tokio::time::{sleep, Duration};
@@ -21,10 +21,15 @@ async fn get_nonce_inner(ws_client: &WsClient, address: &EthAddress) -> Result<u
     }
 }
 
-pub async fn get_nonce(ws_client: &WsClient, address: &EthAddress, sleep_time: u64) -> Result<u64, SentinelError> {
+pub async fn get_nonce(
+    ws_client: &WsClient,
+    address: &EthAddress,
+    sleep_time: u64,
+    side: BridgeSide,
+) -> Result<u64, SentinelError> {
     let mut attempt = 1;
     loop {
-        let m = format!("getting nonce for addresss {address} attempt #{attempt}");
+        let m = format!("{side} getting nonce for addresss {address} attempt #{attempt}");
         debug!("{m}");
 
         let r = tokio::select! {
@@ -37,17 +42,17 @@ pub async fn get_nonce(ws_client: &WsClient, address: &EthAddress, sleep_time: u
             Ok(r) => break Ok(r),
             Err(e) => match e {
                 SentinelError::Endpoint(EndpointError::WsClientDisconnected(_)) => {
-                    warn!("{RPC_CMD} failed due to web socket dropping");
+                    warn!("{side} {RPC_CMD} failed due to web socket dropping");
                     break Err(e);
                 },
                 _ => {
                     if attempt < MAX_RPC_CALL_ATTEMPTS {
                         attempt += 1;
-                        warn!("sleeping for {sleep_time}ms before retrying...");
+                        warn!("{side} sleeping for {sleep_time}ms before retrying...");
                         sleep(Duration::from_millis(sleep_time)).await;
                         continue;
                     } else {
-                        warn!("{RPC_CMD} failed after {attempt} attempts");
+                        warn!("{side} {RPC_CMD} failed after {attempt} attempts");
                         break Err(e);
                     }
                 },
@@ -61,7 +66,7 @@ mod tests {
     use common_eth::convert_hex_to_eth_address;
 
     use super::*;
-    use crate::test_utils::get_test_ws_client;
+    use crate::{test_utils::get_test_ws_client, DEFAULT_SLEEP_TIME};
 
     lazy_static! {
         static ref ADDRESS: EthAddress =
@@ -72,7 +77,7 @@ mod tests {
     #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_get_latest_block_num() {
         let ws_client = get_test_ws_client().await;
-        let result = get_nonce(&ws_client, &*ADDRESS).await;
+        let result = get_nonce(&ws_client, &*ADDRESS, DEFAULT_SLEEP_TIME, BridgeSide::default()).await;
         assert!(result.is_ok());
     }
 

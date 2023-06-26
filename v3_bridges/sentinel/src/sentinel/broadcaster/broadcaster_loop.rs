@@ -32,6 +32,7 @@ async fn cancel_user_op(
 
     let (msg, rx) = EthRpcMessages::get_push_tx_msg(signed_tx, op.side());
     eth_rpc_tx.send(msg).await?;
+
     let tx_hash = rx.await??;
 
     info!("tx hash: {tx_hash}");
@@ -143,7 +144,15 @@ pub async fn broadcaster_loop(
                 r = rx.recv() => match r {
                     Some(BroadcasterMessages::CancelUserOps(ops)) => {
                         // TODO check mongo for any that aren't broadcast yet?
-                        let unbroadcast_ops = cancel_user_ops(&host_address, &native_address, &host_state_manager, &native_state_manager, ops, core_tx.clone(), eth_rpc_tx.clone()).await?;
+                        let unbroadcast_ops = cancel_user_ops(
+                            &host_address,
+                            &native_address,
+                            &host_state_manager,
+                            &native_state_manager,
+                            ops,
+                            core_tx.clone(),
+                            eth_rpc_tx.clone()
+                        ).await?;
                         if !unbroadcast_ops.is_empty() {
                             // TODO save them into mongo?
                         }

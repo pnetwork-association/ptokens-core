@@ -1,5 +1,6 @@
 use std::result::Result;
 
+use common::BridgeSide;
 use common_eth::{EthReceipt, EthReceipts};
 use ethereum_types::H256 as EthHash;
 use futures::{stream, Future, Stream, StreamExt};
@@ -52,11 +53,12 @@ pub async fn get_receipts(
     ws_client: &WsClient,
     tx_hashes: &[EthHash],
     sleep_time: u64,
+    side: BridgeSide,
 ) -> Result<EthReceipts, SentinelError> {
     const TIME_LIMIT: u64 = 10 * 1000;
     let mut attempt = 1;
     loop {
-        let m = format!("getting receipts attempt #{attempt}");
+        let m = format!("{side} getting receipts attempt #{attempt}");
         debug!("{m}");
 
         let r = tokio::select! {
@@ -69,17 +71,17 @@ pub async fn get_receipts(
             Ok(r) => break Ok(r),
             Err(e) => match e {
                 SentinelError::Endpoint(EndpointError::WsClientDisconnected(_)) => {
-                    warn!("{RPC_CMD} failed due to web socket dropping");
+                    warn!("{side} {RPC_CMD} failed due to web socket dropping");
                     break Err(e);
                 },
                 _ => {
                     if attempt < MAX_RPC_CALL_ATTEMPTS {
                         attempt += 1;
-                        warn!("sleeping for {sleep_time}ms before retrying...");
+                        warn!("{side} sleeping for {sleep_time}ms before retrying...");
                         sleep(Duration::from_millis(sleep_time)).await;
                         continue;
                     } else {
-                        warn!("{RPC_CMD} failed after {attempt} attempts");
+                        warn!("{side} {RPC_CMD} failed after {attempt} attempts");
                         break Err(e);
                     }
                 },
@@ -91,14 +93,18 @@ pub async fn get_receipts(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{get_block, get_latest_block_num, test_utils::get_test_ws_client};
+    use crate::{get_block, get_latest_block_num, test_utils::get_test_ws_client, DEFAULT_SLEEP_TIME};
 
     #[tokio::test]
     #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_get_receipts_inner() {
         let ws_client = get_test_ws_client().await;
-        let block_num = get_latest_block_num(&ws_client).await.unwrap();
-        let block = get_block(&ws_client, block_num).await.unwrap();
+        let block_num = get_latest_block_num(&ws_client, DEFAULT_SLEEP_TIME, BridgeSide::default())
+            .await
+            .unwrap();
+        let block = get_block(&ws_client, block_num, DEFAULT_SLEEP_TIME, BridgeSide::default())
+            .await
+            .unwrap();
         let tx_hashes = block.transactions;
         let result = get_receipts_inner(&ws_client, &tx_hashes).await;
         assert!(result.is_ok());
@@ -110,10 +116,14 @@ mod tests {
     #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_get_receipts() {
         let ws_client = get_test_ws_client().await;
-        let block_num = get_latest_block_num(&ws_client).await.unwrap();
-        let block = get_block(&ws_client, block_num).await.unwrap();
+        let block_num = get_latest_block_num(&ws_client, DEFAULT_SLEEP_TIME, BridgeSide::default())
+            .await
+            .unwrap();
+        let block = get_block(&ws_client, block_num, DEFAULT_SLEEP_TIME, BridgeSide::default())
+            .await
+            .unwrap();
         let tx_hashes = block.transactions;
-        let result = get_receipts(&ws_client, &tx_hashes).await;
+        let result = get_receipts(&ws_client, &tx_hashes, DEFAULT_SLEEP_TIME, BridgeSide::default()).await;
         assert!(result.is_ok());
         let receipts_root = result.unwrap().get_merkle_root().unwrap();
         assert_eq!(receipts_root, block.receipts_root);

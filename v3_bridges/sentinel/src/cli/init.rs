@@ -1,4 +1,4 @@
-use common::{CoreType, DatabaseInterface};
+use common::{BridgeSide, CoreType, DatabaseInterface};
 use common_eth::{convert_hex_to_eth_address, init_v3_host_core, init_v3_native_core, VaultUsingCores};
 use common_rocksdb_database::get_db_at_path;
 use lib::{get_latest_block_num, get_sub_mat, ConfigT, SentinelConfig, SentinelError};
@@ -32,8 +32,9 @@ async fn init_native<D: DatabaseInterface>(
     let endpoints = config.get_native_endpoints();
     let ws_client = endpoints.get_first_ws_client().await?;
     let sleep_time = endpoints.sleep_time();
-    let latest_block_num = get_latest_block_num(&ws_client, sleep_time).await?;
-    let sub_mat = get_sub_mat(&ws_client, latest_block_num, sleep_time).await?;
+    let side = BridgeSide::Native;
+    let latest_block_num = get_latest_block_num(&ws_client, sleep_time, side).await?;
+    let sub_mat = get_sub_mat(&ws_client, latest_block_num, sleep_time, side).await?;
 
     init_v3_native_core(
         db,
@@ -58,8 +59,9 @@ async fn init_host<D: DatabaseInterface>(
     let endpoints = config.get_host_endpoints();
     let ws_client = endpoints.get_first_ws_client().await?;
     let sleep_time = endpoints.sleep_time();
-    let latest_block_num = get_latest_block_num(&ws_client, sleep_time).await?;
-    let sub_mat = get_sub_mat(&ws_client, latest_block_num, sleep_time).await?;
+    let side = BridgeSide::Host;
+    let latest_block_num = get_latest_block_num(&ws_client, sleep_time, side).await?;
+    let sub_mat = get_sub_mat(&ws_client, latest_block_num, sleep_time, side).await?;
 
     init_v3_host_core(
         db,

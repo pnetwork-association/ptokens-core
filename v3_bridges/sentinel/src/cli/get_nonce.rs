@@ -42,6 +42,6 @@ pub async fn get_nonce_cli(config: &SentinelConfig, cli_args: &NonceCliArgs) -> 
     };
     let sleep_time = endpoints.sleep_time();
     let ws_client = endpoints.get_first_ws_client().await?;
-    let nonce = get_nonce(&ws_client, &address, sleep_time).await?;
+    let nonce = get_nonce(&ws_client, &address, sleep_time, side).await?;
     Ok(json!({ "jsonrpc": "2.0", "result": { "nonce": nonce, "address": address, "side": side}}).to_string())
 }

@@ -52,10 +52,10 @@ async fn get_sync_status(
     h_sleep_time: u64,
     tx: MpscTx<CoreMessages>,
 ) -> Result<impl warp::Reply, Rejection> {
-    let n_e = get_latest_block_num(n_ws_client, n_sleep_time)
+    let n_e = get_latest_block_num(n_ws_client, n_sleep_time, BridgeSide::Native)
         .await
         .map_err(convert_error_to_rejection)?;
-    let h_e = get_latest_block_num(h_ws_client, h_sleep_time)
+    let h_e = get_latest_block_num(h_ws_client, h_sleep_time, BridgeSide::Host)
         .await
         .map_err(convert_error_to_rejection)?;
 

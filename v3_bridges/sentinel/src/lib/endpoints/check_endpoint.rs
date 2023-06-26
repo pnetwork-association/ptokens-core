@@ -10,7 +10,7 @@ pub async fn check_endpoint(endpoints: &Endpoints, time_limit: u64) -> Result<()
     let sleep_time = endpoints.sleep_time();
     match timeout(
         Duration::from_millis(time_limit),
-        get_latest_block_num(&ws_client, sleep_time),
+        get_latest_block_num(&ws_client, sleep_time, endpoints.side()),
     )
     .await
     {

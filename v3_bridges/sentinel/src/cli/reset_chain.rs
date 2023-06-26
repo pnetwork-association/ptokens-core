@@ -81,8 +81,8 @@ pub async fn reset_chain_cli(config: &SentinelConfig, cli_args: &ResetCliArgs) -
     let sub_mat = match args.block {
         Some(b) => b,
         None => {
-            let n = get_latest_block_num(&ws_client, sleep_time).await?;
-            get_sub_mat(&ws_client, n, sleep_time).await?
+            let n = get_latest_block_num(&ws_client, sleep_time, args.side).await?;
+            get_sub_mat(&ws_client, n, sleep_time, args.side).await?
         },
     };
     let block_num = sub_mat.get_block_number()?;

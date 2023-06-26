@@ -1,3 +1,4 @@
+use common::BridgeSide;
 use common_eth::{EthBlock, EthBlockJsonFromRpc};
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
 use tokio::time::{sleep, Duration};
@@ -21,10 +22,15 @@ async fn get_block_inner(ws_client: &WsClient, block_num: u64) -> Result<EthBloc
     }
 }
 
-pub async fn get_block(ws_client: &WsClient, block_num: u64, sleep_time: u64) -> Result<EthBlock, SentinelError> {
+pub async fn get_block(
+    ws_client: &WsClient,
+    block_num: u64,
+    sleep_time: u64,
+    side: BridgeSide,
+) -> Result<EthBlock, SentinelError> {
     let mut attempt = 1;
     loop {
-        let m = format!("getting block num {block_num} attempt #{attempt}");
+        let m = format!("{side} getting block num {block_num} attempt #{attempt}");
         debug!("{m}");
 
         let r = tokio::select! {
@@ -37,17 +43,17 @@ pub async fn get_block(ws_client: &WsClient, block_num: u64, sleep_time: u64) ->
             Ok(r) => break Ok(r),
             Err(e) => match e {
                 SentinelError::Endpoint(EndpointError::WsClientDisconnected(_)) => {
-                    warn!("{RPC_CMD} failed due to web socket dropping");
+                    warn!("{side} {RPC_CMD} failed due to web socket dropping");
                     break Err(e);
                 },
                 _ => {
                     if attempt < MAX_RPC_CALL_ATTEMPTS {
                         attempt += 1;
-                        warn!("sleeping for {sleep_time}ms before retrying...");
+                        warn!("{side} sleeping for {sleep_time}ms before retrying...");
                         sleep(Duration::from_millis(sleep_time)).await;
                         continue;
                     } else {
-                        warn!("{RPC_CMD} failed after {attempt} attempts");
+                        warn!("{side} {RPC_CMD} failed after {attempt} attempts");
                         break Err(e);
                     }
                 },
@@ -59,13 +65,15 @@ pub async fn get_block(ws_client: &WsClient, block_num: u64, sleep_time: u64) ->
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{get_latest_block_num, test_utils::get_test_ws_client};
+    use crate::{get_latest_block_num, test_utils::get_test_ws_client, DEFAULT_SLEEP_TIME};
 
     #[tokio::test]
     #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_get_block_inner() {
         let ws_client = get_test_ws_client().await;
-        let block_num = get_latest_block_num(&ws_client).await.unwrap();
+        let block_num = get_latest_block_num(&ws_client, DEFAULT_SLEEP_TIME, BridgeSide::default())
+            .await
+            .unwrap();
         let result = get_block_inner(&ws_client, block_num).await;
         assert!(result.is_ok());
     }
@@ -74,8 +82,10 @@ mod tests {
     #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_get_block() {
         let ws_client = get_test_ws_client().await;
-        let block_num = get_latest_block_num(&ws_client).await.unwrap();
-        let result = get_block(&ws_client, block_num).await;
+        let block_num = get_latest_block_num(&ws_client, DEFAULT_SLEEP_TIME, BridgeSide::default())
+            .await
+            .unwrap();
+        let result = get_block(&ws_client, block_num, DEFAULT_SLEEP_TIME, BridgeSide::default()).await;
         assert!(result.is_ok());
     }
 
@@ -84,7 +94,7 @@ mod tests {
     async fn should_fail_to_get_block_with_correct_error() {
         let ws_client = get_test_ws_client().await;
         let block_num = i64::MAX as u64;
-        match get_block(&ws_client, block_num).await {
+        match get_block(&ws_client, block_num, DEFAULT_SLEEP_TIME, BridgeSide::default()).await {
             Err(SentinelError::NoBlock(num)) => assert_eq!(num, block_num),
             Ok(_) => panic!("Should not have succeeded!"),
             Err(e) => panic!("Wrong error received: {e}"),

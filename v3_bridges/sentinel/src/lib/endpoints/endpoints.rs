@@ -78,7 +78,7 @@ impl Endpoints {
         self.endpoints.is_empty()
     }
 
-    fn side(&self) -> BridgeSide {
+    pub fn side(&self) -> BridgeSide {
         self.side
     }
 }

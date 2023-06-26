@@ -1,6 +1,6 @@
 use std::result::Result;
 
-use common::{strip_hex_prefix, Byte, Bytes};
+use common::{strip_hex_prefix, BridgeSide, Byte, Bytes};
 use common_eth::DefaultBlockParameter;
 use ethereum_types::Address as EthAddress;
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
@@ -34,10 +34,11 @@ pub async fn eth_call(
     default_block_parameter: &DefaultBlockParameter,
     ws_client: &WsClient,
     sleep_time: u64,
+    side: BridgeSide,
 ) -> Result<Bytes, SentinelError> {
     let mut attempt = 1;
     loop {
-        let m = format!("making eth call attempt #{attempt}");
+        let m = format!("making {side} eth call attempt #{attempt}");
         debug!("{m}");
 
         let r = tokio::select! {
@@ -50,17 +51,17 @@ pub async fn eth_call(
             Ok(r) => break Ok(r),
             Err(e) => match e {
                 SentinelError::Endpoint(EndpointError::WsClientDisconnected(_)) => {
-                    warn!("{RPC_CMD} failed due to web socket dropping");
+                    warn!("{side} {RPC_CMD} failed due to web socket dropping");
                     break Err(e);
                 },
                 _ => {
                     if attempt < MAX_RPC_CALL_ATTEMPTS {
                         attempt += 1;
-                        warn!("sleeping for {sleep_time}ms before retrying...");
+                        warn!("{side} sleeping for {sleep_time}ms before retrying...");
                         sleep(Duration::from_millis(sleep_time)).await;
                         continue;
                     } else {
-                        warn!("{RPC_CMD} failed after {attempt} attempts");
+                        warn!("{side} {RPC_CMD} failed after {attempt} attempts");
                         break Err(e);
                     }
                 },
@@ -74,7 +75,7 @@ mod tests {
     use common_eth::convert_hex_to_eth_address;
 
     use super::{super::get_chain_id, *};
-    use crate::test_utils::get_test_ws_client;
+    use crate::{test_utils::get_test_ws_client, DEFAULT_SLEEP_TIME};
 
     #[tokio::test]
     #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
@@ -83,7 +84,9 @@ mod tests {
         let to = convert_hex_to_eth_address("0x89Ab32156e46F46D02ade3FEcbe5Fc4243B9AAeD").unwrap();
         let data = hex::decode("70a08231000000000000000000000000aeaa8c6ebb17db8056fa30a08fd3097de555f571").unwrap();
         let ws = get_test_ws_client().await;
-        let chain_id = get_chain_id(&ws).await.unwrap();
+        let chain_id = get_chain_id(&ws, DEFAULT_SLEEP_TIME, BridgeSide::default())
+            .await
+            .unwrap();
         if chain_id == 1 {
             // NOTE: The target for the test above is contract on ETH mainnet.
             let result = eth_call_inner(&to, &data, &default_block_parameter, &ws).await;
@@ -98,7 +101,9 @@ mod tests {
         let to = convert_hex_to_eth_address("0x89Ab32156e46F46D02ade3FEcbe5Fc4243B9AAeD").unwrap();
         let data = hex::decode("70a08231000000000000000000000000aeaa8c6ebb17db8056fa30a08fd3097de555f571").unwrap();
         let ws = get_test_ws_client().await;
-        let chain_id = get_chain_id(&ws).await.unwrap();
+        let chain_id = get_chain_id(&ws, DEFAULT_SLEEP_TIME, BridgeSide::default())
+            .await
+            .unwrap();
         if chain_id == 1 {
             // NOTE: The target for the test above is contract on ETH mainnet.
             let result = eth_call_inner(&to, &data, &default_block_parameter, &ws).await;

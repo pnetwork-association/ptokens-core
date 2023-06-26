@@ -39,6 +39,7 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                 let r = get_latest_block_num(
                                     if side.is_native() { &n_ws_client } else { &h_ws_client },
                                     if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    side,
                                 ).await;
                                 match r {
                                     Ok(r) => {
@@ -63,6 +64,7 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                 let r = get_gas_price(
                                     if side.is_native() { &n_ws_client } else { &h_ws_client },
                                     if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    side,
                                 ).await;
                                 match r {
                                     Ok(r) => {
@@ -84,7 +86,12 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                         },
                         EthRpcMessages::PushTx((tx, side, responder)) => {
                             'inner: loop {
-                                let r = push_tx(&tx, if side.is_native() { &n_ws_client } else { &h_ws_client }).await;
+                                let r = push_tx(
+                                    &tx,
+                                    if side.is_native() { &n_ws_client } else { &h_ws_client },
+                                    if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    side,
+                                ).await;
                                 match r {
                                     Ok(r) => {
                                         let _ = responder.send(Ok(r));
@@ -106,9 +113,10 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                         EthRpcMessages::GetNonce((side, address, responder)) => {
                             'inner: loop {
                                 let r = get_nonce(
-                                    if side.is_native() { &n_ws_client } else { &h_ws_client},
+                                    if side.is_native() { &n_ws_client } else { &h_ws_client },
                                     &address,
                                     if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    side,
                                 ).await;
                                 match r {
                                     Ok(r) => {
@@ -136,6 +144,7 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                     &default_block_parameter,
                                     if side.is_native() { &n_ws_client } else { &h_ws_client },
                                     if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    side,
                                 ).await;
                                 match r {
                                     Ok(r) => {
@@ -160,7 +169,8 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                 let r = get_sub_mat(
                                     if side.is_native() { &n_ws_client } else { &h_ws_client },
                                     block_num,
-                                    if side.is_native() { n_sleep_time } else { h_sleep_time }
+                                    if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    side,
                                 ).await;
                                 match r {
                                     Ok(r) => {
