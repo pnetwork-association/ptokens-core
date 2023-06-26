@@ -458,7 +458,7 @@ pub trait EthDbUtilsExt<D: DatabaseInterface> {
     }
 
     fn reverse_endianess(bytes: Bytes) -> Bytes {
-        debug!("Reversing endianess of bytes: 0x{}", hex::encode(&bytes));
+        trace!("Reversing endianess of bytes: 0x{}", hex::encode(&bytes));
         // NOTE: We switch the endianness of the block hash for EVM bridges
         // to avoid DB collisions w/ ETH<->ETH bridges.
         let mut reversed_bytes = bytes;
