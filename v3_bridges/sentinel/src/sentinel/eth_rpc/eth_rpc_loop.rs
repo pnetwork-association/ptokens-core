@@ -2,6 +2,7 @@ use std::result::Result;
 
 use lib::{
     eth_call,
+    get_eth_balance,
     get_gas_price,
     get_latest_block_num,
     get_nonce,
@@ -169,6 +170,32 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                 let r = get_sub_mat(
                                     if side.is_native() { &n_ws_client } else { &h_ws_client },
                                     block_num,
+                                    if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    side,
+                                ).await;
+                                match r {
+                                    Ok(r) => {
+                                        let _ = responder.send(Ok(r));
+                                        continue 'eth_rpc_loop
+                                    }
+                                    Err(SentinelError::Endpoint(EndpointError::WsClientDisconnected(_))) => {
+                                        warn!("{side} web socket dropped, rotating endpoint");
+                                        if side.is_native() {
+                                            n_ws_client = n_endpoints.rotate().await?;
+                                        } else {
+                                            h_ws_client = h_endpoints.rotate().await?;
+                                        };
+                                        continue 'inner
+                                    },
+                                    Err(e) => break 'eth_rpc_loop Err(e),
+                                }
+                            }
+                        },
+                        EthRpcMessages::GetEthBalance((side, address, responder)) => {
+                            'inner: loop {
+                                let r = get_eth_balance(
+                                    if side.is_native() { &n_ws_client } else { &h_ws_client },
+                                    &address,
                                     if side.is_native() { n_sleep_time } else { h_sleep_time },
                                     side,
                                 ).await;

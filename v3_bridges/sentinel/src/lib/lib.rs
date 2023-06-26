@@ -30,6 +30,7 @@ pub use self::{
     eth_rpc_calls::{
         eth_call,
         get_block,
+        get_eth_balance,
         get_gas_price,
         get_latest_block_num,
         get_nonce,

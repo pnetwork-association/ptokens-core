@@ -13,6 +13,9 @@ use crate::{
 #[derive(Error, Debug)]
 pub enum SentinelError {
     #[error("{0}")]
+    FromStrRadix(#[from] ethereum_types::FromStrRadixErr),
+
+    #[error("{0}")]
     UserOp(Box<crate::user_ops::UserOpError>),
 
     #[error("key exists in db: {0}")]

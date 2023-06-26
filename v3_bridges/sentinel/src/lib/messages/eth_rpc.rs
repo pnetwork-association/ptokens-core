@@ -1,6 +1,6 @@
 use common::{BridgeSide, Bytes};
 use common_eth::{DefaultBlockParameter, EthSubmissionMaterial, EthTransaction};
-use ethereum_types::{Address as EthAddress, H256 as EthHash};
+use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use tokio::sync::{oneshot, oneshot::Receiver};
 
 use crate::{Responder, SentinelError};
@@ -13,9 +13,15 @@ pub enum EthRpcMessages {
     EthCall((Bytes, BridgeSide, EthAddress, DefaultBlockParameter, Responder<Bytes>)),
     GetGasPrice((BridgeSide, Responder<u64>)),
     GetSubMat((BridgeSide, u64, Responder<EthSubmissionMaterial>)),
+    GetEthBalance((BridgeSide, EthAddress, Responder<U256>)),
 }
 
 impl EthRpcMessages {
+    pub fn get_eth_balance_msg(s: BridgeSide, a: EthAddress) -> (Self, Receiver<Result<U256, SentinelError>>) {
+        let (tx, rx) = oneshot::channel();
+        (Self::GetEthBalance((s, a, tx)), rx)
+    }
+
     pub fn get_sub_mat_msg(s: BridgeSide, n: u64) -> (Self, Receiver<Result<EthSubmissionMaterial, SentinelError>>) {
         let (tx, rx) = oneshot::channel();
         (Self::GetSubMat((s, n, tx)), rx)
