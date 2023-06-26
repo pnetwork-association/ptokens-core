@@ -42,7 +42,10 @@ pub async fn start_sentinel(
 
     let (mongo_tx, mongo_rx): (MpscTx<MongoMessages>, MpscRx<MongoMessages>) = mpsc::channel(MAX_CHANNEL_CAPACITY);
 
-    let (eth_rpc_tx, eth_rpc_rx): (MpscTx<EthRpcMessages>, MpscRx<EthRpcMessages>) =
+    let (native_eth_rpc_tx, native_eth_rpc_rx): (MpscTx<EthRpcMessages>, MpscRx<EthRpcMessages>) =
+        mpsc::channel(MAX_CHANNEL_CAPACITY);
+
+    let (host_eth_rpc_tx, host_eth_rpc_rx): (MpscTx<EthRpcMessages>, MpscRx<EthRpcMessages>) =
         mpsc::channel(MAX_CHANNEL_CAPACITY);
 
     let (broadcaster_tx, broadcaster_rx): (MpscTx<BroadcasterMessages>, MpscRx<BroadcasterMessages>) =
@@ -52,24 +55,25 @@ pub async fn start_sentinel(
         Batch::new_from_config(BridgeSide::Native, config)?,
         processor_tx.clone(),
         core_tx.clone(),
-        eth_rpc_tx.clone(),
+        native_eth_rpc_tx.clone(),
         sentinel_args.disable_native_syncer,
     ));
     let host_syncer_thread = tokio::spawn(syncer_loop(
         Batch::new_from_config(BridgeSide::Host, config)?,
         processor_tx,
         core_tx.clone(),
-        eth_rpc_tx.clone(),
+        host_eth_rpc_tx.clone(),
         sentinel_args.disable_host_syncer,
     ));
 
     let core_thread = tokio::spawn(core_loop(wrapped_db.clone(), core_rx));
-    let eth_rpc_thread = tokio::spawn(eth_rpc_loop(eth_rpc_rx, config.clone()));
+    let native_eth_rpc_thread = tokio::spawn(eth_rpc_loop(native_eth_rpc_rx, config.clone()));
+    let host_eth_rpc_thread = tokio::spawn(eth_rpc_loop(host_eth_rpc_rx, config.clone()));
     let mongo_thread = tokio::spawn(mongo_loop(config.mongo().clone(), mongo_rx));
     let broadcaster_thread = tokio::spawn(broadcaster_loop(
         broadcaster_rx,
         mongo_tx.clone(),
-        eth_rpc_tx.clone(),
+        native_eth_rpc_tx.clone(),
         core_tx.clone(),
         config.clone(),
         sentinel_args.disable_broadcaster,
@@ -90,10 +94,11 @@ pub async fn start_sentinel(
         flatten_join_handle(core_thread),
         flatten_join_handle(mongo_thread),
         flatten_join_handle(http_server_thread),
-        flatten_join_handle(eth_rpc_thread),
+        flatten_join_handle(native_eth_rpc_thread),
+        flatten_join_handle(host_eth_rpc_thread),
         flatten_join_handle(broadcaster_thread),
     ) {
-        Ok((r1, r2, r3, r4, r5, r6, r7, r8)) => Ok(json!({
+        Ok((r1, r2, r3, r4, r5, r6, r7, r8, r9)) => Ok(json!({
             "jsonrpc": "2.0",
             "result": {
                 "native_syncer_thread": r1,
@@ -102,8 +107,9 @@ pub async fn start_sentinel(
                 "core_thread": r4,
                 "mongo_thread": r5,
                 "http_server_thread": r6,
-                "eth_rpc_thread": r7,
-                "broadcaster_thread": r8,
+                "native_eth_rpc_thread": r7,
+                "host_eth_rpc_thread": r8,
+                "broadcaster_thread": r9,
             },
         })
         .to_string()),
