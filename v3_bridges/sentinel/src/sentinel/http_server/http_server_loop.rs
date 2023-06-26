@@ -48,12 +48,14 @@ async fn get_heartbeat_from_mongo(tx: MpscTx<MongoMessages>) -> Result<impl warp
 async fn get_sync_status(
     n_ws_client: &WsClient,
     h_ws_client: &WsClient,
+    n_sleep_time: u64,
+    h_sleep_time: u64,
     tx: MpscTx<CoreMessages>,
 ) -> Result<impl warp::Reply, Rejection> {
-    let n_e = get_latest_block_num(n_ws_client)
+    let n_e = get_latest_block_num(n_ws_client, n_sleep_time)
         .await
         .map_err(convert_error_to_rejection)?;
-    let h_e = get_latest_block_num(h_ws_client)
+    let h_e = get_latest_block_num(h_ws_client, h_sleep_time)
         .await
         .map_err(convert_error_to_rejection)?;
 
@@ -91,6 +93,9 @@ async fn main_loop(
     let h_endpoints = config.host().endpoints();
     let n_endpoints = config.native().endpoints();
 
+    let h_sleep_time = h_endpoints.sleep_time();
+    let n_sleep_time = n_endpoints.sleep_time();
+
     // GET /ping
     let ping = warp::path("ping").map(|| warp::reply::json(&json!({"result": "pTokens Sentinel pong"})));
 
@@ -124,7 +129,14 @@ async fn main_loop(
             } else if n_ws_client.is_err() {
                 Err(reject::custom(Error(get_err(BridgeSide::Native).to_string())))
             } else {
-                get_sync_status(&n_ws_client.unwrap(), &h_ws_client.unwrap(), tx).await
+                get_sync_status(
+                    &n_ws_client.unwrap(),
+                    &h_ws_client.unwrap(),
+                    n_sleep_time,
+                    h_sleep_time,
+                    tx,
+                )
+                .await
             }
         }
     });

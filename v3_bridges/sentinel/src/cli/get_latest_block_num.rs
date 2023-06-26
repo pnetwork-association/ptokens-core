@@ -1,7 +1,7 @@
 use std::result::Result;
 
 use jsonrpsee::ws_client::WsClient;
-use lib::{get_latest_block_num, SentinelError};
+use lib::{get_latest_block_num, SentinelError, DEFAULT_SLEEP_TIME};
 use serde_json::json;
 
 #[derive(Debug, Subcommand)]
@@ -16,7 +16,7 @@ pub enum GetLatestBlockNumCmd {
 async fn get_latest_block_num_cli(ws_client: &WsClient, is_native: bool) -> Result<String, SentinelError> {
     let block_type = if is_native { "native" } else { "host" };
     info!("Getting {block_type} latest bock number...");
-    let num = get_latest_block_num(ws_client).await?;
+    let num = get_latest_block_num(ws_client, DEFAULT_SLEEP_TIME).await?;
     Ok(json!({ "jsonrpc": "2.0", "result": num }).to_string())
 }
 

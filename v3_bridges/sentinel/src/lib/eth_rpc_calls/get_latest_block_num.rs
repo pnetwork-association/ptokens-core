@@ -1,6 +1,7 @@
 use std::result::Result;
 
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
+use tokio::time::{sleep, Duration};
 
 use super::constants::{ETH_RPC_CALL_TIME_LIMIT, MAX_RPC_CALL_ATTEMPTS};
 use crate::{constants::HEX_RADIX, endpoints::EndpointError, utils::run_timer, SentinelError};
@@ -15,7 +16,7 @@ async fn get_latest_block_num_inner(ws_client: &WsClient) -> Result<u64, Sentine
     }
 }
 
-pub async fn get_latest_block_num(ws_client: &WsClient) -> Result<u64, SentinelError> {
+pub async fn get_latest_block_num(ws_client: &WsClient, sleep_time: u64) -> Result<u64, SentinelError> {
     let mut attempt = 1;
     loop {
         let m = format!("getting latest block num attempt #{attempt}");
@@ -37,6 +38,8 @@ pub async fn get_latest_block_num(ws_client: &WsClient) -> Result<u64, SentinelE
                 _ => {
                     if attempt < MAX_RPC_CALL_ATTEMPTS {
                         attempt += 1;
+                        warn!("sleeping for {sleep_time}ms before retrying...");
+                        sleep(Duration::from_millis(sleep_time)).await;
                         continue;
                     } else {
                         warn!("{RPC_CMD} failed after {attempt} attempts");

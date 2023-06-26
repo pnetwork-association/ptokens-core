@@ -3,6 +3,7 @@ use std::result::Result;
 use common::strip_hex_prefix;
 use ethereum_types::Address as EthAddress;
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
+use tokio::time::{sleep, Duration};
 
 use super::{ETH_RPC_CALL_TIME_LIMIT, MAX_RPC_CALL_ATTEMPTS};
 use crate::{run_timer, EndpointError, SentinelError};
@@ -20,7 +21,7 @@ async fn get_nonce_inner(ws_client: &WsClient, address: &EthAddress) -> Result<u
     }
 }
 
-pub async fn get_nonce(ws_client: &WsClient, address: &EthAddress) -> Result<u64, SentinelError> {
+pub async fn get_nonce(ws_client: &WsClient, address: &EthAddress, sleep_time: u64) -> Result<u64, SentinelError> {
     let mut attempt = 1;
     loop {
         let m = format!("getting nonce for addresss {address} attempt #{attempt}");
@@ -42,6 +43,8 @@ pub async fn get_nonce(ws_client: &WsClient, address: &EthAddress) -> Result<u64
                 _ => {
                     if attempt < MAX_RPC_CALL_ATTEMPTS {
                         attempt += 1;
+                        warn!("sleeping for {sleep_time}ms before retrying...");
+                        sleep(Duration::from_millis(sleep_time)).await;
                         continue;
                     } else {
                         warn!("{RPC_CMD} failed after {attempt} attempts");

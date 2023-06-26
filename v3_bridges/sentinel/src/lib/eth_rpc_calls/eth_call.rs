@@ -5,6 +5,7 @@ use common_eth::DefaultBlockParameter;
 use ethereum_types::Address as EthAddress;
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
 use serde_json::json;
+use tokio::time::{sleep, Duration};
 
 use super::{ETH_RPC_CALL_TIME_LIMIT, MAX_RPC_CALL_ATTEMPTS};
 use crate::{run_timer, EndpointError, SentinelError};
@@ -32,6 +33,7 @@ pub async fn eth_call(
     call_data: &[Byte],
     default_block_parameter: &DefaultBlockParameter,
     ws_client: &WsClient,
+    sleep_time: u64,
 ) -> Result<Bytes, SentinelError> {
     let mut attempt = 1;
     loop {
@@ -54,6 +56,8 @@ pub async fn eth_call(
                 _ => {
                     if attempt < MAX_RPC_CALL_ATTEMPTS {
                         attempt += 1;
+                        warn!("sleeping for {sleep_time}ms before retrying...");
+                        sleep(Duration::from_millis(sleep_time)).await;
                         continue;
                     } else {
                         warn!("{RPC_CMD} failed after {attempt} attempts");

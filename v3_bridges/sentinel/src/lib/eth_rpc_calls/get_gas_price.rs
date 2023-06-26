@@ -2,6 +2,7 @@ use std::result::Result;
 
 use common::strip_hex_prefix;
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
+use tokio::time::{sleep, Duration};
 
 use super::{ETH_RPC_CALL_TIME_LIMIT, MAX_RPC_CALL_ATTEMPTS};
 use crate::{run_timer, EndpointError, SentinelError};
@@ -16,7 +17,7 @@ async fn get_gas_price_inner(ws_client: &WsClient) -> Result<u64, SentinelError>
     }
 }
 
-pub async fn get_gas_price(ws_client: &WsClient) -> Result<u64, SentinelError> {
+pub async fn get_gas_price(ws_client: &WsClient, sleep_time: u64) -> Result<u64, SentinelError> {
     let mut attempt = 1;
     loop {
         let m = format!("getting gas price attempt #{attempt}");
@@ -38,6 +39,8 @@ pub async fn get_gas_price(ws_client: &WsClient) -> Result<u64, SentinelError> {
                 _ => {
                     if attempt < MAX_RPC_CALL_ATTEMPTS {
                         attempt += 1;
+                        warn!("sleeping for {sleep_time}ms before retrying...");
+                        sleep(Duration::from_millis(sleep_time)).await;
                         continue;
                     } else {
                         warn!("{RPC_CMD} failed after {attempt} attempts");
