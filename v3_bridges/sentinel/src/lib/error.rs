@@ -52,7 +52,7 @@ pub enum SentinelError {
     Json(serde_json::Value),
 
     #[error("common error: {0}")]
-    Common(#[from] common::AppError),
+    Common(common::AppError),
 
     #[error("config error: {0}")]
     Config(#[from] config::ConfigError),
@@ -172,5 +172,15 @@ impl From<tokio::sync::mpsc::error::SendError<EthRpcMessages>> for SentinelError
 impl From<crate::user_ops::UserOpError> for SentinelError {
     fn from(e: crate::user_ops::UserOpError) -> Self {
         Self::UserOp(Box::new(e))
+    }
+}
+
+impl From<common::AppError> for SentinelError {
+    fn from(e: common::AppError) -> Self {
+        match e {
+            common::AppError::NoParentError(e) => Self::NoParent(e),
+            common::AppError::BlockAlreadyInDbError(e) => Self::BlockAlreadyInDb(e),
+            _ => Self::Common(e),
+        }
     }
 }
