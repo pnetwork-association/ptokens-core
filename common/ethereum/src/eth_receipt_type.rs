@@ -12,6 +12,13 @@ pub enum EthReceiptType {
     Legacy,
     EIP2718,
     EIP2930,
+    ArbitrumRetryTxType,
+    ArbitrumLegacyTxType,
+    ArbitrumDepositTxType,
+    ArbitrumUnsignedTxType,
+    ArbitrumContractTxType,
+    ArbitrumInternalTxType,
+    ArbitrumSubmitRetryableTxType,
 }
 
 impl EthReceiptType {
@@ -20,6 +27,13 @@ impl EthReceiptType {
             0x00 => Self::Legacy,
             0x01 => Self::EIP2930,
             0x02 => Self::EIP2718,
+            0x68 => Self::ArbitrumRetryTxType,
+            0x64 => Self::ArbitrumDepositTxType,
+            0x65 => Self::ArbitrumUnsignedTxType,
+            0x66 => Self::ArbitrumContractTxType,
+            0x78 => Self::ArbitrumLegacyTxType,
+            0x6a => Self::ArbitrumInternalTxType,
+            0x69 => Self::ArbitrumSubmitRetryableTxType,
             _ => Self::Legacy,
         }
     }
@@ -29,6 +43,13 @@ impl EthReceiptType {
             Self::Legacy => 0x00,
             Self::EIP2930 => 0x01,
             Self::EIP2718 => 0x02,
+            Self::ArbitrumRetryTxType => 0x68,
+            Self::ArbitrumLegacyTxType => 0x78,
+            Self::ArbitrumDepositTxType => 0x64,
+            Self::ArbitrumUnsignedTxType => 0x65,
+            Self::ArbitrumContractTxType => 0x66,
+            Self::ArbitrumInternalTxType => 0x6a,
+            Self::ArbitrumSubmitRetryableTxType => 0x69,
         }
     }
 
@@ -43,6 +64,13 @@ impl fmt::Display for EthReceiptType {
             Self::Legacy => "0x0",
             Self::EIP2930 => "0x1",
             Self::EIP2718 => "0x2",
+            Self::ArbitrumRetryTxType => "0x68",
+            Self::ArbitrumLegacyTxType => "0x78",
+            Self::ArbitrumDepositTxType => "0x64",
+            Self::ArbitrumUnsignedTxType => "0x65",
+            Self::ArbitrumContractTxType => "0x66",
+            Self::ArbitrumInternalTxType => "0x6a",
+            Self::ArbitrumSubmitRetryableTxType => "0x69",
         };
         write!(f, "{}", s)
     }
@@ -56,6 +84,13 @@ impl FromStr for EthReceiptType {
             "0x0" | "0" => Ok(Self::Legacy),
             "EIP2930" | "0x1" | "1" => Ok(Self::EIP2930),
             "EIP2718" | "0x2" | "2" => Ok(Self::EIP2718),
+            "ArbitrumRetryTxType" | "0x68" | "68" => Ok(Self::ArbitrumRetryTxType),
+            "ArbitrumLegacyTxType" | "0x78" | "78" => Ok(Self::ArbitrumLegacyTxType),
+            "ArbitrumDepositTxType" | "0x64" | "64" => Ok(Self::ArbitrumDepositTxType),
+            "ArbitrumUnsignedTxType" | "0x65" | "65" => Ok(Self::ArbitrumUnsignedTxType),
+            "ArbitrumContractTxType" | "0x66" | "66" => Ok(Self::ArbitrumContractTxType),
+            "ArbitrumInternalTxType" | "0x6a" | "6a" => Ok(Self::ArbitrumInternalTxType),
+            "ArbitrumSubmitRetryableTxType" | "0x69" | "69" => Ok(Self::ArbitrumSubmitRetryableTxType),
             _ => Err(format!("Unrecognized ETH receipt type: {s}").into()),
         }
     }
