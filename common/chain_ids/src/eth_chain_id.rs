@@ -7,9 +7,11 @@ use common::{
     types::{Byte, Bytes, Result},
     utils::{convert_bytes_to_u64, convert_bytes_to_u8},
 };
-use ethereum_types::H256 as KeccakHash;
+use ethereum_types::{H256 as KeccakHash, U256};
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumIter;
+
+use super::ChainIdT;
 
 #[derive(Clone, Debug, PartialEq, Eq, EnumIter, Serialize, Deserialize)]
 pub enum EthChainId {
@@ -26,6 +28,14 @@ pub enum EthChainId {
     ArbitrumMainnet,
     LuxochainMainnet,
     Unknown(u64),
+}
+
+impl ChainIdT for EthChainId {}
+
+impl From<EthChainId> for U256 {
+    fn from(x: EthChainId) -> Self {
+        U256::from(x.to_u64())
+    }
 }
 
 impl Default for EthChainId {
