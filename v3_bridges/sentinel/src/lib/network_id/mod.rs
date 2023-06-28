@@ -6,7 +6,7 @@ mod protocol_id;
 
 pub use self::{
     error::NetworkIdError,
-    network_id::NetworkId,
+    network_id::{Bytes4, NetworkId},
     network_id_version::NetworkIdVersion,
     protocol_id::ProtocolId,
 };

@@ -54,7 +54,7 @@ pub use self::{
         Responder,
         SyncerMessages,
     },
-    network_id::{NetworkId, ProtocolId},
+    network_id::{Bytes4, NetworkId, ProtocolId},
     output::Output,
     user_ops::{UserOp, UserOpError, UserOpList, UserOpSmartContractState, UserOps},
     utils::{get_utc_timestamp, run_timer},
