@@ -1,3 +1,4 @@
+use common::Byte;
 use ethereum_types::H256 as EthHash;
 use thiserror::Error;
 
@@ -31,4 +32,13 @@ pub enum UserOpError {
 
     #[error("user ops UIDs do not match ({a} != {b})")]
     UidMismatch { a: EthHash, b: EthHash },
+
+    #[error("unrecognized smart-contract user op state: {0}")]
+    UnrecognizedSmartContractUserOpState(Byte),
+
+    #[error("cannot get smart-contract user op state from no bytes")]
+    NotEnoughBytes,
+
+    #[error("`UserOpLog` is missing field: '{0}'")]
+    MissingField(String),
 }

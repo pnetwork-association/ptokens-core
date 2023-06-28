@@ -7,12 +7,19 @@ mod user_op_flag;
 mod user_op_list;
 mod user_op_log;
 mod user_op_router_log;
+mod user_op_smart_contract_state;
 mod user_op_state;
 mod user_op_state_manager_log;
 #[allow(clippy::module_inception)]
 mod user_ops;
 
-pub use self::{error::UserOpError, user_op::UserOp, user_op_list::UserOpList, user_ops::UserOps};
+pub use self::{
+    error::UserOpError,
+    user_op::UserOp,
+    user_op_list::UserOpList,
+    user_op_smart_contract_state::UserOpSmartContractState,
+    user_ops::UserOps,
+};
 use self::{
     user_op_constants::{
         CANCELLED_USER_OP_TOPIC,

@@ -15,7 +15,7 @@ use super::{
 };
 
 #[serde_as]
-#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct UserOpLog {
     // TODO should have the state inside it? Or the topic hash?
     pub(super) origin_block_hash: Option<EthHash>,
@@ -35,6 +35,71 @@ pub struct UserOpLog {
     pub(super) underlying_asset_symbol: String,
     #[serde_as(as = "serde_with::hex::Hex")]
     pub(super) user_data: Bytes,
+}
+
+impl Default for UserOpLog {
+    fn default() -> Self {
+        Self {
+            // NOTE The optional fields cannot be missing. They're only optional due to parsing
+            // from logs where in the case of a WITNESSED event, the log does NOT contain them.
+            origin_network_id: Some(vec![]),
+            origin_block_hash: Some(EthHash::zero()),
+            origin_transaction_hash: Some(EthHash::zero()),
+            options_mask: EthHash::default(),
+            nonce: U256::default(),
+            underlying_asset_decimals: U256::default(),
+            amount: U256::default(),
+            underlying_asset_token_address: EthAddress::default(),
+            destination_network_id: vec![],
+            underlying_asset_network_id: vec![],
+            destination_account: String::default(),
+            underlying_asset_name: String::default(),
+            underlying_asset_symbol: String::default(),
+            user_data: vec![],
+        }
+    }
+}
+
+impl UserOpLog {
+    pub fn maybe_update_fields(
+        &mut self,
+        origin_block_hash: EthHash,
+        origin_transaction_hash: EthHash,
+        origin_network_id: Bytes,
+    ) {
+        // NOTE: A witnessed user op needs these fields from the block it was witnessed in. All
+        // other states will include the full log, with these fields already included.
+        if self.origin_block_hash.is_none() {
+            debug!("updating `origin_block_hash` in `UserOpLog`");
+            self.origin_block_hash = Some(origin_block_hash)
+        };
+
+        if self.origin_transaction_hash.is_none() {
+            debug!("updating `origin_transaction_hash` in `UserOpLog`");
+            self.origin_transaction_hash = Some(origin_transaction_hash)
+        };
+
+        if self.origin_network_id.is_none() {
+            debug!("updating `origin_network_id` in `UserOpLog`");
+            self.origin_network_id = Some(origin_network_id)
+        };
+    }
+
+    pub fn origin_block_hash(&self) -> Result<EthHash, UserOpError> {
+        self.origin_block_hash
+            .ok_or_else(|| UserOpError::MissingField("origin_block_hash".into()))
+    }
+
+    pub fn origin_transaction_hash(&self) -> Result<EthHash, UserOpError> {
+        self.origin_transaction_hash
+            .ok_or_else(|| UserOpError::MissingField("origin_transaction_hash".into()))
+    }
+
+    pub fn origin_network_id(&self) -> Result<Bytes, UserOpError> {
+        self.origin_network_id
+            .clone()
+            .ok_or_else(|| UserOpError::MissingField("origin_network_id".into()))
+    }
 }
 
 impl TryFrom<&EthLog> for UserOpLog {

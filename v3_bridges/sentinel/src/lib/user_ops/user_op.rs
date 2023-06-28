@@ -14,7 +14,7 @@ use crate::{DbKey, DbUtilsT, SentinelError};
 
 impl DbUtilsT for UserOp {
     fn key(&self) -> Result<DbKey, SentinelError> {
-        Ok(self.uid().into())
+        Ok(self.uid()?.into())
     }
 
     fn sensitivity() -> Option<Byte> {
@@ -73,14 +73,20 @@ impl UserOp {
         origin_network_id: &[Byte],
         log: &EthLog,
     ) -> Result<Self, UserOpError> {
+        let mut user_op_log = UserOpLog::try_from(log)?;
+
+        // NOTE: A witnessed user op needs these fields from the block it was witnessed in. All
+        // other states will include the full log, with these fields already included.
+        user_op_log.maybe_update_fields(block_hash, tx_hash, origin_network_id.to_vec());
+
         Ok(Self {
             tx_hash,
             block_hash,
             bridge_side,
+            user_op_log,
             block_timestamp,
             witnessed_timestamp,
             previous_states: vec![],
-            user_op_log: UserOpLog::try_from(log)?,
             origin_network_id: origin_network_id.to_vec(),
             state: UserOpState::try_from_log(bridge_side, tx_hash, log)?,
         })
@@ -90,10 +96,10 @@ impl UserOp {
 impl UserOp {
     pub fn update_state(&mut self, other: Self) -> Result<(), UserOpError> {
         debug!("updating user op state from {} to {}", self.state(), other.state());
-        if self.uid() != other.uid() {
+        if self.uid()? != other.uid()? {
             Err(UserOpError::UidMismatch {
-                a: self.uid(),
-                b: other.uid(),
+                a: self.uid()?,
+                b: other.uid()?,
             })
         } else if self.state() >= other.state() {
             Err(UserOpError::CannotUpdate {
@@ -111,20 +117,20 @@ impl UserOp {
         self.state
     }
 
-    pub fn uid(&self) -> EthHash {
+    pub fn uid(&self) -> Result<EthHash, UserOpError> {
         let mut hasher = Keccak::v256();
-        let input = self.abi_encode();
+        let input = self.abi_encode()?;
         let mut output = [0u8; 32];
         hasher.update(&input);
         hasher.finalize(&mut output);
-        EthHash::from_slice(&output)
+        Ok(EthHash::from_slice(&output))
     }
 
-    fn abi_encode(&self) -> Bytes {
-        abi::encode(&[
-            Token::FixedBytes(self.block_hash.as_bytes().to_vec()),
-            Token::FixedBytes(self.tx_hash.as_bytes().to_vec()),
-            Token::FixedBytes(self.origin_network_id.clone()),
+    fn abi_encode(&self) -> Result<Bytes, UserOpError> {
+        Ok(abi::encode(&[
+            Token::FixedBytes(self.user_op_log.origin_block_hash()?.as_bytes().to_vec()),
+            Token::FixedBytes(self.user_op_log.origin_transaction_hash()?.as_bytes().to_vec()),
+            Token::FixedBytes(self.user_op_log.origin_network_id()?),
             Token::Uint(Self::convert_u256_type(self.user_op_log.nonce)),
             Token::String(self.user_op_log.destination_account.clone()),
             Token::FixedBytes(self.user_op_log.destination_network_id.clone()),
@@ -138,7 +144,7 @@ impl UserOp {
             Token::Uint(Self::convert_u256_type(self.user_op_log.amount)),
             Token::Bytes(self.user_op_log.user_data.clone()),
             Token::FixedBytes(self.user_op_log.options_mask.as_bytes().to_vec()),
-        ])
+        ]))
     }
 
     pub(super) fn convert_address_type(t: EthAddress) -> ethers_core::types::Address {
@@ -259,8 +265,8 @@ mod tests {
     fn should_get_enqueued_user_op_uid() {
         let user_op = get_sample_enqueued_user_op();
         let expected_uid =
-            convert_hex_to_h256("c8e8f5ae17a23427f1cce51c1683c7488c722809fedf29c51c08c4461531baaa").unwrap();
-        let uid = user_op.uid();
+            convert_hex_to_h256("be0a969cf68c8a51804458b2d841df79e2c7fa2f0e94b72b2859c5f8d660083d").unwrap();
+        let uid = user_op.uid().unwrap();
         assert_eq!(uid, expected_uid);
     }
 
@@ -269,7 +275,7 @@ mod tests {
         let user_op = get_sample_witnessed_user_op();
         let expected_uid =
             convert_hex_to_h256("68387313a7d1eacdbc7b8e8f6125bc4c6efaece93eee4d93ce6c1324ecb85c8c").unwrap();
-        let uid = user_op.uid();
+        let uid = user_op.uid().unwrap();
         assert_eq!(uid, expected_uid);
     }
 }

@@ -2,31 +2,49 @@ use common::Bytes;
 use common_chain_ids::EthChainId;
 use common_eth::{encode_fxn_call, EthPrivateKey, EthTransaction};
 use ethabi::Token as EthAbiToken;
-use ethereum_types::Address as EthAddress;
+use ethereum_types::{Address as EthAddress, H256 as EthHash};
 
 use super::{UserOp, UserOpError};
 
 impl UserOp {
+    pub fn encode_as_eth_abi_token(&self) -> EthAbiToken {
+        EthAbiToken::Tuple(vec![
+            //EthAbiToken::FixedBytes(self.block_hash.as_bytes().to_vec()), // TODO from the log??
+            //EthAbiToken::FixedBytes(self.tx_hash.as_bytes().to_vec()), // TODO from the log?
+            EthAbiToken::FixedBytes(
+                self.user_op_log
+                    .origin_block_hash
+                    .unwrap_or_else(EthHash::zero)
+                    .as_bytes()
+                    .to_vec(),
+            ), // TODO from the log??
+            EthAbiToken::FixedBytes(
+                self.user_op_log
+                    .origin_transaction_hash
+                    .unwrap_or_else(EthHash::zero)
+                    .as_bytes()
+                    .to_vec(),
+            ), // TODO from the log?
+            EthAbiToken::FixedBytes(self.user_op_log.options_mask.as_bytes().to_vec()),
+            EthAbiToken::Uint(self.user_op_log.nonce),
+            EthAbiToken::Uint(self.user_op_log.underlying_asset_decimals),
+            EthAbiToken::Uint(self.user_op_log.amount),
+            EthAbiToken::Address(self.user_op_log.underlying_asset_token_address),
+            EthAbiToken::FixedBytes(self.origin_network_id.clone()),
+            EthAbiToken::FixedBytes(self.user_op_log.destination_network_id.clone()),
+            EthAbiToken::FixedBytes(self.user_op_log.underlying_asset_network_id.clone()),
+            EthAbiToken::String(self.user_op_log.destination_account.clone()),
+            EthAbiToken::String(self.user_op_log.underlying_asset_name.clone()),
+            EthAbiToken::String(self.user_op_log.underlying_asset_symbol.clone()),
+            EthAbiToken::Bytes(self.user_op_log.user_data.clone()),
+        ])
+    }
+
     fn to_cancel_fxn_data(&self) -> Result<Bytes, UserOpError> {
         const CANCEL_FXN_ABI: &str = "[{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"originBlockHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"originTransactionHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"optionsMask\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"underlyingAssetDecimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"assetAmount\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"underlyingAssetTokenAddress\",\"type\":\"address\"},{\"internalType\":\"bytes4\",\"name\":\"originNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"bytes4\",\"name\":\"destinationNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"bytes4\",\"name\":\"underlyingAssetNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"string\",\"name\":\"destinationAccount\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"underlyingAssetName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"underlyingAssetSymbol\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"userData\",\"type\":\"bytes\"}],\"internalType\":\"struct IStateManager.Operation\",\"name\":\"operation\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"}],\"name\":\"protocolSentinelCancelOperation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]";
 
         Ok(encode_fxn_call(CANCEL_FXN_ABI, "protocolSentinelCancelOperation", &[
-            EthAbiToken::Tuple(vec![
-                EthAbiToken::FixedBytes(self.block_hash.as_bytes().to_vec()),
-                EthAbiToken::FixedBytes(self.tx_hash.as_bytes().to_vec()),
-                EthAbiToken::FixedBytes(self.user_op_log.options_mask.as_bytes().to_vec()),
-                EthAbiToken::Uint(self.user_op_log.nonce),
-                EthAbiToken::Uint(self.user_op_log.underlying_asset_decimals),
-                EthAbiToken::Uint(self.user_op_log.amount),
-                EthAbiToken::Address(self.user_op_log.underlying_asset_token_address),
-                EthAbiToken::FixedBytes(self.origin_network_id.clone()),
-                EthAbiToken::FixedBytes(self.user_op_log.destination_network_id.clone()),
-                EthAbiToken::FixedBytes(self.user_op_log.underlying_asset_network_id.clone()),
-                EthAbiToken::String(self.user_op_log.destination_account.clone()),
-                EthAbiToken::String(self.user_op_log.underlying_asset_name.clone()),
-                EthAbiToken::String(self.user_op_log.underlying_asset_symbol.clone()),
-                EthAbiToken::Bytes(self.user_op_log.user_data.clone()),
-            ]),
+            self.encode_as_eth_abi_token(),
             EthAbiToken::Bytes(vec![]), // NOTE: Sentinel proofs are not currently implemented
         ])?)
     }
@@ -79,7 +97,7 @@ mod tests {
         let tx = user_op
             .cancel(nonce, gas_price, &to, gas_limit, &pk, &chain_id)
             .unwrap();
-        let expected_result = "f903af088504a817c800830186a094c2926f4e511dd26e51d5ce1231e3f26012fd1caf80b90344c0c63d5800000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000320168fcccc67fb7419f6c4dfce71fdf3b9000f6e491e3dad94685cf62284ebdf0ac2e677e7e8c73834dc86c237f79f94ad3e4899d6aa7e561a8110a6117d13e8d50000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a0000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000053900000000000000000000000089ab32156e46f46d02ade3fecbe5fc4243b9aaede15503e4000000000000000000000000000000000000000000000000000000000403020100000000000000000000000000000000000000000000000000000000010303070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001c00000000000000000000000000000000000000000000000000000000000000220000000000000000000000000000000000000000000000000000000000000026000000000000000000000000000000000000000000000000000000000000002a0000000000000000000000000000000000000000000000000000000000000002a30784441464541343932443963363733336165336435366237456431414442363036393263393842633500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a736f6d6520746f6b656e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000353544b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003c0ffee000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008401546d72a00bc1705e0af566a83dc6e9822d089f42c16d0e00186a5ae3479501cfb88e4676a0422d64b19af138e7d2798965de638b5ac237e217bcaf8edf00d48a76e2534fbd".to_string();
+        let expected_result = "f903af088504a817c800830186a094c2926f4e511dd26e51d5ce1231e3f26012fd1caf80b90344c0c63d580000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000032081803894d2305fd729ac0b90a4262a85c4d11b70b8bea98c40ee68bf56c8a1c2eb5cbe8387d5e9e247ea886459bcd0e599732e1a4e02a38b235cd93cac96bf300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a0000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000053900000000000000000000000089ab32156e46f46d02ade3fecbe5fc4243b9aaede15503e4000000000000000000000000000000000000000000000000000000000403020100000000000000000000000000000000000000000000000000000000010303070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001c00000000000000000000000000000000000000000000000000000000000000220000000000000000000000000000000000000000000000000000000000000026000000000000000000000000000000000000000000000000000000000000002a0000000000000000000000000000000000000000000000000000000000000002a30784441464541343932443963363733336165336435366237456431414442363036393263393842633500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a736f6d6520746f6b656e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000353544b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003c0ffee000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008401546d71a0604d7b5018f06338f7e9fa036300a7e55bfb6f160b9b065012045d90aaf1cb61a02d2953d4cc47c174b882521cb26a55fa7ee2e1e02cfdb0680e57c55b7082461c".to_string();
         let result = tx.serialize_hex();
         assert_eq!(result, expected_result);
     }
