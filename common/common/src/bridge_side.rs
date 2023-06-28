@@ -39,6 +39,14 @@ impl BridgeSide {
     pub fn is_host(&self) -> bool {
         self == &Self::Host
     }
+
+    pub fn opposite(&self) -> Self {
+        if self.is_native() {
+            Self::Host
+        } else {
+            Self::Native
+        }
+    }
 }
 
 #[cfg(test)]
@@ -62,5 +70,15 @@ mod tests {
     #[test]
     fn native_should_be_less_than_host() {
         assert!(BridgeSide::Native < BridgeSide::Host)
+    }
+
+    #[test]
+    fn should_get_opposite() {
+        let s1 = BridgeSide::Native;
+        let s2 = BridgeSide::Host;
+        let r1 = s1.opposite();
+        let r2 = s2.opposite();
+        assert_eq!(r1, s2);
+        assert_eq!(r2, s1);
     }
 }
