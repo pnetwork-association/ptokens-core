@@ -8,7 +8,9 @@ mod get_latest_block_num;
 mod get_nonce;
 mod get_receipts;
 mod get_sub_mat;
+mod get_user_op_state;
 mod push_tx;
+mod test_utils;
 
 use self::constants::{ETH_RPC_CALL_TIME_LIMIT, MAX_RPC_CALL_ATTEMPTS};
 pub use self::{

@@ -30,6 +30,7 @@ pub use self::{
     eth_rpc_calls::{
         eth_call,
         get_block,
+        get_chain_id,
         get_eth_balance,
         get_gas_price,
         get_latest_block_num,
@@ -52,9 +53,9 @@ pub use self::{
         Responder,
         SyncerMessages,
     },
-    network_id::NetworkId,
+    network_id::{NetworkId, ProtocolId},
     output::Output,
-    user_ops::{UserOp, UserOpList, UserOps},
+    user_ops::{UserOp, UserOpError, UserOpList, UserOpSmartContractState, UserOps},
     utils::{get_utc_timestamp, run_timer},
 };
 
