@@ -23,5 +23,6 @@ pub use self::{
     get_nonce::get_nonce,
     get_receipts::get_receipts,
     get_sub_mat::get_sub_mat,
+    get_user_op_state::get_user_op_state,
     push_tx::push_tx,
 };

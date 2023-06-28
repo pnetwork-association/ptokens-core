@@ -3,7 +3,7 @@ use common_eth::{DefaultBlockParameter, EthSubmissionMaterial, EthTransaction};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use tokio::sync::{oneshot, oneshot::Receiver};
 
-use crate::{Responder, SentinelError};
+use crate::{Responder, SentinelError, UserOp, UserOpSmartContractState};
 
 #[derive(Debug)]
 pub enum EthRpcMessages {
@@ -14,9 +14,19 @@ pub enum EthRpcMessages {
     GetGasPrice((BridgeSide, Responder<u64>)),
     GetSubMat((BridgeSide, u64, Responder<EthSubmissionMaterial>)),
     GetEthBalance((BridgeSide, EthAddress, Responder<U256>)),
+    GetUserOpState((BridgeSide, UserOp, EthAddress, Responder<UserOpSmartContractState>)),
 }
 
 impl EthRpcMessages {
+    pub fn get_user_op_state_msg(
+        s: BridgeSide,
+        o: UserOp,
+        a: EthAddress,
+    ) -> (Self, Receiver<Result<UserOpSmartContractState, SentinelError>>) {
+        let (tx, rx) = oneshot::channel();
+        (Self::GetUserOpState((s, o, a, tx)), rx)
+    }
+
     pub fn get_eth_balance_msg(s: BridgeSide, a: EthAddress) -> (Self, Receiver<Result<U256, SentinelError>>) {
         let (tx, rx) = oneshot::channel();
         (Self::GetEthBalance((s, a, tx)), rx)

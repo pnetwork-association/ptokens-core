@@ -7,6 +7,7 @@ use lib::{
     get_latest_block_num,
     get_nonce,
     get_sub_mat,
+    get_user_op_state,
     push_tx,
     EndpointError,
     EthRpcMessages,
@@ -35,6 +36,33 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
             r = eth_rpc_rx.recv() => match r {
                 Some(msg) => {
                     match msg {
+                        EthRpcMessages::GetUserOpState((side, user_op, contract_address, responder)) => {
+                            'inner: loop {
+                                let r = get_user_op_state(
+                                    &user_op,
+                                    &contract_address,
+                                    if side.is_native() { &n_ws_client } else { &h_ws_client },
+                                    if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    side,
+                                ).await;
+                                match r {
+                                    Ok(r) => {
+                                        let _ = responder.send(Ok(r));
+                                        continue 'eth_rpc_loop
+                                    },
+                                    Err(SentinelError::Endpoint(EndpointError::WsClientDisconnected(_))) => {
+                                        warn!("{side} web socket dropped, rotating endpoint");
+                                        if side.is_native() {
+                                            n_ws_client = n_endpoints.rotate().await?;
+                                        } else {
+                                            h_ws_client = h_endpoints.rotate().await?;
+                                        };
+                                        continue 'inner
+                                    },
+                                    Err(e) => break 'eth_rpc_loop Err(e),
+                                }
+                            }
+                        },
                         EthRpcMessages::GetLatestBlockNum((side, responder)) => {
                             'inner: loop {
                                 let r = get_latest_block_num(

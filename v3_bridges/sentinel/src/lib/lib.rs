@@ -37,6 +37,7 @@ pub use self::{
         get_nonce,
         get_receipts,
         get_sub_mat,
+        get_user_op_state,
         push_tx,
     },
     flatten_join_handle::flatten_join_handle,
