@@ -9,8 +9,8 @@ use super::NetworkIdError;
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter, Serialize, Deserialize)]
 pub enum ProtocolId {
-    Ethereum = 0,
-    Bitcoin  = 1,
+    Bitcoin  = 0,
+    Ethereum = 1,
     Eos      = 2,
     Algorand = 3,
 }
@@ -33,8 +33,8 @@ impl FromStr for ProtocolId {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_ref() {
-            "0" | "ethereum" | "eth" | "0x00" | "0x0" | "00" => Ok(Self::Ethereum),
-            "1" | "bitcoin" | "btc" | "0x01" | "0x1" | "01" => Ok(Self::Bitcoin),
+            "0" | "bitcoin" | "btc" | "0x00" | "0x0" | "00" => Ok(Self::Bitcoin),
+            "1" | "ethereum" | "eth" | "0x01" | "0x1" | "01" => Ok(Self::Ethereum),
             "2" | "eos" | "0x02" | "0x2" | "02" => Ok(Self::Eos),
             "3" | "algorand" | "algo" | "0x03" | "0x3" | "03" => Ok(Self::Algorand),
             _ => Err(NetworkIdError::InvalidProtocolId(s.into())),
@@ -45,8 +45,8 @@ impl FromStr for ProtocolId {
 impl From<ProtocolId> for u8 {
     fn from(id: ProtocolId) -> u8 {
         match id {
-            ProtocolId::Ethereum => 0,
-            ProtocolId::Bitcoin => 1,
+            ProtocolId::Bitcoin => 0,
+            ProtocolId::Ethereum => 1,
             ProtocolId::Eos => 2,
             ProtocolId::Algorand => 3,
         }

@@ -23,7 +23,7 @@ hex = { workspace = true }
 log = { workspace = true }
 clap = { workspace = true }
 warp = { workspace = true }
-sha3 = { workspace = true }
+sha2 = { workspace = true }
 tokio = { workspace = true }
 paste = { workspace = true }
 strum = { workspace = true }
