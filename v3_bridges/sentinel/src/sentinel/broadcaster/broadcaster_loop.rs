@@ -22,23 +22,29 @@ async fn cancel_user_op(
     core_tx: MpscTx<CoreMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     state_manager: &EthAddress,
-) -> Result<UserOp, SentinelError> {
-    // TODO check it's not already been cancelled
+) -> Result<(), SentinelError> {
     // TODO check we have enough balance to push
+    // TODO check the origin tx exists on the other chain
+    // TODO put back in core db upon error and continue broadcaster loop with warning messages
+    let side = op.side();
 
-    let (msg, rx) = CoreMessages::get_cancellation_signature_msg(op.clone(), nonce, gas_price, *state_manager);
-    core_tx.send(msg).await?;
-    let signed_tx = rx.await??;
-
-    let (msg, rx) = EthRpcMessages::get_push_tx_msg(signed_tx, op.side());
+    let (msg, rx) = EthRpcMessages::get_user_op_state_msg(side, op.clone(), *state_manager);
     eth_rpc_tx.send(msg).await?;
+    let user_op_smart_contract_state = rx.await??;
 
-    let tx_hash = rx.await??;
+    if user_op_smart_contract_state.is_cancellable() {
+        warn!("sending cancellation tx for user op: {op}");
+        let (msg, rx) = CoreMessages::get_cancellation_signature_msg(op.clone(), nonce, gas_price, *state_manager);
+        core_tx.send(msg).await?;
+        let signed_tx = rx.await??;
 
-    info!("tx hash: {tx_hash}");
+        let (msg, rx) = EthRpcMessages::get_push_tx_msg(signed_tx, side);
+        eth_rpc_tx.send(msg).await?;
+        let tx_hash = rx.await??;
+        info!("tx hash: {tx_hash}");
+    };
 
-    // FIXME we shold only return this if we fail to broadcast it no?
-    Ok(op)
+    Ok(())
 }
 
 async fn cancel_user_ops(
