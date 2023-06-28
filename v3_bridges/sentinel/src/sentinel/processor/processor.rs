@@ -3,11 +3,7 @@ use std::result::Result;
 use common::{BridgeSide, DatabaseInterface};
 use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials, HostDbUtils, NativeDbUtils};
 use ethereum_types::Address as EthAddress;
-use lib::{Output, SentinelDbUtils, SentinelError, UserOpList, UserOps};
-
-lazy_static::lazy_static! {
-    static ref ORIGIN_NETWORK_ID: Vec<u8> = hex::decode("e15503e4").unwrap();// FIXME calculate this!
-}
+use lib::{Bytes4, Output, SentinelDbUtils, SentinelError, UserOpList, UserOps};
 
 #[allow(clippy::too_many_arguments)]
 pub fn process_single<D: DatabaseInterface>(
@@ -19,6 +15,7 @@ pub fn process_single<D: DatabaseInterface>(
     use_db_tx: bool,
     dry_run: bool,
     side: BridgeSide,
+    network_id: &Bytes4,
 ) -> Result<UserOps, SentinelError> {
     if use_db_tx {
         debug!("Starting db tx in {side} processor!");
@@ -41,10 +38,11 @@ pub fn process_single<D: DatabaseInterface>(
     }
 
     if is_validating {
+        // NOTE: Block header gets validated above when appending to the chain.
         sub_mat.receipts_are_valid()?;
     };
 
-    let r = UserOps::from_sub_mat(side, state_manager, &ORIGIN_NETWORK_ID, router, sub_mat)?;
+    let r = UserOps::from_sub_mat(side, state_manager, &network_id.to_vec(), router, sub_mat)?;
 
     if use_db_tx {
         debug!("ending db tx in {side} processor!");
@@ -62,6 +60,7 @@ pub fn process_batch<D: DatabaseInterface>(
     batch: &EthSubmissionMaterials,
     is_validating: bool,
     side: BridgeSide,
+    network_id: &Bytes4,
 ) -> Result<Output, SentinelError> {
     info!("Processing {side} batch of submission material...");
     db.start_transaction()?;
@@ -82,14 +81,15 @@ pub fn process_batch<D: DatabaseInterface>(
                     use_db_tx,
                     dry_run,
                     side,
+                    network_id,
                 )
             })
             .collect::<Result<Vec<UserOps>, SentinelError>>()?,
     );
 
-    let ops_requiring_txs = UserOpList::process_ops(&SentinelDbUtils::new(db), user_ops)?;
+    let ops_requiring_cancellation_txs = UserOpList::process_ops(&SentinelDbUtils::new(db), user_ops)?;
 
-    let output = Output::new(side, batch.get_last_block_num()?, ops_requiring_txs);
+    let output = Output::new(side, batch.get_last_block_num()?, ops_requiring_cancellation_txs);
 
     db.end_transaction()?;
 

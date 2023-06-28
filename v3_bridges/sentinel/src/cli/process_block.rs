@@ -5,7 +5,7 @@ use common::BridgeSide;
 use common_eth::EthSubmissionMaterial;
 use common_rocksdb_database::get_db_at_path;
 use derive_more::Constructor;
-use lib::{SentinelConfig, SentinelError};
+use lib::{NetworkId, SentinelConfig, SentinelError, HOST_PROTOCOL_ID, NATIVE_PROTOCOL_ID};
 use serde_json::json;
 
 use crate::sentinel::process_single;
@@ -58,6 +58,19 @@ pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliAr
     let router = config.router(&args.side);
     let is_validating = config.is_validating(&args.side);
     let use_db_tx = !args.dry_run;
+    let network_id = &NetworkId::new(
+        if args.side.is_native() {
+            config.native().get_eth_chain_id()
+        } else {
+            config.host().get_eth_chain_id()
+        },
+        if args.side.is_native() {
+            *NATIVE_PROTOCOL_ID
+        } else {
+            *HOST_PROTOCOL_ID
+        },
+    )
+    .to_bytes_4()?;
     let output = process_single(
         &db,
         &router,
@@ -67,6 +80,7 @@ pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliAr
         use_db_tx,
         args.dry_run,
         args.side,
+        &network_id,
     )?;
     let latest_block_num = args.sub_mat.get_block_number()?;
     let r = json!({

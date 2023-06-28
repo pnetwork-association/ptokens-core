@@ -44,6 +44,8 @@ async fn cancel_user_op(
         info!("tx hash: {tx_hash}");
     };
 
+    // TODO if success, do nothing, if fail, put the op back in the core db for later cancellation
+    // (it'll have a check that this is fine to do)
     Ok(())
 }
 
@@ -72,6 +74,7 @@ async fn cancel_user_ops(
 
     let mut unbroadcast_ops = vec![];
 
+    // FIXME need to increment nonces manually here!
     for op in ops.iter() {
         match op.side() {
             BridgeSide::Native => {

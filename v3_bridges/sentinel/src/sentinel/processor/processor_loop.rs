@@ -1,7 +1,17 @@
 use std::{result::Result, sync::Arc};
 
 use common::DatabaseInterface;
-use lib::{BroadcasterMessages, Heartbeats, MongoMessages, ProcessorMessages, SentinelConfig, SentinelError};
+use lib::{
+    BroadcasterMessages,
+    Heartbeats,
+    MongoMessages,
+    NetworkId,
+    ProcessorMessages,
+    SentinelConfig,
+    SentinelError,
+    HOST_PROTOCOL_ID,
+    NATIVE_PROTOCOL_ID,
+};
 use tokio::sync::{
     mpsc::{Receiver as MpscRx, Sender as MpscTx},
     Mutex,
@@ -18,6 +28,8 @@ pub async fn processor_loop<D: DatabaseInterface>(
 ) -> Result<(), SentinelError> {
     info!("Starting processor loop...");
     let mut heartbeats = Heartbeats::new();
+    let h_origin_network_id = NetworkId::new(config.host().get_eth_chain_id(), *HOST_PROTOCOL_ID).to_bytes_4()?;
+    let n_origin_network_id = NetworkId::new(config.native().get_eth_chain_id(), *NATIVE_PROTOCOL_ID).to_bytes_4()?;
 
     'processor_loop: loop {
         tokio::select! {
@@ -35,6 +47,7 @@ pub async fn processor_loop<D: DatabaseInterface>(
                             &args.batch,
                             config.is_validating(&side),
                             side,
+                            if side.is_native() { &n_origin_network_id } else { &h_origin_network_id },
                         );
                         match result {
                             Ok(output) => {
