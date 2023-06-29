@@ -36,6 +36,7 @@ impl UserOp {
 #[serde_as]
 #[derive(Clone, Debug, Default, Eq, Serialize, Deserialize)]
 pub struct UserOp {
+    pub(super) uid: EthHash,
     pub(super) tx_hash: EthHash,
     pub(super) state: UserOpState,
     pub(super) block_hash: EthHash,
@@ -79,17 +80,23 @@ impl UserOp {
         // other states will include the full log, with these fields already included.
         user_op_log.maybe_update_fields(block_hash, tx_hash, origin_network_id.to_vec());
 
-        Ok(Self {
+        let mut op = Self {
             tx_hash,
             block_hash,
             bridge_side,
             user_op_log,
             block_timestamp,
             witnessed_timestamp,
+            uid: EthHash::zero(),
             previous_states: vec![],
             origin_network_id: origin_network_id.to_vec(),
             state: UserOpState::try_from_log(bridge_side, tx_hash, log)?,
-        })
+        };
+
+        let uid = op.uid()?;
+        op.uid = uid;
+
+        Ok(op)
     }
 }
 

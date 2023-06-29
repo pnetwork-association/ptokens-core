@@ -2,6 +2,7 @@ use std::result::Result;
 
 use clap::Parser;
 use lib::{init_logger, SentinelConfig, SentinelError};
+use serde_json::json;
 
 use crate::{
     cli::{
@@ -35,7 +36,7 @@ pub async fn handle_cli() -> Result<String, SentinelError> {
     let h_ws_client = config.host().endpoints().get_first_ws_client().await?;
     let n_ws_client = config.native().endpoints().get_first_ws_client().await?;
 
-    match cli_args.sub_commands {
+    let r = match cli_args.sub_commands {
         SubCommands::GetUserOps => get_user_ops(&config),
         SubCommands::GetCoreState => get_core_state(&config),
         SubCommands::Init(ref args) => init(&config, args).await,
@@ -49,5 +50,7 @@ pub async fn handle_cli() -> Result<String, SentinelError> {
         SubCommands::GetHostLatestBlockNum => get_host_latest_block_num(&h_ws_client).await,
         SubCommands::GetNativeSubMat(ref args) => get_native_sub_mat(&n_ws_client, args).await,
         SubCommands::GetNativeLatestBlockNum => get_native_latest_block_num(&n_ws_client).await,
-    }
+    };
+
+    r.map_err(|e| SentinelError::Json(json!({"jsonrpc": "2.0", "error": e.to_string()})))
 }

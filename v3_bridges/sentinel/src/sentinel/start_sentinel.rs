@@ -118,9 +118,6 @@ pub async fn start_sentinel(
             "result": "sigint caught successfully",
         })
         .to_string()),
-        Err(e) => {
-            debug!("try_join error: {e}");
-            Err(SentinelError::Json(json!({"jsonrpc": "2.0", "error": e.to_string()})))
-        },
+        Err(e) => Err(e),
     }
 }
