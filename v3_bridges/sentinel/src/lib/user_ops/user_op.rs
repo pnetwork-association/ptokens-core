@@ -94,23 +94,31 @@ impl UserOp {
 }
 
 impl UserOp {
-    pub fn update_state(&mut self, other: Self) -> Result<(), UserOpError> {
-        debug!("updating user op state from {} to {}", self.state(), other.state());
+    pub fn maybe_update_state(&mut self, other: Self) -> Result<(), UserOpError> {
+        let self_state = self.state();
+        let other_state = other.state();
+
         if self.uid()? != other.uid()? {
-            Err(UserOpError::UidMismatch {
+            return Err(UserOpError::UidMismatch {
                 a: self.uid()?,
                 b: other.uid()?,
-            })
-        } else if self.state() >= other.state() {
-            Err(UserOpError::CannotUpdate {
-                from: self.state(),
-                to: other.state(),
-            })
+            });
+        };
+
+        if self_state >= other_state {
+            if !self.previous_states.contains(&other_state) {
+                info!("previous state ({other_state}) not seen before, saving it but not updating self");
+                self.previous_states.push(other_state);
+            } else {
+                info!("previous state ({other_state}) seen before, doing nothing");
+            }
         } else {
-            self.previous_states.push(self.state());
-            self.state = other.state();
-            Ok(())
-        }
+            info!("state more advanced, updating self from {self_state} to {other_state}");
+            self.previous_states.push(self_state);
+            self.state = other_state;
+        };
+
+        Ok(())
     }
 
     pub fn state(&self) -> UserOpState {

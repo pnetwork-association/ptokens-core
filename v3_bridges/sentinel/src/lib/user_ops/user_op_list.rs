@@ -13,7 +13,7 @@ use crate::{
     SentinelError,
 };
 
-#[derive(Clone, Debug, Default, Eq, Serialize, Deserialize, Constructor)]
+#[derive(Clone, Copy, Debug, Default, Eq, Serialize, Deserialize, Constructor)]
 pub struct UserOpListEntry {
     uid: EthHash,
     timestamp: u64,
@@ -23,6 +23,11 @@ pub struct UserOpListEntry {
 impl UserOpListEntry {
     fn uid(&self) -> EthHash {
         self.uid
+    }
+
+    fn set_flag(mut self, flag: UserOpFlag) {
+        debug!("setting flag in user op list entry from {} to {flag}", self.flag);
+        self.flag = flag;
     }
 }
 
@@ -92,10 +97,22 @@ impl UserOpList {
     fn get(&self, uid: &EthHash) -> Option<UserOpListEntry> {
         for entry in self.iter() {
             if &entry.uid == uid {
-                return Some(entry.clone());
+                return Some(*entry);
             }
         }
         None
+    }
+
+    fn upsert(&mut self, entry: UserOpListEntry) -> Result<(), UserOpError> {
+        if self.includes(&entry.uid()) {
+            debug!("updating entry in `UserOpList`: {entry}");
+            let idx = self.iter().position(|e| e == &entry).unwrap();
+            self[idx] = entry;
+        } else {
+            debug!("adding entry to `UserOpList`: {entry}");
+            self.push(entry);
+        };
+        Ok(())
     }
 
     fn handle_is_not_in_list<D: DatabaseInterface>(
@@ -120,26 +137,22 @@ impl UserOpList {
     fn handle_is_in_list<D: DatabaseInterface>(
         db_utils: &SentinelDbUtils<D>,
         op: UserOp,
-        _list: Self,
-        list_entry_from_db: UserOpListEntry,
+        mut list: Self,
+        list_entry: UserOpListEntry,
     ) -> Result<(), UserOpError> {
         debug!("user op found in db");
-        let user_op_state = op.state();
-        let db_user_op_state: UserOpState = list_entry_from_db.flag.into();
+        let mut op_from_db = UserOp::get_from_db(db_utils, &op.key()?)?;
 
-        match (db_user_op_state, user_op_state) {
-            (a, b) if a >= b => {
-                warn!("user op already in db in same or more advanced state - doing nothing");
-                Ok(())
-            },
-            _ => {
-                debug!("updating user op in db to {op}");
-                let mut op_from_db = UserOp::get_from_db(db_utils, &op.key()?)?;
-                op_from_db.update_state(op)?;
-                op_from_db.update_in_db(db_utils)?;
-                Ok(())
-            },
-        }
+        op_from_db.maybe_update_state(op)?;
+        op_from_db.update_in_db(db_utils)?;
+
+        // NOTE: We can safely call this with no checks since the above state will only have
+        // changed if it's more advanced.
+        list_entry.set_flag(op_from_db.to_flag());
+        list.upsert(list_entry)?;
+        list.put_in_db(db_utils)?;
+
+        Ok(())
     }
 
     fn process_op<D: DatabaseInterface>(
@@ -147,6 +160,7 @@ impl UserOpList {
         op: UserOp,
     ) -> Result<Option<UserOp>, UserOpError> {
         let list = Self::get_from_db(db_utils, &USER_OP_LIST).unwrap_or_default();
+
         if let Some(entry) = list.get(&op.uid()?) {
             Self::handle_is_in_list(db_utils, op, list, entry)?;
             Ok(None)
