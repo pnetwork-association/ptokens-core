@@ -1,15 +1,16 @@
 use common::{BridgeSide, CoreType, DatabaseInterface};
-use common_eth::{convert_hex_to_eth_address, init_v3_host_core, init_v3_native_core, VaultUsingCores};
+use common_eth::{init_v3_host_core, init_v3_native_core, VaultUsingCores};
 use common_rocksdb_database::get_db_at_path;
+use ethereum_types::Address as EthAddress;
 use lib::{get_latest_block_num, get_sub_mat, ConfigT, SentinelConfig, SentinelError};
 use serde_json::json;
 
 #[derive(Debug, Args)]
 pub struct InitArgs {
-    /// The host side gas price to use when creating transactions (Unit: wei).
+    /// The host side gas price to use when creating transactions (unit: wei).
     pub host_gas_price: u64,
 
-    /// The native side gas price to use when creating transactions (Unit: wei).
+    /// The native side gas price to use when creating transactions (unit: wei).
     pub native_gas_price: u64,
 
     /// Number of native side confirmations before creating transactions.
@@ -17,10 +18,6 @@ pub struct InitArgs {
 
     /// Number of host side confirmations before creating transactions.
     pub host_confs: u64,
-
-    /// The address of the vault contract.
-    pub vault_address: String,
-    // FIXME Rm!
 }
 
 async fn init_native<D: DatabaseInterface>(
@@ -42,7 +39,7 @@ async fn init_native<D: DatabaseInterface>(
         &config.native().get_eth_chain_id(),
         args.native_gas_price,
         args.native_confs,
-        &convert_hex_to_eth_address(&args.vault_address)?,
+        &EthAddress::zero(), // NOTE: Vaults are not used in v3 sentinels
         &VaultUsingCores::from_core_type(&config.core().core_type)?,
         config.native().is_validating(),
     )?;
