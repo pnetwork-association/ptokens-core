@@ -13,31 +13,45 @@ use super::Side;
 pub struct ResetCliArgs {
     /// Which side of the bridge to reset
     #[arg(value_enum)]
-    pub side: Side,
+    side: Side,
 
-    /// Optional path to block. If omitted it will reset using the latest block instead.
-    #[arg(long, short)]
-    pub path: Option<String>,
+    /// If no arguement provided, it will reset to the latest block
+    #[command(flatten)]
+    arg_group: ArgGroup,
 
-    /// Optional number of confirmations. If omitted it will use the previous value instead.
+    /// Optional number of confirmations. If omitted it will use the previous value instead
     #[arg(long, short)]
-    pub confs: Option<u64>,
+    confs: Option<u64>,
+}
+
+#[derive(Debug, Args)]
+#[group(required = true, multiple = false)]
+struct ArgGroup {
+    /// Path to block to reset to
+    #[arg(long, short)]
+    path: Option<String>,
+
+    /// Block number to reset to
+    #[arg(long, short)]
+    block_num: Option<u64>,
+
+    /// Use the latest block to reset to
+    #[arg(long, short)]
+    latest: Option<bool>,
 }
 
 #[derive(Clone, Debug)]
 struct ResetArgs {
     side: BridgeSide,
     confs: Option<u64>,
+    block_num: Option<u64>,
     block: Option<EthSubmissionMaterial>,
 }
 
 impl ResetArgs {
     fn from_cli_args(cli_args: &ResetCliArgs) -> Result<Self, SentinelError> {
-        let side = match cli_args.side {
-            Side::Host => BridgeSide::Host,
-            Side::Native => BridgeSide::Native,
-        };
-        let block = if let Some(ref p) = cli_args.path {
+        let side = cli_args.side.into();
+        let block = if let Some(ref p) = cli_args.arg_group.path {
             Some(Self::get_block_from_path(p)?)
         } else {
             None
@@ -46,8 +60,9 @@ impl ResetArgs {
             side,
             block,
             confs: cli_args.confs,
+            block_num: cli_args.arg_group.block_num,
         };
-        debug!("Reset cli args: {r:?}");
+        debug!("reset cli args: {r:?}");
         Ok(r)
     }
 
@@ -62,15 +77,16 @@ impl ResetArgs {
 }
 
 pub async fn reset_chain_cli(config: &SentinelConfig, cli_args: &ResetCliArgs) -> Result<String, SentinelError> {
-    info!("Resetting chain...");
+    info!("resetting chain...");
     if !config.core().db_exists() {
         return Err(SentinelError::Custom(format!(
-            "Cannot find db @ path: '{}'",
+            "cannot find db @ path: '{}'",
             config.core().db_path
         )));
     };
     let db = common_rocksdb_database::get_db_at_path(&config.get_db_path())?;
     let args = ResetArgs::from_cli_args(cli_args)?;
+    let side = args.side;
     let native_db_utils = EthDbUtils::new(&db);
     let host_db_utils = EvmDbUtils::new(&db);
 
@@ -84,14 +100,19 @@ pub async fn reset_chain_cli(config: &SentinelConfig, cli_args: &ResetCliArgs) -
     } else {
         config.host().endpoints().sleep_time()
     };
-    let sub_mat = match args.block {
-        Some(b) => b,
-        None => {
-            let n = get_latest_block_num(&ws_client, sleep_time, args.side).await?;
-            get_sub_mat(&ws_client, n, sleep_time, args.side).await?
-        },
+
+    let sub_mat = if let Some(b) = args.block {
+        debug!("resetting {side} using block from path");
+        b
+    } else if let Some(n) = args.block_num {
+        debug!("resetting {side} with supplied block num {n}");
+        get_sub_mat(&ws_client, n, sleep_time, args.side).await?
+    } else {
+        let l = get_latest_block_num(&ws_client, sleep_time, args.side).await?;
+        debug!("resetting {side} with latest block num {l}");
+        get_sub_mat(&ws_client, l, sleep_time, args.side).await?
     };
-    let block_num = sub_mat.get_block_number()?;
+
     let confs = match args.confs {
         Some(c) => c,
         None => {
@@ -103,6 +124,8 @@ pub async fn reset_chain_cli(config: &SentinelConfig, cli_args: &ResetCliArgs) -
         },
     };
 
+    let reset_block_num = sub_mat.get_block_number()?.as_u64();
+
     db.start_transaction()?;
     reset_eth_chain(
         EthState::init(&db).add_eth_submission_material(sub_mat)?,
@@ -111,13 +134,11 @@ pub async fn reset_chain_cli(config: &SentinelConfig, cli_args: &ResetCliArgs) -
     )?;
     db.end_transaction()?;
 
-    Ok(json!({
+    let r = json!({
         "jsonrpc": "2.0",
-        "result": {
-            "side": args.side,
-            "chain_reset_success": true,
-            "latest_block_num": block_num.as_u64(),
-        }
+        "result": { "side": side, "chain_reset_success": true, "reset_block_num": reset_block_num },
     })
-    .to_string())
+    .to_string();
+
+    Ok(r)
 }
