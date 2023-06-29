@@ -80,7 +80,7 @@ pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliAr
         use_db_tx,
         args.dry_run,
         args.side,
-        &network_id,
+        network_id,
     )?;
     let latest_block_num = args.sub_mat.get_block_number()?;
     let r = json!({

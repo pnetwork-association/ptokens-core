@@ -6,6 +6,7 @@ use crate::cli::{
     NonceCliArgs,
     ProcessBlockCliArgs,
     ResetCliArgs,
+    SetGasPriceCliArgs,
     StartSentinelArgs,
 };
 
@@ -49,4 +50,7 @@ pub enum SubCommands {
 
     /// Get user ops
     GetUserOps,
+
+    /// Set gas price
+    SetGasPrice(SetGasPriceCliArgs),
 }

@@ -7,8 +7,12 @@ mod get_user_ops;
 mod init;
 mod process_block;
 mod reset_chain;
+mod set_gas_price;
+mod side;
 mod start_sentinel_args;
 mod write_file;
+
+pub(super) use side::Side;
 
 pub(crate) use self::{
     cli_args::{CliArgs, SubCommands},
@@ -20,6 +24,7 @@ pub(crate) use self::{
     init::init,
     process_block::{process_block, ProcessBlockCliArgs},
     reset_chain::{reset_chain_cli, ResetCliArgs},
+    set_gas_price::{set_gas_price, SetGasPriceCliArgs},
     start_sentinel_args::StartSentinelArgs,
     write_file::write_file,
 };

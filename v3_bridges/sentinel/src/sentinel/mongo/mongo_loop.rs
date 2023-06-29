@@ -83,10 +83,10 @@ where
 async fn handle_message(msg: MongoMessages, collection: &Collection<HeartbeatsJson>) -> Result<(), SentinelError> {
     match msg {
         MongoMessages::PutHeartbeats(msg) => {
-            update_heartbeat(&msg, &collection).await?;
+            update_heartbeat(&msg, collection).await?;
         },
         MongoMessages::GetHeartbeats(responder) => {
-            let r = get_heartbeats(&collection).await;
+            let r = get_heartbeats(collection).await;
             let _ = responder.send(r);
         },
     }

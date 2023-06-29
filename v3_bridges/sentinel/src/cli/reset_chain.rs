@@ -1,11 +1,13 @@
 use std::{fs::read_to_string, path::Path, str::FromStr};
 
-use clap::{Args, ValueEnum};
+use clap::Args;
 use common::{BridgeSide, DatabaseInterface};
 use common_eth::{EthDbUtils, EthDbUtilsExt, EthState, EthSubmissionMaterial, EvmDbUtils};
 use common_eth_debug::reset_eth_chain;
 use lib::{get_latest_block_num, get_sub_mat, SentinelConfig, SentinelError};
 use serde_json::json;
+
+use super::Side;
 
 #[derive(Debug, Args)]
 pub struct ResetCliArgs {
@@ -20,14 +22,6 @@ pub struct ResetCliArgs {
     /// Optional number of confirmations. If omitted it will use the previous value instead.
     #[arg(long, short)]
     pub confs: Option<u64>,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
-pub enum Side {
-    /// native
-    Native,
-    /// host
-    Host,
 }
 
 #[derive(Clone, Debug)]
