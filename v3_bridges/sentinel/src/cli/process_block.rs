@@ -24,14 +24,18 @@ use crate::sentinel::process_single;
 #[derive(Clone, Debug, Default, Args)]
 pub struct ProcessBlockCliArgs {
     /// Which side of the bridge to process a block for
-    pub side: String,
+    side: String,
 
     #[command(flatten)]
     arg_group: ArgGroup,
 
     /// Dry run (nothing is commited to the databases)
     #[arg(long, short)]
-    pub dry_run: Option<bool>,
+    dry_run: Option<bool>,
+
+    /// Dry run (nothing is commited to the databases)
+    #[arg(long, short)]
+    reprocess: Option<bool>,
 }
 
 #[derive(Default, Clone, Debug, Args)]
@@ -48,10 +52,11 @@ struct ArgGroup {
 
 #[derive(Clone, Debug, Default, Constructor)]
 pub struct ProcessBlockArgs {
-    pub dry_run: bool,
-    pub side: BridgeSide,
-    pub block_num: Option<u64>,
-    pub sub_mat: Option<EthSubmissionMaterial>,
+    dry_run: bool,
+    reprocess: bool,
+    side: BridgeSide,
+    block_num: Option<u64>,
+    sub_mat: Option<EthSubmissionMaterial>,
 }
 
 impl TryFrom<&ProcessBlockCliArgs> for ProcessBlockArgs {
@@ -77,12 +82,13 @@ impl TryFrom<&ProcessBlockCliArgs> for ProcessBlockArgs {
         };
 
         let dry_run = matches!(a.dry_run, Some(true));
+        let reprocess = matches!(a.reprocess, Some(true));
 
         if !dry_run {
             warn!("dry run is set to false - changes will be committed to the db!");
         };
 
-        Ok(Self::new(dry_run, side, a.arg_group.block_num, sub_mat))
+        Ok(Self::new(dry_run, reprocess, side, a.arg_group.block_num, sub_mat))
     }
 }
 
@@ -135,13 +141,14 @@ pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliAr
         dry_run,
         args.side,
         network_id,
+        args.reprocess,
     )?;
 
     let user_ops_requiring_cancellation_txs = if user_ops.is_empty() {
-        info!("no user ops to process");
+        warn!("no user ops to process");
         UserOps::default()
     } else if dry_run {
-        info!("dry running therefore skipping processing user ops");
+        warn!("dry running therefore skipping processing user ops");
         UserOps::default()
     } else {
         info!("processing user ops");

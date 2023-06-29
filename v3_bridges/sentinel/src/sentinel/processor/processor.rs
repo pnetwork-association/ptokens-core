@@ -16,6 +16,7 @@ pub fn process_single<D: DatabaseInterface>(
     dry_run: bool,
     side: BridgeSide,
     network_id: &Bytes4,
+    reprocess: bool,
 ) -> Result<UserOps, SentinelError> {
     if use_db_tx {
         debug!("Starting db tx in {side} processor!");
@@ -25,7 +26,9 @@ pub fn process_single<D: DatabaseInterface>(
     let n = sub_mat.get_block_number()?;
 
     if dry_run {
-        warn!("Dry running so skipping block chain appending step!");
+        warn!("dry running so skipping block chain appending step");
+    } else if reprocess {
+        warn!("reprocessing so skipping block chain appending step");
     } else if side.is_native() {
         append_to_blockchain(&NativeDbUtils::new(db), sub_mat, is_validating)?;
     } else {
@@ -53,6 +56,7 @@ pub fn process_single<D: DatabaseInterface>(
     Ok(r)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn process_batch<D: DatabaseInterface>(
     db: &D,
     router: &EthAddress,
@@ -61,6 +65,7 @@ pub fn process_batch<D: DatabaseInterface>(
     is_validating: bool,
     side: BridgeSide,
     network_id: &Bytes4,
+    reprocess: bool,
 ) -> Result<Output, SentinelError> {
     info!("Processing {side} batch of submission material...");
     db.start_transaction()?;
@@ -82,6 +87,7 @@ pub fn process_batch<D: DatabaseInterface>(
                     dry_run,
                     side,
                     network_id,
+                    reprocess,
                 )
             })
             .collect::<Result<Vec<UserOps>, SentinelError>>()?,
