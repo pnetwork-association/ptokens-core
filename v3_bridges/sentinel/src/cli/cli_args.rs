@@ -5,6 +5,7 @@ use crate::cli::{
     init::InitArgs,
     NonceCliArgs,
     ProcessBlockCliArgs,
+    RemoveUserOpCliArgs,
     ResetCliArgs,
     SetGasPriceCliArgs,
     StartSentinelArgs,
@@ -53,4 +54,7 @@ pub enum SubCommands {
 
     /// Set gas price
     SetGasPrice(SetGasPriceCliArgs),
+
+    /// Remove a user operation from the db
+    RemoveUserOp(RemoveUserOpCliArgs),
 }

@@ -84,7 +84,6 @@ impl DbUtilsT for UserOpList {
 }
 
 impl UserOpList {
-    #[allow(unused)]
     fn includes(&self, uid: &EthHash) -> bool {
         for entry in self.iter() {
             if &entry.uid == uid {
@@ -106,13 +105,36 @@ impl UserOpList {
     fn upsert(&mut self, entry: UserOpListEntry) -> Result<(), UserOpError> {
         if self.includes(&entry.uid()) {
             debug!("updating entry in `UserOpList`: {entry}");
-            let idx = self.iter().position(|e| e == &entry).unwrap();
+            let idx = self.iter().position(|e| e == &entry).expect("this should exist");
             self[idx] = entry;
         } else {
             debug!("adding entry to `UserOpList`: {entry}");
             self.push(entry);
         };
         Ok(())
+    }
+
+    pub fn remove_entry<D: DatabaseInterface>(
+        &mut self,
+        db_utils: &SentinelDbUtils<D>,
+        uid: &EthHash,
+    ) -> Result<bool, UserOpError> {
+        if !self.includes(uid) {
+            debug!("no entry with uid {uid} doing nothing");
+            Ok(false)
+        } else {
+            let idx = self
+                .iter()
+                .position(|entry| &entry.uid == uid)
+                .expect("this should exist");
+            let entry = self[idx];
+            let op = UserOp::get_from_db(db_utils, &entry.uid.into())?;
+            debug!("removing entry from list {entry} @ idx {idx}");
+            op.delete(db_utils)?;
+            self.remove(idx);
+            self.update_in_db(db_utils)?;
+            Ok(true)
+        }
     }
 
     fn handle_is_not_in_list<D: DatabaseInterface>(

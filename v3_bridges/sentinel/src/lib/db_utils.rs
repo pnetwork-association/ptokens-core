@@ -39,7 +39,6 @@ pub trait DbUtilsT {
     where
         Self: Sized + Serialize,
     {
-        // FIXME
         db_utils.put(self, &self.key()?)
     }
 
@@ -48,6 +47,13 @@ pub trait DbUtilsT {
         Self: Sized,
     {
         db_utils.get_sensitive(key, Self::sensitivity())
+    }
+
+    fn delete<D: DatabaseInterface>(&self, db_utils: &SentinelDbUtils<D>) -> Result<(), SentinelError>
+    where
+        Self: Sized,
+    {
+        Ok(db_utils.db().delete(self.key()?.to_vec())?)
     }
 }
 
@@ -68,6 +74,12 @@ impl From<[u8; 32]> for DbKey {
 
 impl From<EthHash> for DbKey {
     fn from(h: EthHash) -> Self {
+        Self(h.0)
+    }
+}
+
+impl From<&EthHash> for DbKey {
+    fn from(h: &EthHash) -> Self {
         Self(h.0)
     }
 }

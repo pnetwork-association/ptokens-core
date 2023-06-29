@@ -6,6 +6,7 @@ mod get_sub_mat;
 mod get_user_ops;
 mod init;
 mod process_block;
+mod remove_user_op;
 mod reset_chain;
 mod set_gas_price;
 mod side;
@@ -23,6 +24,7 @@ pub(crate) use self::{
     get_user_ops::get_user_ops,
     init::init,
     process_block::{process_block, ProcessBlockCliArgs},
+    remove_user_op::{remove_user_op, RemoveUserOpCliArgs},
     reset_chain::{reset_chain_cli, ResetCliArgs},
     set_gas_price::{set_gas_price, SetGasPriceCliArgs},
     start_sentinel_args::StartSentinelArgs,
