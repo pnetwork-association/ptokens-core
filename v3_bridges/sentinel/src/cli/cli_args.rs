@@ -52,6 +52,9 @@ pub enum SubCommands {
     /// Get user ops
     GetUserOps,
 
+    /// Get user ops list
+    GetUserOpList,
+
     /// Set gas price
     SetGasPrice(SetGasPriceCliArgs),
 
