@@ -94,7 +94,7 @@ impl UserOpList {
         false
     }
 
-    fn get(&self, uid: &EthHash) -> Option<UserOpListEntry> {
+    fn get_entry(&self, uid: &EthHash) -> Option<UserOpListEntry> {
         for entry in self.iter() {
             if &entry.uid == uid {
                 return Some(*entry);
@@ -159,9 +159,9 @@ impl UserOpList {
         db_utils: &SentinelDbUtils<D>,
         op: UserOp,
     ) -> Result<Option<UserOp>, UserOpError> {
-        let list = Self::get_from_db(db_utils, &USER_OP_LIST).unwrap_or_default();
+        let list = Self::get(db_utils);
 
-        if let Some(entry) = list.get(&op.uid()?) {
+        if let Some(entry) = list.get_entry(&op.uid()?) {
             Self::handle_is_in_list(db_utils, op, list, entry)?;
             Ok(None)
         } else {
@@ -185,8 +185,12 @@ impl UserOpList {
         Ok(UserOps::new(ops_to_cancel))
     }
 
+    pub fn get<D: DatabaseInterface>(db_utils: &SentinelDbUtils<D>) -> Self {
+        Self::get_from_db(db_utils, &USER_OP_LIST).unwrap_or_default()
+    }
+
     pub fn user_ops<D: DatabaseInterface>(db_utils: &SentinelDbUtils<D>) -> Result<UserOps, SentinelError> {
-        let list = Self::get_from_db(db_utils, &USER_OP_LIST).unwrap_or_default();
+        let list = Self::get(db_utils);
         let ops = list
             .iter()
             .map(|entry| UserOp::get_from_db(db_utils, &entry.uid().into()))

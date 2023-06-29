@@ -41,6 +41,10 @@ async fn handle_message<D: DatabaseInterface>(
             let ops = UserOpList::user_ops(&SentinelDbUtils::new(&*db))?;
             let _ = responder.send(Ok(ops));
         },
+        CoreMessages::GetUserOpList(responder) => {
+            let l = UserOpList::get(&SentinelDbUtils::new(&*db));
+            let _ = responder.send(Ok(l));
+        },
         CoreMessages::GetAddress { side, responder } => {
             let a = match side {
                 BridgeSide::Native => HostDbUtils::new(&*db).get_public_eth_address_from_db()?,

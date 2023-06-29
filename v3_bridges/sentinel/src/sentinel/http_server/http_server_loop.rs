@@ -36,6 +36,15 @@ async fn get_user_ops_from_core(tx: MpscTx<CoreMessages>) -> Result<impl warp::R
         .map(|core_state| warp::reply::json(&core_state))
 }
 
+async fn get_user_ops_list_from_core(tx: MpscTx<CoreMessages>) -> Result<impl warp::Reply, Rejection> {
+    let (msg, rx) = CoreMessages::get_user_ops_list_msg();
+    tx.send(msg).await.map_err(convert_error_to_rejection)?;
+    rx.await
+        .map_err(convert_error_to_rejection)?
+        .map_err(convert_error_to_rejection)
+        .map(|core_state| warp::reply::json(&core_state))
+}
+
 async fn get_heartbeat_from_mongo(tx: MpscTx<MongoMessages>) -> Result<impl warp::Reply, Rejection> {
     let (msg, rx) = MongoMessages::get_heartbeats_msg();
     tx.send(msg).await.map_err(convert_error_to_rejection)?;
@@ -87,6 +96,7 @@ async fn main_loop(
     let core_tx_1 = core_tx.clone();
     let core_tx_2 = core_tx.clone();
     let core_tx_3 = core_tx.clone();
+    let core_tx_4 = core_tx.clone();
     let mongo_tx_1 = mongo_tx.clone();
     let core_type = config.core().core_type;
 
@@ -147,7 +157,13 @@ async fn main_loop(
         async move { get_user_ops_from_core(tx).await }
     });
 
-    let routes = warp::get().and(ping.or(state).or(bpm).or(sync).or(ops));
+    // GET /list
+    let list = warp::path("list").and_then(move || {
+        let tx = core_tx_4.clone();
+        async move { get_user_ops_list_from_core(tx).await }
+    });
+
+    let routes = warp::get().and(ping.or(state).or(bpm).or(sync).or(ops).or(list));
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
     Ok(())
 }
