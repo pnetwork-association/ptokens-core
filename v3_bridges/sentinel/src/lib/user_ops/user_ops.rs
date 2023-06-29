@@ -19,32 +19,6 @@ impl UserOps {
         self.0 = [a, b].concat();
     }
 
-    pub fn remove_matches(self, other: Self) -> (Self, Self) {
-        let mut self_user_ops: Vec<UserOp> = vec![];
-        let mut other_user_ops = other;
-
-        for self_op in self.iter() {
-            let len_before = other_user_ops.len();
-            other_user_ops = Self::new(
-                other_user_ops
-                    .iter()
-                    .cloned()
-                    .filter(|other_op| self_op != other_op)
-                    .collect::<Vec<_>>(),
-            );
-            let len_after = other_user_ops.len();
-
-            // TODO Check incase > 1 got filtered out? Or should we not care?
-            if len_before != len_after {
-                debug!("Found a matching user op:\n{}", self_op);
-            } else {
-                self_user_ops.push(self_op.clone());
-            }
-        }
-
-        (Self::new(self_user_ops), other_user_ops)
-    }
-
     pub fn empty() -> Self {
         Self::default()
     }
