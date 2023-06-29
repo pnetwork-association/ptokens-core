@@ -1,6 +1,6 @@
 use std::{fs::read_to_string, path::Path, str::FromStr};
 
-use clap::Args;
+use clap::{Args, ValueEnum};
 use common::{BridgeSide, DatabaseInterface};
 use common_eth::{EthDbUtils, EthDbUtilsExt, EthState, EthSubmissionMaterial, EvmDbUtils};
 use common_eth_debug::reset_eth_chain;
@@ -10,7 +10,8 @@ use serde_json::json;
 #[derive(Debug, Args)]
 pub struct ResetCliArgs {
     /// Which side of the bridge to reset
-    pub side: String,
+    #[arg(value_enum)]
+    pub side: Side,
 
     /// Optional path to block. If omitted it will reset using the latest block instead.
     #[arg(long, short)]
@@ -19,6 +20,14 @@ pub struct ResetCliArgs {
     /// Optional number of confirmations. If omitted it will use the previous value instead.
     #[arg(long, short)]
     pub confs: Option<u64>,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+pub enum Side {
+    /// native
+    Native,
+    /// host
+    Host,
 }
 
 #[derive(Clone, Debug)]
@@ -30,7 +39,10 @@ struct ResetArgs {
 
 impl ResetArgs {
     fn from_cli_args(cli_args: &ResetCliArgs) -> Result<Self, SentinelError> {
-        let side = BridgeSide::from_str(&cli_args.side)?;
+        let side = match cli_args.side {
+            Side::Host => BridgeSide::Host,
+            Side::Native => BridgeSide::Native,
+        };
         let block = if let Some(ref p) = cli_args.path {
             Some(Self::get_block_from_path(p)?)
         } else {
