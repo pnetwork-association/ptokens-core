@@ -1,3 +1,5 @@
+use std::fmt;
+
 use common::{BridgeSide, Byte};
 use derive_more::{Constructor, Deref};
 use ethereum_types::H256 as EthHash;
@@ -7,6 +9,23 @@ use super::{UserOp, UserOpState};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default, PartialOrd, Deref, Constructor, Serialize, Deserialize)]
 pub struct UserOpFlag(Byte);
+
+impl fmt::Display for UserOpFlag {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = if self.is_witnessed() {
+            "witnessed"
+        } else if self.is_enqueued() {
+            "enqueued"
+        } else if self.is_executed() {
+            "executed"
+        } else if self.is_cancelled() {
+            "cancelled"
+        } else {
+            "not set"
+        };
+        write!(f, "{s}")
+    }
+}
 
 impl From<&UserOp> for UserOpFlag {
     fn from(op: &UserOp) -> Self {
