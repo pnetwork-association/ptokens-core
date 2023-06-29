@@ -11,7 +11,6 @@ const MAX_NUM_ROTATIONS: usize = 10; // TODO Make this configurable?
 
 #[derive(Debug, Default, Clone)]
 pub struct Endpoints {
-    is_native: bool,
     sleep_time: u64,
     side: BridgeSide,
     endpoints: Vec<String>,
@@ -20,10 +19,9 @@ pub struct Endpoints {
 }
 
 impl Endpoints {
-    pub fn new(is_native: bool, sleep_time: u64, side: BridgeSide, endpoints: Vec<String>) -> Self {
+    pub fn new(sleep_time: u64, side: BridgeSide, endpoints: Vec<String>) -> Self {
         Self {
             side,
-            is_native,
             endpoints,
             sleep_time,
             ..Default::default()

@@ -35,7 +35,7 @@ impl HostConfig {
             sleep_duration,
             validate: toml.validate,
             router: convert_hex_to_eth_address(&toml.router)?,
-            endpoints: Endpoints::new(false, sleep_duration, BridgeSide::Host, toml.endpoints.clone()),
+            endpoints: Endpoints::new(sleep_duration, BridgeSide::Host, toml.endpoints.clone()),
             state_manager: convert_hex_to_eth_address(&toml.state_manager)?,
             eth_chain_id: match EthChainId::from_str(&toml.eth_chain_id) {
                 Ok(id) => id,
