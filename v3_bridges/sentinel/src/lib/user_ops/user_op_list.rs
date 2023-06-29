@@ -104,7 +104,7 @@ impl UserOpList {
 
     fn upsert(&mut self, entry: UserOpListEntry) -> Result<(), UserOpError> {
         if self.includes(&entry.uid()) {
-            debug!("updating entry in `UserOpList`: {entry}");
+            debug!("updating entry in `UserOpList` to : {entry}");
             let idx = self.iter().position(|e| e == &entry).expect("this should exist");
             self[idx] = entry;
         } else {
@@ -145,7 +145,7 @@ impl UserOpList {
         debug!("adding user op to db: {op}");
         list.push(UserOpListEntry::try_from(&op)?);
         op.put_in_db(db_utils)?;
-        list.put_in_db(db_utils)?;
+        list.update_in_db(db_utils)?;
         match op.state() {
             UserOpState::Enqueued(..) => {
                 // NOTE: We return this because it'll require a cancellation signature
@@ -172,7 +172,7 @@ impl UserOpList {
         // changed if it's more advanced.
         list_entry.set_flag(op_from_db.to_flag());
         list.upsert(list_entry)?;
-        list.put_in_db(db_utils)?;
+        list.update_in_db(db_utils)?;
 
         Ok(())
     }
