@@ -157,7 +157,7 @@ pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliAr
         };
         let ops = UserOpList::process_ops(&SentinelDbUtils::new(&db), user_ops.clone())?;
         if use_db_tx {
-            db.start_transaction()?
+            db.end_transaction()?
         };
         ops
     };
