@@ -112,7 +112,7 @@ impl EthSubmissionMaterial {
 
     pub fn add_block(mut self, block: EthBlock) -> Result<Self> {
         if self.block.is_none() {
-            info!("Adding block to ETH submission material...");
+            debug!("adding block to ETH submission material...");
             self.hash = Some(block.hash);
             self.block_number = Some(block.number);
             self.parent_hash = Some(block.parent_hash);
@@ -126,7 +126,7 @@ impl EthSubmissionMaterial {
 
     pub fn add_receipts(mut self, receipts: EthReceipts) -> Result<Self> {
         if self.receipts.is_empty() {
-            info!("[+] Adding receipts to ETH submission material!");
+            debug!("adding receipts to ETH submission material!");
             self.receipts = receipts;
             Ok(self)
         } else {
@@ -301,10 +301,10 @@ impl EthSubmissionMaterial {
 
     fn contains_log_from_addresses(&self, addresses: &[EthAddress]) -> bool {
         if addresses.is_empty() {
-            info!("NOT Checking ETH sub mat for logs from addresses because none passed in!");
+            debug!("nOT Checking ETH sub mat for logs from addresses because none passed in!");
             false
         } else {
-            info!("Checking ETH sub mat for logs from addresses: {addresses:?}...");
+            debug!("checking ETH sub mat for logs from addresses: {addresses:?}...");
             for receipt in self.receipts.iter() {
                 for log in receipt.logs.iter() {
                     let needle = log.address;
@@ -314,17 +314,17 @@ impl EthSubmissionMaterial {
                     }
                 }
             }
-            info!("Eth sub mat has NO logs from given addresses!");
+            debug!("eth sub mat has NO logs from given addresses!");
             false
         }
     }
 
     pub fn remove_receipts_if_no_logs_from_addresses(self, addresses: &[EthAddress]) -> Self {
         if self.contains_log_from_addresses(addresses) {
-            info!("NOT removing receipts from ETH sub mat because they contain pertinent logs!");
+            debug!("NOT removing receipts from ETH sub mat because they contain pertinent logs!");
             self
         } else {
-            info!("REMOVING receipts from ETH sub mat because they do NOT contain pertinent logs!");
+            debug!("REMOVING receipts from ETH sub mat because they do NOT contain pertinent logs!");
             let mut mutable_self = self;
             mutable_self.receipts = EthReceipts::new(vec![]);
             mutable_self
