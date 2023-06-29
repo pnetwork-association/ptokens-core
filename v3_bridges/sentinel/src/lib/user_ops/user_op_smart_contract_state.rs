@@ -71,7 +71,7 @@ impl UserOpSmartContractState {
 
     pub fn encode_rpc_call_data(user_op: &UserOp) -> Result<Bytes, SentinelError> {
         let encoded = encode_fxn_call(GET_USER_OP_STATE_ABI, "operationStatusOf", &[
-            user_op.encode_as_eth_abi_token()
+            user_op.encode_as_eth_abi_token()?
         ])?;
         Ok(encoded)
     }
