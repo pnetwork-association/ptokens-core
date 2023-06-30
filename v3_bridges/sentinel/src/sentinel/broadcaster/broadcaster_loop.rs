@@ -1,7 +1,7 @@
 use std::result::Result;
 
 use common::BridgeSide;
-use ethereum_types::Address as EthAddress;
+use ethereum_types::{Address as EthAddress, H256 as EthHash};
 use lib::{
     BroadcasterMessages,
     ConfigT,
@@ -22,10 +22,9 @@ async fn cancel_user_op(
     core_tx: MpscTx<CoreMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     state_manager: &EthAddress,
-) -> Result<(), SentinelError> {
+) -> Result<EthHash, SentinelError> {
     // TODO check we have enough balance to push
-    // TODO check the origin tx exists on the other chain
-    // TODO put back in core db upon error and continue broadcaster loop with warning messages
+    // TODO put back in core db upon error and continue broadcaster loop with warning messages?
 
     let side = op.destination_side();
 
@@ -33,7 +32,7 @@ async fn cancel_user_op(
     eth_rpc_tx.send(msg).await?;
     let user_op_smart_contract_state = rx.await??;
 
-    if user_op_smart_contract_state.is_cancellable() {
+    let tx_hash = if user_op_smart_contract_state.is_cancellable() {
         warn!("sending cancellation tx for user op: {op}");
         let (msg, rx) = CoreMessages::get_cancellation_signature_msg(op.clone(), nonce, gas_price, *state_manager);
         core_tx.send(msg).await?;
@@ -43,11 +42,12 @@ async fn cancel_user_op(
         eth_rpc_tx.send(msg).await?;
         let tx_hash = rx.await??;
         info!("tx hash: {tx_hash}");
+        tx_hash
+    } else {
+        EthHash::zero()
     };
 
-    // TODO if success, do nothing, if fail, put the op back in the core db for later cancellation
-    // (it'll have a check that this is fine to do)
-    Ok(())
+    Ok(tx_hash)
 }
 
 async fn cancel_user_ops(
@@ -58,7 +58,7 @@ async fn cancel_user_ops(
     ops: UserOps,
     core_tx: MpscTx<CoreMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
-) -> Result<UserOps, SentinelError> {
+) -> Result<(), SentinelError> {
     let (host_msg, host_rx) = EthRpcMessages::get_nonce_msg(BridgeSide::Host, *host_address);
     let (native_msg, native_rx) = EthRpcMessages::get_nonce_msg(BridgeSide::Native, *native_address);
     eth_rpc_tx.send(host_msg).await?;
@@ -73,12 +73,13 @@ async fn cancel_user_ops(
     let host_gas_price = host_rx.await??;
     let native_gas_price = native_rx.await??;
 
-    let mut unbroadcast_ops = vec![];
+    let err_msg = "error cancelling user op ";
 
     for op in ops.iter() {
-        match op.side() {
+        match op.destination_side() {
             BridgeSide::Native => {
-                let result = cancel_user_op(
+                let uid = op.uid()?;
+                match cancel_user_op(
                     op.clone(),
                     native_nonce,
                     native_gas_price,
@@ -86,16 +87,23 @@ async fn cancel_user_ops(
                     eth_rpc_tx.clone(),
                     native_state_manager,
                 )
-                .await;
-                if result.is_err() {
-                    unbroadcast_ops.push(op.clone())
-                } else {
-                    result.unwrap();
-                    native_nonce += 1;
+                .await
+                {
+                    Err(e) => {
+                        error!("{err_msg} {uid} {e}");
+                    },
+                    Ok(tx_hash) => {
+                        info!(
+                            "user op {uid} cancelled successfully @ tx {}",
+                            hex::encode(tx_hash.as_bytes())
+                        );
+                    },
                 }
+                native_nonce += 1;
             },
             BridgeSide::Host => {
-                let result = cancel_user_op(
+                let uid = op.uid()?;
+                match cancel_user_op(
                     op.clone(),
                     host_nonce,
                     host_gas_price,
@@ -103,18 +111,24 @@ async fn cancel_user_ops(
                     eth_rpc_tx.clone(),
                     host_state_manager,
                 )
-                .await;
-                if result.is_err() {
-                    unbroadcast_ops.push(op.clone())
-                } else {
-                    result.unwrap();
-                    host_nonce += 1;
+                .await
+                {
+                    Err(e) => {
+                        error!("{err_msg} {uid} {e}");
+                    },
+                    Ok(tx_hash) => {
+                        info!(
+                            "user op {uid} cancelled successfully @ tx {}",
+                            hex::encode(tx_hash.as_bytes())
+                        );
+                    },
                 }
+                host_nonce += 1;
             },
         }
     }
 
-    Ok(UserOps::new(unbroadcast_ops))
+    Ok(())
 }
 
 pub async fn broadcaster_loop(
@@ -152,8 +166,7 @@ pub async fn broadcaster_loop(
             tokio::select! {
                 r = rx.recv() => match r {
                     Some(BroadcasterMessages::CancelUserOps(ops)) => {
-                        // TODO check mongo for any that aren't broadcast yet?
-                        let unbroadcast_ops = cancel_user_ops(
+                        match cancel_user_ops(
                             &host_address,
                             &native_address,
                             &host_state_manager,
@@ -161,10 +174,14 @@ pub async fn broadcaster_loop(
                             ops,
                             core_tx.clone(),
                             eth_rpc_tx.clone()
-                        ).await?;
-                        if !unbroadcast_ops.is_empty() {
-                            // TODO save them into mongo?
-                        }
+                        ).await {
+                            Ok(_) => {
+                                info!("finished sending user op cancellation txs");
+                            }
+                            Err(e) => {
+                                error!("{e}");
+                            }
+                        };
                         continue 'broadcaster_loop
                     },
                     None => {
