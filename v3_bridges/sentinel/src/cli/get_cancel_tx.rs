@@ -14,7 +14,6 @@ use lib::{
     SentinelError,
     UserOp,
     UserOpSmartContractState,
-    USER_OP_CANCEL_TX_GAS_LIMIT,
 };
 use serde_json::json;
 
@@ -110,14 +109,6 @@ pub async fn get_cancel_tx(config: &SentinelConfig, args: &CancelTxArgs) -> Resu
                     p
                 };
 
-                let gas_limit = if let Some(l) = args.gas_limit {
-                    debug!("using passed in gas limit {l}");
-                    l
-                } else {
-                    debug!("using default gas limit {USER_OP_CANCEL_TX_GAS_LIMIT}");
-                    USER_OP_CANCEL_TX_GAS_LIMIT as usize
-                };
-
                 let state_manager = if side.is_native() {
                     config.native().state_manager()
                 } else {
@@ -134,6 +125,15 @@ pub async fn get_cancel_tx(config: &SentinelConfig, args: &CancelTxArgs) -> Resu
                         h_db_utils.get_eth_chain_id_from_db()?,
                         h_db_utils.get_eth_private_key_from_db()?,
                     )
+                };
+
+                let gas_limit = if let Some(l) = args.gas_limit {
+                    debug!("using passed in gas limit {l}");
+                    l
+                } else {
+                    let l = UserOp::cancellation_gas_limit(&chain_id);
+                    debug!("using gas limit {l}");
+                    l
                 };
 
                 let tx = op.cancel(nonce, gas_price, &state_manager, gas_limit, &pk, &chain_id)?;

@@ -2,7 +2,7 @@ use std::{result::Result, sync::Arc};
 
 use common::{BridgeSide, DatabaseInterface};
 use common_eth::{EthDbUtilsExt, HostDbUtils, NativeDbUtils};
-use lib::{CoreMessages, CoreState, SentinelDbUtils, SentinelError, UserOpList, USER_OP_CANCEL_TX_GAS_LIMIT};
+use lib::{CoreMessages, CoreState, SentinelDbUtils, SentinelError, UserOp, UserOpList};
 use tokio::sync::{mpsc::Receiver as MpscRx, Mutex};
 
 async fn handle_message<D: DatabaseInterface>(
@@ -65,14 +65,8 @@ async fn handle_message<D: DatabaseInterface>(
                 BridgeSide::Host => (h.get_eth_chain_id_from_db()?, h.get_eth_private_key_from_db()?),
                 BridgeSide::Native => (n.get_eth_chain_id_from_db()?, n.get_eth_private_key_from_db()?),
             };
-            let tx = op.cancel(
-                nonce,
-                gas_price,
-                &state_manager,
-                USER_OP_CANCEL_TX_GAS_LIMIT as usize,
-                &pk,
-                &chain_id,
-            )?;
+            let gas_limit = UserOp::cancellation_gas_limit(&chain_id);
+            let tx = op.cancel(nonce, gas_price, &state_manager, gas_limit, &pk, &chain_id)?;
             let _ = responder.send(Ok(tx));
         },
     }

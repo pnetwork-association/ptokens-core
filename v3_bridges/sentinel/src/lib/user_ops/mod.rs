@@ -1,4 +1,5 @@
 mod cancel_user_op;
+mod cancellation_gas_limit;
 mod error;
 mod test_utils;
 mod user_op;
@@ -25,6 +26,7 @@ use self::{
         CANCELLED_USER_OP_TOPIC,
         ENQUEUED_USER_OP_TOPIC,
         EXECUTED_USER_OP_TOPIC,
+        USER_OP_CANCEL_TX_GAS_LIMIT,
         WITNESSED_USER_OP_TOPIC,
     },
     user_op_flag::UserOpFlag,
