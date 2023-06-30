@@ -16,7 +16,6 @@ use serde_json::json;
 #[derive(Clone, Debug, Default, Args)]
 pub struct GetUserOpStateCliArgs {
     /// User op identifaction hash
-    #[arg(long, short)]
     uid: String,
 }
 
@@ -32,7 +31,7 @@ pub async fn get_user_op_state(config: &SentinelConfig, args: &GetUserOpStateCli
             Err(SentinelError::Custom(format!("no user op in db with uid {uid}")))
         },
         Ok(op) => {
-            let side = op.side();
+            let side = op.destination_side();
 
             let state_manager = if side.is_native() {
                 config.native().state_manager()
