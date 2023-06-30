@@ -21,13 +21,12 @@ pub async fn get_test_ws_client() -> WsClient {
 
 pub async fn get_test_endpoints() -> Endpoints {
     dotenv().ok();
-    let is_native = true;
     let sleep_time = 500;
     let url = env::var(ENV_VAR)
         .map_err(|_| SentinelError::Custom(format!("Please set env var '{ENV_VAR}' to a working endpoint!").into()))
         .unwrap();
     let urls = vec![url];
-    Endpoints::new(is_native, sleep_time, BridgeSide::Native, urls)
+    Endpoints::new(sleep_time, BridgeSide::Native, urls)
 }
 
 pub fn get_sample_sub_mat_n(n: usize) -> EthSubmissionMaterial {
