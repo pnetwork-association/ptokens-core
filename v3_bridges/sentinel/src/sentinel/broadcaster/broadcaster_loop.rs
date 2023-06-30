@@ -26,7 +26,8 @@ async fn cancel_user_op(
     // TODO check we have enough balance to push
     // TODO check the origin tx exists on the other chain
     // TODO put back in core db upon error and continue broadcaster loop with warning messages
-    let side = op.side();
+
+    let side = op.destination_side();
 
     let (msg, rx) = EthRpcMessages::get_user_op_state_msg(side, op.clone(), *state_manager);
     eth_rpc_tx.send(msg).await?;
