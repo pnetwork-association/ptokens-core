@@ -9,12 +9,14 @@ use lib::{
     get_sub_mat,
     get_user_op_state,
     push_tx,
-    EndpointError,
     EthRpcMessages,
     SentinelConfig,
     SentinelError,
 };
-use tokio::sync::mpsc::Receiver as MpscRx;
+use tokio::{
+    sync::mpsc::Receiver as MpscRx,
+    time::{sleep, Duration},
+};
 
 // NOTE: The underlying RPC calls have both retry & timeout logic, however in the event of a websocket disconnect, they
 // immediately return with an error. That error is handled in each of the arms below, via rotating the endpoint to get a
@@ -22,6 +24,8 @@ use tokio::sync::mpsc::Receiver as MpscRx;
 
 // TODO DRY out the repeat code below, though it's not trivial due to having to replace the mutable websocket clients
 // upon endpoint rotation.
+
+const ENDPOINT_ROTATION_SLEEP_TIME: u64 = 2000;
 
 pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: SentinelConfig) -> Result<(), SentinelError> {
     let mut h_endpoints = config.get_host_endpoints();
@@ -50,8 +54,10 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                         let _ = responder.send(Ok(r));
                                         continue 'eth_rpc_loop
                                     },
-                                    Err(SentinelError::Endpoint(EndpointError::WsClientDisconnected(_))) => {
-                                        warn!("{side} web socket dropped, rotating endpoint");
+                                    Err(e) => {
+                                        error!("{side} eth rpc error: {e}");
+                                        warn!("rotating {side} endpoint");
+                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
                                         if side.is_native() {
                                             n_ws_client = n_endpoints.rotate().await?;
                                         } else {
@@ -59,7 +65,6 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                         };
                                         continue 'inner
                                     },
-                                    Err(e) => break 'eth_rpc_loop Err(e),
                                 }
                             }
                         },
@@ -75,8 +80,10 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                         let _ = responder.send(Ok(r));
                                         continue 'eth_rpc_loop
                                     },
-                                    Err(SentinelError::Endpoint(EndpointError::WsClientDisconnected(_))) => {
-                                        warn!("{side} web socket dropped, rotating endpoint");
+                                    Err(e) => {
+                                        error!("{side} eth rpc error: {e}");
+                                        warn!("rotating {side} endpoint");
+                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
                                         if side.is_native() {
                                             n_ws_client = n_endpoints.rotate().await?;
                                         } else {
@@ -84,7 +91,6 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                         };
                                         continue 'inner
                                     },
-                                    Err(e) => break 'eth_rpc_loop Err(e),
                                 }
                             }
                         },
@@ -100,8 +106,10 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                         let _ = responder.send(Ok(r));
                                         continue 'eth_rpc_loop
                                     },
-                                    Err(SentinelError::Endpoint(EndpointError::WsClientDisconnected(_))) => {
-                                        warn!("{side} web socket dropped, rotating endpoint");
+                                    Err(e) => {
+                                        error!("{side} eth rpc error: {e}");
+                                        warn!("rotating {side} endpoint");
+                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
                                         if side.is_native() {
                                             n_ws_client = n_endpoints.rotate().await?;
                                         } else {
@@ -109,7 +117,6 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                         };
                                         continue 'inner
                                     },
-                                    Err(e) => break 'eth_rpc_loop Err(e),
                                 }
                             }
                         },
@@ -126,8 +133,10 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                         let _ = responder.send(Ok(r));
                                         continue 'eth_rpc_loop
                                     },
-                                    Err(SentinelError::Endpoint(EndpointError::WsClientDisconnected(_))) => {
-                                        warn!("{side} web socket dropped, rotating endpoint");
+                                    Err(e) => {
+                                        error!("{side} eth rpc error: {e}");
+                                        warn!("rotating {side} endpoint");
+                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
                                         if side.is_native() {
                                             n_ws_client = n_endpoints.rotate().await?;
                                         } else {
@@ -135,7 +144,6 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                         };
                                         continue 'inner
                                     },
-                                    Err(e) => break 'eth_rpc_loop Err(e),
                                 }
                             }
                         },
@@ -152,8 +160,10 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                         let _ = responder.send(Ok(r));
                                         continue 'eth_rpc_loop
                                     },
-                                    Err(SentinelError::Endpoint(EndpointError::WsClientDisconnected(_))) => {
-                                        warn!("{side} web socket dropped, rotating endpoint");
+                                    Err(e) => {
+                                        error!("{side} eth rpc error: {e}");
+                                        warn!("rotating {side} endpoint");
+                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
                                         if side.is_native() {
                                             n_ws_client = n_endpoints.rotate().await?;
                                         } else {
@@ -161,7 +171,6 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                         };
                                         continue 'inner
                                     },
-                                    Err(e) => break 'eth_rpc_loop Err(e),
                                 }
                             }
                         },
@@ -180,8 +189,10 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                         let _ = responder.send(Ok(r));
                                         continue 'eth_rpc_loop
                                     },
-                                    Err(SentinelError::Endpoint(EndpointError::WsClientDisconnected(_))) => {
-                                        warn!("{side} web socket dropped, rotating endpoint");
+                                    Err(e) => {
+                                        error!("{side} eth rpc error: {e}");
+                                        warn!("rotating {side} endpoint");
+                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
                                         if side.is_native() {
                                             n_ws_client = n_endpoints.rotate().await?;
                                         } else {
@@ -189,7 +200,6 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                         };
                                         continue 'inner
                                     },
-                                    Err(e) => break 'eth_rpc_loop Err(e),
                                 }
                             }
                         },
@@ -206,8 +216,10 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                         let _ = responder.send(Ok(r));
                                         continue 'eth_rpc_loop
                                     }
-                                    Err(SentinelError::Endpoint(EndpointError::WsClientDisconnected(_))) => {
-                                        warn!("{side} web socket dropped, rotating endpoint");
+                                    Err(e) => {
+                                        error!("{side} eth rpc error: {e}");
+                                        warn!("rotating {side} endpoint");
+                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
                                         if side.is_native() {
                                             n_ws_client = n_endpoints.rotate().await?;
                                         } else {
@@ -215,7 +227,6 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                         };
                                         continue 'inner
                                     },
-                                    Err(e) => break 'eth_rpc_loop Err(e),
                                 }
                             }
                         },
@@ -232,8 +243,10 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                         let _ = responder.send(Ok(r));
                                         continue 'eth_rpc_loop
                                     }
-                                    Err(SentinelError::Endpoint(EndpointError::WsClientDisconnected(_))) => {
-                                        warn!("{side} web socket dropped, rotating endpoint");
+                                    Err(e) => {
+                                        error!("{side} eth rpc error: {e}");
+                                        warn!("rotating {side} endpoint");
+                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
                                         if side.is_native() {
                                             n_ws_client = n_endpoints.rotate().await?;
                                         } else {
@@ -241,7 +254,6 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                                         };
                                         continue 'inner
                                     },
-                                    Err(e) => break 'eth_rpc_loop Err(e),
                                 }
                             }
                         },
@@ -249,7 +261,7 @@ pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: Sentin
                 },
                 None => {
                     let m = "all eth rpc senders dropped!";
-                    warn!("{m}");
+                    error!("{m}");
                     break 'eth_rpc_loop Err(SentinelError::Custom(m.into()))
                 },
             },
