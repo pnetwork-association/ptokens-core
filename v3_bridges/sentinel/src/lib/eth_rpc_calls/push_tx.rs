@@ -12,7 +12,9 @@ use crate::{run_timer, EndpointError, SentinelError};
 const RPC_CMD: &str = "eth_sendRawTransaction";
 
 async fn push_tx_inner(tx: &EthTransaction, ws_client: &WsClient) -> Result<H256, SentinelError> {
-    let res: Result<String, jsonrpsee::core::Error> = ws_client.request(RPC_CMD, rpc_params![tx.serialize_hex()]).await;
+    let res: Result<String, jsonrpsee::core::Error> = ws_client
+        .request(RPC_CMD, rpc_params![format!("0x{}", tx.serialize_hex())])
+        .await;
     match res {
         Ok(ref s) => Ok(convert_hex_to_h256(s)?),
         Err(e) => Err(EndpointError::PushTx(e).into()),
