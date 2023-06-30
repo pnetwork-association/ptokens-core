@@ -48,6 +48,7 @@ pub async fn push_tx(
                 _ => {
                     if attempt < MAX_RPC_CALL_ATTEMPTS {
                         attempt += 1;
+                        error!("{e}");
                         warn!("{side} sleeping for {sleep_time}ms before retrying...");
                         sleep(Duration::from_millis(sleep_time)).await;
                         continue;
