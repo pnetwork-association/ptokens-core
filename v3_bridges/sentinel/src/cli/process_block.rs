@@ -33,7 +33,7 @@ pub struct ProcessBlockCliArgs {
     #[arg(long, short)]
     dry_run: Option<bool>,
 
-    /// Dry run (nothing is commited to the databases)
+    /// Reprocess block. This skips appending the block to the chain.
     #[arg(long, short)]
     reprocess: Option<bool>,
 }

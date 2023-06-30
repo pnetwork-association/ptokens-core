@@ -3,7 +3,7 @@ use clap::Parser;
 use crate::cli::{
     get_sub_mat::SubMatGetterArgs,
     init::InitArgs,
-    GetCancelTxArgs,
+    CancelTxArgs,
     GetUserOpStateCliArgs,
     NonceCliArgs,
     ProcessBlockCliArgs,
@@ -63,11 +63,9 @@ pub enum SubCommands {
     /// Remove a user operation from the db
     RemoveUserOp(RemoveUserOpCliArgs),
 
-    /// Get a cancellation tx for a given user op UID. Will only return a signature if the core is
-    /// aware of the user operation, and believes it to be cancellable.
-    GetCancelTx(GetCancelTxArgs),
+    /// Cancel a user operation. Only works with ops already in the core
+    CancelTx(CancelTxArgs),
 
-    /// Get the user operation state from the state manager contract for a given UID. Can only work
-    /// if the core is aware of the user operation.
+    /// Get the user operation state. Only works with ops already in the core
     GetUserOpState(GetUserOpStateCliArgs),
 }
