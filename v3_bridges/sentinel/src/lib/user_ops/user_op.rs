@@ -101,6 +101,10 @@ impl UserOp {
 }
 
 impl UserOp {
+    pub fn is_enqueued(&self) -> bool {
+        self.state.is_enqueued()
+    }
+
     pub fn maybe_update_state(&mut self, other: Self) -> Result<(), UserOpError> {
         let self_state = self.state();
         let other_state = other.state();

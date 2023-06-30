@@ -1,4 +1,5 @@
 mod cli_args;
+mod get_cancel_tx;
 mod get_core_state;
 mod get_latest_block_num;
 mod get_nonce;
@@ -18,6 +19,7 @@ pub(super) use side::Side;
 
 pub(crate) use self::{
     cli_args::{CliArgs, SubCommands},
+    get_cancel_tx::{get_cancel_tx, GetCancelTxArgs},
     get_core_state::get_core_state,
     get_latest_block_num::{get_host_latest_block_num, get_native_latest_block_num},
     get_nonce::{get_nonce_cli, NonceCliArgs},

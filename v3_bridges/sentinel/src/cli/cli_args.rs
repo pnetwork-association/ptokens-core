@@ -3,6 +3,7 @@ use clap::Parser;
 use crate::cli::{
     get_sub_mat::SubMatGetterArgs,
     init::InitArgs,
+    GetCancelTxArgs,
     NonceCliArgs,
     ProcessBlockCliArgs,
     RemoveUserOpCliArgs,
@@ -60,4 +61,7 @@ pub enum SubCommands {
 
     /// Remove a user operation from the db
     RemoveUserOp(RemoveUserOpCliArgs),
+
+    /// Get a cancellation tx for a given user op UID
+    GetCancelTx(GetCancelTxArgs),
 }
