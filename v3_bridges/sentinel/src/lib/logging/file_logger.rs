@@ -19,6 +19,6 @@ pub fn initialize_file_logger(config: &LogConfig) -> Result<(), SentinelError> {
             .append()
             .start()
     })?;
-    info!("File logger initialized!");
+    debug!("File logger initialized!");
     Ok(())
 }

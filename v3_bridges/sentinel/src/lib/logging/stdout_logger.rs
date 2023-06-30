@@ -12,6 +12,6 @@ pub fn initialize_stdout_logger(config: &LogConfig) -> Result<(), SentinelError>
             .append()
             .start()
     })?;
-    info!("Stdout Logger initialized!");
+    debug!("Stdout Logger initialized!");
     Ok(())
 }
