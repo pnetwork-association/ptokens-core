@@ -17,7 +17,7 @@ async fn main() {
             println!("{s}");
         },
         Err(e) => {
-            info!("{e}");
+            error!("{e}");
             eprintln!("{e}");
             std::process::exit(1)
         },
