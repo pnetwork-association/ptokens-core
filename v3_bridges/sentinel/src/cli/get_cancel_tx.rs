@@ -113,9 +113,21 @@ pub async fn get_cancel_tx(config: &SentinelConfig, args: &GetCancelTxArgs) -> R
                 let tx = op
                     .cancel(nonce, gas_price, &state_manager, gas_limit, &pk, &chain_id)?
                     .serialize_hex();
-
                 debug!("signed tx: 0x{tx}");
-                Ok(tx)
+
+                let r = json!({
+                    "jsonrpc": "2.0",
+                    "result": {
+                        "nonce": nonce,
+                        "uid": args.uid,
+                        "signed_tx": tx,
+                        "gas_price": gas_price,
+                        "gas_limit": gas_limit,
+                    }
+                })
+                .to_string();
+
+                Ok(r)
             }
         },
     }
