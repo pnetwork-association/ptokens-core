@@ -16,7 +16,7 @@ impl UserOp {
             EthAbiToken::Uint(self.user_op_log.underlying_asset_decimals),
             EthAbiToken::Uint(self.user_op_log.amount),
             EthAbiToken::Address(self.user_op_log.underlying_asset_token_address),
-            EthAbiToken::FixedBytes(self.origin_network_id.clone()),
+            EthAbiToken::FixedBytes(self.user_op_log.origin_network_id.clone().unwrap_or_default()),
             EthAbiToken::FixedBytes(self.user_op_log.destination_network_id.clone()),
             EthAbiToken::FixedBytes(self.user_op_log.underlying_asset_network_id.clone()),
             EthAbiToken::String(self.user_op_log.destination_account.clone()),

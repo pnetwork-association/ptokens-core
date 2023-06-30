@@ -65,6 +65,19 @@ impl UserOp {
         self.into()
     }
 
+    pub fn origin_side(&self) -> BridgeSide {
+        // NOTE: This depends entirely on which side of the bridge sees the user op first, since
+        // that's not guaranteed to be either or.
+        match self.state {
+            UserOpState::Witnessed(side, _) => side,
+            _ => self.state.side().opposite(),
+        }
+    }
+
+    pub fn destination_side(&self) -> BridgeSide {
+        self.origin_side().opposite()
+    }
+
     pub fn from_log(
         bridge_side: BridgeSide,
         witnessed_timestamp: u64,
