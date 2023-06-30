@@ -4,6 +4,7 @@ use crate::cli::{
     get_sub_mat::SubMatGetterArgs,
     init::InitArgs,
     GetCancelTxArgs,
+    GetUserOpStateCliArgs,
     NonceCliArgs,
     ProcessBlockCliArgs,
     RemoveUserOpCliArgs,
@@ -62,6 +63,11 @@ pub enum SubCommands {
     /// Remove a user operation from the db
     RemoveUserOp(RemoveUserOpCliArgs),
 
-    /// Get a cancellation tx for a given user op UID
+    /// Get a cancellation tx for a given user op UID. Will only return a signature if the core is
+    /// aware of the user operation, and believes it to be cancellable.
     GetCancelTx(GetCancelTxArgs),
+
+    /// Get the user operation state from the state manager contract for a given UID. Can only work
+    /// if the core is aware of the user operation.
+    GetUserOpState(GetUserOpStateCliArgs),
 }

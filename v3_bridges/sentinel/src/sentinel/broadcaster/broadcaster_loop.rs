@@ -74,7 +74,6 @@ async fn cancel_user_ops(
 
     let mut unbroadcast_ops = vec![];
 
-    // FIXME need to increment nonces manually here!
     for op in ops.iter() {
         match op.side() {
             BridgeSide::Native => {
