@@ -7,7 +7,6 @@ use serde_json::json;
 #[derive(Debug, Args)]
 pub struct RemoveUserOpCliArgs {
     /// Unique ID of user operation to remove
-    #[arg(long, short)]
     uid: String,
 }
 

@@ -13,11 +13,11 @@ use lib::{
     DEFAULT_SLEEP_TIME,
     USER_OP_CANCEL_TX_GAS_LIMIT,
 };
+use serde_json::json;
 
 #[derive(Clone, Debug, Default, Args)]
 pub struct GetCancelTxArgs {
     /// User op identifaction hash
-    #[arg(long, short)]
     uid: String,
 
     /// Nonce to use. If omitted, will call the endpoint to determine the nonce
