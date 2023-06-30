@@ -27,16 +27,19 @@ async fn cancel_user_op(
     // TODO put back in core db upon error and continue broadcaster loop with warning messages?
 
     let side = op.destination_side();
+    debug!("cancelling user op on side: {side} nonce: {nonce} gas price: {gas_price}");
 
     let (msg, rx) = EthRpcMessages::get_user_op_state_msg(side, op.clone(), *state_manager);
     eth_rpc_tx.send(msg).await?;
     let user_op_smart_contract_state = rx.await??;
+    debug!("user op state before cancellation: {user_op_smart_contract_state}");
 
     let tx_hash = if user_op_smart_contract_state.is_cancellable() {
         warn!("sending cancellation tx for user op: {op}");
         let (msg, rx) = CoreMessages::get_cancellation_signature_msg(op.clone(), nonce, gas_price, *state_manager);
         core_tx.send(msg).await?;
         let signed_tx = rx.await??;
+        debug!("signed tx: {}", signed_tx.serialize_hex());
 
         let (msg, rx) = EthRpcMessages::get_push_tx_msg(signed_tx, side);
         eth_rpc_tx.send(msg).await?;
@@ -66,12 +69,9 @@ async fn cancel_user_ops(
     let mut host_nonce = host_rx.await??;
     let mut native_nonce = native_rx.await??;
 
-    let (host_msg, host_rx) = EthRpcMessages::get_gas_price_msg(BridgeSide::Host);
-    let (native_msg, native_rx) = EthRpcMessages::get_gas_price_msg(BridgeSide::Native);
-    eth_rpc_tx.send(host_msg).await?;
-    eth_rpc_tx.send(native_msg).await?;
-    let host_gas_price = host_rx.await??;
-    let native_gas_price = native_rx.await??;
+    let (gas_prices_msg, gas_prices_rx) = CoreMessages::get_gas_prices_msg();
+    core_tx.send(gas_prices_msg).await?;
+    let (native_gas_price, host_gas_price) = gas_prices_rx.await??;
 
     let err_msg = "error cancelling user op ";
 

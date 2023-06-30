@@ -45,10 +45,15 @@ async fn handle_message<D: DatabaseInterface>(
             let l = UserOpList::get(&SentinelDbUtils::new(&*db));
             let _ = responder.send(Ok(l));
         },
+        CoreMessages::GetGasPrices(responder) => {
+            let n = NativeDbUtils::new(&*db).get_eth_gas_price_from_db()?;
+            let h = HostDbUtils::new(&*db).get_eth_gas_price_from_db()?;
+            let _ = responder.send(Ok((n, h)));
+        },
         CoreMessages::GetAddress { side, responder } => {
             let a = match side {
-                BridgeSide::Native => HostDbUtils::new(&*db).get_public_eth_address_from_db()?,
-                BridgeSide::Host => NativeDbUtils::new(&*db).get_public_eth_address_from_db()?,
+                BridgeSide::Native => NativeDbUtils::new(&*db).get_public_eth_address_from_db()?,
+                BridgeSide::Host => HostDbUtils::new(&*db).get_public_eth_address_from_db()?,
             };
             let _ = responder.send(Ok(a));
         },
@@ -60,11 +65,12 @@ async fn handle_message<D: DatabaseInterface>(
             state_manager,
         } => {
             let h = HostDbUtils::new(&*db);
-            let n = HostDbUtils::new(&*db);
-            let (chain_id, pk) = match op.side() {
+            let n = NativeDbUtils::new(&*db);
+            let (chain_id, pk) = match op.destination_side() {
                 BridgeSide::Host => (h.get_eth_chain_id_from_db()?, h.get_eth_private_key_from_db()?),
                 BridgeSide::Native => (n.get_eth_chain_id_from_db()?, n.get_eth_private_key_from_db()?),
             };
+            debug!("core cancellation getter chain ID: {chain_id}");
             let gas_limit = UserOp::cancellation_gas_limit(&chain_id);
             let tx = op.cancel(nonce, gas_price, &state_manager, gas_limit, &pk, &chain_id)?;
             let _ = responder.send(Ok(tx));

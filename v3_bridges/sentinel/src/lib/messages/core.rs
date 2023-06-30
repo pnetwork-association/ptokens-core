@@ -10,6 +10,7 @@ pub enum CoreMessages {
     GetHostConfs(Responder<u64>),
     GetNativeConfs(Responder<u64>),
     GetUserOps(Responder<UserOps>),
+    GetGasPrices(Responder<(u64, u64)>),
     GetUserOpList(Responder<UserOpList>),
     GetHostLatestBlockNumber(Responder<u64>),
     GetNativeLatestBlockNumber(Responder<u64>),
@@ -29,6 +30,12 @@ pub enum CoreMessages {
 }
 
 impl CoreMessages {
+    #[allow(clippy::type_complexity)]
+    pub fn get_gas_prices_msg() -> (Self, Receiver<Result<(u64, u64), SentinelError>>) {
+        let (tx, rx) = oneshot::channel();
+        (Self::GetGasPrices(tx), rx)
+    }
+
     pub fn get_user_ops_list_msg() -> (Self, Receiver<Result<UserOpList, SentinelError>>) {
         let (tx, rx) = oneshot::channel();
         (Self::GetUserOpList(tx), rx)
