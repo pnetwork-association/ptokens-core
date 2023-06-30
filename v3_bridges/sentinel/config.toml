@@ -4,34 +4,40 @@ core_type = "evm-on-int"
 
 [native]
 eth_chain_id = "100"
-endpoints = [ "wss://purple-thrilling-snow.xdai.quiknode.pro:443/dcfb5b75b6900929740f64dcc77ca5c72a2fb152" ] # NOTE: Gnosis
-eth_endpoints = [ "ws://65.109.125.45:8546" ] # NOTE: ETH
-sepolia_endpoints = [ "wss://yolo-purple-thunder.ethereum-sepolia.quiknode.pro:443/05d2368784df00f5b87c938e61ac1eb377c37522" ]
+eth_endpoints = [ "ws://65.109.125.45:8546" ] # ETH
+endpoints = [ # Gnosis
+    #"wss://purple-thrilling-snow.xdai.quiknode.pro:443/dcfb5b75b6900929740f64dcc77ca5c72a2fb152",
+    "wss://capable-boldest-mound.xdai.quiknode.pro:443/d94eb22c1131fc98298ee8f431b0eab75b246410/",
+]
+sepolia_endpoints = [ "wss://yolo-purple-thunder.ethereum-sepolia.quiknode.pro:443/05d2368784df00f5b87c938e61ac1eb377c37522" ] # Sepolia
 sleep_duration = 5 # How long to wait before trying to get the next host block (in seconds)
 contract_addresses = [] # Used to prefilter submission material to reduce total batch size.
 validate = false # Used to turn off validation for this side's chain.
-state_manager = "0xa3c4398244591841bce776ec7f8d9e7741b9f934" # Contract where actor emitted events are seen
-router = "0x40088126dDBFd5508cdb33285451161aCbdA6C56" # Contract where user emitted events are seen
+state_manager = "0xc508e6af23d3C1FcAbD24Dfab5A5304F65c0042c" # Contract where actor emitted events are seen
+router = "0x1a364F5Aa1ED122D609206479103C980d6954E8C" # Contract where user emitted events are seen
 
 [host]
 eth_chain_id = "42161"
-eth_endpoints = [ "ws://65.109.125.45:8546" ] # NOTE: ETH
-endpoints = [ "wss://twilight-multi-shadow.arbitrum-mainnet.quiknode.pro:443/547666915375cbcc1df5ccf1d4c505c641839a3a/" ] # NOTE: Arbitrum
-sepolia_endpoints = [ "wss://yolo-purple-thunder.ethereum-sepolia.quiknode.pro:443/05d2368784df00f5b87c938e61ac1eb377c37522" ]
-sleep_duration = 2 # How long to wait before trying to get the next native block (in seconds)
+eth_endpoints = [ "ws://65.109.125.45:8546" ] # ETH
+endpoints = [ # Abitrum
+    "wss://attentive-wild-resonance.arbitrum-mainnet.quiknode.pro:443/8c50775d9fefc0c7a3798101319af15bc8171ad1/",
+    # "wss://twilight-multi-shadow.arbitrum-mainnet.quiknode.pro:443/547666915375cbcc1df5ccf1d4c505c641839a3a/",
+]
+sepolia_endpoints = [ "wss://yolo-purple-thunder.ethereum-sepolia.quiknode.pro:443/05d2368784df00f5b87c938e61ac1eb377c37522" ] # Sepolia
+sleep_duration = 1 # How long to wait before trying to get the next native block (in seconds)
 contract_addresses = [] # Used to prefilter submission material to reduce total batch size.
 validate = false # Used to turn off validation for this side's chain.
-state_manager = "0x2Cd64a7dD0bd467fc1953521df2C440e4b493541" # Contract where actor emitted events are seen
-router = "0x2097d168d852DAF856A9Bc0Eb8E8EF16328d7d85" # Contract where user emitted events are seen
+state_manager = "0x578E916A4064c32F2eF44614Ff9B04B6D2546A13" # Contract where actor emitted events are seen
+router = "0x715dE5C8BcC623c462e29b6253C6dd92Ed8e1440" # Contract where user emitted events are seen
 
 [batching]
-host_batch_size = 600 # Max number of host blocks to batch before submission
-native_batch_size = 100 # Max number of native blocks to batch before submission
-host_batch_duration = 300 # Max amount of time between batch submission in seconds
-native_batch_duration = 300 # Max amount of time between batch submission in seconds
+host_batch_size = 1000 # Max number of host blocks to batch together before submission
+native_batch_size = 10 # Max number of native blocks to batch together before submission
+host_batch_duration = 60 # Max amount of time between batch submission in seconds
+native_batch_duration = 60 # Max amount of time between batch submission in seconds
 
 [log]
-level = "info"
+level = "debug"
 enabled = true # Allow logging to be turned off entirely if desired
 use_file_logging = false # If false, logs are written to stderr, if true, logs are written to file
 path = "./" # Path to write logs to. Defaults to "./"
