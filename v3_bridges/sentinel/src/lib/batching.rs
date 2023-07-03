@@ -231,7 +231,7 @@ impl Batch {
         let pct_full = (size as f64 / size_limit as f64) * 100_f64;
         let pct_time = (time as f64 / time_limit as f64) * 100_f64;
         info!(
-            "{} batch not ready to submit yet! ({pct_full:.2}% full, {pct_time:.2}% time)",
+            "{} batch not ready to submit yet! ({size} blocks, {pct_full:.2}% full, {pct_time:.2}% time)",
             self.side()
         );
         false
