@@ -3,6 +3,7 @@ use std::{result::Result, sync::Arc};
 use common::{BridgeSide, DatabaseInterface};
 use common_eth::{EthDbUtilsExt, HostDbUtils, NativeDbUtils};
 use lib::{CoreMessages, CoreState, SentinelDbUtils, SentinelError, UserOp, UserOpList};
+use serde_json::json;
 use tokio::sync::{mpsc::Receiver as MpscRx, Mutex};
 
 async fn handle_message<D: DatabaseInterface>(
@@ -12,6 +13,16 @@ async fn handle_message<D: DatabaseInterface>(
     let db = guarded_db.lock().await;
 
     match msg {
+        CoreMessages::RemoveUserOp { uid, responder } => {
+            let db_utils = SentinelDbUtils::new(&*db);
+            let mut list = UserOpList::get(&db_utils);
+            let removed_from_list = list.remove_entry(&db_utils, &uid)?;
+            let r = json!({
+                "jsonrpc": "2.0",
+                "result": { "uid": uid, "removed_from_list": removed_from_list },
+            });
+            let _ = responder.send(Ok(r));
+        },
         CoreMessages::GetHostLatestBlockNumber(responder) => {
             let n = HostDbUtils::new(&*db).get_latest_eth_block_number()?;
             let _ = responder.send(Ok(n as u64));

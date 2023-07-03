@@ -1,6 +1,5 @@
-use std::result::Result;
-
 use common::{BridgeSide, CoreType};
+use common_eth::convert_hex_to_h256;
 use jsonrpsee::ws_client::WsClient;
 use lib::{get_latest_block_num, CoreMessages, MongoMessages, SentinelConfig, SentinelError};
 use serde::{Deserialize, Serialize};
@@ -17,6 +16,7 @@ fn convert_error_to_rejection<T: core::fmt::Display>(e: T) -> Rejection {
     reject::custom(Error(e.to_string()))
 }
 
+// TODO make this json RPC 2.0 compliant
 // TODO rm duplicate code from here
 async fn get_core_state_from_db(tx: MpscTx<CoreMessages>, core_type: &CoreType) -> Result<impl warp::Reply, Rejection> {
     let (msg, rx) = CoreMessages::get_core_state_msg(core_type);
@@ -43,6 +43,24 @@ async fn get_user_ops_list_from_core(tx: MpscTx<CoreMessages>) -> Result<impl wa
         .map_err(convert_error_to_rejection)?
         .map_err(convert_error_to_rejection)
         .map(|core_state| warp::reply::json(&core_state))
+}
+
+#[derive(Deserialize)]
+struct RemoveUserOpQuery {
+    uid: String,
+}
+
+async fn remove_user_op_from_core(
+    body: RemoveUserOpQuery,
+    tx: MpscTx<CoreMessages>,
+) -> Result<impl warp::Reply, Rejection> {
+    let (msg, rx) =
+        CoreMessages::get_remove_user_op_msg(convert_hex_to_h256(&body.uid).map_err(convert_error_to_rejection)?);
+    tx.send(msg).await.map_err(convert_error_to_rejection)?;
+    rx.await
+        .map_err(convert_error_to_rejection)?
+        .map_err(convert_error_to_rejection)
+        .map(|j| warp::reply::json(&j))
 }
 
 async fn get_heartbeat_from_mongo(tx: MpscTx<MongoMessages>) -> Result<impl warp::Reply, Rejection> {
@@ -97,6 +115,7 @@ async fn main_loop(
     let core_tx_2 = core_tx.clone();
     let core_tx_3 = core_tx.clone();
     let core_tx_4 = core_tx.clone();
+    let core_tx_5 = core_tx.clone();
     let mongo_tx_1 = mongo_tx.clone();
     let core_type = config.core().core_type;
 
@@ -163,7 +182,16 @@ async fn main_loop(
         async move { get_user_ops_list_from_core(tx).await }
     });
 
-    let routes = warp::get().and(ping.or(state).or(bpm).or(sync).or(ops).or(list));
+    // GET /removeUserOp
+    let remove_user_op = warp::path("removeUserOp")
+        .and(warp::post())
+        .and(warp::body::json())
+        .and_then(move |body| {
+            let tx = core_tx_5.clone();
+            async move { remove_user_op_from_core(body, tx).await }
+        });
+
+    let routes = warp::get().and(ping.or(state).or(bpm).or(sync).or(ops).or(list).or(remove_user_op));
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
     Ok(())
 }

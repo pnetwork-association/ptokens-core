@@ -1,6 +1,7 @@
 use common::{BridgeSide, CoreType};
 use common_eth::EthTransaction;
-use ethereum_types::Address as EthAddress;
+use ethereum_types::{Address as EthAddress, H256 as EthHash};
+use serde_json::Value as Json;
 use tokio::sync::{oneshot, oneshot::Receiver};
 
 use crate::{CoreState, Responder, SentinelError, UserOp, UserOpList, UserOps};
@@ -16,6 +17,10 @@ pub enum CoreMessages {
     GetNativeLatestBlockNumber(Responder<u64>),
     GetLatestBlockNumbers(Responder<(u64, u64)>),
     GetCoreState((CoreType, Responder<CoreState>)),
+    RemoveUserOp {
+        uid: EthHash,
+        responder: Responder<Json>,
+    },
     GetAddress {
         side: BridgeSide,
         responder: Responder<EthAddress>,
@@ -30,6 +35,11 @@ pub enum CoreMessages {
 }
 
 impl CoreMessages {
+    pub fn get_remove_user_op_msg(uid: EthHash) -> (Self, Receiver<Result<Json, SentinelError>>) {
+        let (tx, rx) = oneshot::channel();
+        (Self::RemoveUserOp { uid, responder: tx }, rx)
+    }
+
     #[allow(clippy::type_complexity)]
     pub fn get_gas_prices_msg() -> (Self, Receiver<Result<(u64, u64), SentinelError>>) {
         let (tx, rx) = oneshot::channel();
