@@ -17,10 +17,7 @@ async fn handle_message<D: DatabaseInterface>(
             let db_utils = SentinelDbUtils::new(&*db);
             let mut list = UserOpList::get(&db_utils);
             let removed_from_list = list.remove_entry(&db_utils, &uid)?;
-            let r = json!({
-                "jsonrpc": "2.0",
-                "result": { "uid": uid, "removed_from_list": removed_from_list },
-            });
+            let r = json!({ "uid": uid, "removed_from_list": removed_from_list });
             let _ = responder.send(Ok(r));
         },
         CoreMessages::GetHostLatestBlockNumber(responder) => {

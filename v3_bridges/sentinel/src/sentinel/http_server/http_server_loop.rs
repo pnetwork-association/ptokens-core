@@ -3,7 +3,7 @@ use common_eth::convert_hex_to_h256;
 use jsonrpsee::ws_client::WsClient;
 use lib::{get_latest_block_num, CoreMessages, MongoMessages, SentinelConfig, SentinelError};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value as JsonValue};
+use serde_json::{json, Value as Json};
 use tokio::sync::mpsc::Sender as MpscTx;
 use warp::{reject, reject::Reject, Filter, Rejection};
 
@@ -12,19 +12,25 @@ struct Error(String);
 
 impl Reject for Error {}
 
-fn convert_error_to_rejection<T: core::fmt::Display>(e: T) -> Rejection {
-    reject::custom(Error(e.to_string()))
-}
-
 // TODO make this json RPC 2.0 compliant
 // TODO rm duplicate code from here
+// TODO impl ids for calls to the rpc
+
+fn convert_error_to_rejection<T: core::fmt::Display>(e: T) -> Rejection {
+    reject::custom(Error(e.to_string())) // TODO rpc error spec adherence required
+}
+
+fn create_json_rpc_response<T: Serialize>(t: T, id: Option<u64>) -> Json {
+    json!({ "id": id, "result": t, "jsonrpc": "2.0" })
+}
+
 async fn get_core_state_from_db(tx: MpscTx<CoreMessages>, core_type: &CoreType) -> Result<impl warp::Reply, Rejection> {
     let (msg, rx) = CoreMessages::get_core_state_msg(core_type);
     tx.send(msg).await.map_err(convert_error_to_rejection)?;
     rx.await
         .map_err(convert_error_to_rejection)?
         .map_err(convert_error_to_rejection)
-        .map(|core_state| warp::reply::json(&core_state))
+        .map(|core_state| warp::reply::json(&create_json_rpc_response(core_state, None)))
 }
 
 async fn get_user_ops_from_core(tx: MpscTx<CoreMessages>) -> Result<impl warp::Reply, Rejection> {
@@ -33,7 +39,7 @@ async fn get_user_ops_from_core(tx: MpscTx<CoreMessages>) -> Result<impl warp::R
     rx.await
         .map_err(convert_error_to_rejection)?
         .map_err(convert_error_to_rejection)
-        .map(|core_state| warp::reply::json(&core_state))
+        .map(|core_state| warp::reply::json(&create_json_rpc_response(core_state, None)))
 }
 
 async fn get_user_ops_list_from_core(tx: MpscTx<CoreMessages>) -> Result<impl warp::Reply, Rejection> {
@@ -42,7 +48,7 @@ async fn get_user_ops_list_from_core(tx: MpscTx<CoreMessages>) -> Result<impl wa
     rx.await
         .map_err(convert_error_to_rejection)?
         .map_err(convert_error_to_rejection)
-        .map(|core_state| warp::reply::json(&core_state))
+        .map(|core_state| warp::reply::json(&create_json_rpc_response(core_state, None)))
 }
 
 #[derive(Deserialize)]
@@ -60,7 +66,7 @@ async fn remove_user_op_from_core(
     rx.await
         .map_err(convert_error_to_rejection)?
         .map_err(convert_error_to_rejection)
-        .map(|j| warp::reply::json(&j))
+        .map(|r| warp::reply::json(&create_json_rpc_response(r, None)))
 }
 
 async fn get_heartbeat_from_mongo(tx: MpscTx<MongoMessages>) -> Result<impl warp::Reply, Rejection> {
@@ -69,7 +75,7 @@ async fn get_heartbeat_from_mongo(tx: MpscTx<MongoMessages>) -> Result<impl warp
     rx.await
         .map_err(convert_error_to_rejection)?
         .map_err(convert_error_to_rejection)
-        .map(|h| warp::reply::json(&h.to_output()))
+        .map(|r| warp::reply::json(&create_json_rpc_response(r.to_output(), None)))
 }
 
 async fn get_sync_status(
@@ -94,14 +100,15 @@ async fn get_sync_status(
         .map(|(n_c, h_c)| {
             let n_d = if n_e > n_c { n_e - n_c } else { 0 };
             let h_d = if h_e > h_c { h_e - h_c } else { 0 };
-            warp::reply::json(&json!({
+            let r = json!({
                 "host_delta": h_d,
                 "native_delta": n_d,
                 "host_core_latest_block_num": h_c,
                 "native_core_latest_block_num": n_c,
                 "host_endpoint_latest_block_num": h_e,
                 "native_endpoint_latest_block_num": n_e,
-            }))
+            });
+            warp::reply::json(&create_json_rpc_response(r, None))
         })
 }
 
@@ -126,7 +133,7 @@ async fn main_loop(
     let n_sleep_time = n_endpoints.sleep_time();
 
     // GET /ping
-    let ping = warp::path("ping").map(|| warp::reply::json(&json!({"result": "pTokens Sentinel pong"})));
+    let ping = warp::path("ping").map(|| warp::reply::json(&create_json_rpc_response("pong", None)));
 
     // GET /state
     let state = warp::path("state").and_then(move || {
@@ -146,8 +153,8 @@ async fn main_loop(
         let he = h_endpoints.clone();
         let ne = n_endpoints.clone();
         async move {
-            fn get_err(side: BridgeSide) -> JsonValue {
-                json!({ "jsonrpc": "2.0", "error": format!("error getting {side} websocket - check your config")})
+            fn get_err(side: BridgeSide) -> Json {
+                json!({ "jsonrpc": "2.0", "id": None::<u64>, "error": format!("error getting {side} websocket - check your config")})
             }
 
             let h_ws_client = he.get_first_ws_client().await;
