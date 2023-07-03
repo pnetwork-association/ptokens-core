@@ -6,9 +6,6 @@ use jsonrpsee::ws_client::WsClient;
 use super::EndpointError;
 use crate::{config::ConfigError, get_rpc_client, SentinelError};
 
-// NOTE: We rotate to a new endpoint whenever the websocket drops.
-const MAX_NUM_ROTATIONS: usize = 10; // TODO Make this configurable?
-
 #[derive(Debug, Default, Clone)]
 pub struct Endpoints {
     sleep_time: u64,
@@ -64,12 +61,9 @@ impl Endpoints {
             self.rotations += 1;
             debug!("incrementing num rotations to {}", self.rotations);
         }
-        if self.rotations >= MAX_NUM_ROTATIONS {
-            Err(EndpointError::MaxRotations(self.side(), MAX_NUM_ROTATIONS))
-        } else {
-            self.current = next;
-            Ok(())
-        }
+        warn!("on {} endpoint rotation #{}", self.side(), self.rotations);
+        self.current = next;
+        Ok(())
     }
 
     pub fn is_empty(&self) -> bool {
