@@ -13,47 +13,56 @@ use super::{
     EXECUTED_USER_OP_TOPIC,
     WITNESSED_USER_OP_TOPIC,
 };
+use crate::get_utc_timestamp;
 
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Serialize, Deserialize, EnumIter)]
 pub enum UserOpState {
-    Witnessed(BridgeSide, EthHash) = 1,
-    Enqueued(BridgeSide, EthHash) = 2,
-    Executed(BridgeSide, EthHash) = 3,
-    Cancelled(BridgeSide, EthHash) = 4,
+    Witnessed(BridgeSide, EthHash, u64) = 1,
+    Enqueued(BridgeSide, EthHash, u64) = 2,
+    Executed(BridgeSide, EthHash, u64) = 3,
+    Cancelled(BridgeSide, EthHash, u64) = 4,
 }
 
 impl fmt::Display for UserOpState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Enqueued(ref side, ref hash) => write!(f, "enqueued on {side} @ tx 0x{hash:x}"),
-            Self::Executed(ref side, ref hash) => write!(f, "executed on {side} @ tx 0x{hash:x}"),
-            Self::Witnessed(ref side, ref hash) => write!(f, "witnessed on {side} @ tx 0x{hash:x}"),
-            Self::Cancelled(ref side, ref hash) => write!(f, "cancelled on {side} @ tx 0x{hash:x}"),
+            Self::Enqueued(ref side, ref hash, ref timestamp) => {
+                write!(f, "enqueued on {side} @ tx 0x{hash:x} @ time {timestamp}")
+            },
+            Self::Executed(ref side, ref hash, ref timestamp) => {
+                write!(f, "executed on {side} @ tx 0x{hash:x} @ time {timestamp}")
+            },
+            Self::Witnessed(ref side, ref hash, ref timestamp) => {
+                write!(f, "witnessed on {side} @ tx 0x{hash:x} @ time {timestamp}")
+            },
+            Self::Cancelled(ref side, ref hash, ref timestamp) => {
+                write!(f, "cancelled on {side} @ tx 0x{hash:x} @ time {timestamp}")
+            },
         }
     }
 }
 
 impl Default for UserOpState {
     fn default() -> Self {
-        Self::Witnessed(BridgeSide::Native, EthHash::default())
+        Self::Witnessed(BridgeSide::Native, EthHash::default(), <u64>::default())
     }
 }
 
 impl UserOpState {
-    pub fn try_from_log(side: BridgeSide, tx_hash: EthHash, log: &EthLog) -> Result<Self, UserOpError> {
+    pub fn try_from_log(side: BridgeSide, tx_hash: EthHash, log: &EthLog, timestamp: u64) -> Result<Self, UserOpError> {
         if log.topics.is_empty() {
             return Err(UserOpError::NoTopics);
         };
 
         if log.topics[0] == *WITNESSED_USER_OP_TOPIC {
-            Ok(Self::Witnessed(side, tx_hash))
+            Ok(Self::Witnessed(side, tx_hash, timestamp))
         } else if log.topics[0] == *ENQUEUED_USER_OP_TOPIC {
-            Ok(Self::Enqueued(side, tx_hash))
+            Ok(Self::Enqueued(side, tx_hash, timestamp))
         } else if log.topics[0] == *EXECUTED_USER_OP_TOPIC {
-            Ok(Self::Executed(side, tx_hash))
+            Ok(Self::Executed(side, tx_hash, timestamp))
         } else if log.topics[0] == *CANCELLED_USER_OP_TOPIC {
-            Ok(Self::Cancelled(side, tx_hash))
+            Ok(Self::Cancelled(side, tx_hash, timestamp))
         } else {
             Err(UserOpError::UnrecognizedTopic(log.topics[0]))
         }
@@ -72,31 +81,31 @@ impl UserOpState {
         )
     }
 
-    pub fn update(self, tx_hash: EthHash) -> Result<(Self, Self), UserOpError> {
+    pub fn update(self, tx_hash: EthHash, timestamp: u64) -> Result<(Self, Self), UserOpError> {
         match self {
-            Self::Witnessed(side, _) => Ok((self, Self::Enqueued(side, tx_hash))),
-            Self::Enqueued(side, _) => Ok((self, Self::Executed(side, tx_hash))),
+            Self::Witnessed(side, ..) => Ok((self, Self::Enqueued(side, tx_hash, timestamp))),
+            Self::Enqueued(side, ..) => Ok((self, Self::Executed(side, tx_hash, timestamp))),
             op_state => Err(UserOpError::CannotUpdate {
                 from: op_state,
-                to: UserOpState::Cancelled(op_state.side(), tx_hash),
+                to: UserOpState::Cancelled(op_state.side(), tx_hash, timestamp),
             }),
         }
     }
 
     pub fn cancel(self, tx_hash: EthHash) -> Result<(Self, Self), UserOpError> {
         match self {
-            Self::Witnessed(side, _) => Ok((self, Self::Cancelled(side, tx_hash))),
-            Self::Enqueued(side, _) => Ok((self, Self::Cancelled(side, tx_hash))),
+            Self::Witnessed(side, ..) => Ok((self, Self::Cancelled(side, tx_hash, get_utc_timestamp()?))),
+            Self::Enqueued(side, ..) => Ok((self, Self::Cancelled(side, tx_hash, get_utc_timestamp()?))),
             op_state => Err(UserOpError::CannotCancel(op_state)),
         }
     }
 
     pub fn side(&self) -> BridgeSide {
         match self {
-            Self::Witnessed(side, _) => *side,
-            Self::Enqueued(side, _) => *side,
-            Self::Executed(side, _) => *side,
-            Self::Cancelled(side, _) => *side,
+            Self::Witnessed(side, ..) => *side,
+            Self::Enqueued(side, ..) => *side,
+            Self::Executed(side, ..) => *side,
+            Self::Cancelled(side, ..) => *side,
         }
     }
 

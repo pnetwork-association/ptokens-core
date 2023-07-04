@@ -54,10 +54,10 @@ impl From<&UserOpFlag> for UserOpState {
         let max_executed: u8 = 0b0000_0111;
 
         match n {
-            _x if n <= max_witnessed => Self::Witnessed(side, zero_hash),
-            _x if n <= max_enqueued => Self::Enqueued(side, zero_hash),
-            _x if n <= max_executed => Self::Executed(side, zero_hash),
-            _ => Self::Cancelled(side, zero_hash),
+            _x if n <= max_witnessed => Self::Witnessed(side, zero_hash, <u64>::default()),
+            _x if n <= max_enqueued => Self::Enqueued(side, zero_hash, <u64>::default()),
+            _x if n <= max_executed => Self::Executed(side, zero_hash, <u64>::default()),
+            _ => Self::Cancelled(side, zero_hash, <u64>::default()),
         }
     }
 }

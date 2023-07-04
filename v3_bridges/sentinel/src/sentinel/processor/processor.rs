@@ -103,3 +103,15 @@ pub fn process_batch<D: DatabaseInterface>(
 
     output
 }
+/*
+plan:
+get last X user ops from list after processing the batch.
+go through them getting any that are cancellable
+add news checks re time stuff for cancellability
+return what's cancellable
+
+sub_mat.get_timestamp()
+or
+sub_mats.get_last_block_timestamp()
+then use that.
+*/

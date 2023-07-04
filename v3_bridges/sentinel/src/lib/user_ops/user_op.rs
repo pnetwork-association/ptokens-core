@@ -69,7 +69,7 @@ impl UserOp {
         // NOTE: This depends entirely on which side of the bridge sees the user op first, since
         // that's not guaranteed to be either or.
         match self.state {
-            UserOpState::Witnessed(side, _) => side,
+            UserOpState::Witnessed(side, ..) => side,
             _ => self.state.side().opposite(),
         }
     }
@@ -103,7 +103,7 @@ impl UserOp {
             uid: EthHash::zero(),
             previous_states: vec![],
             origin_network_id: origin_network_id.to_vec(),
-            state: UserOpState::try_from_log(bridge_side, tx_hash, log)?,
+            state: UserOpState::try_from_log(bridge_side, tx_hash, log, block_timestamp)?,
         };
 
         let uid = op.uid()?;
