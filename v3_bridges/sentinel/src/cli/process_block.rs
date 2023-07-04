@@ -155,11 +155,15 @@ pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliAr
         if use_db_tx {
             db.start_transaction()?
         };
-        let ops = UserOpList::process_ops(&SentinelDbUtils::new(&db), user_ops.clone())?;
+        let db_utils = SentinelDbUtils::new(&db);
+        let mut list = UserOpList::get(&db_utils);
+        list.process_ops(user_ops, &db_utils)?;
+        let cancellable_ops = UserOps::default();
+        unimplemented!("need to get cancellable ops above for real"); // FIXME
         if use_db_tx {
             db.end_transaction()?
         };
-        ops
+        cancellable_ops
     };
 
     let r = json!({

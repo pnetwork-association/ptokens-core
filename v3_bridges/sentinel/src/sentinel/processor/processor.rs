@@ -3,7 +3,7 @@ use std::result::Result;
 use common::{BridgeSide, DatabaseInterface};
 use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials, HostDbUtils, NativeDbUtils};
 use ethereum_types::Address as EthAddress;
-use lib::{Bytes4, Output, SentinelDbUtils, SentinelError, UserOpList, UserOps};
+use lib::{Bytes4, DbUtilsT, Output, SentinelDbUtils, SentinelError, UserOpList, UserOps};
 
 #[allow(clippy::too_many_arguments)]
 pub fn process_single<D: DatabaseInterface>(
@@ -68,6 +68,8 @@ pub fn process_batch<D: DatabaseInterface>(
     reprocess: bool,
 ) -> Result<Output, SentinelError> {
     info!("Processing {side} batch of submission material...");
+    // FIXME db transaction handling - make sure it works for dry runs etc
+
     db.start_transaction()?;
 
     let use_db_tx = false;
@@ -93,11 +95,19 @@ pub fn process_batch<D: DatabaseInterface>(
             .collect::<Result<Vec<UserOps>, SentinelError>>()?,
     );
 
-    let ops_requiring_cancellation_txs = UserOpList::process_ops(&SentinelDbUtils::new(db), user_ops)?;
+    // FIXME db transaction/dry run stuff
+    let db_utils = SentinelDbUtils::new(db);
+    let mut user_op_list = UserOpList::get(&db_utils);
+    user_op_list.process_ops(user_ops, &db_utils)?;
 
-    let output = Output::new(side, batch.get_last_block_num()?, ops_requiring_cancellation_txs);
+    // TODO: Get cancellable ops via last X ops, check for cancellable, return those.
+    let cancellable_ops = UserOps::default();
+    // Then, using the same list, get the last X ops from it. (TODO fix flags so that we can be more efficient here)
+    // Then parse last X ops to see if any are cancellable. This meansjbhb
 
     db.end_transaction()?;
+
+    let output = Output::new(side, batch.get_last_block_num()?, cancellable_ops);
 
     info!("finished processing {side} submission material");
 

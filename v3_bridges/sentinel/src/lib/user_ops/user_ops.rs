@@ -26,7 +26,7 @@ impl UserOps {
     pub fn from_sub_mat(
         side: BridgeSide,
         router: &EthAddress,
-        origin_network_id: &[Byte], // TODO get this from the BridgeSide? Or the config?
+        origin_network_id: &[Byte],
         state_manager: &EthAddress,
         sub_mat: &EthSubmissionMaterial,
     ) -> Result<Self, SentinelError> {
