@@ -2,7 +2,7 @@ use std::{convert::TryFrom, fs::read_to_string, path::Path, str::FromStr};
 
 use clap::Args;
 use common::{BridgeSide, DatabaseInterface};
-use common_eth::EthSubmissionMaterial;
+use common_eth::{EthDbUtilsExt, EthSubmissionMaterial, HostDbUtils, NativeDbUtils};
 use common_rocksdb_database::get_db_at_path;
 use derive_more::Constructor;
 use lib::{
@@ -155,11 +155,13 @@ pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliAr
         if use_db_tx {
             db.start_transaction()?
         };
-        let db_utils = SentinelDbUtils::new(&db);
-        let mut list = UserOpList::get(&db_utils);
-        list.process_ops(user_ops, &db_utils)?;
-        let cancellable_ops = UserOps::default();
-        unimplemented!("need to get cancellable ops above for real"); // FIXME
+        let n_latest_block_num = NativeDbUtils::new(&db).get_latest_eth_block_timestamp()?;
+        let h_latest_block_num = HostDbUtils::new(&db).get_latest_eth_block_timestamp()?;
+
+        let s_db_utils = SentinelDbUtils::new(&db);
+        let mut list = UserOpList::get(&s_db_utils);
+        list.process_ops(user_ops.clone(), &s_db_utils)?;
+        let cancellable_ops = list.get_cancellable_ops(&s_db_utils, n_latest_block_num, h_latest_block_num)?;
         if use_db_tx {
             db.end_transaction()?
         };

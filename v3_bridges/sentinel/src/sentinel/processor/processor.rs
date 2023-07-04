@@ -1,7 +1,14 @@
 use std::result::Result;
 
 use common::{BridgeSide, DatabaseInterface};
-use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials, HostDbUtils, NativeDbUtils};
+use common_eth::{
+    append_to_blockchain,
+    EthDbUtilsExt,
+    EthSubmissionMaterial,
+    EthSubmissionMaterials,
+    HostDbUtils,
+    NativeDbUtils,
+};
 use ethereum_types::Address as EthAddress;
 use lib::{Bytes4, DbUtilsT, Output, SentinelDbUtils, SentinelError, UserOpList, UserOps};
 
@@ -95,15 +102,25 @@ pub fn process_batch<D: DatabaseInterface>(
             .collect::<Result<Vec<UserOps>, SentinelError>>()?,
     );
 
+    let n_latest_block_timestamp = if side.is_native() {
+        batch.get_last_block_timestamp()?.as_secs()
+    } else {
+        NativeDbUtils::new(db).get_latest_eth_block_timestamp()?
+    };
+
+    let h_latest_block_timestamp = if side.is_host() {
+        batch.get_last_block_timestamp()?.as_secs()
+    } else {
+        HostDbUtils::new(db).get_latest_eth_block_timestamp()?
+    };
+
     // FIXME db transaction/dry run stuff
     let db_utils = SentinelDbUtils::new(db);
     let mut user_op_list = UserOpList::get(&db_utils);
     user_op_list.process_ops(user_ops, &db_utils)?;
 
-    // TODO: Get cancellable ops via last X ops, check for cancellable, return those.
-    let cancellable_ops = UserOps::default();
-    // Then, using the same list, get the last X ops from it. (TODO fix flags so that we can be more efficient here)
-    // Then parse last X ops to see if any are cancellable. This meansjbhb
+    let cancellable_ops =
+        user_op_list.get_cancellable_ops(&db_utils, n_latest_block_timestamp, h_latest_block_timestamp)?;
 
     db.end_transaction()?;
 
