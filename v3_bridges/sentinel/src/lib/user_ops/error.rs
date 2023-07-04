@@ -41,4 +41,7 @@ pub enum UserOpError {
 
     #[error("`UserOpLog` is missing field: '{0}'")]
     MissingField(String),
+
+    #[error("user op has not been enqueued")]
+    HasNotBeenEnqueued,
 }
