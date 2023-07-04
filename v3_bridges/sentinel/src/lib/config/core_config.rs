@@ -9,18 +9,21 @@ use crate::SentinelError;
 pub struct CoreToml {
     db_path: String,
     core_type: String,
+    max_cancellable_time_delta: u64,
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct CoreConfig {
     pub db_path: String,
     pub core_type: CoreType,
+    pub max_cancellable_time_delta: u64,
 }
 
 impl CoreConfig {
     pub fn from_toml(toml: &CoreToml) -> Result<Self, SentinelError> {
         Ok(Self {
             db_path: toml.db_path.clone(),
+            max_cancellable_time_delta: toml.max_cancellable_time_delta,
             core_type: CoreType::V3(V3CoreType::from_str(&toml.core_type)?),
         })
     }
