@@ -1,6 +1,7 @@
 mod cancel_user_op;
 mod cancellation_gas_limit;
 mod error;
+mod get_cancellable_user_ops;
 mod test_utils;
 mod user_op;
 mod user_op_constants;

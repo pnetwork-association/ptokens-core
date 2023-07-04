@@ -21,7 +21,7 @@ pub struct UserOpListEntry {
 }
 
 impl UserOpListEntry {
-    fn uid(&self) -> EthHash {
+    pub(super) fn uid(&self) -> EthHash {
         self.uid
     }
 
@@ -204,22 +204,6 @@ impl UserOpList {
             .map(|entry| UserOp::get_from_db(db_utils, &entry.uid().into()))
             .collect::<Result<Vec<UserOp>, SentinelError>>()?;
         Ok(UserOps::new(ops))
-    }
-
-    pub fn get_cancellable_ops<D: DatabaseInterface>(
-        &self,
-        db_utils: &SentinelDbUtils<D>,
-        n_latest_block_timestamp: u64,
-        h_latest_block_timestamp: u64,
-    ) -> Result<UserOps, UserOpError> {
-        const NUM_PAST_OPS_TO_CHECK_FOR_CANCELLABILITY: usize = 10;
-        // get last X ops from db
-        // return any that are enqueud but have not been witnessed
-        // check those vs current db block timestamps
-        // fin
-        todo!("do this");
-        let r = UserOps::default();
-        Ok(r)
     }
 }
 
