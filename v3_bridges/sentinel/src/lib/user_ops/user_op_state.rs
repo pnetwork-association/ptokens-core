@@ -50,6 +50,15 @@ impl Default for UserOpState {
 }
 
 impl UserOpState {
+    pub(super) fn timestamp(&self) -> u64 {
+        match self {
+            Self::Witnessed(_, _, timestamp) => *timestamp,
+            Self::Enqueued(_, _, timestamp) => *timestamp,
+            Self::Executed(_, _, timestamp) => *timestamp,
+            Self::Cancelled(_, _, timestamp) => *timestamp,
+        }
+    }
+
     pub fn try_from_log(side: BridgeSide, tx_hash: EthHash, log: &EthLog, timestamp: u64) -> Result<Self, UserOpError> {
         if log.topics.is_empty() {
             return Err(UserOpError::NoTopics);
