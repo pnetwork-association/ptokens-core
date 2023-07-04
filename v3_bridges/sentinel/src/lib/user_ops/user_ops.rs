@@ -68,6 +68,15 @@ impl UserOps {
 
         Ok(Self::new(user_ops))
     }
+
+    pub(super) fn get_enqueued_but_not_witnessed(&self) -> Self {
+        UserOps::new(
+            self.iter()
+                .filter(|op| op.is_enqueued() && op.has_not_been_witnessed())
+                .cloned()
+                .collect::<Vec<UserOp>>(),
+        )
+    }
 }
 
 impl From<Vec<UserOps>> for UserOps {
