@@ -57,6 +57,32 @@ impl PartialEq for UserOp {
 }
 
 impl UserOp {
+    pub fn enqueued_timestamp(&self) -> Result<u64, UserOpError> {
+        let e = UserOpError::HasNotBeenEnqueued;
+
+        if self.has_not_been_enqueued() {
+            return Err(e);
+        };
+
+        let enqueued_state = if self.state.is_enqueued() {
+            self.state
+        } else {
+            let x = self
+                .previous_states
+                .iter()
+                .filter(|state| state.is_enqueued())
+                .cloned()
+                .collect::<Vec<UserOpState>>();
+            if x.is_empty() {
+                return Err(e);
+            } else {
+                x[0]
+            }
+        };
+
+        Ok(enqueued_state.timestamp())
+    }
+
     pub fn side(&self) -> BridgeSide {
         self.bridge_side
     }
@@ -114,6 +140,22 @@ impl UserOp {
 }
 
 impl UserOp {
+    pub fn has_been_enqueued(&self) -> bool {
+        self.state.is_enqueued() || self.previous_states.iter().any(|state| state.is_enqueued())
+    }
+
+    pub fn has_not_been_enqueued(&self) -> bool {
+        !self.has_been_enqueued()
+    }
+
+    pub fn has_been_witnessed(&self) -> bool {
+        self.state.is_witnessed() || self.previous_states.iter().any(|state| state.is_witnessed())
+    }
+
+    pub fn has_not_been_witnessed(&self) -> bool {
+        !self.has_been_witnessed()
+    }
+
     pub fn is_enqueued(&self) -> bool {
         self.state.is_enqueued()
     }
