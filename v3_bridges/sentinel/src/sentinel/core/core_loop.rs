@@ -2,17 +2,30 @@ use std::{result::Result, sync::Arc};
 
 use common::{BridgeSide, DatabaseInterface};
 use common_eth::{EthDbUtilsExt, HostDbUtils, NativeDbUtils};
-use lib::{CoreMessages, CoreState, SentinelDbUtils, SentinelError, UserOp, UserOpList};
+use lib::{CoreConfig, CoreMessages, CoreState, SentinelDbUtils, SentinelError, UserOp, UserOpList};
 use serde_json::json;
 use tokio::sync::{mpsc::Receiver as MpscRx, Mutex};
 
 async fn handle_message<D: DatabaseInterface>(
     guarded_db: Arc<Mutex<D>>,
+    config: &CoreConfig,
     msg: CoreMessages,
 ) -> Result<(), SentinelError> {
     let db = guarded_db.lock().await;
 
     match msg {
+        CoreMessages::GetCancellableUserOps(responder) => {
+            let sentinel_db_utils = SentinelDbUtils::new(&*db);
+            let h_latest_timestamp = HostDbUtils::new(&*db).get_latest_eth_block_timestamp()?;
+            let n_latest_timestamp = NativeDbUtils::new(&*db).get_latest_eth_block_timestamp()?;
+            let r = UserOpList::get(&sentinel_db_utils).get_cancellable_ops(
+                config.max_cancellable_time_delta(),
+                &sentinel_db_utils,
+                n_latest_timestamp,
+                h_latest_timestamp,
+            );
+            let _ = responder.send(r);
+        },
         CoreMessages::RemoveUserOp { uid, responder } => {
             let db_utils = SentinelDbUtils::new(&*db);
             let mut list = UserOpList::get(&db_utils);
@@ -90,6 +103,7 @@ async fn handle_message<D: DatabaseInterface>(
 
 pub async fn core_loop<D: DatabaseInterface>(
     guarded_db: Arc<Mutex<D>>,
+    config: CoreConfig,
     mut core_rx: MpscRx<CoreMessages>,
 ) -> Result<(), SentinelError> {
     info!("core listening...");
@@ -98,7 +112,7 @@ pub async fn core_loop<D: DatabaseInterface>(
         tokio::select! {
             r = core_rx.recv() => {
                 if let Some(msg) = r {
-                    handle_message(guarded_db.clone(), msg).await?;
+                    handle_message(guarded_db.clone(), &config, msg).await?;
                     continue 'core_loop
                 } else {
                     let m = "all core senders dropped!";

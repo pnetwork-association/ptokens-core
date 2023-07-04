@@ -16,10 +16,14 @@ pub struct CoreToml {
 pub struct CoreConfig {
     pub db_path: String,
     pub core_type: CoreType,
-    pub max_cancellable_time_delta: u64,
+    max_cancellable_time_delta: u64,
 }
 
 impl CoreConfig {
+    pub fn max_cancellable_time_delta(&self) -> u64 {
+        self.max_cancellable_time_delta
+    }
+
     pub fn from_toml(toml: &CoreToml) -> Result<Self, SentinelError> {
         Ok(Self {
             db_path: toml.db_path.clone(),

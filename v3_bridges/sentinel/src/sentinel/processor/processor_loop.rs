@@ -50,7 +50,7 @@ pub async fn processor_loop<D: DatabaseInterface>(
                             side,
                             if side.is_native() { &n_origin_network_id } else { &h_origin_network_id },
                             reprocess,
-                            config.core().max_cancellable_time_delta,
+                            config.core().max_cancellable_time_delta(),
                         );
                         match result {
                             Ok(output) => {

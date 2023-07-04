@@ -21,7 +21,7 @@ mod utils;
 pub use self::{
     batching::Batch,
     check_init::check_init,
-    config::{Config as SentinelConfig, ConfigT, HostConfig, MongoConfig, NativeConfig},
+    config::{Config as SentinelConfig, ConfigT, CoreConfig, HostConfig, MongoConfig, NativeConfig},
     constants::{DEFAULT_SLEEP_TIME, HOST_PROTOCOL_ID, MILLISECONDS_MULTIPLIER, NATIVE_PROTOCOL_ID},
     core_state::CoreState,
     db_utils::{DbKey, DbUtilsT, SentinelDbUtils},

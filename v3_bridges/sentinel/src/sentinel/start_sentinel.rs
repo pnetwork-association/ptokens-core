@@ -66,7 +66,7 @@ pub async fn start_sentinel(
         sentinel_args.disable_host_syncer,
     ));
 
-    let core_thread = tokio::spawn(core_loop(wrapped_db.clone(), core_rx));
+    let core_thread = tokio::spawn(core_loop(wrapped_db.clone(), config.core().clone(), core_rx));
     let native_eth_rpc_thread = tokio::spawn(eth_rpc_loop(native_eth_rpc_rx, config.clone()));
     let host_eth_rpc_thread = tokio::spawn(eth_rpc_loop(host_eth_rpc_rx, config.clone()));
     let mongo_thread = tokio::spawn(mongo_loop(config.mongo().clone(), mongo_rx));

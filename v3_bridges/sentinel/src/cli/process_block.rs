@@ -162,7 +162,7 @@ pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliAr
         let mut list = UserOpList::get(&s_db_utils);
         list.process_ops(user_ops.clone(), &s_db_utils)?;
         let cancellable_ops = list.get_cancellable_ops(
-            config.core().max_cancellable_time_delta,
+            config.core().max_cancellable_time_delta(),
             &s_db_utils,
             n_latest_block_num,
             h_latest_block_num,

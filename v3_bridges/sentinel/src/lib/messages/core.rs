@@ -14,6 +14,7 @@ pub enum CoreMessages {
     GetGasPrices(Responder<(u64, u64)>),
     GetUserOpList(Responder<UserOpList>),
     GetHostLatestBlockNumber(Responder<u64>),
+    GetCancellableUserOps(Responder<UserOps>),
     GetNativeLatestBlockNumber(Responder<u64>),
     GetLatestBlockNumbers(Responder<(u64, u64)>),
     GetCoreState((CoreType, Responder<CoreState>)),
@@ -35,6 +36,11 @@ pub enum CoreMessages {
 }
 
 impl CoreMessages {
+    pub fn get_cancellable_user_ops_msg() -> (Self, Receiver<Result<UserOps, SentinelError>>) {
+        let (tx, rx) = oneshot::channel();
+        (Self::GetCancellableUserOps(tx), rx)
+    }
+
     pub fn get_remove_user_op_msg(uid: EthHash) -> (Self, Receiver<Result<Json, SentinelError>>) {
         let (tx, rx) = oneshot::channel();
         (Self::RemoveUserOp { uid, responder: tx }, rx)
