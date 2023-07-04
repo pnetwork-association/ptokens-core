@@ -322,6 +322,14 @@ pub trait EthDbUtilsExt<D: DatabaseInterface> {
         }
     }
 
+    fn get_latest_eth_block_timestamp(&self) -> Result<u64> {
+        info!("✔ Getting latest ETH block number from db...");
+        match self.get_special_eth_block_from_db("latest") {
+            Ok(result) => Ok(result.get_timestamp().as_secs()),
+            Err(e) => Err(e),
+        }
+    }
+
     fn get_eth_tail_block_from_db(&self) -> Result<EthSubmissionMaterial> {
         info!("✔ Getting ETH tail block from db...");
         self.get_special_eth_block_from_db("tail")
