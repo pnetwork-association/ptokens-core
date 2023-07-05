@@ -20,6 +20,10 @@ pub struct CoreConfig {
 }
 
 impl CoreConfig {
+    pub fn core_type(&self) -> CoreType {
+        self.core_type.clone()
+    }
+
     pub fn max_cancellable_time_delta(&self) -> u64 {
         self.max_cancellable_time_delta
     }
