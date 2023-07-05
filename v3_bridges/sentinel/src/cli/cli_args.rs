@@ -68,4 +68,7 @@ pub enum SubCommands {
 
     /// Get the user operation state. Only works with ops already in the core
     GetUserOpState(GetUserOpStateCliArgs),
+
+    /// Get list of cancellable user ops
+    GetCancellableOps,
 }
