@@ -11,7 +11,6 @@ use lib::{
     SentinelConfig,
     SentinelError,
     UserOp,
-    UserOps,
 };
 use tokio::sync::mpsc::{Receiver as MpscRx, Sender as MpscTx};
 
@@ -58,24 +57,28 @@ async fn cancel_user_ops(
     native_address: &EthAddress,
     host_state_manager: &EthAddress,
     native_state_manager: &EthAddress,
-    ops: UserOps,
     core_tx: MpscTx<CoreMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
 ) -> Result<(), SentinelError> {
     let (host_msg, host_rx) = EthRpcMessages::get_nonce_msg(BridgeSide::Host, *host_address);
-    let (native_msg, native_rx) = EthRpcMessages::get_nonce_msg(BridgeSide::Native, *native_address);
     eth_rpc_tx.send(host_msg).await?;
-    eth_rpc_tx.send(native_msg).await?;
     let mut host_nonce = host_rx.await??;
+
+    let (native_msg, native_rx) = EthRpcMessages::get_nonce_msg(BridgeSide::Native, *native_address);
+    eth_rpc_tx.send(native_msg).await?;
     let mut native_nonce = native_rx.await??;
 
     let (gas_prices_msg, gas_prices_rx) = CoreMessages::get_gas_prices_msg();
     core_tx.send(gas_prices_msg).await?;
     let (native_gas_price, host_gas_price) = gas_prices_rx.await??;
 
+    let (cancellable_ops_msg, cancellable_ops_rx) = CoreMessages::get_cancellable_user_ops_msg();
+    core_tx.send(cancellable_ops_msg).await?;
+    let cancellable_user_ops = cancellable_ops_rx.await??;
+
     let err_msg = "error cancelling user op ";
 
-    for op in ops.iter() {
+    for op in cancellable_user_ops.iter() {
         match op.destination_side() {
             BridgeSide::Native => {
                 let uid = op.uid()?;
@@ -165,13 +168,12 @@ pub async fn broadcaster_loop(
         'broadcaster_loop: loop {
             tokio::select! {
                 r = rx.recv() => match r {
-                    Some(BroadcasterMessages::CancelUserOps(ops)) => {
+                    Some(BroadcasterMessages::CancelUserOps) => {
                         match cancel_user_ops(
                             &host_address,
                             &native_address,
                             &host_state_manager,
                             &native_state_manager,
-                            ops,
                             core_tx.clone(),
                             eth_rpc_tx.clone()
                         ).await {
