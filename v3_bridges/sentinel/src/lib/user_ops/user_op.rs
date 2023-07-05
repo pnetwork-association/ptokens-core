@@ -200,6 +200,10 @@ impl UserOp {
         Ok(EthHash::from_slice(&output))
     }
 
+    pub fn uid_hex(&self) -> Result<String, UserOpError> {
+        self.uid().map(|uid| format!("0x{}", hex::encode(uid.as_bytes())))
+    }
+
     fn abi_encode(&self) -> Result<Bytes, UserOpError> {
         Ok(abi::encode(&[
             Token::FixedBytes(self.user_op_log.origin_block_hash()?.as_bytes().to_vec()),
