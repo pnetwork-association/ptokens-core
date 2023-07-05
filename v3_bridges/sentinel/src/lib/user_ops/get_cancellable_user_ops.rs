@@ -33,28 +33,37 @@ impl UserOpList {
     ) -> Result<UserOps, SentinelError> {
         self.get_up_to_last_x_ops(db_utils, NUM_PAST_OPS_TO_CHECK_FOR_CANCELLABILITY)
             .map(|ops| ops.get_enqueued_but_not_witnessed())
-            .and_then(|cancellable_ops| {
+            .and_then(|potentially_cancellable_ops| {
+                debug!("num ops queued but not witnessed: {}", potentially_cancellable_ops.len());
+                debug!(
+                    "max delta: {max_delta}, n_latest_timestamp: {n_latest_block_timestamp}, h_latest_block_timestamp: {h_latest_block_timestamp}"
+                );
+
                 let mut ops: Vec<UserOp> = vec![];
-                for op in cancellable_ops.iter() {
+                for op in potentially_cancellable_ops.iter() {
                     let side = op.side();
+                    let uid = op.uid_hex()?;
                     let time = op.enqueued_timestamp()?;
 
-                    let cancellable = match side {
+                    let is_cancellable = match side {
                         // NOTE: Note that for host cancellations we need to ensure the _native_
                         // chain is in sync (within the allowable delta) and vice versa. This is so
-                        // we've had every chance to see the witnessed event.
+                        // we've had every chance to witness  the originationg `userSend` event.
                         BridgeSide::Host => time - max_delta < n_latest_block_timestamp,
                         BridgeSide::Native => time - max_delta < h_latest_block_timestamp,
                     };
                     debug!(
-                        "side: {side}, enqueued_timestamp: {time}, max_delta: {max_delta}, cancellable: {cancellable}"
+                        "op uid: {uid}, destination: {side}, enqueued_timestamp: {time}, is_cancellable: {is_cancellable}"
                     );
-                    if cancellable {
+
+                    if is_cancellable {
                         ops.push(op.clone())
                     }
                 }
 
-                Ok(UserOps::new(ops))
+                let r = UserOps::new(ops);
+                debug!("num cancellable ops: {}", r.len());
+                Ok(r)
             })
     }
 }
