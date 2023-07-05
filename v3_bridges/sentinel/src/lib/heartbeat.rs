@@ -4,7 +4,7 @@ use bounded_vec_deque::BoundedVecDeque;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::Output;
+use crate::ProcessorOutput;
 
 type Timestamp = u64;
 type LatestBlockNum = u64;
@@ -53,8 +53,8 @@ impl HeartbeatInfo {
     }
 }
 
-impl From<&Output> for HeartbeatInfo {
-    fn from(v: &Output) -> Self {
+impl From<&ProcessorOutput> for HeartbeatInfo {
+    fn from(v: &ProcessorOutput) -> Self {
         Self((v.timestamp(), v.latest_block_num()))
     }
 }
@@ -98,7 +98,7 @@ impl Heartbeats {
         }
     }
 
-    pub fn push(&mut self, o: &Output) {
+    pub fn push(&mut self, o: &ProcessorOutput) {
         let is_native = o.side().is_native();
         let last_timestamp = if is_native {
             self.last_native_timestamp()

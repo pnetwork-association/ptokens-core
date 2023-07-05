@@ -1,18 +1,15 @@
 use std::{convert::TryFrom, fs::read_to_string, path::Path, str::FromStr};
 
 use clap::Args;
-use common::{BridgeSide, DatabaseInterface};
-use common_eth::{EthDbUtilsExt, EthSubmissionMaterial, HostDbUtils, NativeDbUtils};
+use common::BridgeSide;
+use common_eth::EthSubmissionMaterial;
 use common_rocksdb_database::get_db_at_path;
 use derive_more::Constructor;
 use lib::{
     get_sub_mat,
     NetworkId,
     SentinelConfig,
-    SentinelDbUtils,
     SentinelError,
-    UserOpList,
-    UserOps,
     DEFAULT_SLEEP_TIME,
     HOST_PROTOCOL_ID,
     NATIVE_PROTOCOL_ID,
@@ -131,7 +128,7 @@ pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliAr
 
     let processed_block_num = sub_mat.get_block_number()?;
 
-    let user_ops = process_single(
+    let processed_user_ops = process_single(
         &db,
         &router,
         &sub_mat,
@@ -144,44 +141,14 @@ pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliAr
         args.reprocess,
     )?;
 
-    let user_ops_requiring_cancellation_txs = if user_ops.is_empty() {
-        warn!("no user ops to process");
-        UserOps::default()
-    } else if dry_run {
-        warn!("dry running therefore skipping processing user ops");
-        UserOps::default()
-    } else {
-        info!("processing user ops");
-        if use_db_tx {
-            db.start_transaction()?
-        };
-        let n_latest_block_num = NativeDbUtils::new(&db).get_latest_eth_block_timestamp()?;
-        let h_latest_block_num = HostDbUtils::new(&db).get_latest_eth_block_timestamp()?;
-
-        let s_db_utils = SentinelDbUtils::new(&db);
-        let mut list = UserOpList::get(&s_db_utils);
-        list.process_ops(user_ops.clone(), &s_db_utils)?;
-        let cancellable_ops = list.get_cancellable_ops(
-            config.core().max_cancellable_time_delta(),
-            &s_db_utils,
-            n_latest_block_num,
-            h_latest_block_num,
-        )?;
-        if use_db_tx {
-            db.end_transaction()?
-        };
-        cancellable_ops
-    };
-
     let r = json!({
         "jsonrpc": "2.0",
         "result": {
             "dry_run": dry_run,
-            "user_ops": user_ops,
             "use_db_tx": use_db_tx,
             "is_validating": is_validating,
+            "processed_user_ops": processed_user_ops,
             "processed_block_num": processed_block_num,
-            "user_ops_requiring_cancellation_txs": user_ops_requiring_cancellation_txs,
         }
     })
     .to_string();

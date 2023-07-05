@@ -13,7 +13,7 @@ mod heartbeat;
 mod logging;
 mod messages;
 mod network_id;
-mod output;
+mod processor_output;
 mod test_utils;
 mod user_ops;
 mod utils;
@@ -55,7 +55,7 @@ pub use self::{
         SyncerMessages,
     },
     network_id::{Bytes4, NetworkId, ProtocolId},
-    output::Output,
+    processor_output::ProcessorOutput,
     user_ops::{UserOp, UserOpError, UserOpList, UserOpSmartContractState, UserOps},
     utils::{get_utc_timestamp, run_timer},
 };

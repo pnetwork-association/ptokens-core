@@ -50,7 +50,6 @@ pub async fn processor_loop<D: DatabaseInterface>(
                             side,
                             if side.is_native() { &n_origin_network_id } else { &h_origin_network_id },
                             reprocess,
-                            config.core().max_cancellable_time_delta(),
                         );
                         match result {
                             Ok(output) => {
@@ -60,7 +59,9 @@ pub async fn processor_loop<D: DatabaseInterface>(
                                 mongo_tx.send(MongoMessages::PutHeartbeats(heartbeats.to_json())).await?;
 
                                 if output.has_user_ops() {
-                                    broadcaster_tx.send(BroadcasterMessages::CancelUserOps(output.user_ops())).await?;
+                                    // NOTE: Some user ops were processed so there may be some that
+                                    // are cancellable.
+                                    broadcaster_tx.send(BroadcasterMessages::CancelUserOps).await?;
                                 }
 
                                 continue 'processor_loop
