@@ -33,7 +33,7 @@ pub enum SentinelError {
     #[error("{0}")]
     Custom(String),
 
-    #[error("sigint caught in component '{0}'")]
+    #[error("sigint caught in {0}")]
     SigInt(String),
 
     #[error("timeout error: {0}")]
