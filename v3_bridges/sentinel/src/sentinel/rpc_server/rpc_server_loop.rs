@@ -206,7 +206,7 @@ impl RpcCall {
 }
 
 async fn main_loop(core_tx: CoreTx, mongo_tx: MongoTx, config: SentinelConfig) -> Result<(), SentinelError> {
-    debug!("server listening!");
+    debug!("rpc server listening!");
     let core_tx_filter = warp::any().map(move || core_tx.clone());
     let mongo_tx_filter = warp::any().map(move || mongo_tx.clone());
 
@@ -227,16 +227,17 @@ async fn main_loop(core_tx: CoreTx, mongo_tx: MongoTx, config: SentinelConfig) -
     Ok(())
 }
 
-pub async fn http_server_loop(
+pub async fn rpc_server_loop(
     core_tx: MpscTx<CoreMessages>,
     mongo_tx: MpscTx<MongoMessages>,
     config: SentinelConfig,
 ) -> Result<(), SentinelError> {
+    let m = "rpc server";
     tokio::select! {
         _ = main_loop(core_tx, mongo_tx, config.clone()) => Ok(()),
         _ = tokio::signal::ctrl_c() => {
-            warn!("http server shutting down...");
-            Err(SentinelError::SigInt("http server".into()))
+            warn!("{m} shutting down...");
+            Err(SentinelError::SigInt(m.into()))
         },
     }
 }

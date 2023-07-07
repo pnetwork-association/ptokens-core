@@ -22,7 +22,7 @@ use tokio::sync::{
 
 use crate::{
     cli::StartSentinelArgs,
-    sentinel::{broadcaster_loop, core_loop, eth_rpc_loop, http_server_loop, mongo_loop, processor_loop, syncer_loop},
+    sentinel::{broadcaster_loop, core_loop, eth_rpc_loop, mongo_loop, processor_loop, rpc_server_loop, syncer_loop},
 };
 
 const MAX_CHANNEL_CAPACITY: usize = 1337;
@@ -78,7 +78,7 @@ pub async fn start_sentinel(
         config.clone(),
         sentinel_args.disable_broadcaster,
     ));
-    let http_server_thread = tokio::spawn(http_server_loop(core_tx.clone(), mongo_tx.clone(), config.clone()));
+    let rpc_server_thread = tokio::spawn(rpc_server_loop(core_tx.clone(), mongo_tx.clone(), config.clone()));
     let processor_thread = tokio::spawn(processor_loop(
         wrapped_db.clone(),
         processor_rx,
@@ -93,7 +93,7 @@ pub async fn start_sentinel(
         flatten_join_handle(processor_thread),
         flatten_join_handle(core_thread),
         flatten_join_handle(mongo_thread),
-        flatten_join_handle(http_server_thread),
+        flatten_join_handle(rpc_server_thread),
         flatten_join_handle(native_eth_rpc_thread),
         flatten_join_handle(host_eth_rpc_thread),
         flatten_join_handle(broadcaster_thread),
@@ -106,7 +106,7 @@ pub async fn start_sentinel(
                 "processor_thread": r3,
                 "core_thread": r4,
                 "mongo_thread": r5,
-                "http_server_thread": r6,
+                "rpc_server_thread": r6,
                 "native_eth_rpc_thread": r7,
                 "host_eth_rpc_thread": r8,
                 "broadcaster_thread": r9,
