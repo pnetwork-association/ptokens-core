@@ -31,11 +31,11 @@ use crate::{
 pub async fn handle_cli() -> Result<String, SentinelError> {
     let config = SentinelConfig::new()?;
 
-    if config.log().is_enabled() {
-        init_logger(config.log())?;
-    };
-
     let cli_args = CliArgs::parse();
+
+    if config.log().is_enabled() {
+        init_logger(config.log(), cli_args.log_level())?
+    };
 
     let r = match cli_args.sub_commands {
         SubCommands::GetUserOps => get_user_ops(&config),

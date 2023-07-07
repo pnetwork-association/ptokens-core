@@ -1,5 +1,6 @@
 use clap::Parser;
 
+use super::LogLevel;
 use crate::cli::{
     get_sub_mat::SubMatGetterArgs,
     init::InitArgs,
@@ -17,6 +18,16 @@ use crate::cli::{
 pub struct CliArgs {
     #[command(subcommand)]
     pub sub_commands: SubCommands,
+
+    /// Log level - if extant, this overrides log level set in config
+    #[arg(long, short)]
+    log_level: Option<LogLevel>,
+}
+
+impl CliArgs {
+    pub fn log_level(&self) -> Option<log::Level> {
+        self.log_level.map(|l| l.into())
+    }
 }
 
 #[derive(Debug, Subcommand)]

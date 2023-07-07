@@ -9,6 +9,7 @@ mod get_user_op_list;
 mod get_user_op_state;
 mod get_user_ops;
 mod init;
+mod log_level;
 mod process_block;
 mod remove_user_op;
 mod reset_chain;
@@ -17,6 +18,7 @@ mod side;
 mod start_sentinel_args;
 mod write_file;
 
+pub(super) use log_level::LogLevel;
 pub(super) use side::Side;
 
 pub(crate) use self::{
