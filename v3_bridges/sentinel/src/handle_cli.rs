@@ -37,9 +37,6 @@ pub async fn handle_cli() -> Result<String, SentinelError> {
 
     let cli_args = CliArgs::parse();
 
-    let h_ws_client = config.host().endpoints().get_first_ws_client().await?;
-    let n_ws_client = config.native().endpoints().get_first_ws_client().await?;
-
     let r = match cli_args.sub_commands {
         SubCommands::GetUserOps => get_user_ops(&config),
         SubCommands::GetCoreState => get_core_state(&config),
@@ -54,10 +51,18 @@ pub async fn handle_cli() -> Result<String, SentinelError> {
         SubCommands::ProcessBlock(ref args) => process_block(&config, args).await,
         SubCommands::RemoveUserOp(ref args) => remove_user_op(&config, args).await,
         SubCommands::GetUserOpState(ref args) => get_user_op_state(&config, args).await,
-        SubCommands::GetHostSubMat(ref args) => get_host_sub_mat(&h_ws_client, args).await,
-        SubCommands::GetHostLatestBlockNum => get_host_latest_block_num(&h_ws_client).await,
-        SubCommands::GetNativeSubMat(ref args) => get_native_sub_mat(&n_ws_client, args).await,
-        SubCommands::GetNativeLatestBlockNum => get_native_latest_block_num(&n_ws_client).await,
+        SubCommands::GetHostSubMat(ref args) => {
+            get_host_sub_mat(&config.host().endpoints().get_first_ws_client().await?, args).await
+        },
+        SubCommands::GetHostLatestBlockNum => {
+            get_host_latest_block_num(&config.host().endpoints().get_first_ws_client().await?).await
+        },
+        SubCommands::GetNativeSubMat(ref args) => {
+            get_native_sub_mat(&config.native().endpoints().get_first_ws_client().await?, args).await
+        },
+        SubCommands::GetNativeLatestBlockNum => {
+            get_native_latest_block_num(&config.native().endpoints().get_first_ws_client().await?).await
+        },
     };
 
     r.map_err(|e| SentinelError::Json(json!({"jsonrpc": "2.0", "error": e.to_string()})))
