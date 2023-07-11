@@ -152,7 +152,7 @@ mod tests {
         assert_eq!(result, expected_result);
         let side = BridgeSide::Native;
         let hash = convert_hex_to_h256("0xf6f24a42e1bfa9ab963786a9d2e146da7a6afad0ed188daa7a88e37bf42db789").unwrap();
-        let expected_state = UserOpState::Witnessed(side, hash);
+        let expected_state = UserOpState::witnessed(side, hash);
         assert_eq!(ops[0].state(), expected_state);
     }
 
@@ -169,7 +169,7 @@ mod tests {
         assert_eq!(result, expected_result);
         let side = BridgeSide::Native;
         let hash = convert_hex_to_h256("0xc2e677e7e8c73834dc86c237f79f94ad3e4899d6aa7e561a8110a6117d13e8d5").unwrap();
-        let expected_state = UserOpState::Enqueued(side, hash);
+        let expected_state = UserOpState::enqueued(side, hash);
         assert_eq!(ops[0].state(), expected_state);
     }
 }

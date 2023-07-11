@@ -16,12 +16,44 @@ use super::{
 use crate::get_utc_timestamp;
 
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Serialize, Deserialize, EnumIter)]
+#[derive(Debug, Copy, Clone, Eq, PartialOrd, Serialize, Deserialize, EnumIter)]
 pub enum UserOpState {
     Witnessed(BridgeSide, EthHash, u64) = 1,
     Enqueued(BridgeSide, EthHash, u64) = 2,
     Executed(BridgeSide, EthHash, u64) = 3,
     Cancelled(BridgeSide, EthHash, u64) = 4,
+}
+
+impl PartialEq for UserOpState {
+    fn eq(&self, other: &Self) -> bool {
+        // NOTE: We don't care about the timestamps when comparing these...
+        match (self, other) {
+            (Self::Enqueued(s_a, h_a, _), Self::Enqueued(s_b, h_b, _))
+            | (Self::Executed(s_a, h_a, _), Self::Executed(s_b, h_b, _))
+            | (Self::Witnessed(s_a, h_a, _), Self::Witnessed(s_b, h_b, _))
+            | (Self::Cancelled(s_a, h_a, _), Self::Cancelled(s_b, h_b, _)) => s_a == s_b && h_a == h_b,
+            _ => false,
+        }
+    }
+}
+
+#[cfg(test)]
+impl UserOpState {
+    pub fn witnessed(s: BridgeSide, h: EthHash) -> Self {
+        Self::Witnessed(s, h, get_utc_timestamp().unwrap_or_default())
+    }
+
+    pub fn enqueued(s: BridgeSide, h: EthHash) -> Self {
+        Self::Enqueued(s, h, get_utc_timestamp().unwrap_or_default())
+    }
+
+    pub fn executed(s: BridgeSide, h: EthHash) -> Self {
+        Self::Executed(s, h, get_utc_timestamp().unwrap_or_default())
+    }
+
+    pub fn cancelled(s: BridgeSide, h: EthHash) -> Self {
+        Self::Cancelled(s, h, get_utc_timestamp().unwrap_or_default())
+    }
 }
 
 impl fmt::Display for UserOpState {
@@ -151,22 +183,22 @@ mod tests {
     #[test]
     fn user_op_state_should_be_ordered() {
         let h = EthHash::default();
-        assert!(UserOpState::Witnessed(BridgeSide::Native, h) < UserOpState::Witnessed(BridgeSide::Host, h));
+        assert!(UserOpState::witnessed(BridgeSide::Native, h) < UserOpState::witnessed(BridgeSide::Host, h));
         let s = BridgeSide::Native;
-        assert!(UserOpState::Witnessed(s, h) < UserOpState::Enqueued(s, h));
-        assert!(UserOpState::Enqueued(s, h) < UserOpState::Executed(s, h));
-        assert!(UserOpState::Executed(s, h) < UserOpState::Cancelled(s, h));
+        assert!(UserOpState::witnessed(s, h) < UserOpState::enqueued(s, h));
+        assert!(UserOpState::enqueued(s, h) < UserOpState::executed(s, h));
+        assert!(UserOpState::executed(s, h) < UserOpState::cancelled(s, h));
     }
 
     #[test]
     fn should_update_user_op_state() {
         let side = BridgeSide::Native;
         let hash_1 = EthHash::random();
-        let user_op_state = UserOpState::Witnessed(side, hash_1);
+        let user_op_state = UserOpState::witnessed(side, hash_1);
         let hash_2 = EthHash::random();
-        let (prev, result) = user_op_state.update(hash_2).unwrap();
+        let (prev, result) = user_op_state.update(hash_2, 1).unwrap();
         assert_eq!(prev, user_op_state);
-        let expected_result = UserOpState::Enqueued(side, hash_2);
+        let expected_result = UserOpState::enqueued(side, hash_2);
         assert_eq!(result, expected_result);
     }
 
@@ -174,13 +206,13 @@ mod tests {
     fn should_fail_to_update_user_op_state() {
         let side = BridgeSide::Native;
         let hash_1 = EthHash::random();
-        let user_op_state = UserOpState::Executed(side, hash_1);
+        let user_op_state = UserOpState::executed(side, hash_1);
         let hash_2 = EthHash::random();
-        match user_op_state.update(hash_2) {
+        match user_op_state.update(hash_2, 1) {
             Ok(_) => panic!("should not have succeeded!"),
             Err(UserOpError::CannotUpdate { from, to }) => {
                 assert_eq!(from, user_op_state);
-                assert_eq!(to, UserOpState::Cancelled(side, hash_2));
+                assert_eq!(to, UserOpState::Cancelled(side, hash_2, 1));
             },
             Err(e) => panic!("wrong error received: {e}"),
         }
@@ -190,11 +222,11 @@ mod tests {
     fn should_cancel_user_op_state() {
         let side = BridgeSide::Native;
         let hash_1 = EthHash::random();
-        let user_op_state = UserOpState::Witnessed(side, hash_1);
+        let user_op_state = UserOpState::witnessed(side, hash_1);
         let hash_2 = EthHash::random();
         let (prev, result) = user_op_state.cancel(hash_2).unwrap();
         assert_eq!(prev, user_op_state);
-        let expected_result = UserOpState::Cancelled(side, hash_2);
+        let expected_result = UserOpState::cancelled(side, hash_2);
         assert_eq!(result, expected_result);
     }
 
@@ -202,7 +234,7 @@ mod tests {
     fn should_fail_to_cancel_user_op_state() {
         let side = BridgeSide::Native;
         let hash_1 = EthHash::random();
-        let user_op_state = UserOpState::Executed(side, hash_1);
+        let user_op_state = UserOpState::executed(side, hash_1);
         let hash_2 = EthHash::random();
         match user_op_state.cancel(hash_2) {
             Ok(_) => panic!("should not have succeeded!"),
@@ -217,8 +249,8 @@ mod tests {
         let h_2 = EthHash::random();
         let b_1 = BridgeSide::Native;
         let b_2 = BridgeSide::Host;
-        let a = UserOpState::Witnessed(b_1, h_1);
-        let b = UserOpState::Witnessed(b_2, h_2);
+        let a = UserOpState::witnessed(b_1, h_1);
+        let b = UserOpState::witnessed(b_2, h_2);
         assert_ne!(a, b);
         assert!(a.is_same_state_as(b));
         assert!(a <= b);

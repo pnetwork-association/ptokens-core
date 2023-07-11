@@ -335,7 +335,7 @@ mod tests {
             &log,
         )
         .unwrap();
-        let expected_state = UserOpState::Enqueued(bridge_side, tx_hash);
+        let expected_state = UserOpState::Enqueued(bridge_side, tx_hash, 1);
         assert_eq!(result.state, expected_state);
     }
 

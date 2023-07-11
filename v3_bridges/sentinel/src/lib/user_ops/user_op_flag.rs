@@ -160,8 +160,8 @@ mod tests {
         let mut user_op_flag = UserOpFlag::default();
         let side = BridgeSide::Native;
         let hash = EthHash::random();
-        let s1 = UserOpState::Witnessed(side, hash);
-        let s2 = UserOpState::Enqueued(side, hash);
+        let s1 = UserOpState::witnessed(side, hash);
+        let s2 = UserOpState::enqueued(side, hash);
         user_op_flag.set_flag(&s1);
         assert!(user_op_flag.is_set(&s1));
         user_op_flag.set_flag(&s2);
