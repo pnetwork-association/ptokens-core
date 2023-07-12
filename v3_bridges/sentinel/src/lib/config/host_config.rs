@@ -12,18 +12,22 @@ use crate::{config::ConfigT, constants::MILLISECONDS_MULTIPLIER, Endpoints, Sent
 pub struct HostToml {
     validate: bool,
     router: String,
+    gas_limit: u64,
     sleep_duration: u64,
     eth_chain_id: String,
     state_manager: String,
     endpoints: Vec<String>,
+    gas_price: Option<u64>,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct HostConfig {
     validate: bool,
+    gas_limit: u64,
     router: EthAddress,
     sleep_duration: u64,
     endpoints: Endpoints,
+    gas_price: Option<u64>,
     eth_chain_id: EthChainId,
     state_manager: EthAddress,
 }
@@ -34,6 +38,8 @@ impl HostConfig {
         Ok(Self {
             sleep_duration,
             validate: toml.validate,
+            gas_price: toml.gas_price,
+            gas_limit: toml.gas_limit,
             router: convert_hex_to_eth_address(&toml.router)?,
             endpoints: Endpoints::new(sleep_duration, BridgeSide::Host, toml.endpoints.clone()),
             state_manager: convert_hex_to_eth_address(&toml.state_manager)?,
@@ -76,5 +82,13 @@ impl ConfigT for HostConfig {
 
     fn router(&self) -> EthAddress {
         self.router
+    }
+
+    fn gas_price(&self) -> Option<u64> {
+        self.gas_price
+    }
+
+    fn gas_limit(&self) -> u64 {
+        self.gas_limit
     }
 }
