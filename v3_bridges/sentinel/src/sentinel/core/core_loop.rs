@@ -84,7 +84,7 @@ async fn handle_message<D: DatabaseInterface>(
             gas_limit,
             nonce,
             responder,
-            state_manager,
+            pnetwork_hub,
         } => {
             let h = HostDbUtils::new(&*db);
             let n = NativeDbUtils::new(&*db);
@@ -95,7 +95,7 @@ async fn handle_message<D: DatabaseInterface>(
                 (h.get_eth_chain_id_from_db()?, h.get_eth_private_key_from_db()?)
             };
             debug!("core cancellation getter chain ID: {chain_id}");
-            let tx = op.cancel(nonce, gas_price, gas_limit, &state_manager, &pk, &chain_id)?;
+            let tx = op.cancel(nonce, gas_price, gas_limit, &pnetwork_hub, &pk, &chain_id)?;
             let _ = responder.send(Ok(tx));
         },
     }

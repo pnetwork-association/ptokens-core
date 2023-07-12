@@ -11,11 +11,10 @@ use crate::{config::ConfigT, constants::MILLISECONDS_MULTIPLIER, Endpoints, Sent
 #[derive(Debug, Clone, Deserialize)]
 pub struct NativeToml {
     validate: bool,
-    router: String,
     gas_limit: usize,
     sleep_duration: u64,
     eth_chain_id: String,
-    state_manager: String,
+    pnetwork_hub: String,
     endpoints: Vec<String>,
     gas_price: Option<u64>,
 }
@@ -24,12 +23,11 @@ pub struct NativeToml {
 pub struct NativeConfig {
     validate: bool,
     gas_limit: usize,
-    router: EthAddress,
     sleep_duration: u64,
     endpoints: Endpoints,
     gas_price: Option<u64>,
     eth_chain_id: EthChainId,
-    state_manager: EthAddress,
+    pnetwork_hub: EthAddress,
 }
 
 impl NativeConfig {
@@ -40,8 +38,7 @@ impl NativeConfig {
             validate: toml.validate,
             gas_price: toml.gas_price,
             gas_limit: toml.gas_limit,
-            router: convert_hex_to_eth_address(&toml.router)?,
-            state_manager: convert_hex_to_eth_address(&toml.state_manager)?,
+            pnetwork_hub: convert_hex_to_eth_address(&toml.pnetwork_hub)?,
             endpoints: Endpoints::new(sleep_duration, BridgeSide::Native, toml.endpoints.clone()),
             eth_chain_id: match EthChainId::from_str(&toml.eth_chain_id) {
                 Ok(id) => id,
@@ -76,19 +73,15 @@ impl ConfigT for NativeConfig {
         self.validate
     }
 
-    fn state_manager(&self) -> EthAddress {
-        self.state_manager
-    }
-
-    fn router(&self) -> EthAddress {
-        self.router
-    }
-
     fn gas_price(&self) -> Option<u64> {
         self.gas_price
     }
 
     fn gas_limit(&self) -> usize {
         self.gas_limit
+    }
+
+    fn pnetwork_hub(&self) -> EthAddress {
+        self.pnetwork_hub
     }
 }

@@ -114,14 +114,6 @@ impl Config {
         self.native.endpoints()
     }
 
-    pub fn state_manager(&self, side: &BridgeSide) -> EthAddress {
-        if side.is_native() {
-            self.native.state_manager()
-        } else {
-            self.host.state_manager()
-        }
-    }
-
     pub fn is_validating(&self, side: &BridgeSide) -> bool {
         if side.is_native() {
             self.native.is_validating()
@@ -130,11 +122,11 @@ impl Config {
         }
     }
 
-    pub fn router(&self, side: &BridgeSide) -> EthAddress {
+    pub fn pnetwork_hub(&self, side: &BridgeSide) -> EthAddress {
         if side.is_native() {
-            self.native.router()
+            self.native.pnetwork_hub()
         } else {
-            self.host.router()
+            self.host.pnetwork_hub()
         }
     }
 }

@@ -8,9 +8,8 @@ use lib::{Bytes4, ProcessorOutput, SentinelDbUtils, SentinelError, UserOpList, U
 #[allow(clippy::too_many_arguments)]
 pub fn process_single<D: DatabaseInterface>(
     db: &D,
-    router: &EthAddress,
     sub_mat: &EthSubmissionMaterial,
-    state_manager: &EthAddress,
+    pnetwork_hub: &EthAddress,
     is_validating: bool,
     use_db_tx: bool,
     dry_run: bool,
@@ -45,7 +44,7 @@ pub fn process_single<D: DatabaseInterface>(
         sub_mat.receipts_are_valid()?;
     };
 
-    let ops = UserOps::from_sub_mat(side, state_manager, &network_id.to_vec(), router, sub_mat)?;
+    let ops = UserOps::from_sub_mat(side, &network_id.to_vec(), pnetwork_hub, sub_mat)?;
     debug!("found user ops: {ops}");
 
     let sentinel_db_utils = SentinelDbUtils::new(db);
@@ -64,8 +63,7 @@ pub fn process_single<D: DatabaseInterface>(
 #[allow(clippy::too_many_arguments)]
 pub fn process_batch<D: DatabaseInterface>(
     db: &D,
-    router: &EthAddress,
-    state_manager: &EthAddress,
+    pnetwork_hub: &EthAddress,
     batch: &EthSubmissionMaterials,
     is_validating: bool,
     side: BridgeSide,
@@ -82,9 +80,8 @@ pub fn process_batch<D: DatabaseInterface>(
             .map(|sub_mat| {
                 process_single(
                     db,
-                    router,
                     sub_mat,
-                    state_manager,
+                    pnetwork_hub,
                     is_validating,
                     use_db_tx,
                     dry_run,

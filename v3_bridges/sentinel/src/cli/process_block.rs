@@ -93,8 +93,7 @@ pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliAr
     let args = ProcessBlockArgs::try_from(cli_args)?;
     let db = get_db_at_path(&config.get_db_path())?;
     let side = args.side;
-    let state_manager = config.state_manager(&side);
-    let router = config.router(&side);
+    let pnetwork_hub = config.pnetwork_hub(&side);
     let is_validating = config.is_validating(&side);
     let dry_run = args.dry_run;
     let use_db_tx = !dry_run;
@@ -130,9 +129,8 @@ pub async fn process_block(config: &SentinelConfig, cli_args: &ProcessBlockCliAr
 
     let processed_user_ops = process_single(
         &db,
-        &router,
         &sub_mat,
-        &state_manager,
+        &pnetwork_hub,
         is_validating,
         use_db_tx,
         dry_run,

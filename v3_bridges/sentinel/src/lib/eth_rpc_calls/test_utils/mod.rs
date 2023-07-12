@@ -14,19 +14,17 @@ fn get_arbitrum_protocol_queue_operation_sub_mat() -> EthSubmissionMaterial {
 
 pub fn get_arbitrum_protocol_queue_user_op() -> UserOp {
     let side = BridgeSide::Host;
-    let router = convert_hex_to_eth_address("0x6DEad6070e7165bf389319762512e5743831E353").unwrap();
     let protocol_id = ProtocolId::Ethereum;
     let origin_chain_id = EthChainId::XDaiMainnet;
     let origin_network_id = NetworkId::new(origin_chain_id, protocol_id)
         .to_bytes_4()
         .unwrap()
         .to_vec();
-    let state_manager = convert_hex_to_eth_address("0xf84552a4B276B47718b8E25E8151eF749D64C4A6").unwrap();
+    let pnetwork_hub = convert_hex_to_eth_address("0xf84552a4B276B47718b8E25E8151eF749D64C4A6").unwrap();
     let ops = UserOps::from_sub_mat(
         side,
-        &router,
         &origin_network_id,
-        &state_manager,
+        &pnetwork_hub,
         &get_arbitrum_protocol_queue_operation_sub_mat(),
     )
     .unwrap();

@@ -69,13 +69,9 @@ pub async fn get_cancel_tx(config: &SentinelConfig, args: &CancelTxArgs) -> Resu
                     config.host().endpoints().get_first_ws_client().await?
                 };
 
-                let state_manager = if side.is_native() {
-                    config.native().state_manager()
-                } else {
-                    config.host().state_manager()
-                };
+                let pnetwork_hub = config.pnetwork_hub(&side);
 
-                let user_op_state = get_user_op_state(&op, &state_manager, &ws_client, SLEEP_TIME, side).await?;
+                let user_op_state = get_user_op_state(&op, &pnetwork_hub, &ws_client, SLEEP_TIME, side).await?;
 
                 if user_op_state != UserOpSmartContractState::Enqueued {
                     return Err(SentinelError::Custom(format!(
@@ -119,10 +115,10 @@ pub async fn get_cancel_tx(config: &SentinelConfig, args: &CancelTxArgs) -> Resu
                     }
                 };
 
-                let state_manager = if side.is_native() {
-                    config.native().state_manager()
+                let pnetwork_hub = if side.is_native() {
+                    config.native().pnetwork_hub()
                 } else {
-                    config.host().state_manager()
+                    config.host().pnetwork_hub()
                 };
 
                 let (chain_id, pk) = if side.is_native() {
@@ -146,7 +142,7 @@ pub async fn get_cancel_tx(config: &SentinelConfig, args: &CancelTxArgs) -> Resu
                     l
                 };
 
-                let tx = op.cancel(nonce, gas_price, gas_limit, &state_manager, &pk, &chain_id)?;
+                let tx = op.cancel(nonce, gas_price, gas_limit, &pnetwork_hub, &pk, &chain_id)?;
                 let tx_hex = tx.serialize_hex();
 
                 debug!("signed tx: 0x{tx_hex}");

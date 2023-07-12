@@ -17,11 +17,10 @@ pub struct Batch {
     block_num: u64,
     batch_size: u64,
     side: BridgeSide,
-    router: EthAddress,
     sleep_duration: u64,
     batch_duration: u64,
     endpoints: Endpoints,
-    state_manager: EthAddress,
+    pnetwork_hub: EthAddress,
     batching_is_disabled: bool,
     single_submissions_flag: bool,
     batch: EthSubmissionMaterials,
@@ -38,10 +37,9 @@ impl Default for Batch {
             batch_duration: 300, // NOTE: 5mins
             side: BridgeSide::default(),
             batching_is_disabled: false,
-            router: EthAddress::default(),
             single_submissions_flag: false,
             endpoints: Endpoints::default(),
-            state_manager: EthAddress::default(),
+            pnetwork_hub: EthAddress::default(),
             batch: EthSubmissionMaterials::default(),
             last_submitted_timestamp: SystemTime::now(),
         }
@@ -125,15 +123,10 @@ impl Batch {
             },
             batch_size: config.batching().get_batch_size(is_native),
             batch_duration: config.batching().get_batch_duration(is_native),
-            state_manager: if is_native {
-                config.native().state_manager()
+            pnetwork_hub: if is_native {
+                config.native().pnetwork_hub()
             } else {
-                config.host().state_manager()
-            },
-            router: if is_native {
-                config.native().router()
-            } else {
-                config.host().router()
+                config.host().pnetwork_hub()
             },
             ..Default::default()
         };
@@ -166,11 +159,11 @@ impl Batch {
 
     pub fn push(&mut self, sub_mat: EthSubmissionMaterial) {
         self.batch
-            .push(sub_mat.remove_receipts_if_no_logs_from_addresses(&[self.state_manager, self.router]));
+            .push(sub_mat.remove_receipts_if_no_logs_from_addresses(&[self.pnetwork_hub]));
     }
 
-    pub fn get_state_manager(&self) -> &EthAddress {
-        &self.state_manager
+    pub fn get_pnetwork_hub(&self) -> &EthAddress {
+        &self.pnetwork_hub
     }
 
     pub fn is_empty(&self) -> bool {
@@ -384,7 +377,7 @@ mod tests {
             ..Default::default()
         };
         let mut batch = Batch {
-            state_manager: address,
+            pnetwork_hub: address,
             ..Default::default()
         };
         batch.push(sub_mat);
@@ -410,7 +403,7 @@ mod tests {
             ..Default::default()
         };
         let mut batch = Batch {
-            state_manager: other_address,
+            pnetwork_hub: other_address,
             ..Default::default()
         };
         batch.push(sub_mat);

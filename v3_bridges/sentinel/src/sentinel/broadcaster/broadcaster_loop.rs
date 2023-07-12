@@ -21,7 +21,7 @@ async fn cancel_user_op(
     gas_limit: usize,
     core_tx: MpscTx<CoreMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
-    state_manager: &EthAddress,
+    pnetwork_hub: &EthAddress,
 ) -> Result<EthHash, SentinelError> {
     // TODO check we have enough balance to push
     // TODO put back in core db upon error and continue broadcaster loop with warning messages?
@@ -29,7 +29,7 @@ async fn cancel_user_op(
     let side = op.destination_side();
     debug!("cancelling user op on side: {side} nonce: {nonce} gas price: {gas_price}");
 
-    let (msg, rx) = EthRpcMessages::get_user_op_state_msg(side, op.clone(), *state_manager);
+    let (msg, rx) = EthRpcMessages::get_user_op_state_msg(side, op.clone(), *pnetwork_hub);
     eth_rpc_tx.send(msg).await?;
     let user_op_smart_contract_state = rx.await??;
     debug!("user op state before cancellation: {user_op_smart_contract_state}");
@@ -37,7 +37,7 @@ async fn cancel_user_op(
     let tx_hash = if user_op_smart_contract_state.is_cancellable() {
         warn!("sending cancellation tx for user op: {op}");
         let (msg, rx) =
-            CoreMessages::get_cancellation_signature_msg(op.clone(), nonce, gas_price, gas_limit, *state_manager);
+            CoreMessages::get_cancellation_signature_msg(op.clone(), nonce, gas_price, gas_limit, *pnetwork_hub);
         core_tx.send(msg).await?;
         let signed_tx = rx.await??;
         debug!("signed tx: {}", signed_tx.serialize_hex());
@@ -76,8 +76,8 @@ async fn cancel_user_ops(
     core_tx: MpscTx<CoreMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
 ) -> Result<(), SentinelError> {
-    let host_state_manager = config.host().state_manager();
-    let native_state_manager = config.native().state_manager();
+    let host_pnetwork_hub = config.host().pnetwork_hub();
+    let native_pnetwork_hub = config.native().pnetwork_hub();
 
     let (host_msg, host_rx) = EthRpcMessages::get_nonce_msg(BridgeSide::Host, *host_address);
     eth_rpc_tx.send(host_msg).await?;
@@ -110,7 +110,7 @@ async fn cancel_user_ops(
                     native_gas_limit,
                     core_tx.clone(),
                     eth_rpc_tx.clone(),
-                    &native_state_manager,
+                    &native_pnetwork_hub,
                 )
                 .await
                 {
@@ -135,7 +135,7 @@ async fn cancel_user_ops(
                     host_gas_limit,
                     core_tx.clone(),
                     eth_rpc_tx.clone(),
-                    &host_state_manager,
+                    &host_pnetwork_hub,
                 )
                 .await
                 {

@@ -43,8 +43,7 @@ pub async fn processor_loop<D: DatabaseInterface>(
                         // NOTE If we match on the process fxn call directly, we get tokio errors!
                         let result =  process_batch(
                             &*db,
-                            &config.router(&side),
-                            &config.state_manager(&side),
+                            &config.pnetwork_hub(&side),
                             &args.batch,
                             config.is_validating(&side),
                             side,

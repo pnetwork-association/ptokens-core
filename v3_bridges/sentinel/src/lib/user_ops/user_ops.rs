@@ -25,9 +25,8 @@ impl UserOps {
 
     pub fn from_sub_mat(
         side: BridgeSide,
-        router: &EthAddress,
         origin_network_id: &[Byte],
-        state_manager: &EthAddress,
+        pnetwork_hub: &EthAddress,
         sub_mat: &EthSubmissionMaterial,
     ) -> Result<Self, SentinelError> {
         let block_hash = sub_mat.get_block_hash()?;
@@ -40,7 +39,7 @@ impl UserOps {
             *WITNESSED_USER_OP_TOPIC,
         ];
 
-        let addresses = vec![router, state_manager];
+        let addresses = vec![pnetwork_hub];
 
         let mut user_ops: Vec<UserOp> = vec![];
 
@@ -144,10 +143,9 @@ mod tests {
         let side = BridgeSide::Native;
         let sub_mat = get_sample_sub_mat_n(10);
         let sepolia_network_id = hex::decode("e15503e4").unwrap();
-        let state_manager = convert_hex_to_eth_address("b274d81a823c1912c6884e39c2e4e669e04c83f4").unwrap();
-        let router = EthAddress::random();
+        let pnetwork_hub = convert_hex_to_eth_address("b274d81a823c1912c6884e39c2e4e669e04c83f4").unwrap();
         let expected_result = 1;
-        let ops = UserOps::from_sub_mat(side, &router, &sepolia_network_id, &state_manager, &sub_mat).unwrap();
+        let ops = UserOps::from_sub_mat(side, &sepolia_network_id, &pnetwork_hub, &sub_mat).unwrap();
         let result = ops.len();
         assert_eq!(result, expected_result);
         let side = BridgeSide::Native;
@@ -161,10 +159,9 @@ mod tests {
         let side = BridgeSide::Native;
         let sub_mat = get_sample_sub_mat_n(11);
         let sepolia_network_id = hex::decode("e15503e4").unwrap();
-        let state_manager = convert_hex_to_eth_address("0xBcBC92efE0a3C3ca99deBa708CEc92c785AfFB15").unwrap();
-        let router = EthAddress::random();
+        let pnetwork_hub = convert_hex_to_eth_address("0xBcBC92efE0a3C3ca99deBa708CEc92c785AfFB15").unwrap();
         let expected_result = 1;
-        let ops = UserOps::from_sub_mat(side, &router, &sepolia_network_id, &state_manager, &sub_mat).unwrap();
+        let ops = UserOps::from_sub_mat(side, &sepolia_network_id, &pnetwork_hub, &sub_mat).unwrap();
         let result = ops.len();
         assert_eq!(result, expected_result);
         let side = BridgeSide::Native;

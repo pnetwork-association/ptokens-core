@@ -31,7 +31,7 @@ pub enum CoreMessages {
         gas_price: u64,
         gas_limit: usize,
         op: Box<UserOp>,
-        state_manager: EthAddress,
+        pnetwork_hub: EthAddress,
         responder: Responder<EthTransaction>,
     },
 }
@@ -97,7 +97,7 @@ impl CoreMessages {
         nonce: u64,
         gas_price: u64,
         gas_limit: usize,
-        state_manager: EthAddress,
+        pnetwork_hub: EthAddress,
     ) -> (Self, Receiver<Result<EthTransaction, SentinelError>>) {
         let (tx, rx) = oneshot::channel();
         (
@@ -105,7 +105,7 @@ impl CoreMessages {
                 nonce,
                 gas_price,
                 gas_limit,
-                state_manager,
+                pnetwork_hub,
                 responder: tx,
                 op: Box::new(op),
             },

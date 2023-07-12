@@ -3,7 +3,6 @@ use common_rocksdb_database::get_db_at_path;
 use lib::{
     check_init,
     get_user_op_state as get_user_op_state_rpc_call,
-    ConfigT,
     DbUtilsT,
     SentinelConfig,
     SentinelDbUtils,
@@ -32,20 +31,14 @@ pub async fn get_user_op_state(config: &SentinelConfig, args: &GetUserOpStateCli
         },
         Ok(op) => {
             let side = op.destination_side();
-
-            let state_manager = if side.is_native() {
-                config.native().state_manager()
-            } else {
-                config.host().state_manager()
-            };
-
+            let pnework_hub = config.pnetwork_hub(&side);
             let ws_client = if side.is_native() {
                 config.native().endpoints().get_first_ws_client().await?
             } else {
                 config.host().endpoints().get_first_ws_client().await?
             };
 
-            let state = get_user_op_state_rpc_call(&op, &state_manager, &ws_client, DEFAULT_SLEEP_TIME, side).await?;
+            let state = get_user_op_state_rpc_call(&op, &pnework_hub, &ws_client, DEFAULT_SLEEP_TIME, side).await?;
 
             let r = json!({"jsonrpc": "2.0", "result": { "user_op_state": state.to_string(), "uid": args.uid }})
                 .to_string();
