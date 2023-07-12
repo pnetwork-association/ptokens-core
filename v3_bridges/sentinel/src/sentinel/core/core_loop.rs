@@ -2,7 +2,7 @@ use std::{result::Result, sync::Arc};
 
 use common::{BridgeSide, DatabaseInterface};
 use common_eth::{EthDbUtilsExt, HostDbUtils, NativeDbUtils};
-use lib::{CoreConfig, CoreMessages, CoreState, SentinelDbUtils, SentinelError, UserOp, UserOpList};
+use lib::{CoreConfig, CoreMessages, CoreState, SentinelDbUtils, SentinelError, UserOpList};
 use serde_json::json;
 use tokio::sync::{mpsc::Receiver as MpscRx, Mutex};
 
@@ -81,19 +81,21 @@ async fn handle_message<D: DatabaseInterface>(
         CoreMessages::GetCancellationTx {
             op,
             gas_price,
+            gas_limit,
             nonce,
             responder,
             state_manager,
         } => {
             let h = HostDbUtils::new(&*db);
             let n = NativeDbUtils::new(&*db);
-            let (chain_id, pk) = match op.destination_side() {
-                BridgeSide::Host => (h.get_eth_chain_id_from_db()?, h.get_eth_private_key_from_db()?),
-                BridgeSide::Native => (n.get_eth_chain_id_from_db()?, n.get_eth_private_key_from_db()?),
+            let side = op.destination_side();
+            let (chain_id, pk) = if side.is_native() {
+                (n.get_eth_chain_id_from_db()?, n.get_eth_private_key_from_db()?)
+            } else {
+                (h.get_eth_chain_id_from_db()?, h.get_eth_private_key_from_db()?)
             };
             debug!("core cancellation getter chain ID: {chain_id}");
-            let gas_limit = UserOp::cancellation_gas_limit(&chain_id);
-            let tx = op.cancel(nonce, gas_price, &state_manager, gas_limit, &pk, &chain_id)?;
+            let tx = op.cancel(nonce, gas_price, gas_limit, &state_manager, &pk, &chain_id)?;
             let _ = responder.send(Ok(tx));
         },
     }

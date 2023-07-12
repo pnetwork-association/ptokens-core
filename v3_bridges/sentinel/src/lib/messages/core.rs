@@ -29,6 +29,7 @@ pub enum CoreMessages {
     GetCancellationTx {
         nonce: u64,
         gas_price: u64,
+        gas_limit: usize,
         op: Box<UserOp>,
         state_manager: EthAddress,
         responder: Responder<EthTransaction>,
@@ -95,6 +96,7 @@ impl CoreMessages {
         op: UserOp,
         nonce: u64,
         gas_price: u64,
+        gas_limit: usize,
         state_manager: EthAddress,
     ) -> (Self, Receiver<Result<EthTransaction, SentinelError>>) {
         let (tx, rx) = oneshot::channel();
@@ -102,6 +104,7 @@ impl CoreMessages {
             Self::GetCancellationTx {
                 nonce,
                 gas_price,
+                gas_limit,
                 state_manager,
                 responder: tx,
                 op: Box::new(op),

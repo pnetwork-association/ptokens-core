@@ -18,6 +18,7 @@ async fn cancel_user_op(
     op: UserOp,
     nonce: u64,
     gas_price: u64,
+    gas_limit: usize,
     core_tx: MpscTx<CoreMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     state_manager: &EthAddress,
@@ -35,7 +36,8 @@ async fn cancel_user_op(
 
     let tx_hash = if user_op_smart_contract_state.is_cancellable() {
         warn!("sending cancellation tx for user op: {op}");
-        let (msg, rx) = CoreMessages::get_cancellation_signature_msg(op.clone(), nonce, gas_price, *state_manager);
+        let (msg, rx) =
+            CoreMessages::get_cancellation_signature_msg(op.clone(), nonce, gas_price, gas_limit, *state_manager);
         core_tx.send(msg).await?;
         let signed_tx = rx.await??;
         debug!("signed tx: {}", signed_tx.serialize_hex());
@@ -52,14 +54,31 @@ async fn cancel_user_op(
     Ok(tx_hash)
 }
 
+async fn get_gas_price(config: &impl ConfigT, eth_rpc_tx: MpscTx<EthRpcMessages>) -> Result<u64, SentinelError> {
+    let side = config.side();
+    let p = if let Some(p) = config.gas_price() {
+        debug!("using {side} gas price from config: {p}");
+        p
+    } else {
+        let (msg, rx) = EthRpcMessages::get_gas_price_msg(side);
+        eth_rpc_tx.send(msg).await?;
+        let p = rx.await??;
+        debug!("using {side} gas price from rpc: {p}");
+        p
+    };
+    Ok(p)
+}
+
 async fn cancel_user_ops(
+    config: &SentinelConfig,
     host_address: &EthAddress,
     native_address: &EthAddress,
-    host_state_manager: &EthAddress,
-    native_state_manager: &EthAddress,
     core_tx: MpscTx<CoreMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
 ) -> Result<(), SentinelError> {
+    let host_state_manager = config.host().state_manager();
+    let native_state_manager = config.native().state_manager();
+
     let (host_msg, host_rx) = EthRpcMessages::get_nonce_msg(BridgeSide::Host, *host_address);
     eth_rpc_tx.send(host_msg).await?;
     let mut host_nonce = host_rx.await??;
@@ -68,9 +87,11 @@ async fn cancel_user_ops(
     eth_rpc_tx.send(native_msg).await?;
     let mut native_nonce = native_rx.await??;
 
-    let (gas_prices_msg, gas_prices_rx) = CoreMessages::get_gas_prices_msg();
-    core_tx.send(gas_prices_msg).await?;
-    let (native_gas_price, host_gas_price) = gas_prices_rx.await??;
+    let host_gas_price = get_gas_price(config.host(), eth_rpc_tx.clone()).await?;
+    let native_gas_price = get_gas_price(config.native(), eth_rpc_tx.clone()).await?;
+
+    let host_gas_limit = config.host().gas_limit();
+    let native_gas_limit = config.native().gas_limit();
 
     let (cancellable_ops_msg, cancellable_ops_rx) = CoreMessages::get_cancellable_user_ops_msg();
     core_tx.send(cancellable_ops_msg).await?;
@@ -86,9 +107,10 @@ async fn cancel_user_ops(
                     op.clone(),
                     native_nonce,
                     native_gas_price,
+                    native_gas_limit,
                     core_tx.clone(),
                     eth_rpc_tx.clone(),
-                    native_state_manager,
+                    &native_state_manager,
                 )
                 .await
                 {
@@ -110,9 +132,10 @@ async fn cancel_user_ops(
                     op.clone(),
                     host_nonce,
                     host_gas_price,
+                    host_gas_limit,
                     core_tx.clone(),
                     eth_rpc_tx.clone(),
-                    host_state_manager,
+                    &host_state_manager,
                 )
                 .await
                 {
@@ -142,11 +165,6 @@ pub async fn broadcaster_loop(
     config: SentinelConfig,
     disable_broadcaster: bool,
 ) -> Result<(), SentinelError> {
-    let _host_endpoints = config.get_host_endpoints();
-    let _native_endpoints = config.get_native_endpoints();
-    let host_state_manager = config.host().state_manager();
-    let native_state_manager = config.native().state_manager();
-
     if disable_broadcaster {
         warn!("Broadcaster has been disabled");
         tokio::select! {
@@ -170,10 +188,9 @@ pub async fn broadcaster_loop(
                 r = rx.recv() => match r {
                     Some(BroadcasterMessages::CancelUserOps) => {
                         match cancel_user_ops(
+                            &config,
                             &host_address,
                             &native_address,
-                            &host_state_manager,
-                            &native_state_manager,
                             core_tx.clone(),
                             eth_rpc_tx.clone()
                         ).await {

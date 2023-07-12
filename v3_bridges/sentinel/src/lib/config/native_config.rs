@@ -12,7 +12,7 @@ use crate::{config::ConfigT, constants::MILLISECONDS_MULTIPLIER, Endpoints, Sent
 pub struct NativeToml {
     validate: bool,
     router: String,
-    gas_limit: u64,
+    gas_limit: usize,
     sleep_duration: u64,
     eth_chain_id: String,
     state_manager: String,
@@ -23,7 +23,7 @@ pub struct NativeToml {
 #[derive(Debug, Clone, Default)]
 pub struct NativeConfig {
     validate: bool,
-    gas_limit: u64,
+    gas_limit: usize,
     router: EthAddress,
     sleep_duration: u64,
     endpoints: Endpoints,
@@ -88,7 +88,7 @@ impl ConfigT for NativeConfig {
         self.gas_price
     }
 
-    fn gas_limit(&self) -> u64 {
+    fn gas_limit(&self) -> usize {
         self.gas_limit
     }
 }

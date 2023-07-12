@@ -82,7 +82,6 @@ mod tests {
         let ws_client = get_test_ws_client().await;
         let result = get_eth_balance(&ws_client, &*ADDRESS, DEFAULT_SLEEP_TIME, BridgeSide::default()).await;
         assert!(result.is_ok());
-        println!("{result:?}");
     }
 
     #[tokio::test]

@@ -104,9 +104,19 @@ pub async fn get_cancel_tx(config: &SentinelConfig, args: &CancelTxArgs) -> Resu
                     debug!("using passed in gas price {p}");
                     p
                 } else {
-                    let p = get_gas_price(&ws_client, SLEEP_TIME, side).await?;
-                    debug!("using gas price from RPC: {p}");
-                    p
+                    let maybe_p = if side.is_native() {
+                        config.native().gas_price()
+                    } else {
+                        config.host().gas_price()
+                    };
+                    if let Some(p) = maybe_p {
+                        debug!("using gas price from config: {p}");
+                        p
+                    } else {
+                        let p = get_gas_price(&ws_client, SLEEP_TIME, side).await?;
+                        debug!("using gas price from RPC: {p}");
+                        p
+                    }
                 };
 
                 let state_manager = if side.is_native() {
@@ -136,7 +146,7 @@ pub async fn get_cancel_tx(config: &SentinelConfig, args: &CancelTxArgs) -> Resu
                     l
                 };
 
-                let tx = op.cancel(nonce, gas_price, &state_manager, gas_limit, &pk, &chain_id)?;
+                let tx = op.cancel(nonce, gas_price, gas_limit, &state_manager, &pk, &chain_id)?;
                 let tx_hex = tx.serialize_hex();
 
                 debug!("signed tx: 0x{tx_hex}");
