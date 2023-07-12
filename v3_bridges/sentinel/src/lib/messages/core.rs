@@ -1,5 +1,5 @@
 use common::{BridgeSide, CoreType};
-use common_eth::EthTransaction;
+use common_eth::{EthPrivateKey, EthTransaction};
 use ethereum_types::{Address as EthAddress, H256 as EthHash};
 use serde_json::Value as Json;
 use tokio::sync::{oneshot, oneshot::Receiver};
@@ -32,6 +32,7 @@ pub enum CoreMessages {
         gas_limit: usize,
         op: Box<UserOp>,
         pnetwork_hub: EthAddress,
+        broadcaster_pk: EthPrivateKey,
         responder: Responder<EthTransaction>,
     },
 }
@@ -98,6 +99,7 @@ impl CoreMessages {
         gas_price: u64,
         gas_limit: usize,
         pnetwork_hub: EthAddress,
+        broadcaster_pk: EthPrivateKey,
     ) -> (Self, Receiver<Result<EthTransaction, SentinelError>>) {
         let (tx, rx) = oneshot::channel();
         (
@@ -107,6 +109,7 @@ impl CoreMessages {
                 gas_limit,
                 pnetwork_hub,
                 responder: tx,
+                broadcaster_pk,
                 op: Box::new(op),
             },
             rx,
