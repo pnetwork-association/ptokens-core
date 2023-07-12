@@ -1,8 +1,9 @@
-use std::{convert::TryFrom, fmt};
+use std::{convert::TryFrom, fmt, str::FromStr};
 
 use common::{
     constants::MAX_DATA_SENSITIVITY_LEVEL,
     crypto_utils::{generate_random_private_key, keccak_hash_bytes},
+    strip_hex_prefix,
     traits::DatabaseInterface,
     types::{Byte, Result},
     AppError,
@@ -30,6 +31,14 @@ impl EthPrivateKey {
 
     pub fn to_hex(&self) -> String {
         format!("{}", self.0)
+    }
+}
+
+impl FromStr for EthPrivateKey {
+    type Err = AppError;
+
+    fn from_str(s: &str) -> Result<Self> {
+        Self::from_slice(&hex::decode(strip_hex_prefix(s))?)
     }
 }
 
@@ -210,6 +219,22 @@ mod tests {
         let pk = get_sample_eth_private_key();
         let result = pk.to_hex();
         let expected_result = "e8eeb2631ab476dacd68f84eb0b9ee558b872f5155a088bf74381b5f2c63a130".to_string();
+        assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    fn should_get_eth_pk_from_non_hex_prefixed_str() {
+        let s = "e8eeb2631ab476dacd68f84eb0b9ee558b872f5155a088bf74381b5f2c63a130";
+        let result = EthPrivateKey::from_str(s).unwrap();
+        let expected_result = get_sample_eth_private_key();
+        assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    fn should_get_eth_pk_from_hex_prefixed_str() {
+        let s = "0xe8eeb2631ab476dacd68f84eb0b9ee558b872f5155a088bf74381b5f2c63a130";
+        let result = EthPrivateKey::from_str(s).unwrap();
+        let expected_result = get_sample_eth_private_key();
         assert_eq!(result, expected_result);
     }
 }
