@@ -27,6 +27,10 @@ impl EthPrivateKey {
     pub fn to_address(&self) -> EthAddress {
         self.to_public_key().to_address()
     }
+
+    pub fn to_hex(&self) -> String {
+        format!("{}", self.0)
+    }
 }
 
 impl TryFrom<&str> for EthPrivateKey {
@@ -198,6 +202,14 @@ mod tests {
         let pk = get_sample_eth_private_key();
         let result = pk.to_address();
         let expected_result = convert_hex_to_eth_address("0x1739624f5cd969885a224da84418d12b8570d61a").unwrap();
+        assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    fn should_get_pk_as_hex() {
+        let pk = get_sample_eth_private_key();
+        let result = pk.to_hex();
+        let expected_result = "e8eeb2631ab476dacd68f84eb0b9ee558b872f5155a088bf74381b5f2c63a130".to_string();
         assert_eq!(result, expected_result);
     }
 }
