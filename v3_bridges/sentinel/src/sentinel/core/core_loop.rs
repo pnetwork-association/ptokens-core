@@ -89,13 +89,22 @@ async fn handle_message<D: DatabaseInterface>(
             let h = HostDbUtils::new(&*db);
             let n = NativeDbUtils::new(&*db);
             let side = op.destination_side();
-            let (chain_id, pk) = if side.is_native() {
+            let (chain_id, core_pk) = if side.is_native() {
                 (n.get_eth_chain_id_from_db()?, n.get_eth_private_key_from_db()?)
             } else {
                 (h.get_eth_chain_id_from_db()?, h.get_eth_private_key_from_db()?)
             };
             debug!("core cancellation getter chain ID: {chain_id}");
-            let tx = op.cancel(nonce, gas_price, gas_limit, &pnetwork_hub, &pk, &chain_id)?;
+            let broadcaster_pk = common_eth::EthPrivateKey::generate_random()?; // FIXME
+            let tx = op.get_cancellation_tx(
+                nonce,
+                gas_price,
+                gas_limit,
+                &pnetwork_hub,
+                &chain_id,
+                &core_pk,
+                &core_pk,
+            )?;
             let _ = responder.send(Ok(tx));
         },
     }

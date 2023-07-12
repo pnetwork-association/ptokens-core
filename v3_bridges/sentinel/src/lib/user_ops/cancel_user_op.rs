@@ -1,10 +1,12 @@
 use common::Bytes;
 use common_chain_ids::EthChainId;
-use common_eth::{encode_fxn_call, EthPrivateKey, EthTransaction};
+use common_eth::{encode_fxn_call, EthPrivateKey, EthSignature, EthSigningCapabilities, EthTransaction};
 use ethabi::Token as EthAbiToken;
 use ethereum_types::Address as EthAddress;
 
 use super::{UserOp, UserOpError};
+
+const CANCEL_FXN_ABI: &str = "[{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"originBlockHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"originTransactionHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"optionsMask\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"underlyingAssetDecimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"assetAmount\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"underlyingAssetTokenAddress\",\"type\":\"address\"},{\"internalType\":\"bytes4\",\"name\":\"originNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"bytes4\",\"name\":\"destinationNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"bytes4\",\"name\":\"underlyingAssetNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"string\",\"name\":\"destinationAccount\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"underlyingAssetName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"underlyingAssetSymbol\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"userData\",\"type\":\"bytes\"}],\"internalType\":\"struct IStateManager.Operation\",\"name\":\"operation\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"}],\"name\":\"protocolSentinelCancelOperation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]";
 
 impl UserOp {
     pub fn encode_as_eth_abi_token(&self) -> Result<EthAbiToken, UserOpError> {
@@ -26,30 +28,41 @@ impl UserOp {
         ]))
     }
 
-    fn to_cancel_fxn_data(&self) -> Result<Bytes, UserOpError> {
-        const CANCEL_FXN_ABI: &str = "[{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"originBlockHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"originTransactionHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"optionsMask\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"underlyingAssetDecimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"assetAmount\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"underlyingAssetTokenAddress\",\"type\":\"address\"},{\"internalType\":\"bytes4\",\"name\":\"originNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"bytes4\",\"name\":\"destinationNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"bytes4\",\"name\":\"underlyingAssetNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"string\",\"name\":\"destinationAccount\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"underlyingAssetName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"underlyingAssetSymbol\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"userData\",\"type\":\"bytes\"}],\"internalType\":\"struct IStateManager.Operation\",\"name\":\"operation\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"}],\"name\":\"protocolSentinelCancelOperation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]";
+    fn get_cancellation_signature(&self, pk: &EthPrivateKey) -> Result<EthSignature, UserOpError> {
+        if self.state().is_cancelled() || self.state().is_executed() {
+            Err(UserOpError::CannotCancel(self.state))
+        } else {
+            Ok(pk.sign_hash_and_set_eth_recovery_param(self.uid()?)?)
+        }
+    }
 
+    fn encode_cancellation_fxn_data(&self, pk: &EthPrivateKey) -> Result<Bytes, UserOpError> {
         Ok(encode_fxn_call(CANCEL_FXN_ABI, "protocolSentinelCancelOperation", &[
             self.encode_as_eth_abi_token()?,
-            EthAbiToken::Bytes(vec![]), // NOTE: Sentinel proofs are not currently implemented
+            EthAbiToken::Bytes(self.get_cancellation_signature(pk)?.to_vec()),
         ])?)
     }
 
-    pub fn cancel(
+    #[allow(clippy::too_many_arguments)]
+    pub fn get_cancellation_tx(
         &self,
         nonce: u64,
         gas_price: u64,
         gas_limit: usize,
-        to: &EthAddress,
-        pk: &EthPrivateKey,
+        pnetwork_hub: &EthAddress,
         chain_id: &EthChainId,
+        core_pk: &EthPrivateKey,
+        broadcaster_pk: &EthPrivateKey,
     ) -> Result<EthTransaction, UserOpError> {
         if self.state().is_cancelled() || self.state().is_executed() {
             Err(UserOpError::CannotCancel(self.state))
         } else {
             let value = 0;
-            let data = self.to_cancel_fxn_data()?;
-            Ok(EthTransaction::new_unsigned(data, nonce, value, *to, chain_id, gas_limit, gas_price).sign(pk)?)
+            let data = self.encode_cancellation_fxn_data(core_pk)?;
+            Ok(
+                EthTransaction::new_unsigned(data, nonce, value, *pnetwork_hub, chain_id, gas_limit, gas_price)
+                    .sign(broadcaster_pk)?,
+            )
         }
     }
 }

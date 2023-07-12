@@ -121,7 +121,7 @@ pub async fn get_cancel_tx(config: &SentinelConfig, args: &CancelTxArgs) -> Resu
                     config.host().pnetwork_hub()
                 };
 
-                let (chain_id, pk) = if side.is_native() {
+                let (chain_id, core_pk) = if side.is_native() {
                     (
                         n_db_utils.get_eth_chain_id_from_db()?,
                         n_db_utils.get_eth_private_key_from_db()?,
@@ -142,7 +142,17 @@ pub async fn get_cancel_tx(config: &SentinelConfig, args: &CancelTxArgs) -> Resu
                     l
                 };
 
-                let tx = op.cancel(nonce, gas_price, gas_limit, &pnetwork_hub, &pk, &chain_id)?;
+                let broadcaster_pk = common_eth::EthPrivateKey::generate_random()?; // FIXME
+
+                let tx = op.get_cancellation_tx(
+                    nonce,
+                    gas_price,
+                    gas_limit,
+                    &pnetwork_hub,
+                    &chain_id,
+                    &core_pk,
+                    &core_pk,
+                )?;
                 let tx_hex = tx.serialize_hex();
 
                 debug!("signed tx: 0x{tx_hex}");
