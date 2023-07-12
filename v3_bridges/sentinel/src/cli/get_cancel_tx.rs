@@ -4,6 +4,8 @@ use ethereum_types::H256 as EthHash;
 use lib::{
     check_init,
     get_gas_price,
+    get_host_broadcaster_private_key_from_env,
+    get_native_broadcaster_private_key_from_env,
     get_nonce,
     get_user_op_state,
     push_tx,
@@ -53,12 +55,19 @@ pub async fn get_cancel_tx(config: &SentinelConfig, args: &CancelTxArgs) -> Resu
             Err(SentinelError::Custom(format!("no user op in db with uid {uid}")))
         },
         Ok(op) => {
-            if !op.is_enqueued() {
+            if op.has_not_been_enqueued() {
                 Err(SentinelError::Custom(
-                    "user op is not enqueued, cannot cancel it".into(),
+                    "user op has not enqueued, cannot cancel it".into(),
                 ))
             } else {
+                dotenv::dotenv()?;
                 let side = op.destination_side();
+
+                let broadcaster_pk = if side.is_native() {
+                    get_native_broadcaster_private_key_from_env()?
+                } else {
+                    get_host_broadcaster_private_key_from_env()?
+                };
 
                 let h_db_utils = HostDbUtils::new(&db);
                 let n_db_utils = NativeDbUtils::new(&db);
@@ -142,8 +151,6 @@ pub async fn get_cancel_tx(config: &SentinelConfig, args: &CancelTxArgs) -> Resu
                     l
                 };
 
-                let broadcaster_pk = common_eth::EthPrivateKey::generate_random()?; // FIXME
-
                 let tx = op.get_cancellation_tx(
                     nonce,
                     gas_price,
@@ -151,7 +158,7 @@ pub async fn get_cancel_tx(config: &SentinelConfig, args: &CancelTxArgs) -> Resu
                     &pnetwork_hub,
                     &chain_id,
                     &core_pk,
-                    &core_pk,
+                    &broadcaster_pk,
                 )?;
                 let tx_hex = tx.serialize_hex();
 
