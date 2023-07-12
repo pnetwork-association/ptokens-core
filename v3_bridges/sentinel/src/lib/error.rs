@@ -12,6 +12,12 @@ use crate::{
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("missing env var: '{0}'")]
+    MissingEnvVar(String),
+
+    #[error("{0}")]
+    DotEnv(#[from] dotenv::Error),
+
     #[error("{0}")]
     FromStrRadix(#[from] ethereum_types::FromStrRadixErr),
 

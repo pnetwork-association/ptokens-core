@@ -5,6 +5,7 @@ mod constants;
 mod core_state;
 mod db_utils;
 mod endpoints;
+mod env_var;
 mod error;
 mod eth_rpc_calls;
 mod flatten_join_handle;
@@ -26,6 +27,7 @@ pub use self::{
     core_state::CoreState,
     db_utils::{DbKey, DbUtilsT, SentinelDbUtils},
     endpoints::{check_endpoint, EndpointError, Endpoints},
+    env_var::{get_host_broadcaster_private_key_from_env, get_native_broadcaster_private_key_from_env},
     error::SentinelError,
     eth_rpc_calls::{
         eth_call,

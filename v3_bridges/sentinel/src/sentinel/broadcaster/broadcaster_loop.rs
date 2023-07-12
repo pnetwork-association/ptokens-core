@@ -1,8 +1,11 @@
 use std::result::Result;
 
 use common::BridgeSide;
+use common_eth::EthPrivateKey;
 use ethereum_types::{Address as EthAddress, H256 as EthHash};
 use lib::{
+    get_host_broadcaster_private_key_from_env,
+    get_native_broadcaster_private_key_from_env,
     BroadcasterMessages,
     ConfigT,
     CoreMessages,
@@ -14,6 +17,7 @@ use lib::{
 };
 use tokio::sync::mpsc::{Receiver as MpscRx, Sender as MpscTx};
 
+#[allow(clippy::too_many_arguments)]
 async fn cancel_user_op(
     op: UserOp,
     nonce: u64,
@@ -22,9 +26,9 @@ async fn cancel_user_op(
     core_tx: MpscTx<CoreMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     pnetwork_hub: &EthAddress,
+    broadcaster_pk: &EthPrivateKey,
 ) -> Result<EthHash, SentinelError> {
     // TODO check we have enough balance to push
-    // TODO put back in core db upon error and continue broadcaster loop with warning messages?
 
     let side = op.destination_side();
     debug!("cancelling user op on side: {side} nonce: {nonce} gas price: {gas_price}");
@@ -36,8 +40,14 @@ async fn cancel_user_op(
 
     let tx_hash = if user_op_smart_contract_state.is_cancellable() {
         warn!("sending cancellation tx for user op: {op}");
-        let (msg, rx) =
-            CoreMessages::get_cancellation_signature_msg(op.clone(), nonce, gas_price, gas_limit, *pnetwork_hub);
+        let (msg, rx) = CoreMessages::get_cancellation_signature_msg(
+            op.clone(),
+            nonce,
+            gas_price,
+            gas_limit,
+            *pnetwork_hub,
+            broadcaster_pk.clone(),
+        );
         core_tx.send(msg).await?;
         let signed_tx = rx.await??;
         debug!("signed tx: {}", signed_tx.serialize_hex());
@@ -75,6 +85,8 @@ async fn cancel_user_ops(
     native_address: &EthAddress,
     core_tx: MpscTx<CoreMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
+    native_broadcaster_pk: &EthPrivateKey,
+    host_broadcaster_pk: &EthPrivateKey,
 ) -> Result<(), SentinelError> {
     let host_pnetwork_hub = config.host().pnetwork_hub();
     let native_pnetwork_hub = config.native().pnetwork_hub();
@@ -111,6 +123,7 @@ async fn cancel_user_ops(
                     core_tx.clone(),
                     eth_rpc_tx.clone(),
                     &native_pnetwork_hub,
+                    native_broadcaster_pk,
                 )
                 .await
                 {
@@ -136,6 +149,7 @@ async fn cancel_user_ops(
                     core_tx.clone(),
                     eth_rpc_tx.clone(),
                     &host_pnetwork_hub,
+                    host_broadcaster_pk,
                 )
                 .await
                 {
@@ -174,7 +188,11 @@ async fn broadcaster_enabled_loop(
     core_tx: MpscTx<CoreMessages>,
     config: SentinelConfig,
 ) -> Result<(), SentinelError> {
-    // TODO could get all the signing params fom the core here and collection them into a struct?
+    dotenv::dotenv()?;
+
+    let host_broadcaster_pk = get_host_broadcaster_private_key_from_env()?;
+    let native_broadcaster_pk = get_native_broadcaster_private_key_from_env()?;
+
     let (host_msg, host_rx) = CoreMessages::get_address_msg(BridgeSide::Host);
     let (native_msg, native_rx) = CoreMessages::get_address_msg(BridgeSide::Native);
     core_tx.send(host_msg).await?;
@@ -192,7 +210,9 @@ async fn broadcaster_enabled_loop(
                         &host_address,
                         &native_address,
                         core_tx.clone(),
-                        eth_rpc_tx.clone()
+                        eth_rpc_tx.clone(),
+                        &native_broadcaster_pk,
+                        &host_broadcaster_pk,
                     ).await {
                         Ok(_) => {
                             info!("finished sending user op cancellation txs");
