@@ -157,63 +157,77 @@ async fn cancel_user_ops(
     Ok(())
 }
 
-pub async fn broadcaster_loop(
+async fn broadcaster_disabled_loop() -> Result<(), SentinelError> {
+    warn!("broadcaster disabled");
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {
+            warn!("broadcaster shutting down...");
+            Err(SentinelError::SigInt("broadcaster".into()))
+        },
+    }
+}
+
+async fn broadcaster_enabled_loop(
     mut rx: MpscRx<BroadcasterMessages>,
     _mongo_tx: MpscTx<MongoMessages>,
+    eth_rpc_tx: MpscTx<EthRpcMessages>,
+    core_tx: MpscTx<CoreMessages>,
+    config: SentinelConfig,
+) -> Result<(), SentinelError> {
+    // TODO could get all the signing params fom the core here and collection them into a struct?
+    let (host_msg, host_rx) = CoreMessages::get_address_msg(BridgeSide::Host);
+    let (native_msg, native_rx) = CoreMessages::get_address_msg(BridgeSide::Native);
+    core_tx.send(host_msg).await?;
+    core_tx.send(native_msg).await?;
+    let host_address = host_rx.await??;
+    let native_address = native_rx.await??;
+
+    debug!("broadcaster loop running...");
+    'broadcaster_loop: loop {
+        tokio::select! {
+            r = rx.recv() => match r {
+                Some(BroadcasterMessages::CancelUserOps) => {
+                    match cancel_user_ops(
+                        &config,
+                        &host_address,
+                        &native_address,
+                        core_tx.clone(),
+                        eth_rpc_tx.clone()
+                    ).await {
+                        Ok(_) => {
+                            info!("finished sending user op cancellation txs");
+                        }
+                        Err(e) => {
+                            error!("{e}");
+                        }
+                    };
+                    continue 'broadcaster_loop
+                },
+                None => {
+                    let m = "all broadcaster senders dropped!";
+                    warn!("{m}");
+                    break 'broadcaster_loop Err(SentinelError::Custom(m.into()))
+                },
+            },
+            _ = tokio::signal::ctrl_c() => {
+                warn!("broadcaster shutting down...");
+                return Err(SentinelError::SigInt("broadcaster".into()))
+            },
+        }
+    }
+}
+
+pub async fn broadcaster_loop(
+    rx: MpscRx<BroadcasterMessages>,
+    mongo_tx: MpscTx<MongoMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     core_tx: MpscTx<CoreMessages>,
     config: SentinelConfig,
     disable_broadcaster: bool,
 ) -> Result<(), SentinelError> {
     if disable_broadcaster {
-        warn!("Broadcaster has been disabled");
-        tokio::select! {
-            _ = tokio::signal::ctrl_c() => {
-                warn!("broadcaster shutting down...");
-                Err(SentinelError::SigInt("broadcaster".into()))
-            },
-        }
+        broadcaster_disabled_loop().await
     } else {
-        // TODO could get all the signing params fom the core here and collection them into a struct?
-        let (host_msg, host_rx) = CoreMessages::get_address_msg(BridgeSide::Host);
-        let (native_msg, native_rx) = CoreMessages::get_address_msg(BridgeSide::Native);
-        core_tx.send(host_msg).await?;
-        core_tx.send(native_msg).await?;
-        let host_address = host_rx.await??;
-        let native_address = native_rx.await??;
-
-        debug!("Broadcaster loop running...");
-        'broadcaster_loop: loop {
-            tokio::select! {
-                r = rx.recv() => match r {
-                    Some(BroadcasterMessages::CancelUserOps) => {
-                        match cancel_user_ops(
-                            &config,
-                            &host_address,
-                            &native_address,
-                            core_tx.clone(),
-                            eth_rpc_tx.clone()
-                        ).await {
-                            Ok(_) => {
-                                info!("finished sending user op cancellation txs");
-                            }
-                            Err(e) => {
-                                error!("{e}");
-                            }
-                        };
-                        continue 'broadcaster_loop
-                    },
-                    None => {
-                        let m = "all broadcaster senders dropped!";
-                        warn!("{m}");
-                        break 'broadcaster_loop Err(SentinelError::Custom(m.into()))
-                    },
-                },
-                _ = tokio::signal::ctrl_c() => {
-                    warn!("broadcaster shutting down...");
-                    return Err(SentinelError::SigInt("broadcaster".into()))
-                },
-            }
-        }
+        broadcaster_enabled_loop(rx, mongo_tx, eth_rpc_tx, core_tx, config).await
     }
 }
