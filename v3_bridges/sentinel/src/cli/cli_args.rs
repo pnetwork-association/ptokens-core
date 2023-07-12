@@ -82,4 +82,7 @@ pub enum SubCommands {
 
     /// Get list of cancellable user ops
     GetCancellableOps,
+
+    /// Generate an ETH private key
+    GeneratePrivateKey,
 }

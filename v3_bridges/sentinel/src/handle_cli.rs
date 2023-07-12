@@ -6,6 +6,7 @@ use serde_json::json;
 
 use crate::{
     cli::{
+        generate_private_key,
         get_cancel_tx,
         get_cancellable_user_ops,
         get_core_state,
@@ -42,6 +43,7 @@ pub async fn handle_cli() -> Result<String, SentinelError> {
         SubCommands::GetCoreState => get_core_state(&config),
         SubCommands::GetUserOpList => get_user_op_list(&config),
         SubCommands::Init(ref args) => init(&config, args).await,
+        SubCommands::GeneratePrivateKey => generate_private_key(),
         SubCommands::Start(ref args) => start_sentinel(&config, args).await,
         SubCommands::GetNonce(ref args) => get_nonce_cli(&config, args).await,
         SubCommands::CancelTx(ref args) => get_cancel_tx(&config, args).await,
