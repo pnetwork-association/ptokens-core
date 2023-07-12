@@ -7,7 +7,7 @@ use common::{
     types::{Byte, Result},
     AppError,
 };
-use ethereum_types::H256;
+use ethereum_types::{Address as EthAddress, H256};
 use secp256k1::{
     key::{PublicKey, SecretKey, ONE_KEY},
     Message,
@@ -22,6 +22,12 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EthPrivateKey(SecretKey);
+
+impl EthPrivateKey {
+    pub fn to_address(&self) -> EthAddress {
+        self.to_public_key().to_address()
+    }
+}
 
 impl TryFrom<&str> for EthPrivateKey {
     type Error = AppError;
@@ -105,7 +111,10 @@ impl Drop for EthPrivateKey {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::{get_sample_eth_private_key, get_sample_eth_private_key_slice};
+    use crate::{
+        convert_hex_to_eth_address,
+        test_utils::{get_sample_eth_private_key, get_sample_eth_private_key_slice},
+    };
 
     #[test]
     fn should_create_random_eth_private_key() {
@@ -181,6 +190,14 @@ mod tests {
         ).unwrap();
         let private_key = get_sample_eth_private_key();
         let result = private_key.to_public_key().to_bytes();
+        assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    fn should_get_address_from_pk() {
+        let pk = get_sample_eth_private_key();
+        let result = pk.to_address();
+        let expected_result = convert_hex_to_eth_address("0x1739624f5cd969885a224da84418d12b8570d61a").unwrap();
         assert_eq!(result, expected_result);
     }
 }
