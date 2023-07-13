@@ -2,13 +2,29 @@ use common::Bytes;
 use common_chain_ids::EthChainId;
 use common_eth::{encode_fxn_call, EthPrivateKey, EthSignature, EthSigningCapabilities, EthTransaction};
 use ethabi::Token as EthAbiToken;
-use ethereum_types::Address as EthAddress;
+use ethereum_types::{Address as EthAddress, U256};
 
 use super::{UserOp, UserOpError};
 
 const CANCEL_FXN_ABI: &str = "[{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"originBlockHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"originTransactionHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"optionsMask\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"underlyingAssetDecimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"assetAmount\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"underlyingAssetTokenAddress\",\"type\":\"address\"},{\"internalType\":\"bytes4\",\"name\":\"originNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"bytes4\",\"name\":\"destinationNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"bytes4\",\"name\":\"underlyingAssetNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"string\",\"name\":\"destinationAccount\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"underlyingAssetName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"underlyingAssetSymbol\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"userData\",\"type\":\"bytes\"}],\"internalType\":\"struct IStateManager.Operation\",\"name\":\"operation\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"}],\"name\":\"protocolSentinelCancelOperation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]";
 
 impl UserOp {
+    pub fn check_affordability(&self, balance: U256, gas_limit: usize, gas_price: u64) -> Result<(), UserOpError> {
+        let cost = Self::get_tx_cost(gas_limit, gas_price);
+        if balance > cost {
+            Ok(())
+        } else {
+            Err(UserOpError::InsufficientBalance {
+                have: balance,
+                need: cost,
+            })
+        }
+    }
+
+    pub fn get_tx_cost(gas_limit: usize, gas_price: u64) -> U256 {
+        U256::from(gas_limit as u64 * gas_price)
+    }
+
     pub fn encode_as_eth_abi_token(&self) -> Result<EthAbiToken, UserOpError> {
         Ok(EthAbiToken::Tuple(vec![
             EthAbiToken::FixedBytes(self.user_op_log.origin_block_hash()?.as_bytes().to_vec()),

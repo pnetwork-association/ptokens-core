@@ -3,7 +3,7 @@ use std::{convert::TryFrom, fmt, str::FromStr};
 use common::{BridgeSide, Byte, Bytes};
 use common_eth::EthSubmissionMaterial;
 use derive_more::{Constructor, Deref};
-use ethereum_types::Address as EthAddress;
+use ethereum_types::{Address as EthAddress, U256};
 use serde::{Deserialize, Serialize};
 
 use super::{UserOp, CANCELLED_USER_OP_TOPIC, ENQUEUED_USER_OP_TOPIC, EXECUTED_USER_OP_TOPIC, WITNESSED_USER_OP_TOPIC};
@@ -13,6 +13,10 @@ use crate::{get_utc_timestamp, SentinelError};
 pub struct UserOps(Vec<UserOp>);
 
 impl UserOps {
+    pub fn get_tx_cost(&self, gas_limit: usize, gas_price: u64) -> U256 {
+        UserOp::get_tx_cost(gas_limit, gas_price) * U256::from(self.len())
+    }
+
     pub fn add(&mut self, other: Self) {
         let a = self.0.clone();
         let b = other.0;

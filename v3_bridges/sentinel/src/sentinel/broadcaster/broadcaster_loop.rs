@@ -2,7 +2,7 @@ use std::result::Result;
 
 use common::BridgeSide;
 use common_eth::EthPrivateKey;
-use ethereum_types::{Address as EthAddress, H256 as EthHash};
+use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use lib::{
     get_host_broadcaster_private_key_from_env,
     get_native_broadcaster_private_key_from_env,
@@ -27,8 +27,9 @@ async fn cancel_user_op(
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     pnetwork_hub: &EthAddress,
     broadcaster_pk: &EthPrivateKey,
+    balance: U256,
 ) -> Result<EthHash, SentinelError> {
-    // TODO check we have enough balance to push
+    op.check_affordability(balance, gas_limit, gas_price)?;
 
     let side = op.destination_side();
     debug!("cancelling user op on side: {side} nonce: {nonce} gas price: {gas_price}");
@@ -79,6 +80,7 @@ async fn get_gas_price(config: &impl ConfigT, eth_rpc_tx: MpscTx<EthRpcMessages>
     Ok(p)
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn cancel_user_ops(
     config: &SentinelConfig,
     host_address: &EthAddress,
@@ -105,6 +107,14 @@ async fn cancel_user_ops(
     let host_gas_limit = config.host().gas_limit();
     let native_gas_limit = config.native().gas_limit();
 
+    let (host_balance_msg, host_balance_rx) = EthRpcMessages::get_eth_balance_msg(BridgeSide::Host, *host_address);
+    let (native_balance_msg, native_balance_rx) =
+        EthRpcMessages::get_eth_balance_msg(BridgeSide::Native, *native_address);
+    eth_rpc_tx.send(native_balance_msg).await?;
+    let mut host_balance = host_balance_rx.await??;
+    eth_rpc_tx.send(host_balance_msg).await?;
+    let mut native_balance = native_balance_rx.await??;
+
     let (cancellable_ops_msg, cancellable_ops_rx) = CoreMessages::get_cancellable_user_ops_msg();
     core_tx.send(cancellable_ops_msg).await?;
     let cancellable_user_ops = cancellable_ops_rx.await??;
@@ -124,6 +134,7 @@ async fn cancel_user_ops(
                     eth_rpc_tx.clone(),
                     &native_pnetwork_hub,
                     native_broadcaster_pk,
+                    native_balance,
                 )
                 .await
                 {
@@ -138,6 +149,7 @@ async fn cancel_user_ops(
                     },
                 }
                 native_nonce += 1;
+                native_balance -= UserOp::get_tx_cost(native_gas_limit, native_gas_price);
             },
             BridgeSide::Host => {
                 let uid = op.uid()?;
@@ -150,6 +162,7 @@ async fn cancel_user_ops(
                     eth_rpc_tx.clone(),
                     &host_pnetwork_hub,
                     host_broadcaster_pk,
+                    host_balance,
                 )
                 .await
                 {
@@ -164,6 +177,7 @@ async fn cancel_user_ops(
                     },
                 }
                 host_nonce += 1;
+                host_balance -= UserOp::get_tx_cost(host_gas_limit, host_gas_price);
             },
         }
     }

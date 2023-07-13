@@ -1,11 +1,14 @@
 use common::Byte;
-use ethereum_types::H256 as EthHash;
+use ethereum_types::{H256 as EthHash, U256};
 use thiserror::Error;
 
 use super::UserOpState;
 
 #[derive(Error, Debug)]
 pub enum UserOpError {
+    #[error("insufficient ETH balance to cancel tx - have: {have} need: {need}")]
+    InsufficientBalance { have: U256, need: U256 },
+
     #[error("cannot update user op state from: '{from}' to {to}")]
     CannotUpdate { from: UserOpState, to: UserOpState },
 
