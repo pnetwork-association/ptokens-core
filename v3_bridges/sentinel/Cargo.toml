@@ -12,7 +12,11 @@ path = "src/lib/lib.rs"
 
 [[bin]]
 name = "sentinel"
-path = "src/main.rs"
+path = "src/bin/app/main.rs"
+
+[[bin]]
+name = "core"
+path = "src/bin/core/main.rs"
 
 [features]
 non-validating = ["common_eth/non-validating"] # NOTE: Disables block & recepit validation
