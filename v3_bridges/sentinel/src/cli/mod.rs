@@ -1,5 +1,6 @@
 mod cli_args;
 mod generate_private_key;
+mod get_balance;
 mod get_cancel_tx;
 mod get_cancellable_user_ops;
 mod get_core_state;
@@ -25,6 +26,7 @@ pub(super) use side::Side;
 pub(crate) use self::{
     cli_args::{CliArgs, SubCommands},
     generate_private_key::generate_private_key,
+    get_balance::{get_balance, GetBalanceCliArgs},
     get_cancel_tx::{get_cancel_tx, CancelTxArgs},
     get_cancellable_user_ops::get_cancellable_user_ops,
     get_core_state::get_core_state,

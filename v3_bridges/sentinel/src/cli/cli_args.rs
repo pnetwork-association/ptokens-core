@@ -5,6 +5,7 @@ use crate::cli::{
     get_sub_mat::SubMatGetterArgs,
     init::InitArgs,
     CancelTxArgs,
+    GetBalanceCliArgs,
     GetUserOpStateCliArgs,
     NonceCliArgs,
     ProcessBlockCliArgs,
@@ -85,4 +86,7 @@ pub enum SubCommands {
 
     /// Generate an ETH private key
     GeneratePrivateKey,
+
+    /// Get ETH balance of passed in address
+    GetBalance(GetBalanceCliArgs),
 }
