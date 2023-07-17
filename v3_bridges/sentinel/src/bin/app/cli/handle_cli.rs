@@ -21,13 +21,11 @@ use super::{
     remove_user_op,
     reset_chain_cli,
     set_gas_price,
-    CliArgs,
     CliSubCommands,
 };
 
-pub async fn handle_cli(config: &SentinelConfig, cli_args: &CliArgs) -> Result<String, SentinelError> {
-    match cli_args.sub_commands {
-        CliSubCommands::Start(_) => todo!("have a separate start command then the CLI can be sub commands"),
+pub async fn handle_cli(config: &SentinelConfig, cmds: &CliSubCommands) -> Result<String, SentinelError> {
+    match cmds {
         CliSubCommands::GetUserOps => get_user_ops(config),
         CliSubCommands::GetCoreState => get_core_state(config),
         CliSubCommands::GetUserOpList => get_user_op_list(config),

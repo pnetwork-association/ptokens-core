@@ -20,16 +20,23 @@ use tokio::sync::{
     Mutex,
 };
 
-use crate::{
-    cli::StartSentinelArgs,
-    sentinel::{broadcaster_loop, core_loop, eth_rpc_loop, mongo_loop, processor_loop, rpc_server_loop, syncer_loop},
+use crate::sentinel::{
+    broadcaster_loop,
+    core_loop,
+    eth_rpc_loop,
+    mongo_loop,
+    processor_loop,
+    rpc_server_loop,
+    syncer_loop,
 };
 
 const MAX_CHANNEL_CAPACITY: usize = 1337;
 
 pub async fn start_sentinel(
     config: &SentinelConfig,
-    sentinel_args: &StartSentinelArgs,
+    disable_native_syncer: bool,
+    disable_host_syncer: bool,
+    disable_broadcaster: bool,
 ) -> Result<String, SentinelError> {
     let db = common_rocksdb_database::get_db_at_path(&config.get_db_path())?;
     check_init(&db)?;
@@ -56,14 +63,14 @@ pub async fn start_sentinel(
         processor_tx.clone(),
         core_tx.clone(),
         native_eth_rpc_tx.clone(),
-        sentinel_args.disable_native_syncer,
+        disable_native_syncer,
     ));
     let host_syncer_thread = tokio::spawn(syncer_loop(
         Batch::new_from_config(BridgeSide::Host, config)?,
         processor_tx,
         core_tx.clone(),
         host_eth_rpc_tx.clone(),
-        sentinel_args.disable_host_syncer,
+        disable_host_syncer,
     ));
 
     let core_thread = tokio::spawn(core_loop(wrapped_db.clone(), config.core().clone(), core_rx));
@@ -76,7 +83,7 @@ pub async fn start_sentinel(
         native_eth_rpc_tx.clone(),
         core_tx.clone(),
         config.clone(),
-        sentinel_args.disable_broadcaster,
+        disable_broadcaster,
     ));
     let rpc_server_thread = tokio::spawn(rpc_server_loop(core_tx.clone(), mongo_tx.clone(), config.clone()));
     let processor_thread = tokio::spawn(processor_loop(

@@ -18,14 +18,13 @@ mod remove_user_op;
 mod reset_chain;
 mod set_gas_price;
 mod side;
-mod start_sentinel_args;
 mod write_file;
 
 pub(super) use log_level::LogLevel;
 pub(super) use side::Side;
 
 pub(crate) use self::{
-    cli_args::{CliArgs, CliSubCommands},
+    cli_args::CliSubCommands,
     generate_private_key::generate_private_key,
     get_balance::{get_balance, GetBalanceCliArgs},
     get_cancel_tx::{get_cancel_tx, CancelTxArgs},
@@ -43,6 +42,5 @@ pub(crate) use self::{
     remove_user_op::{remove_user_op, RemoveUserOpCliArgs},
     reset_chain::{reset_chain_cli, ResetCliArgs},
     set_gas_price::{set_gas_price, SetGasPriceCliArgs},
-    start_sentinel_args::StartSentinelArgs,
     write_file::write_file,
 };

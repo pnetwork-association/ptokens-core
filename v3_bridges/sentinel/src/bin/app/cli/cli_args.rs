@@ -1,6 +1,3 @@
-use clap::Parser;
-
-use super::LogLevel;
 use crate::cli::{
     get_sub_mat::SubMatGetterArgs,
     init::InitArgs,
@@ -12,30 +9,10 @@ use crate::cli::{
     RemoveUserOpCliArgs,
     ResetCliArgs,
     SetGasPriceCliArgs,
-    StartSentinelArgs,
 };
-
-#[derive(Debug, Parser)]
-pub struct CliArgs {
-    #[command(subcommand)]
-    pub sub_commands: CliSubCommands,
-
-    /// Log level - if extant, this overrides log level set in config
-    #[arg(long, short)]
-    log_level: Option<LogLevel>,
-}
-
-impl CliArgs {
-    pub fn log_level(&self) -> Option<log::Level> {
-        self.log_level.map(|l| l.into())
-    }
-}
 
 #[derive(Debug, Subcommand)]
 pub enum CliSubCommands {
-    /// Start the Sentinel
-    Start(StartSentinelArgs),
-
     /// Get HOST latest block number.
     GetHostLatestBlockNum,
 

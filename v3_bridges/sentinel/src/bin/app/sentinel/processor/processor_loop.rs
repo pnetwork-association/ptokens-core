@@ -26,7 +26,7 @@ pub async fn processor_loop<D: DatabaseInterface>(
     broadcaster_tx: MpscTx<BroadcasterMessages>,
     config: SentinelConfig,
 ) -> Result<(), SentinelError> {
-    info!("Starting processor loop...");
+    info!("starting processor loop...");
     let reprocess = false;
     let mut heartbeats = Heartbeats::new();
     let h_origin_network_id = NetworkId::new(config.host().get_eth_chain_id(), *HOST_PROTOCOL_ID).to_bytes_4()?;
