@@ -15,7 +15,7 @@ pub enum SentinelError {
     #[error("missing env var: '{0}'")]
     MissingEnvVar(String),
 
-    #[error("{0}")]
+    #[error("dotenv error: {0}")]
     DotEnv(#[from] dotenv::Error),
 
     #[error("{0}")]
@@ -27,7 +27,7 @@ pub enum SentinelError {
     #[error("key exists in db: {0}")]
     KeyExists(DbKey),
 
-    #[error("{0}")]
+    #[error("network ID error: {0}")]
     NetworkId(#[from] crate::network_id::NetworkIdError),
 
     #[error("poisoned lock encountered")]
