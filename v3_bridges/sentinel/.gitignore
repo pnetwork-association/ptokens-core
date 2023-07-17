@@ -3,4 +3,5 @@
 **/*database*/*
 *.log
 *.gz
+*.env
 /server
