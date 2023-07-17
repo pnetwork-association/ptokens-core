@@ -18,7 +18,7 @@ use crate::cli::{
 #[derive(Debug, Parser)]
 pub struct CliArgs {
     #[command(subcommand)]
-    pub sub_commands: SubCommands,
+    pub sub_commands: CliSubCommands,
 
     /// Log level - if extant, this overrides log level set in config
     #[arg(long, short)]
@@ -32,7 +32,7 @@ impl CliArgs {
 }
 
 #[derive(Debug, Subcommand)]
-pub enum SubCommands {
+pub enum CliSubCommands {
     /// Start the Sentinel
     Start(StartSentinelArgs),
 

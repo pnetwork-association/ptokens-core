@@ -10,6 +10,7 @@ mod get_sub_mat;
 mod get_user_op_list;
 mod get_user_op_state;
 mod get_user_ops;
+mod handle_cli;
 mod init;
 mod log_level;
 mod process_block;
@@ -24,7 +25,7 @@ pub(super) use log_level::LogLevel;
 pub(super) use side::Side;
 
 pub(crate) use self::{
-    cli_args::{CliArgs, SubCommands},
+    cli_args::{CliArgs, CliSubCommands},
     generate_private_key::generate_private_key,
     get_balance::{get_balance, GetBalanceCliArgs},
     get_cancel_tx::{get_cancel_tx, CancelTxArgs},
@@ -36,6 +37,7 @@ pub(crate) use self::{
     get_user_op_list::get_user_op_list,
     get_user_op_state::{get_user_op_state, GetUserOpStateCliArgs},
     get_user_ops::get_user_ops,
+    handle_cli::handle_cli,
     init::init,
     process_block::{process_block, ProcessBlockCliArgs},
     remove_user_op::{remove_user_op, RemoveUserOpCliArgs},
