@@ -4,13 +4,12 @@ use ethereum_types::H256 as EthHash;
 use lib::{
     check_init,
     get_gas_price,
-    get_host_broadcaster_private_key_from_env,
-    get_native_broadcaster_private_key_from_env,
     get_nonce,
     get_user_op_state,
     push_tx,
     ConfigT,
     DbUtilsT,
+    Env,
     SentinelConfig,
     SentinelDbUtils,
     SentinelError,
@@ -60,13 +59,13 @@ pub async fn get_cancel_tx(config: &SentinelConfig, args: &CancelTxArgs) -> Resu
                     "user op has not enqueued, cannot cancel it".into(),
                 ))
             } else {
-                dotenv::dotenv()?;
+                Env::init()?;
                 let side = op.destination_side();
 
                 let broadcaster_pk = if side.is_native() {
-                    get_native_broadcaster_private_key_from_env()?
+                    Env::get_native_broadcaster_private_key()?
                 } else {
-                    get_host_broadcaster_private_key_from_env()?
+                    Env::get_host_broadcaster_private_key()?
                 };
 
                 let h_db_utils = HostDbUtils::new(&db);

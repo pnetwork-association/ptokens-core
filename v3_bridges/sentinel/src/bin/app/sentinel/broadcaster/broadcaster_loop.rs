@@ -4,11 +4,10 @@ use common::BridgeSide;
 use common_eth::EthPrivateKey;
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use lib::{
-    get_host_broadcaster_private_key_from_env,
-    get_native_broadcaster_private_key_from_env,
     BroadcasterMessages,
     ConfigT,
     CoreMessages,
+    Env,
     EthRpcMessages,
     MongoMessages,
     SentinelConfig,
@@ -202,10 +201,10 @@ async fn broadcaster_enabled_loop(
     core_tx: MpscTx<CoreMessages>,
     config: SentinelConfig,
 ) -> Result<(), SentinelError> {
-    dotenv::dotenv()?;
+    Env::init()?;
 
-    let host_broadcaster_pk = get_host_broadcaster_private_key_from_env()?;
-    let native_broadcaster_pk = get_native_broadcaster_private_key_from_env()?;
+    let host_broadcaster_pk = Env::get_host_broadcaster_private_key()?;
+    let native_broadcaster_pk = Env::get_native_broadcaster_private_key()?;
 
     let (host_msg, host_rx) = CoreMessages::get_address_msg(BridgeSide::Host);
     let (native_msg, native_rx) = CoreMessages::get_address_msg(BridgeSide::Native);
