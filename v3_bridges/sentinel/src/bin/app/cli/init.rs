@@ -7,18 +7,14 @@ use serde_json::json;
 
 #[derive(Debug, Args)]
 pub struct InitArgs {
-    /// The host side gas price to use when creating transactions (unit: wei).
-    pub host_gas_price: u64,
-
-    /// The native side gas price to use when creating transactions (unit: wei).
-    pub native_gas_price: u64,
-
     /// Number of native side confirmations before creating transactions.
-    pub native_confs: u64,
+    native_confs: u64,
 
     /// Number of host side confirmations before creating transactions.
-    pub host_confs: u64,
+    host_confs: u64,
 }
+
+const ZERO_GAS_PRICE: u64 = 0; // NOTE: Gas prices for txs are no longer handled by the core in the TEE
 
 async fn init_native<D: DatabaseInterface>(
     db: &D,
@@ -37,7 +33,7 @@ async fn init_native<D: DatabaseInterface>(
         db,
         sub_mat,
         &config.native().get_eth_chain_id(),
-        args.native_gas_price,
+        ZERO_GAS_PRICE,
         args.native_confs,
         &EthAddress::zero(), // NOTE: Vaults are not used in v3 sentinels
         &VaultUsingCores::from_core_type(&config.core().core_type)?,
@@ -64,7 +60,7 @@ async fn init_host<D: DatabaseInterface>(
         db,
         sub_mat,
         &config.host().get_eth_chain_id(),
-        args.host_gas_price,
+        ZERO_GAS_PRICE,
         args.host_confs,
         config.host().is_validating(),
     )?;
