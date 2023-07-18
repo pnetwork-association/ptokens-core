@@ -45,7 +45,7 @@ pub use self::{
     flatten_join_handle::flatten_join_handle,
     get_rpc_client::get_rpc_client,
     heartbeat::{HeartbeatInfo, Heartbeats, HeartbeatsJson},
-    logging::init_logger,
+    logging::{init_logger, LogLevel},
     messages::{
         BroadcasterMessages,
         CoreMessages,
