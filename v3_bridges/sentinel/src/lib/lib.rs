@@ -15,6 +15,7 @@ mod logging;
 mod messages;
 mod network_id;
 mod processor_output;
+mod side;
 mod test_utils;
 mod user_ops;
 mod utils;
@@ -58,6 +59,7 @@ pub use self::{
     },
     network_id::{Bytes4, NetworkId, ProtocolId},
     processor_output::ProcessorOutput,
+    side::Side,
     user_ops::{UserOp, UserOpError, UserOpList, UserOpSmartContractState, UserOps},
     utils::{get_utc_timestamp, run_timer},
 };
