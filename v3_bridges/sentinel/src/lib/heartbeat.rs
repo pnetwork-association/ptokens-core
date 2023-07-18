@@ -26,9 +26,13 @@ impl Default for Heartbeats {
 pub struct HeartbeatsJson {
     #[serde(rename = "_id")]
     id: String,
+    host_bpm: String,
+    native_bpm: String,
     host: Vec<HeartbeatInfo>,
     native: Vec<HeartbeatInfo>,
 }
+
+const NOT_ENOUGH_DATA_MSG: &str = "not enough data";
 
 impl Default for HeartbeatsJson {
     fn default() -> Self {
@@ -36,6 +40,8 @@ impl Default for HeartbeatsJson {
             host: vec![],
             native: vec![],
             id: "heartbeats".to_string(),
+            host_bpm: NOT_ENOUGH_DATA_MSG.into(),
+            native_bpm: NOT_ENOUGH_DATA_MSG.into(),
         }
     }
 }
@@ -63,6 +69,8 @@ impl Heartbeats {
     pub fn to_json(&self) -> HeartbeatsJson {
         HeartbeatsJson {
             id: "heartbeats".to_string(),
+            host_bpm: self.host_heartbeat(),
+            native_bpm: self.native_heartbeat(),
             host: self.host_deque.iter().cloned().collect::<Vec<_>>(),
             native: self.native_deque.iter().cloned().collect::<Vec<_>>(),
         }
