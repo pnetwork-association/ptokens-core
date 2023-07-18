@@ -1,9 +1,7 @@
 use common::{BridgeSide, DatabaseInterface};
 use common_eth::{EthDbUtils, EthDbUtilsExt, EvmDbUtils};
-use lib::{SentinelConfig, SentinelError};
+use lib::{SentinelConfig, SentinelError, Side};
 use serde_json::json;
-
-use super::Side;
 
 #[derive(Debug, Args)]
 pub struct SetGasPriceCliArgs {

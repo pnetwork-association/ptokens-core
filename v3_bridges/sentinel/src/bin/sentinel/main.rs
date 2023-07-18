@@ -1,21 +1,31 @@
-mod cli;
-mod sentinel;
+mod broadcaster;
+mod core;
+mod eth_rpc;
+mod mongo;
+mod processor;
+mod rpc_server;
+mod start_sentinel;
+mod syncer;
+
+use self::{
+    broadcaster::broadcaster_loop,
+    core::core_loop,
+    eth_rpc::eth_rpc_loop,
+    mongo::mongo_loop,
+    processor::processor_loop,
+    rpc_server::rpc_server_loop,
+    start_sentinel::start_sentinel,
+    syncer::syncer_loop,
+};
 
 #[macro_use]
 extern crate log;
-#[macro_use]
-extern crate clap;
 
 use std::result::Result;
 
 use clap::Parser;
-use lib::{init_logger, SentinelConfig, SentinelError};
+use lib::{init_logger, LogLevel, SentinelConfig, SentinelError};
 use serde_json::json;
-
-use crate::{
-    cli::{handle_cli, CliSubCommands, LogLevel},
-    sentinel::start_sentinel,
-};
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
@@ -35,9 +45,6 @@ pub struct Cli {
     /// Disable the broadcaster
     #[arg(short = 'z', long)]
     disable_broadcaster: bool,
-
-    #[command(subcommand)]
-    sub_commands: Option<CliSubCommands>,
 }
 
 impl Cli {
@@ -55,17 +62,13 @@ async fn start() -> Result<String, SentinelError> {
         init_logger(config.log(), cli_args.log_level())?
     };
 
-    let r = if let Some(cmds) = cli_args.sub_commands {
-        handle_cli(&config, &cmds).await
-    } else {
-        start_sentinel(
-            &config,
-            cli_args.disable_native_syncer,
-            cli_args.disable_host_syncer,
-            cli_args.disable_broadcaster,
-        )
-        .await
-    };
+    let r = start_sentinel(
+        &config,
+        cli_args.disable_native_syncer,
+        cli_args.disable_host_syncer,
+        cli_args.disable_broadcaster,
+    )
+    .await;
 
     r.map_err(|e| SentinelError::Json(json!({"jsonrpc": "2.0", "error": e.to_string()})))
 }

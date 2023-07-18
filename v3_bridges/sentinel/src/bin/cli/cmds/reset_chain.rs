@@ -4,10 +4,8 @@ use clap::Args;
 use common::{BridgeSide, DatabaseInterface};
 use common_eth::{EthDbUtils, EthDbUtilsExt, EthState, EthSubmissionMaterial, EvmDbUtils};
 use common_eth_debug::reset_eth_chain;
-use lib::{get_latest_block_num, get_sub_mat, SentinelConfig, SentinelError};
+use lib::{get_latest_block_num, get_sub_mat, SentinelConfig, SentinelError, Side};
 use serde_json::json;
-
-use super::Side;
 
 #[derive(Debug, Args)]
 pub struct ResetCliArgs {

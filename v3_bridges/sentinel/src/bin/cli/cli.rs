@@ -1,18 +1,38 @@
-use crate::cli::{
-    get_sub_mat::SubMatGetterArgs,
-    init::InitArgs,
+use clap::{Parser, Subcommand};
+use lib::LogLevel;
+
+use crate::cmds::{
     CancelTxArgs,
     GetBalanceCliArgs,
     GetUserOpStateCliArgs,
+    InitArgs,
     NonceCliArgs,
     ProcessBlockCliArgs,
     RemoveUserOpCliArgs,
     ResetCliArgs,
     SetGasPriceCliArgs,
+    SubMatGetterArgs,
 };
 
+#[derive(Debug, Parser)]
+#[command(author, version, about, long_about = None)]
+pub struct Cli {
+    /// Log level - if extant, this overrides log level set in config
+    #[arg(long, short)]
+    log_level: Option<LogLevel>,
+
+    #[command(subcommand)]
+    pub cmds: Cmds,
+}
+
+impl Cli {
+    pub fn log_level(&self) -> Option<log::Level> {
+        self.log_level.map(|l| l.into())
+    }
+}
+
 #[derive(Debug, Subcommand)]
-pub enum CliSubCommands {
+pub enum Cmds {
     /// Get HOST latest block number.
     GetHostLatestBlockNum,
 

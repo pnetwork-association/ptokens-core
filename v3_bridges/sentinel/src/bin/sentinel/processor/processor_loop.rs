@@ -2,6 +2,7 @@ use std::{result::Result, sync::Arc};
 
 use common::DatabaseInterface;
 use lib::{
+    process_batch,
     BroadcasterMessages,
     Heartbeats,
     MongoMessages,
@@ -16,8 +17,6 @@ use tokio::sync::{
     mpsc::{Receiver as MpscRx, Sender as MpscTx},
     Mutex,
 };
-
-use super::process_batch;
 
 pub async fn processor_loop<D: DatabaseInterface>(
     guarded_db: Arc<Mutex<D>>,

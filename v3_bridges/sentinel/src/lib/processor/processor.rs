@@ -3,7 +3,8 @@ use std::result::Result;
 use common::{BridgeSide, DatabaseInterface};
 use common_eth::{append_to_blockchain, EthSubmissionMaterial, EthSubmissionMaterials, HostDbUtils, NativeDbUtils};
 use ethereum_types::Address as EthAddress;
-use lib::{Bytes4, ProcessorOutput, SentinelDbUtils, SentinelError, UserOpList, UserOps};
+
+use crate::{Bytes4, ProcessorOutput, SentinelDbUtils, SentinelError, UserOpList, UserOps};
 
 #[allow(clippy::too_many_arguments)]
 pub fn process_single<D: DatabaseInterface>(

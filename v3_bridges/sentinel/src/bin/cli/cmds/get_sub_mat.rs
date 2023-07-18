@@ -6,7 +6,7 @@ use jsonrpsee::ws_client::WsClient;
 use lib::{get_sub_mat, SentinelError};
 use serde_json::json;
 
-use crate::cli::write_file;
+use crate::write_file::write_file;
 
 const SLEEP_TIME: u64 = 15;
 

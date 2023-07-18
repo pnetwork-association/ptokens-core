@@ -20,15 +20,7 @@ use tokio::sync::{
     Mutex,
 };
 
-use crate::sentinel::{
-    broadcaster_loop,
-    core_loop,
-    eth_rpc_loop,
-    mongo_loop,
-    processor_loop,
-    rpc_server_loop,
-    syncer_loop,
-};
+use crate::{broadcaster_loop, core_loop, eth_rpc_loop, mongo_loop, processor_loop, rpc_server_loop, syncer_loop};
 
 const MAX_CHANNEL_CAPACITY: usize = 1337;
 

@@ -14,6 +14,7 @@ mod heartbeat;
 mod logging;
 mod messages;
 mod network_id;
+mod processor;
 mod processor_output;
 mod side;
 mod test_utils;
@@ -58,6 +59,7 @@ pub use self::{
         SyncerMessages,
     },
     network_id::{Bytes4, NetworkId, ProtocolId},
+    processor::{process_batch, process_single},
     processor_output::ProcessorOutput,
     side::Side,
     user_ops::{UserOp, UserOpError, UserOpList, UserOpSmartContractState, UserOps},

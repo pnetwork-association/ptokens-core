@@ -7,6 +7,7 @@ use common_rocksdb_database::get_db_at_path;
 use derive_more::Constructor;
 use lib::{
     get_sub_mat,
+    process_single,
     NetworkId,
     SentinelConfig,
     SentinelError,
@@ -15,8 +16,6 @@ use lib::{
     NATIVE_PROTOCOL_ID,
 };
 use serde_json::json;
-
-use crate::sentinel::process_single;
 
 #[derive(Clone, Debug, Default, Args)]
 pub struct ProcessBlockCliArgs {
