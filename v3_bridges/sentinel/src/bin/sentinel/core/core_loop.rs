@@ -2,9 +2,22 @@ use std::{result::Result, sync::Arc};
 
 use common::{BridgeSide, DatabaseInterface};
 use common_eth::{EthDbUtilsExt, HostDbUtils, NativeDbUtils};
-use lib::{CoreConfig, CoreMessages, CoreState, SentinelDbUtils, SentinelError, UserOpList};
+use lib::{
+    BroadcasterMessages,
+    CoreConfig,
+    CoreMessages,
+    CoreState,
+    MongoMessages,
+    SentinelConfig,
+    SentinelDbUtils,
+    SentinelError,
+    UserOpList,
+};
 use serde_json::json;
-use tokio::sync::{mpsc::Receiver as MpscRx, Mutex};
+use tokio::sync::{
+    mpsc::{Receiver as MpscRx, Sender as MpscTx},
+    Mutex,
+};
 
 async fn handle_message<D: DatabaseInterface>(
     guarded_db: Arc<Mutex<D>>,
@@ -114,8 +127,10 @@ async fn handle_message<D: DatabaseInterface>(
 
 pub async fn core_loop<D: DatabaseInterface>(
     guarded_db: Arc<Mutex<D>>,
-    config: CoreConfig,
+    config: SentinelConfig,
     mut core_rx: MpscRx<CoreMessages>,
+    mongo_tx: MpscTx<MongoMessages>,
+    broadcaster_tx: MpscTx<BroadcasterMessages>,
 ) -> Result<(), SentinelError> {
     info!("core listening...");
 
@@ -123,7 +138,7 @@ pub async fn core_loop<D: DatabaseInterface>(
         tokio::select! {
             r = core_rx.recv() => {
                 if let Some(msg) = r {
-                    handle_message(guarded_db.clone(), &config, msg).await?;
+                    handle_message(guarded_db.clone(), config.core(), msg).await?;
                     continue 'core_loop
                 } else {
                     let m = "all core senders dropped!";
