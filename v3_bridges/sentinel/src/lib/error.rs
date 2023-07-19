@@ -1,14 +1,6 @@
 use thiserror::Error;
 
-use crate::{
-    BroadcasterMessages,
-    CoreMessages,
-    DbKey,
-    EthRpcMessages,
-    MongoMessages,
-    ProcessorMessages,
-    SyncerMessages,
-};
+use crate::{BroadcasterMessages, CoreMessages, DbKey, EthRpcMessages, MongoMessages, SyncerMessages};
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
@@ -126,9 +118,6 @@ pub enum SentinelError {
     #[error("syncer channel error: {0}")]
     SyncerChannel(Box<tokio::sync::broadcast::error::SendError<SyncerMessages>>),
 
-    #[error("processor channel error: {0}")]
-    ProcessorChannel(Box<tokio::sync::mpsc::error::SendError<ProcessorMessages>>),
-
     #[error("broadcast channel error: {0}")]
     BroadcastChannel(Box<tokio::sync::broadcast::error::SendError<BroadcasterMessages>>),
 
@@ -151,12 +140,6 @@ impl From<tokio::sync::mpsc::error::SendError<CoreMessages>> for SentinelError {
 impl From<tokio::sync::broadcast::error::SendError<SyncerMessages>> for SentinelError {
     fn from(e: tokio::sync::broadcast::error::SendError<SyncerMessages>) -> Self {
         Self::SyncerChannel(Box::new(e))
-    }
-}
-
-impl From<tokio::sync::mpsc::error::SendError<ProcessorMessages>> for SentinelError {
-    fn from(e: tokio::sync::mpsc::error::SendError<ProcessorMessages>) -> Self {
-        Self::ProcessorChannel(Box::new(e))
     }
 }
 

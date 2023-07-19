@@ -9,7 +9,6 @@ use lib::{
     CoreMessages,
     EthRpcMessages,
     MongoMessages,
-    ProcessorMessages,
     SentinelConfig,
     SentinelError,
 };
@@ -20,7 +19,14 @@ use tokio::sync::{
     Mutex,
 };
 
-use crate::{broadcaster_loop, core_loop, eth_rpc_loop, mongo_loop, processor_loop, rpc_server_loop, syncer_loop};
+use crate::{
+    broadcaster::broadcaster_loop,
+    core::core_loop,
+    eth_rpc::eth_rpc_loop,
+    mongo::mongo_loop,
+    rpc_server::rpc_server_loop,
+    syncer::syncer_loop,
+};
 
 const MAX_CHANNEL_CAPACITY: usize = 1337;
 
@@ -33,9 +39,6 @@ pub async fn start_sentinel(
     let db = common_rocksdb_database::get_db_at_path(&config.get_db_path())?;
     check_init(&db)?;
     let wrapped_db = Arc::new(Mutex::new(db));
-
-    let (processor_tx, processor_rx): (MpscTx<ProcessorMessages>, MpscRx<ProcessorMessages>) =
-        mpsc::channel(MAX_CHANNEL_CAPACITY);
 
     let (core_tx, core_rx): (MpscTx<CoreMessages>, MpscRx<CoreMessages>) = mpsc::channel(MAX_CHANNEL_CAPACITY);
 
@@ -82,18 +85,10 @@ pub async fn start_sentinel(
         disable_broadcaster,
     ));
     let rpc_server_thread = tokio::spawn(rpc_server_loop(core_tx.clone(), mongo_tx.clone(), config.clone()));
-    let processor_thread = tokio::spawn(processor_loop(
-        wrapped_db.clone(),
-        processor_rx,
-        mongo_tx.clone(),
-        broadcaster_tx.clone(),
-        config.clone(),
-    ));
 
     match tokio::try_join!(
         flatten_join_handle(native_syncer_thread),
         flatten_join_handle(host_syncer_thread),
-        flatten_join_handle(processor_thread),
         flatten_join_handle(core_thread),
         flatten_join_handle(mongo_thread),
         flatten_join_handle(rpc_server_thread),
@@ -101,18 +96,17 @@ pub async fn start_sentinel(
         flatten_join_handle(host_eth_rpc_thread),
         flatten_join_handle(broadcaster_thread),
     ) {
-        Ok((r1, r2, r3, r4, r5, r6, r7, r8, r9)) => Ok(json!({
+        Ok((r1, r2, r3, r4, r5, r6, r7, r8)) => Ok(json!({
             "jsonrpc": "2.0",
             "result": {
                 "native_syncer_thread": r1,
                 "host_syncer_thread": r2,
-                "processor_thread": r3,
-                "core_thread": r4,
-                "mongo_thread": r5,
-                "rpc_server_thread": r6,
-                "native_eth_rpc_thread": r7,
-                "host_eth_rpc_thread": r8,
-                "broadcaster_thread": r9,
+                "core_thread": r3,
+                "mongo_thread": r4,
+                "rpc_server_thread": r5,
+                "native_eth_rpc_thread": r6,
+                "host_eth_rpc_thread": r7,
+                "broadcaster_thread": r8,
             },
         })
         .to_string()),

@@ -2,21 +2,9 @@ mod broadcaster;
 mod core;
 mod eth_rpc;
 mod mongo;
-mod processor;
 mod rpc_server;
 mod start_sentinel;
 mod syncer;
-
-use self::{
-    broadcaster::broadcaster_loop,
-    core::core_loop,
-    eth_rpc::eth_rpc_loop,
-    mongo::mongo_loop,
-    processor::processor_loop,
-    rpc_server::rpc_server_loop,
-    start_sentinel::start_sentinel,
-    syncer::syncer_loop,
-};
 
 #[macro_use]
 extern crate log;
@@ -64,7 +52,7 @@ async fn start() -> Result<String, SentinelError> {
         init_logger(config.log(), cli_args.log_level())?
     };
 
-    let r = start_sentinel(
+    let r = start_sentinel::start_sentinel(
         &config,
         cli_args.disable_native_syncer,
         cli_args.disable_host_syncer,
