@@ -1,6 +1,6 @@
 use std::result::Result;
 
-use lib::{Batch, CoreMessages, EthRpcMessages, ProcessorMessages, SentinelError};
+use lib::{Batch, CoreMessages, EthRpcMessages, SentinelError};
 use tokio::{
     sync::mpsc::Sender as MpscTx,
     time::{sleep, Duration},
@@ -8,7 +8,7 @@ use tokio::{
 
 async fn main_loop(
     mut batch: Batch,
-    processor_tx: MpscTx<ProcessorMessages>,
+    core_tx: MpscTx<CoreMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
 ) -> Result<(), SentinelError> {
     let side = batch.side();
@@ -27,8 +27,8 @@ async fn main_loop(
                 } else {
                     // TODO check if batch is chained correctly!
                     info!("{log_prefix} batch is ready to submit!");
-                    let (msg, rx) = ProcessorMessages::get_process_msg(batch.side(), batch.to_submission_material());
-                    processor_tx.send(msg).await?;
+                    let (msg, rx) = CoreMessages::get_process_msg(batch.side(), batch.to_submission_material());
+                    core_tx.send(msg).await?;
                     match rx.await? {
                         Ok(_) => {
                             debug!("{log_prefix} oneshot channel returned ok");
@@ -72,7 +72,6 @@ async fn main_loop(
 
 pub async fn syncer_loop(
     mut batch: Batch,
-    processor_tx: MpscTx<ProcessorMessages>,
     core_tx: MpscTx<CoreMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     disable_syncer: bool,
@@ -98,7 +97,7 @@ pub async fn syncer_loop(
         }
     } else {
         tokio::select! {
-            res = main_loop(batch, processor_tx, eth_rpc_tx) => res,
+            res = main_loop(batch, core_tx, eth_rpc_tx) => res,
             _ = tokio::signal::ctrl_c() => {
                 warn!("{side} syncer shutting down...");
                 Err(SentinelError::SigInt("{side} syncer".into()))

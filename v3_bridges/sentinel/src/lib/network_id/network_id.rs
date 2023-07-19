@@ -11,7 +11,7 @@ use super::{NetworkIdError, NetworkIdVersion, ProtocolId};
 
 const NUM_BYTES: usize = 4;
 
-#[derive(Debug, Clone, Eq, PartialEq, Deref)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Deref)]
 pub struct Bytes4([u8; NUM_BYTES]);
 
 impl TryFrom<Bytes> for Bytes4 {

@@ -3,15 +3,20 @@ use std::{result::Result, sync::Arc};
 use common::{BridgeSide, DatabaseInterface};
 use common_eth::{EthDbUtilsExt, HostDbUtils, NativeDbUtils};
 use lib::{
+    process_batch,
     BroadcasterMessages,
-    CoreConfig,
+    Bytes4,
     CoreMessages,
     CoreState,
+    Heartbeats,
     MongoMessages,
+    NetworkId,
     SentinelConfig,
     SentinelDbUtils,
     SentinelError,
     UserOpList,
+    HOST_PROTOCOL_ID,
+    NATIVE_PROTOCOL_ID,
 };
 use serde_json::json;
 use tokio::sync::{
@@ -19,20 +24,91 @@ use tokio::sync::{
     Mutex,
 };
 
+lazy_static! {
+    // NOTE: This is just used to give a quick RPC-access way to see how fast the sentinel is syncing
+    static ref HEARTBEATS: std::sync::Mutex<Heartbeats> = std::sync::Mutex::new(Heartbeats::new());
+}
+
 async fn handle_message<D: DatabaseInterface>(
     guarded_db: Arc<Mutex<D>>,
-    config: &CoreConfig,
+    config: &SentinelConfig,
     msg: CoreMessages,
+    mongo_tx: MpscTx<MongoMessages>,
+    broadcaster_tx: MpscTx<BroadcasterMessages>,
+    n_origin_network_id: Bytes4,
+    h_origin_network_id: Bytes4,
 ) -> Result<(), SentinelError> {
+    let reprocess = false;
     let db = guarded_db.lock().await;
 
     match msg {
+        CoreMessages::Process(args) => {
+            let side = args.side();
+            debug!("processing {side} material...");
+            // NOTE If we match on the process fxn call directly, we get tokio errors!
+            let result = process_batch(
+                &*db,
+                &config.pnetwork_hub(&side),
+                &args.batch,
+                config.is_validating(&side),
+                side,
+                if side.is_native() {
+                    &n_origin_network_id
+                } else {
+                    &h_origin_network_id
+                },
+                reprocess,
+            );
+            match result {
+                Ok(output) => {
+                    let _ = args.responder.send(Ok(())); // NOTE: Send an OK response so syncer can continue
+
+                    let maybe_json = match HEARTBEATS.lock() {
+                        Ok(mut h) => {
+                            h.push(&output);
+                            Some(h.to_json())
+                        },
+                        Err(e) => {
+                            // NOTE: If for some reason the lock gets poisoned, we don't care too
+                            // much since the heartbeats is just a crude monitoring method.
+                            error!("cannot push latest info into heartbeats: {e}");
+                            None
+                        },
+                    };
+                    if let Some(json) = maybe_json {
+                        mongo_tx.send(MongoMessages::PutHeartbeats(json)).await?
+                    }
+
+                    if output.has_user_ops() {
+                        // NOTE: Some user ops were processed so there may be some that
+                        // are cancellable.
+                        broadcaster_tx.send(BroadcasterMessages::CancelUserOps).await?;
+                    }
+
+                    return Ok(());
+                },
+                Err(SentinelError::NoParent(e)) => {
+                    debug!("{side} no parent error successfully caught and returned to syncer");
+                    let _ = args.responder.send(Err(SentinelError::NoParent(e)));
+                    return Ok(());
+                },
+                Err(SentinelError::BlockAlreadyInDb(e)) => {
+                    debug!("{side} block already in db successfully caught and returned to syncer");
+                    let _ = args.responder.send(Err(SentinelError::BlockAlreadyInDb(e)));
+                    return Ok(());
+                },
+                Err(e) => {
+                    warn!("{side} processor err: {e}");
+                    return Err(e);
+                },
+            }
+        },
         CoreMessages::GetCancellableUserOps(responder) => {
             let sentinel_db_utils = SentinelDbUtils::new(&*db);
             let h_latest_timestamp = HostDbUtils::new(&*db).get_latest_eth_block_timestamp()?;
             let n_latest_timestamp = NativeDbUtils::new(&*db).get_latest_eth_block_timestamp()?;
             let r = UserOpList::get(&sentinel_db_utils).get_cancellable_ops(
-                config.max_cancellable_time_delta(),
+                config.core().max_cancellable_time_delta(),
                 &sentinel_db_utils,
                 n_latest_timestamp,
                 h_latest_timestamp,
@@ -133,12 +209,22 @@ pub async fn core_loop<D: DatabaseInterface>(
     broadcaster_tx: MpscTx<BroadcasterMessages>,
 ) -> Result<(), SentinelError> {
     info!("core listening...");
+    let h_origin_network_id = NetworkId::new(config.host().get_eth_chain_id(), *HOST_PROTOCOL_ID).to_bytes_4()?;
+    let n_origin_network_id = NetworkId::new(config.native().get_eth_chain_id(), *NATIVE_PROTOCOL_ID).to_bytes_4()?;
 
     'core_loop: loop {
         tokio::select! {
             r = core_rx.recv() => {
                 if let Some(msg) = r {
-                    handle_message(guarded_db.clone(), config.core(), msg).await?;
+                    handle_message(
+                        guarded_db.clone(),
+                        &config,
+                        msg,
+                        mongo_tx.clone(),
+                        broadcaster_tx.clone(),
+                        n_origin_network_id,
+                        h_origin_network_id,
+                    ).await?;
                     continue 'core_loop
                 } else {
                     let m = "all core senders dropped!";

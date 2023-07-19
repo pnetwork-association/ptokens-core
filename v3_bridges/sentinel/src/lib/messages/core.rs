@@ -1,5 +1,6 @@
 use common::{BridgeSide, CoreType};
-use common_eth::{EthPrivateKey, EthTransaction};
+use common_eth::{EthPrivateKey, EthSubmissionMaterials, EthTransaction};
+use derive_more::Constructor;
 use ethereum_types::{Address as EthAddress, H256 as EthHash};
 use serde_json::Value as Json;
 use tokio::sync::{oneshot, oneshot::Receiver};
@@ -8,6 +9,7 @@ use crate::{CoreState, Responder, SentinelError, UserOp, UserOpList, UserOps};
 
 #[derive(Debug)]
 pub enum CoreMessages {
+    Process(ProcessArgs),
     GetHostConfs(Responder<u64>),
     GetNativeConfs(Responder<u64>),
     GetUserOps(Responder<UserOps>),
@@ -37,7 +39,29 @@ pub enum CoreMessages {
     },
 }
 
+#[derive(Debug, Constructor)]
+pub struct ProcessArgs {
+    side: BridgeSide,
+    pub responder: Responder<()>,
+    pub batch: EthSubmissionMaterials,
+}
+
+impl ProcessArgs {
+    pub fn side(&self) -> BridgeSide {
+        self.side
+    }
+}
+
 impl CoreMessages {
+    pub fn get_process_msg(
+        side: BridgeSide,
+        sub_mat: EthSubmissionMaterials,
+    ) -> (Self, Receiver<Result<(), SentinelError>>) {
+        let (tx, rx) = oneshot::channel();
+        let args = ProcessArgs::new(side, tx, sub_mat);
+        (Self::Process(args), rx)
+    }
+
     pub fn get_cancellable_user_ops_msg() -> (Self, Receiver<Result<UserOps, SentinelError>>) {
         let (tx, rx) = oneshot::channel();
         (Self::GetCancellableUserOps(tx), rx)
