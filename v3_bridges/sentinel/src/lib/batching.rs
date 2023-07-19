@@ -5,11 +5,7 @@ use common_eth::{EthSubmissionMaterial, EthSubmissionMaterials};
 use ethereum_types::{Address as EthAddress, U256};
 use jsonrpsee::ws_client::WsClient;
 
-use crate::{
-    config::{Config, ConfigT},
-    endpoints::Endpoints,
-    SentinelError,
-};
+use crate::{endpoints::Endpoints, ConfigT, SentinelConfig, SentinelError};
 
 #[derive(Debug, Clone)]
 pub struct Batch {
@@ -103,7 +99,7 @@ impl Batch {
         self.endpoints.clone()
     }
 
-    pub fn new_from_config(side: BridgeSide, config: &Config) -> Result<Self, SentinelError> {
+    pub fn new_from_config(side: BridgeSide, config: &SentinelConfig) -> Result<Self, SentinelError> {
         let is_native = side.is_native();
         info!(
             "getting {} batch from config...",

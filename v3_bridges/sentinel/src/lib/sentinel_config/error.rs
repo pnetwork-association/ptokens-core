@@ -2,7 +2,7 @@ use common::BridgeSide;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
-pub enum ConfigError {
+pub enum SentinelConfigError {
     #[error("logs of size {size}b is not between min of {min}b and max of {max}b ")]
     LogSize { size: u64, min: u64, max: u64 },
 

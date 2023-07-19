@@ -55,7 +55,7 @@ pub enum SentinelError {
     #[error("common error: {0}")]
     Common(common::AppError),
 
-    #[error("config error: {0}")]
+    #[error("config crate error: {0}")]
     Config(#[from] config::ConfigError),
 
     #[error("serde json error {0}")]
@@ -89,7 +89,7 @@ pub enum SentinelError {
     Endpoint(#[from] crate::endpoints::EndpointError),
 
     #[error("sentinel config error {0}")]
-    SentinelConfig(#[from] crate::config::ConfigError),
+    SentinelConfig(#[from] crate::sentinel_config::SentinelConfigError),
 
     #[error("rocksdb error {0}")]
     RocksDb(#[from] common_rocksdb_database::RocksdbDatabaseError),

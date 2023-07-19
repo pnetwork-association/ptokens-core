@@ -6,7 +6,7 @@ use log::Level as LogLevel;
 use serde::Deserialize;
 
 use crate::{
-    config::{
+    sentinel_config::{
         BatchingConfig,
         BatchingToml,
         ConfigT,
@@ -25,10 +25,10 @@ use crate::{
     SentinelError,
 };
 
-const CONFIG_FILE_PATH: &str = "config";
+const CONFIG_FILE_PATH: &str = "sentinel-config";
 
 #[derive(Debug, Clone, Deserialize)]
-struct ConfigToml {
+struct SentinelConfigToml {
     log: LogToml,
     host: HostToml,
     core: CoreToml,
@@ -37,7 +37,7 @@ struct ConfigToml {
     batching: BatchingToml,
 }
 
-impl ConfigToml {
+impl SentinelConfigToml {
     pub fn new() -> Result<Self, SentinelError> {
         Ok(config::Config::builder()
             .add_source(config::File::with_name(CONFIG_FILE_PATH))
@@ -47,7 +47,7 @@ impl ConfigToml {
 }
 
 #[derive(Debug, Clone)]
-pub struct Config {
+pub struct SentinelConfig {
     log: LogConfig,
     host: HostConfig,
     core: CoreConfig,
@@ -56,7 +56,7 @@ pub struct Config {
     batching: BatchingConfig,
 }
 
-impl Config {
+impl SentinelConfig {
     pub fn mongo(&self) -> &MongoConfig {
         &self.mongo
     }
@@ -86,12 +86,12 @@ impl Config {
     }
 
     pub fn new() -> Result<Self, SentinelError> {
-        let res = Self::from_toml(&ConfigToml::new()?)?;
-        debug!("Config {:?}", res);
+        let res = Self::from_toml(&SentinelConfigToml::new()?)?;
+        debug!("sentinel config {:?}", res);
         Ok(res)
     }
 
-    fn from_toml(toml: &ConfigToml) -> Result<Self, SentinelError> {
+    fn from_toml(toml: &SentinelConfigToml) -> Result<Self, SentinelError> {
         Ok(Self {
             log: LogConfig::from_toml(&toml.log)?,
             core: CoreConfig::from_toml(&toml.core)?,
@@ -137,7 +137,7 @@ mod tests {
 
     #[test]
     fn should_get_config() {
-        let result = Config::new();
+        let result = SentinelConfig::new();
         result.unwrap();
     }
 }

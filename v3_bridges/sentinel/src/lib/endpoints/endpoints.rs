@@ -4,7 +4,7 @@ use common::BridgeSide;
 use jsonrpsee::ws_client::WsClient;
 
 use super::EndpointError;
-use crate::{config::ConfigError, get_rpc_client, SentinelError};
+use crate::{get_rpc_client, SentinelConfigError, SentinelError};
 
 #[derive(Debug, Default, Clone)]
 pub struct Endpoints {
@@ -29,10 +29,10 @@ impl Endpoints {
         self.sleep_time
     }
 
-    fn get_first_endpoint(&self) -> Result<String, ConfigError> {
+    fn get_first_endpoint(&self) -> Result<String, SentinelConfigError> {
         info!("getting first {} endpoint...", self.side());
         if self.endpoints.is_empty() {
-            Err(ConfigError::NoEndpoints(self.side))
+            Err(SentinelConfigError::NoEndpoints(self.side))
         } else {
             Ok(self.endpoints[0].clone())
         }

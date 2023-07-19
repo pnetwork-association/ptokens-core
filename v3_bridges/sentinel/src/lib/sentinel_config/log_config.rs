@@ -3,7 +3,7 @@ use std::result::Result;
 use log::Level as LogLevel;
 use serde::Deserialize;
 
-use super::ConfigError;
+use super::SentinelConfigError;
 use crate::SentinelError;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -49,7 +49,7 @@ impl LogConfig {
         if (MIN..=MAX).contains(&n) {
             Ok(n)
         } else {
-            Err(SentinelError::SentinelConfig(ConfigError::LogNum {
+            Err(SentinelError::SentinelConfig(SentinelConfigError::LogNum {
                 size: n,
                 max: MAX,
                 min: MIN,
@@ -63,7 +63,7 @@ impl LogConfig {
         if (MIN..=MAX).contains(&n) {
             Ok(n)
         } else {
-            Err(SentinelError::SentinelConfig(ConfigError::LogSize {
+            Err(SentinelError::SentinelConfig(SentinelConfigError::LogSize {
                 size: n,
                 max: MAX,
                 min: MIN,

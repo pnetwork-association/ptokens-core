@@ -6,10 +6,10 @@ use common_eth::convert_hex_to_eth_address;
 use ethereum_types::Address as EthAddress;
 use serde::Deserialize;
 
-use crate::{config::ConfigT, constants::MILLISECONDS_MULTIPLIER, Endpoints, SentinelError};
+use crate::{constants::MILLISECONDS_MULTIPLIER, sentinel_config::ConfigT, Endpoints, SentinelError};
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct NativeToml {
+pub struct HostToml {
     validate: bool,
     gas_limit: usize,
     sleep_duration: u64,
@@ -20,7 +20,7 @@ pub struct NativeToml {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct NativeConfig {
+pub struct HostConfig {
     validate: bool,
     gas_limit: usize,
     sleep_duration: u64,
@@ -30,8 +30,8 @@ pub struct NativeConfig {
     pnetwork_hub: EthAddress,
 }
 
-impl NativeConfig {
-    pub fn from_toml(toml: &NativeToml) -> Result<Self, SentinelError> {
+impl HostConfig {
+    pub fn from_toml(toml: &HostToml) -> Result<Self, SentinelError> {
         let sleep_duration = toml.sleep_duration * MILLISECONDS_MULTIPLIER;
         Ok(Self {
             sleep_duration,
@@ -39,11 +39,11 @@ impl NativeConfig {
             gas_price: toml.gas_price,
             gas_limit: toml.gas_limit,
             pnetwork_hub: convert_hex_to_eth_address(&toml.pnetwork_hub)?,
-            endpoints: Endpoints::new(sleep_duration, BridgeSide::Native, toml.endpoints.clone()),
+            endpoints: Endpoints::new(sleep_duration, BridgeSide::Host, toml.endpoints.clone()),
             eth_chain_id: match EthChainId::from_str(&toml.eth_chain_id) {
                 Ok(id) => id,
                 Err(e) => {
-                    warn!("Could not parse `eth_chain_id` from native config, defaulting to ETH mainnet!");
+                    warn!("Could not parse `eth_chain_id` from host config, defaulting to ETH mainnet!");
                     warn!("{e}");
                     EthChainId::Mainnet
                 },
@@ -64,9 +64,9 @@ impl NativeConfig {
     }
 }
 
-impl ConfigT for NativeConfig {
+impl ConfigT for HostConfig {
     fn side(&self) -> BridgeSide {
-        BridgeSide::Native
+        BridgeSide::Host
     }
 
     fn is_validating(&self) -> bool {
