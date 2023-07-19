@@ -92,6 +92,7 @@ keccak-hasher = "0.15.3"
 serde_derive = "1.0.152"
 ethereum-types = "0.12.1"
 bounded-vec-deque = "0.1.1"
+tokio-tungstenite = "0.19.0"
 tokio = { version = "1.25.0", features = [ "full" ] }
 clap = { version = "4.1.6", features = [ "derive" ] }
 serde = { version = "1.0.130", features = ["derive"] }

@@ -6,20 +6,20 @@ use serde::Deserialize;
 use crate::SentinelError;
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct CoreToml {
+pub struct SentinelCoreToml {
     db_path: String,
     core_type: String,
     max_cancellable_time_delta: u64,
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct CoreConfig {
+pub struct SentinelCoreConfig {
     pub db_path: String,
     pub core_type: CoreType,
     max_cancellable_time_delta: u64,
 }
 
-impl CoreConfig {
+impl SentinelCoreConfig {
     pub fn core_type(&self) -> CoreType {
         self.core_type
     }
@@ -28,7 +28,7 @@ impl CoreConfig {
         self.max_cancellable_time_delta
     }
 
-    pub fn from_toml(toml: &CoreToml) -> Result<Self, SentinelError> {
+    pub fn from_toml(toml: &SentinelCoreToml) -> Result<Self, SentinelError> {
         Ok(Self {
             db_path: toml.db_path.clone(),
             max_cancellable_time_delta: toml.max_cancellable_time_delta,
