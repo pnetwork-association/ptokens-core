@@ -1,11 +1,16 @@
+mod core_config;
+mod error;
+
 #[macro_use]
 extern crate log;
 
 use std::result::Result;
 
 use clap::Parser;
-use lib::{init_logger, LogLevel, SentinelConfig, SentinelError};
+use lib::{init_logger, LogLevel};
 use serde_json::json;
+
+use self::{core_config::CoreConfig, error::CoreError};
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
@@ -21,17 +26,17 @@ impl Cli {
     }
 }
 
-async fn start() -> Result<String, SentinelError> {
-    let config = SentinelConfig::new()?;
+async fn start() -> Result<String, CoreError> {
+    let config = CoreConfig::new()?;
 
     let cli_args = Cli::parse();
 
     if config.log().is_enabled() {
-        init_logger(config.log(), cli_args.log_level())?
+        init_logger(&config.log(), cli_args.log_level())?
     };
 
-    let r: Result<String, SentinelError> = Ok("this does nothing".into());
-    r.map_err(|e| SentinelError::Json(json!({"jsonrpc": "2.0", "error": e.to_string()})))
+    let r: Result<String, CoreError> = Ok("this does nothing".into());
+    r.map_err(|e| CoreError::Json(json!({"jsonrpc": "2.0", "error": e.to_string()})))
 }
 
 #[tokio::main]

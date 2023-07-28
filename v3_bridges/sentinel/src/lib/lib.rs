@@ -1,7 +1,6 @@
 mod batching;
 mod check_init;
 mod constants;
-mod core_config;
 mod core_state;
 mod db_utils;
 mod endpoints;
@@ -26,7 +25,6 @@ pub use self::{
     batching::Batch,
     check_init::check_init,
     constants::{DEFAULT_SLEEP_TIME, HOST_PROTOCOL_ID, MILLISECONDS_MULTIPLIER, NATIVE_PROTOCOL_ID},
-    core_config::CoreConfig,
     core_state::CoreState,
     db_utils::{DbKey, DbUtilsT, SentinelDbUtils},
     endpoints::{check_endpoint, EndpointError, Endpoints},
@@ -56,6 +54,8 @@ pub use self::{
     sentinel_config::{
         ConfigT,
         HostConfig,
+        LogConfig,
+        LogToml,
         MongoConfig,
         NativeConfig,
         SentinelConfig,

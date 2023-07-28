@@ -76,15 +76,3 @@ impl MongoConfig {
         self.sleep_duration
     }
 }
-
-#[cfg(test)]
-mod tests {
-
-    use crate::config::Config;
-
-    #[test]
-    fn should_get_mongo_config() {
-        let result = Config::new();
-        assert!(result.is_ok());
-    }
-}

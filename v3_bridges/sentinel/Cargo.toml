@@ -19,7 +19,7 @@ name = "sentinel-cli"
 path = "src/bin/cli/main.rs"
 
 [[bin]]
-name = "core"
+name = "sentinel-core"
 path = "src/bin/core/main.rs"
 
 [features]
