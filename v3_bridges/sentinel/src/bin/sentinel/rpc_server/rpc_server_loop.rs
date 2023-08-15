@@ -205,7 +205,7 @@ impl RpcCall {
     }
 }
 
-async fn main_loop(core_tx: CoreTx, mongo_tx: MongoTx, config: SentinelConfig) -> Result<(), SentinelError> {
+async fn start_rpc_server(core_tx: CoreTx, mongo_tx: MongoTx, config: SentinelConfig) -> Result<(), SentinelError> {
     debug!("rpc server listening!");
     let core_tx_filter = warp::any().map(move || core_tx.clone());
     let mongo_tx_filter = warp::any().map(move || mongo_tx.clone());
@@ -231,13 +231,28 @@ pub async fn rpc_server_loop(
     core_tx: MpscTx<CoreMessages>,
     mongo_tx: MpscTx<MongoMessages>,
     config: SentinelConfig,
+    disable: bool,
 ) -> Result<(), SentinelError> {
-    let m = "rpc server";
-    tokio::select! {
-        _ = main_loop(core_tx, mongo_tx, config.clone()) => Ok(()),
-        _ = tokio::signal::ctrl_c() => {
-            warn!("{m} shutting down...");
-            Err(SentinelError::SigInt(m.into()))
-        },
+    let mut rpc_server_is_enabled = !disable;
+    let name = "rpc server";
+    'rpc_server_loop: loop {
+        tokio::select! {
+            r = start_rpc_server(core_tx.clone(), mongo_tx.clone(), config.clone()), if rpc_server_is_enabled => {
+                if r.is_ok() {
+                    warn!("{name} returned, restarting {name} now...");
+                    continue 'rpc_server_loop
+                } else {
+                    break 'rpc_server_loop r
+                }
+            },
+            _ = tokio::signal::ctrl_c() => {
+                warn!("{name} shutting down...");
+                break 'rpc_server_loop Err(SentinelError::SigInt(name.into()))
+            },
+            else => {
+                warn!("in {name} `else` branch, {name} is currently {}abled", if rpc_server_is_enabled { "en" } else { "dis" });
+                continue 'rpc_server_loop
+            }
+        }
     }
 }
