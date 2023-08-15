@@ -38,7 +38,7 @@ pub async fn start_sentinel(
     disable_rpc_server: bool,
 ) -> Result<String, SentinelError> {
     let db = common_rocksdb_database::get_db_at_path(&config.get_db_path())?;
-    check_init(&db)?;
+    check_init(&db)?; // FIXME This will need changing to a core_tx call
     let wrapped_db = Arc::new(Mutex::new(db));
 
     let (core_tx, core_rx): (MpscTx<CoreMessages>, MpscRx<CoreMessages>) = mpsc::channel(MAX_CHANNEL_CAPACITY);
