@@ -30,6 +30,7 @@ test-eth-rpc = [] # NOTE: Means the RPC fxns can only be tested if this feature 
 hex = { workspace = true }
 log = { workspace = true }
 clap = { workspace = true }
+axum = { workspace = true }
 warp = { workspace = true }
 sha2 = { workspace = true }
 tokio = { workspace = true }
@@ -43,8 +44,10 @@ dotenv = { workspace = true }
 futures = { workspace = true }
 mongodb = { workspace = true }
 reqwest = { workspace = true }
+headers = { workspace = true }
 thiserror = { workspace = true }
 jsonrpsee = { workspace = true }
+tower-http = { workspace = true }
 serde_with = { workspace = true }
 serde_json = { workspace = true }
 tiny-keccak = { workspace = true }

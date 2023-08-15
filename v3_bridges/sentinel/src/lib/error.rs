@@ -4,6 +4,9 @@ use crate::{BroadcasterMessages, CoreMessages, DbKey, EthRpcMessages, MongoMessa
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("warp hyper: {0}")]
+    WarpHyper(#[from] warp::hyper::Error),
+
     #[error("env error: {0}")]
     Env(#[from] crate::env::EnvError),
 
