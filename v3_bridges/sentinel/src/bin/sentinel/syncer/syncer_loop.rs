@@ -15,6 +15,16 @@ async fn main_loop(
     let log_prefix = format!("{} syncer", side);
     let sleep_duration = batch.get_sleep_duration();
 
+    // NOTE: Get & set the core's latest block num into the batch...
+    let (latest_block_num_msg, latest_block_num_rx) = CoreMessages::get_latest_block_num_msg(&side);
+    core_tx.send(latest_block_num_msg).await?;
+    batch.set_block_num(latest_block_num_rx.await?? + 1);
+
+    // NOTE: Get & set the core's number of confs into the batch...
+    let (confs_msg, confs_rx) = CoreMessages::get_confs_msg(&side);
+    core_tx.send(confs_msg).await?;
+    batch.set_confs(confs_rx.await??);
+
     'main_loop: loop {
         let (msg, rx) = EthRpcMessages::get_sub_mat_msg(side, batch.get_block_num());
         eth_rpc_tx.send(msg).await?;
@@ -74,33 +84,29 @@ pub async fn syncer_loop(
     mut batch: Batch,
     core_tx: MpscTx<CoreMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
-    disable_syncer: bool,
+    disable: bool,
 ) -> Result<(), SentinelError> {
     let side = batch.side();
+    let name = format!("{side} syncer");
+    let mut syncer_is_enabled = !disable;
 
-    // NOTE: Get & set the core's latest block num into the batch...
-    let (latest_block_num_msg, latest_block_num_rx) = CoreMessages::get_latest_block_num_msg(&side);
-    core_tx.send(latest_block_num_msg).await?;
-    batch.set_block_num(latest_block_num_rx.await?? + 1);
-
-    // NOTE: Get & set the core's number of confs into the batch...
-    let (confs_msg, confs_rx) = CoreMessages::get_confs_msg(&side);
-    core_tx.send(confs_msg).await?;
-    batch.set_confs(confs_rx.await??);
-
-    if disable_syncer {
+    'syncer_loop: loop {
         tokio::select! {
-            _ = tokio::signal::ctrl_c() => {
-                warn!("{side} syncer shutting down...");
-                Err(SentinelError::SigInt("{side} syncer".into()))
+            r = main_loop(batch.clone(), core_tx.clone(), eth_rpc_tx.clone()), if syncer_is_enabled => {
+                if r.is_ok() {
+                    warn!("{name} returned, restarting {name} now...");
+                    continue 'syncer_loop
+                } else {
+                    break 'syncer_loop r
+                }
             },
-        }
-    } else {
-        tokio::select! {
-            res = main_loop(batch, core_tx, eth_rpc_tx) => res,
             _ = tokio::signal::ctrl_c() => {
                 warn!("{side} syncer shutting down...");
-                Err(SentinelError::SigInt("{side} syncer".into()))
+                break 'syncer_loop Err(SentinelError::SigInt(name.into()))
+            },
+            else => {
+                warn!("in {name} `else` branch, {name} is currently {}abled", if syncer_is_enabled { "en" } else { "dis" });
+                continue 'syncer_loop
             },
         }
     }
