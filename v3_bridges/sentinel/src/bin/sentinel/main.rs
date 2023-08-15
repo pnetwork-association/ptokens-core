@@ -5,6 +5,7 @@ mod mongo;
 mod rpc_server;
 mod start_sentinel;
 mod syncer;
+mod ws_server;
 
 #[macro_use]
 extern crate log;
@@ -25,16 +26,20 @@ pub struct Cli {
     log_level: Option<LogLevel>,
 
     /// Disable the native syncer
-    #[arg(short = 'x', long)]
+    #[arg(short = 'w', long)]
     disable_native_syncer: bool,
 
     /// Disable the host syncer
-    #[arg(short = 'y', long)]
+    #[arg(short = 'x', long)]
     disable_host_syncer: bool,
 
     /// Disable the broadcaster
-    #[arg(short = 'z', long)]
+    #[arg(short = 'y', long)]
     disable_broadcaster: bool,
+
+    /// Disable the rpc server
+    #[arg(short = 'z', long)]
+    disable_rpc_server: bool,
 }
 
 impl Cli {
@@ -57,6 +62,7 @@ async fn start() -> Result<String, SentinelError> {
         cli_args.disable_native_syncer,
         cli_args.disable_host_syncer,
         cli_args.disable_broadcaster,
+        cli_args.disable_rpc_server,
     )
     .await;
 

@@ -35,6 +35,7 @@ pub async fn start_sentinel(
     disable_native_syncer: bool,
     disable_host_syncer: bool,
     disable_broadcaster: bool,
+    disable_rpc_server: bool,
 ) -> Result<String, SentinelError> {
     let db = common_rocksdb_database::get_db_at_path(&config.get_db_path())?;
     check_init(&db)?;
@@ -84,7 +85,12 @@ pub async fn start_sentinel(
         config.clone(),
         disable_broadcaster,
     ));
-    let rpc_server_thread = tokio::spawn(rpc_server_loop(core_tx.clone(), mongo_tx.clone(), config.clone()));
+    let rpc_server_thread = tokio::spawn(rpc_server_loop(
+        core_tx.clone(),
+        mongo_tx.clone(),
+        config.clone(),
+        disable_rpc_server,
+    ));
 
     match tokio::try_join!(
         flatten_join_handle(native_syncer_thread),
