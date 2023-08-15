@@ -26,6 +26,7 @@ use crate::{
     mongo::mongo_loop,
     rpc_server::rpc_server_loop,
     syncer::syncer_loop,
+    ws_server::ws_server_loop,
 };
 
 const MAX_CHANNEL_CAPACITY: usize = 1337;
@@ -36,6 +37,7 @@ pub async fn start_sentinel(
     disable_host_syncer: bool,
     disable_broadcaster: bool,
     disable_rpc_server: bool,
+    disable_ws_server: bool,
 ) -> Result<String, SentinelError> {
     let db = common_rocksdb_database::get_db_at_path(&config.get_db_path())?;
     check_init(&db)?; // FIXME This will need changing to a core_tx call
@@ -92,6 +94,8 @@ pub async fn start_sentinel(
         disable_rpc_server,
     ));
 
+    let ws_server_thread = tokio::spawn(ws_server_loop(core_tx.clone(), config.clone(), disable_ws_server));
+
     match tokio::try_join!(
         flatten_join_handle(native_syncer_thread),
         flatten_join_handle(host_syncer_thread),
@@ -101,8 +105,9 @@ pub async fn start_sentinel(
         flatten_join_handle(native_eth_rpc_thread),
         flatten_join_handle(host_eth_rpc_thread),
         flatten_join_handle(broadcaster_thread),
+        flatten_join_handle(ws_server_thread),
     ) {
-        Ok((r1, r2, r3, r4, r5, r6, r7, r8)) => Ok(json!({
+        Ok((r1, r2, r3, r4, r5, r6, r7, r8, r9)) => Ok(json!({
             "jsonrpc": "2.0",
             "result": {
                 "native_syncer_thread": r1,
@@ -113,6 +118,7 @@ pub async fn start_sentinel(
                 "native_eth_rpc_thread": r6,
                 "host_eth_rpc_thread": r7,
                 "broadcaster_thread": r8,
+                "ws_server_thread": r9,
             },
         })
         .to_string()),

@@ -25,6 +25,10 @@ pub struct Cli {
     #[arg(long, short)]
     log_level: Option<LogLevel>,
 
+    /// Disable the ws server
+    #[arg(short = 'v', long)]
+    disable_ws_server: bool,
+
     /// Disable the native syncer
     #[arg(short = 'w', long)]
     disable_native_syncer: bool,
@@ -63,6 +67,7 @@ async fn start() -> Result<String, SentinelError> {
         cli_args.disable_host_syncer,
         cli_args.disable_broadcaster,
         cli_args.disable_rpc_server,
+        cli_args.disable_ws_server,
     )
     .await;
 
