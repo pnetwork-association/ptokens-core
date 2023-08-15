@@ -184,23 +184,16 @@ async fn cancel_user_ops(
     Ok(())
 }
 
-async fn broadcaster_disabled_loop() -> Result<(), SentinelError> {
-    warn!("broadcaster disabled");
-    tokio::select! {
-        _ = tokio::signal::ctrl_c() => {
-            warn!("broadcaster shutting down...");
-            Err(SentinelError::SigInt("broadcaster".into()))
-        },
-    }
-}
-
-async fn broadcaster_enabled_loop(
+pub async fn broadcaster_loop(
     mut rx: MpscRx<BroadcasterMessages>,
     _mongo_tx: MpscTx<MongoMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     core_tx: MpscTx<CoreMessages>,
     config: SentinelConfig,
+    disable: bool,
 ) -> Result<(), SentinelError> {
+    let name = "broadcaster";
+    let mut broadcaster_is_enabled = !disable; // NOTE/TODO use a broadcaster channel to flip this switch
     Env::init()?;
 
     let host_broadcaster_pk = Env::get_host_broadcaster_private_key()?;
@@ -213,10 +206,9 @@ async fn broadcaster_enabled_loop(
     let host_address = host_rx.await??;
     let native_address = native_rx.await??;
 
-    debug!("broadcaster loop running...");
     'broadcaster_loop: loop {
         tokio::select! {
-            r = rx.recv() => match r {
+            r = rx.recv() , if broadcaster_is_enabled => match r {
                 Some(BroadcasterMessages::CancelUserOps) => {
                     match cancel_user_ops(
                         &config,
@@ -237,30 +229,19 @@ async fn broadcaster_enabled_loop(
                     continue 'broadcaster_loop
                 },
                 None => {
-                    let m = "all broadcaster senders dropped!";
+                    let m = "all {name} senders dropped!";
                     warn!("{m}");
-                    break 'broadcaster_loop Err(SentinelError::Custom(m.into()))
+                    break 'broadcaster_loop Err(SentinelError::Custom(name.into()))
                 },
             },
             _ = tokio::signal::ctrl_c() => {
-                warn!("broadcaster shutting down...");
-                return Err(SentinelError::SigInt("broadcaster".into()))
+                warn!("{name} shutting down...");
+                break 'broadcaster_loop Err(SentinelError::SigInt(name.into()))
+            },
+            else => {
+                warn!("in {name} `else` branch, {name} is currently {}abled", if broadcaster_is_enabled { "en" } else { "dis" });
+                continue 'broadcaster_loop
             },
         }
-    }
-}
-
-pub async fn broadcaster_loop(
-    rx: MpscRx<BroadcasterMessages>,
-    mongo_tx: MpscTx<MongoMessages>,
-    eth_rpc_tx: MpscTx<EthRpcMessages>,
-    core_tx: MpscTx<CoreMessages>,
-    config: SentinelConfig,
-    disable_broadcaster: bool,
-) -> Result<(), SentinelError> {
-    if disable_broadcaster {
-        broadcaster_disabled_loop().await
-    } else {
-        broadcaster_enabled_loop(rx, mongo_tx, eth_rpc_tx, core_tx, config).await
     }
 }
