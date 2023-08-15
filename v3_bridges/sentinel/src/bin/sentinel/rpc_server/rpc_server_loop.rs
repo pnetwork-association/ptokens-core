@@ -235,6 +235,9 @@ pub async fn rpc_server_loop(
 ) -> Result<(), SentinelError> {
     let mut rpc_server_is_enabled = !disable;
     let name = "rpc server";
+    if disable {
+        warn!("{name} disabled!")
+    };
     'rpc_server_loop: loop {
         tokio::select! {
             r = start_rpc_server(core_tx.clone(), mongo_tx.clone(), config.clone()), if rpc_server_is_enabled => {

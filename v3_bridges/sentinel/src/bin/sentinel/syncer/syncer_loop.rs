@@ -88,6 +88,9 @@ pub async fn syncer_loop(
 ) -> Result<(), SentinelError> {
     let side = batch.side();
     let name = format!("{side} syncer");
+    if disable {
+        warn!("{name} disabled!")
+    };
     let mut syncer_is_enabled = !disable;
 
     'syncer_loop: loop {

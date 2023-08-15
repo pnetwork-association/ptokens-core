@@ -193,7 +193,10 @@ pub async fn broadcaster_loop(
     disable: bool,
 ) -> Result<(), SentinelError> {
     let name = "broadcaster";
-    let mut broadcaster_is_enabled = !disable; // NOTE/TODO use a broadcaster channel to flip this switch
+    if disable {
+        warn!("{name} disabled!")
+    };
+    let mut broadcaster_is_enabled = !disable; // FIXME/TODO use a broadcaster channel to flip this switch
     Env::init()?;
 
     let host_broadcaster_pk = Env::get_host_broadcaster_private_key()?;
