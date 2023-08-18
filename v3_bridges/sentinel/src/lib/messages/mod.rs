@@ -4,6 +4,7 @@ mod eth_rpc;
 mod mongo;
 mod responder;
 mod syncer;
+mod websocket;
 
 pub use self::{
     broadcaster::BroadcasterMessages,
@@ -12,4 +13,5 @@ pub use self::{
     mongo::MongoMessages,
     responder::Responder,
     syncer::SyncerMessages,
+    websocket::WebSocketMessages,
 };

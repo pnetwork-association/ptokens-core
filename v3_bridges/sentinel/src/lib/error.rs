@@ -4,6 +4,9 @@ use crate::{BroadcasterMessages, CoreMessages, DbKey, EthRpcMessages, MongoMessa
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("base64 error: {0}")]
+    Base64(#[from] base64::DecodeError),
+
     #[error("warp hyper: {0}")]
     WarpHyper(#[from] warp::hyper::Error),
 
