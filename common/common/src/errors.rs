@@ -110,9 +110,6 @@ pub enum AppError {
     #[error("✘ `ParseFloatError` error: {0:?}")]
     ParseFloatError(#[from] std::num::ParseFloatError),
 
-    #[error("✘ Base64 decoder error: {0}")]
-    Base64DecodeError(#[from] base64::DecodeError),
-
     #[error("✘ Rustc hex error: {0}")]
     RustCHexError(#[from] rustc_hex::FromHexError),
 
