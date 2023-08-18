@@ -6,10 +6,10 @@ members = [
     "common/bitcoin",
     "common/metadata",
     "common/algorand",
+    "common/sentinel",
     "common/ethereum",
     "common/chain_ids",
     "common/file_logger",
-    "v3_bridges/sentinel",
     "common/enclave_info",
     "common/stderr_logger",
     "common/docopt_macros",
@@ -30,6 +30,9 @@ members = [
     "v1_bridges/erc20_on_evm",
     "v1_bridges/erc20_on_eos",
     "v2_bridges/erc20_on_int",
+    "v3_bridges/evm/sentinel-app",
+    "v3_bridges/evm/sentinel-cli",
+    "v3_bridges/evm/sentinel-android-lib",
     "v2_bridges/vanilla_apps/pint-on-evm",
     "v1_bridges/vanilla_apps/pbtc-on-eos",
     "v1_bridges/vanilla_apps/pbtc-on-eth",
@@ -121,6 +124,7 @@ common_eth = { package = "ethereum", path = "./common/ethereum" }
 common_algo = { package = "algorand", path = "./common/algorand" }
 common_metadata = { package = "metadata", path = "./common/metadata" }
 common_chain_ids = { package = "chain_ids", path = "./common/chain_ids" }
+common_sentinel = { package = "sentinel-lib", path = "./common/sentinel" }
 common_file_logger = { package = "file_logger", path = "./common/file_logger" }
 common_eth_debug = { package = "ethereum_debug", path = "./common/ethereum_debug"}
 common_enclave_info = { package = "enclave_info", path = "./common/enclave_info" }

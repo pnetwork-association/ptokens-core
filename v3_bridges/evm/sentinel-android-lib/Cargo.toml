@@ -1,0 +1,15 @@
+[package]
+edition = "2021"
+version = "0.1.0"
+name = "sentinel-android-lib"
+authors = [ "Greg Kapka <gregkapka@gmail.com>" ]
+description = "The android library for a pTokens EVM sentinel"
+
+[features]
+non-validating = ["common_sentinel/non-validating"] # NOTE: Disables block & recepit validation
+
+[dependencies]
+common_sentinel = { workspace = true }
+
+[dev-dependencies]
+simple_logger = { workspace = true }
