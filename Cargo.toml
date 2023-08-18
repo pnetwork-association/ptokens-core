@@ -98,12 +98,12 @@ tokio = { version = "1.25.0", features = [ "full" ] }
 clap = { version = "4.1.6", features = [ "derive" ] }
 serde = { version = "1.0.130", features = ["derive"] }
 tower-http = { version = "0.4.3", features = [ "fs" ] }
-serde_with = { version = "1.11.0", features = ["hex"] }
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 axum = { version = "0.6.16", features = [ "ws", "headers" ] }
 mongodb = { version = "2.4.0", features = ["tokio-runtime"] }
 jsonrpsee = { version = "0.18.1", features = [ "ws-client" ]}
 bitcoin = { version = "0.29.2", features = ["serde", "rand"] }
+serde_with = { version = "1.11.0", features = ["hex", "base64"] }
 eip-712 = { git = "https://github.com/paritytech/EIP-712", rev = "551dfd9" }
 rust-algorand = { git = "https://github.com/provable-things/rust-algorand" }
 eos-chain = { git = "https://github.com/bifrost-finance/rust-eos", rev = "8e57843" }
