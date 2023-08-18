@@ -4,18 +4,20 @@ use axum::{
     extract::{
         connect_info::ConnectInfo,
         ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade},
+        State,
     },
     response::IntoResponse,
     routing::get,
     Router,
     TypedHeader,
 };
+use futures::stream::StreamExt;
 use lib::{CoreMessages, SentinelConfig, SentinelError};
 use tokio::sync::mpsc::Sender as MpscTx;
 use tower_http::services::ServeDir;
-use futures::stream::StreamExt;
 
-async fn handle_socket(mut socket: WebSocket, who: SocketAddr) { // FIXME Return result
+async fn handle_socket(mut socket: WebSocket, who: SocketAddr) {
+    // FIXME Return result
     if socket.send(Message::Ping(vec![1, 3, 3, 7])).await.is_ok() {
         debug!("pinged {}...", who);
     } else {
@@ -132,37 +134,35 @@ fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), ()> {
     match msg {
         Message::Text(t) => {
             debug!("{} sent str: {:?}", who, t);
-        }
+        },
         Message::Binary(d) => {
             debug!("{} sent {} bytes: {:?}", who, d.len(), d);
-        }
+        },
         Message::Close(c) => {
             if let Some(cf) = c {
-                debug!(
-                    "{} sent close with code {} and reason `{}`",
-                    who, cf.code, cf.reason
-                );
+                debug!("{} sent close with code {} and reason `{}`", who, cf.code, cf.reason);
             } else {
                 debug!("{} somehow sent close message without CloseFrame", who);
             }
             return ControlFlow::Break(());
-        }
+        },
 
         Message::Pong(v) => {
             debug!("{} sent pong with {:?}", who, v);
-        }
+        },
         // You should never need to manually handle Message::Ping, as axum's websocket library
         // will do so for you automagically by replying with Pong and copying the v according to
         // spec. But if you need the contents of the pings you can see them here.
         Message::Ping(v) => {
             debug!("{} sent ping with {:?}", who, v);
-        }
+        },
     }
     ControlFlow::Continue(())
 }
 
 async fn ws_handler(
     ws: WebSocketUpgrade,
+    State(core_tx): State<MpscTx<CoreMessages>>,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> impl IntoResponse {
@@ -179,7 +179,8 @@ async fn start_ws_server(core_tx: MpscTx<CoreMessages>, config: SentinelConfig) 
     let assets_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/bin/sentinel/ws_server/assets");
     let app = Router::new()
         .fallback_service(ServeDir::new(assets_dir).append_index_html_on_directories(true))
-        .route("/ws", get(ws_handler));
+        .route("/ws", get(ws_handler))
+        .with_state(core_tx);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000)); // FIXME make configurable
     debug!("ws server listening on {}", addr);
