@@ -1,0 +1,21 @@
+[package]
+edition = "2021"
+version = "0.1.0"
+name = "sentinel-strongbox"
+authors = [ "Greg Kapka <gregkapka@gmail.com>" ]
+description = "The android/strongbox library for a pTokens EVM sentinel"
+
+[features]
+non-validating = ["common_sentinel/non-validating"] # NOTE: Disables block & recepit validation
+
+[lib]
+crate-type = ["dylib"] # NOTE: Smallest type of lib
+
+[dependencies]
+jni = "0.14.0"
+log = { workspace = true }
+base64 = { workspace = true }
+thiserror = { workspace = true }
+derive_more = { workspace = true }
+
+common_sentinel = { workspace = true }
