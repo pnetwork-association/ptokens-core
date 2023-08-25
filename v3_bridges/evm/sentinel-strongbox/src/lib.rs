@@ -1,6 +1,3 @@
-#[cfg(not(target_os = "android"))]
-compile_error!("this repo targets android only - please compile with `--target=aarch64-linux-android` flag");
-
 #[cfg(target_os = "android")]
 #[macro_use]
 extern crate log;
