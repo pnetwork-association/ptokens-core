@@ -36,28 +36,9 @@ impl DatabaseInterface for Database<'_> {
     }
 }
 
-impl Database<'_> {
-    pub fn parse_input(&self, input: JString) -> Result<String, SentinelError> {
-        Ok(self.env.get_string(input)?.into())
-    }
-
-    fn to_jstring(&self, s: &str) -> Result<JString<'_>, SentinelError> {
-        Ok(self.env.new_string(s)?)
-    }
-
-    pub fn to_return_value_pointer(&self, s: &str) -> Result<*mut JavaPointer, SentinelError> {
-        Ok(self.to_jstring(s)?.into_inner())
-    }
-
-    pub fn call_callback(&self) -> Result<(), SentinelError> {
-        match self.env.call_static_method(self.db_java_class, "callback", "()V", &[]) {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                self.env.exception_describe()?;
-                self.env.exception_clear()?;
-                Err(e.into())
-            },
-        }
+impl<'a> Database<'a> {
+    pub fn db_java_class(&self) -> JObject<'a> {
+        self.db_java_class
     }
 
     fn to_java_byte_array(&self, bs: &ByteArray) -> Result<JValue, SentinelError> {

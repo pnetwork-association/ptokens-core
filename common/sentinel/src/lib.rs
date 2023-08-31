@@ -47,7 +47,7 @@ pub use self::{
     get_rpc_client::get_rpc_client,
     heartbeat::{HeartbeatInfo, Heartbeats, HeartbeatsJson},
     logging::{init_logger, LogLevel},
-    messages::{BroadcasterMessages, CoreMessages, EthRpcMessages, MongoMessages, Responder, SyncerMessages},
+    messages::{WebSocketMessages, BroadcasterMessages, CoreMessages, EthRpcMessages, MongoMessages, Responder, SyncerMessages},
     network_id::{Bytes4, NetworkId, ProtocolId},
     processor::{process_batch, process_single},
     processor_output::ProcessorOutput,

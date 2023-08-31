@@ -1,8 +1,11 @@
-mod base64;
+mod state;
 mod database;
 mod type_aliases;
 
-use common_sentinel::SentinelError;
+use common_sentinel::{
+    SentinelError,
+    WebSocketMessages,
+};
 use jni::{
     objects::{JClass, JObject, JString},
     sys::jstring,
@@ -10,35 +13,20 @@ use jni::{
 };
 
 use self::{
-    base64::{from_b64, to_b64},
+    state::State,
     database::Database,
     type_aliases::{Bytes, JavaPointer},
 };
 
 fn call_core_inner(env: JNIEnv<'_>, db_java_class: JObject, input: JString) -> Result<*mut JavaPointer, SentinelError> {
-    let db = Database::new(&env, db_java_class);
-
-    db.start_transaction()?;
-
-    let k = vec![6u8, 6u8, 7u8];
-    //let v = vec![1u8, 3u8, 3u8, 7u8];
-    //db.put(&k, &v, None)?;
-    let x = match db.get(&k, None) {
-        Ok(r) => r,
-        Err(e) => {
-            println!("{e}");
-            vec![9u8, 9u8, 9u8]
-        },
-    };
-
-    let input = db.parse_input(input)?;
-    let bs = from_b64(&input)?;
-    let reversed = bs.iter().rev().cloned().collect::<Bytes>();
-    let _reversed_b64 = to_b64(&reversed);
-    db.call_callback()?;
-    db.end_transaction()?;
-    db.to_return_value_pointer(&to_b64(&x))
+    let state = State::new(&env, db_java_class, input)?;
+    state.to_return_value_pointer("some str")
 }
+
+// FIXME Important! The java db is NOT single threaded! We need a shim here to intercept errors
+// (whilst we still have the ability to callback to the java db stuff), and in the case of errors
+// here where the db tx is never ended (as it shouldn't be in the case of errors), we need to call
+// something to clean up the flags in the java db impl to allow new txs to be started.
 
 #[allow(non_snake_case)]
 #[no_mangle]
