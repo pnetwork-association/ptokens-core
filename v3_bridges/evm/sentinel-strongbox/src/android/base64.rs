@@ -1,13 +1,11 @@
-use super::{
-    type_aliases::{ByteArray, Bytes},
-    CoreError,
-};
-
 use base64::{engine::general_purpose as b64_codec, Engine};
 
-pub fn from_b64<T: AsRef<ByteArray> + std::convert::AsRef<[u8]>>(
-    s: &T,
-) -> Result<Bytes, CoreError> {
+use super::{
+    type_aliases::{ByteArray, Bytes},
+    Error,
+};
+
+pub fn from_b64<T: AsRef<ByteArray> + std::convert::AsRef<[u8]>>(s: &T) -> Result<Bytes, Error> {
     Ok(b64_codec::STANDARD_NO_PAD.decode(s)?)
 }
 

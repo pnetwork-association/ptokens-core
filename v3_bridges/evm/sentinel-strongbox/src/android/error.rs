@@ -1,7 +1,8 @@
+use common::AppError as CommonError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
-pub enum CoreError {
+pub enum Error {
     #[error("custom: {0}")]
     Custom(String),
 
@@ -10,4 +11,10 @@ pub enum CoreError {
 
     #[error("base64 error: {0}")]
     Base64(#[from] base64::DecodeError),
+}
+
+impl From<Error> for CommonError {
+    fn from(e: Error) -> Self {
+        CommonError::Custom(format!("{e}"))
+    }
 }

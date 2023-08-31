@@ -18,4 +18,5 @@ base64 = { workspace = true }
 thiserror = { workspace = true }
 derive_more = { workspace = true }
 
+common = { workspace = true }
 common_sentinel = { workspace = true }

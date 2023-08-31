@@ -1,29 +1,22 @@
 mod base64;
 mod database;
-mod traits;
-mod type_aliases;
 mod error;
-
-use self::{
-    base64::{from_b64, to_b64},
-    database::Database,
-    traits::DatabaseT,
-    type_aliases::{Bytes, JavaPointer},
-};
+mod type_aliases;
 
 use jni::{
     objects::{JClass, JObject, JString},
-    sys::{jstring},
+    sys::jstring,
     JNIEnv,
 };
 
-pub use self::error::CoreError;
+pub use self::error::Error;
+use self::{
+    base64::{from_b64, to_b64},
+    database::Database,
+    type_aliases::{Bytes, JavaPointer},
+};
 
-fn call_core_inner(
-    env: JNIEnv<'_>,
-    db_java_class: JObject,
-    input: JString,
-) -> Result<*mut JavaPointer, CoreError> {
+fn call_core_inner(env: JNIEnv<'_>, db_java_class: JObject, input: JString) -> Result<*mut JavaPointer, Error> {
     let db = Database::new(&env, db_java_class);
 
     db.start_transaction()?;
@@ -36,7 +29,7 @@ fn call_core_inner(
         Err(e) => {
             println!("{e}");
             vec![9u8, 9u8, 9u8]
-        }
+        },
     };
 
     let input = db.parse_input(input)?;
