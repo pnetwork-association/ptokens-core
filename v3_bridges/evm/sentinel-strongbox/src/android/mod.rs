@@ -1,22 +1,21 @@
 mod base64;
 mod database;
-mod error;
 mod type_aliases;
 
+use common_sentinel::SentinelError;
 use jni::{
     objects::{JClass, JObject, JString},
     sys::jstring,
     JNIEnv,
 };
 
-pub use self::error::Error;
 use self::{
     base64::{from_b64, to_b64},
     database::Database,
     type_aliases::{Bytes, JavaPointer},
 };
 
-fn call_core_inner(env: JNIEnv<'_>, db_java_class: JObject, input: JString) -> Result<*mut JavaPointer, Error> {
+fn call_core_inner(env: JNIEnv<'_>, db_java_class: JObject, input: JString) -> Result<*mut JavaPointer, SentinelError> {
     let db = Database::new(&env, db_java_class);
 
     db.start_transaction()?;
@@ -50,6 +49,6 @@ pub extern "C" fn Java_com_ptokenssentinelandroidapp_RustBridge_callCore(
     input: JString,
 ) -> jstring {
     call_core_inner(env, db_java_class, input)
-        .map_err(|e| e.to_string()) // FIXME encode the error type to b64 too
+        .map_err(|e| e.to_string())
         .expect("this not to panic")
 }

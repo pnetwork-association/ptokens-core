@@ -13,6 +13,7 @@ non-validating = ["common_eth/non-validating"] # NOTE: Disables block & recepit 
 test-eth-rpc = [] # NOTE: Means the RPC fxns can only be tested if this feature is enabled
 
 [dependencies]
+jni = { workspace = true }
 hex = { workspace = true }
 log = { workspace = true }
 clap = { workspace = true }

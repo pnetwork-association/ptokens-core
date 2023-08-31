@@ -1,11 +1,9 @@
 use base64::{engine::general_purpose as b64_codec, Engine};
+use common_sentinel::SentinelError;
 
-use super::{
-    type_aliases::{ByteArray, Bytes},
-    Error,
-};
+use super::type_aliases::{ByteArray, Bytes};
 
-pub fn from_b64<T: AsRef<ByteArray> + std::convert::AsRef<[u8]>>(s: &T) -> Result<Bytes, Error> {
+pub fn from_b64<T: AsRef<ByteArray> + std::convert::AsRef<[u8]>>(s: &T) -> Result<Bytes, SentinelError> {
     Ok(b64_codec::STANDARD_NO_PAD.decode(s)?)
 }
 

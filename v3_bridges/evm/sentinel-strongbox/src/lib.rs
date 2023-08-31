@@ -6,4 +6,4 @@ extern crate log;
 mod android;
 
 #[cfg(target_os = "android")]
-pub use self::android::{Error, Java_com_ptokenssentinelandroidapp_RustBridge_callCore};
+pub use self::android::Java_com_ptokenssentinelandroidapp_RustBridge_callCore;

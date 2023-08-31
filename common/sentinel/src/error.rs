@@ -1,9 +1,19 @@
+use common::AppError as CommonError;
 use thiserror::Error;
 
 use crate::{BroadcasterMessages, CoreMessages, DbKey, EthRpcMessages, MongoMessages, SyncerMessages};
 
+impl From<SentinelError> for CommonError {
+    fn from(e: SentinelError) -> CommonError {
+        CommonError::Custom(format!("{e}"))
+    }
+}
+
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("jni error: {0}")]
+    JniError(#[from] jni::errors::Error),
+
     #[error("base64 error: {0}")]
     Base64(#[from] base64::DecodeError),
 

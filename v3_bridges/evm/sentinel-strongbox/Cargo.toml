@@ -12,7 +12,7 @@ non-validating = ["common_sentinel/non-validating"] # NOTE: Disables block & rec
 crate-type = ["dylib"] # NOTE: Smallest type of lib
 
 [dependencies]
-jni = "0.14.0"
+jni = { workspace = true }
 log = { workspace = true }
 base64 = { workspace = true }
 thiserror = { workspace = true }

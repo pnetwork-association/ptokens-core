@@ -4686,6 +4686,7 @@ dependencies = [
  "futures-retry",
  "headers",
  "hex",
+ "jni",
  "jsonrpsee",
  "lazy_static",
  "log",
