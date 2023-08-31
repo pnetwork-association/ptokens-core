@@ -4714,6 +4714,7 @@ name = "sentinel-strongbox"
 version = "0.1.0"
 dependencies = [
  "base64 0.21.2",
+ "common",
  "derive_more",
  "jni",
  "log",

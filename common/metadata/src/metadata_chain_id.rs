@@ -194,9 +194,9 @@ impl MetadataChainId {
                 // ID would match bitcoin too. So instead we just use three random bytes in the
                 // defintion of a litecoin metadata chain ID.
                 let random_bytes = vec![0x84, 0x04, 0x35];
-                Ok(vec![vec![self.to_protocol_id().to_byte()], random_bytes].concat())
+                Ok([vec![self.to_protocol_id().to_byte()], random_bytes].concat())
             },
-            _ => Ok(vec![
+            _ => Ok([
                 vec![self.to_protocol_id().to_byte()],
                 self.to_first_three_bytes_of_keccak_hash()?,
             ]

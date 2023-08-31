@@ -114,7 +114,7 @@ impl DebugSignatory {
     #[allow(clippy::if_same_then_else)]
     pub fn validate(&self, signature: &EthSignature, core_type: &CoreType, debug_command_hash: &H256) -> Result<()> {
         let needle = self.eth_address;
-        let haystack = vec![
+        let haystack = [
             self.recover_signer_addresses(signature, core_type, debug_command_hash)?,
             self.recover_signer_addresses_using_eth_prefix_and_hex_prefix(signature, core_type, debug_command_hash)?,
             self.recover_signer_addresses_using_eth_prefix_and_no_hex_prefix(signature, core_type, debug_command_hash)?,

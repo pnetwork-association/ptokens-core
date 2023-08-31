@@ -11,8 +11,8 @@ use axum::{
     Router,
     TypedHeader,
 };
-use futures::stream::StreamExt;
 use common_sentinel::{CoreMessages, SentinelConfig, SentinelError};
+use futures::stream::StreamExt;
 use tokio::sync::mpsc::Sender as MpscTx;
 use tower_http::services::ServeDir;
 

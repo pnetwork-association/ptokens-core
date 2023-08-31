@@ -2,8 +2,8 @@ use std::result::Result;
 
 use clap::Args;
 use common::BridgeSide;
-use jsonrpsee::ws_client::WsClient;
 use common_sentinel::{get_sub_mat, SentinelError};
+use jsonrpsee::ws_client::WsClient;
 use serde_json::json;
 
 use crate::write_file::write_file;

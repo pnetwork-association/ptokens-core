@@ -1,8 +1,8 @@
 use std::result::Result;
 
 use common::BridgeSide;
-use jsonrpsee::ws_client::WsClient;
 use common_sentinel::{get_latest_block_num, SentinelError, DEFAULT_SLEEP_TIME};
+use jsonrpsee::ws_client::WsClient;
 use serde_json::json;
 
 #[derive(Debug, Subcommand)]

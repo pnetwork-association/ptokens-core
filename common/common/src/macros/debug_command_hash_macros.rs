@@ -7,7 +7,7 @@ macro_rules! get_debug_command_hash {
             use tiny_keccak::Hasher;
             let mut hasher = tiny_keccak::Keccak::v256();
             let mut hash = [0u8; $crate::constants::ETH_HASH_LENGTH];
-            let bytes_to_hash = vec![$(serde_json::to_vec($e)?,)*].concat();
+            let bytes_to_hash = [$(serde_json::to_vec($e)?,)*].concat();
             hasher.update(&bytes_to_hash);
             hasher.finalize(&mut hash);
             Ok(format!("0x{}", hex::encode(&hash)))

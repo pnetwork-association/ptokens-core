@@ -1,6 +1,5 @@
 use common_eth::{convert_hex_to_h256, EthDbUtilsExt, HostDbUtils, NativeDbUtils};
 use common_rocksdb_database::get_db_at_path;
-use ethereum_types::H256 as EthHash;
 use common_sentinel::{
     check_init,
     get_gas_price,
@@ -16,6 +15,7 @@ use common_sentinel::{
     UserOp,
     UserOpSmartContractState,
 };
+use ethereum_types::H256 as EthHash;
 use serde_json::json;
 
 #[derive(Clone, Debug, Default, Args)]

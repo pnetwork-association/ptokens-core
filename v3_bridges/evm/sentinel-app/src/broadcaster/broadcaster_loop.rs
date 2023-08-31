@@ -2,7 +2,6 @@ use std::result::Result;
 
 use common::BridgeSide;
 use common_eth::EthPrivateKey;
-use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use common_sentinel::{
     BroadcasterMessages,
     ConfigT,
@@ -14,6 +13,7 @@ use common_sentinel::{
     SentinelError,
     UserOp,
 };
+use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use tokio::sync::mpsc::{Receiver as MpscRx, Sender as MpscTx};
 
 #[allow(clippy::too_many_arguments)]

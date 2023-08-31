@@ -4,7 +4,6 @@ use clap::Args;
 use common::BridgeSide;
 use common_eth::EthSubmissionMaterial;
 use common_rocksdb_database::get_db_at_path;
-use derive_more::Constructor;
 use common_sentinel::{
     get_sub_mat,
     process_single,
@@ -15,6 +14,7 @@ use common_sentinel::{
     HOST_PROTOCOL_ID,
     NATIVE_PROTOCOL_ID,
 };
+use derive_more::Constructor;
 use serde_json::json;
 
 #[derive(Clone, Debug, Default, Args)]

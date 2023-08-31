@@ -36,14 +36,14 @@ impl UserOps {
         let block_hash = sub_mat.get_block_hash()?;
         let block_timestamp = sub_mat.get_timestamp().as_secs();
         let witnessed_timestamp = get_utc_timestamp()?;
-        let topics = vec![
+        let topics = [
             *CANCELLED_USER_OP_TOPIC,
             *ENQUEUED_USER_OP_TOPIC,
             *EXECUTED_USER_OP_TOPIC,
             *WITNESSED_USER_OP_TOPIC,
         ];
 
-        let addresses = vec![pnetwork_hub];
+        let addresses = [pnetwork_hub];
 
         let mut user_ops: Vec<UserOp> = vec![];
 

@@ -112,7 +112,7 @@ impl TryFrom<&EthLog> for UserOpLog {
             return Ok(Self::from(UserOpRouterLog::try_from(l)?));
         }
 
-        let topics = vec![
+        let topics = [
             *CANCELLED_USER_OP_TOPIC,
             *ENQUEUED_USER_OP_TOPIC,
             *EXECUTED_USER_OP_TOPIC,

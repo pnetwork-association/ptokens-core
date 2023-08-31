@@ -1,6 +1,5 @@
 use common::{BridgeSide, CoreType};
 use common_eth::convert_hex_to_h256;
-use jsonrpsee::ws_client::WsClient;
 use common_sentinel::{
     get_latest_block_num,
     CoreMessages,
@@ -12,6 +11,7 @@ use common_sentinel::{
     UserOpList,
     UserOps,
 };
+use jsonrpsee::ws_client::WsClient;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 use tokio::sync::mpsc::Sender as MpscTx;

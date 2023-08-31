@@ -3,8 +3,8 @@ use std::str::FromStr;
 use clap::Args;
 use common::BridgeSide;
 use common_eth::convert_hex_to_eth_address;
-use ethereum_types::Address as EthAddress;
 use common_sentinel::{get_nonce, SentinelConfig, SentinelError};
+use ethereum_types::Address as EthAddress;
 use serde_json::json;
 
 #[derive(Debug, Args)]

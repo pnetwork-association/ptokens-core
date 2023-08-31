@@ -1,8 +1,8 @@
 use common::{BridgeSide, CoreType, DatabaseInterface};
 use common_eth::{init_v3_host_core, init_v3_native_core, VaultUsingCores};
 use common_rocksdb_database::get_db_at_path;
-use ethereum_types::Address as EthAddress;
 use common_sentinel::{get_latest_block_num, get_sub_mat, ConfigT, SentinelConfig, SentinelError};
+use ethereum_types::Address as EthAddress;
 use serde_json::json;
 
 #[derive(Debug, Args)]
