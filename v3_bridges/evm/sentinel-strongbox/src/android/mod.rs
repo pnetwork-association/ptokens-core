@@ -18,8 +18,8 @@ use self::{
     type_aliases::{Bytes, JavaPointer},
 };
 
-fn call_core_inner(env: JNIEnv<'_>, db_java_class: JObject, input: JString) -> Result<*mut JavaPointer, SentinelError> {
-    let state = State::new(&env, db_java_class, input)?;
+fn call_core_inner(env: &JNIEnv<'_>, db_java_class: JObject, input: JString) -> Result<*mut JavaPointer, SentinelError> {
+    let state = State::new(env, db_java_class, input)?;
     state.to_return_value_pointer("some str")
 }
 
@@ -36,7 +36,12 @@ pub extern "C" fn Java_com_ptokenssentinelandroidapp_RustBridge_callCore(
     db_java_class: JObject,
     input: JString,
 ) -> jstring {
-    call_core_inner(env, db_java_class, input)
-        .map_err(|e| e.to_string())
-        .expect("this not to panic")
+    match call_core_inner(&env, db_java_class, input) {
+        Ok(r) => r,
+        Err(e) => {
+            // FIXME Wrap any error here in a websocket message and encode & return it
+            error!("{e}");
+            env.new_string(e.to_string()).unwrap().into_inner()
+        }
+    }
 }
