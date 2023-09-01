@@ -9,12 +9,11 @@ description = "The android/strongbox library for a pTokens EVM sentinel"
 non-validating = ["common_sentinel/non-validating"] # NOTE: Disables block & recepit validation
 
 [lib]
-crate-type = ["dylib"] # NOTE: Smallest type of lib
+crate-type = ["cdylib"]
 
 [dependencies]
 jni = { workspace = true }
 log = { workspace = true }
-base64 = { workspace = true }
 thiserror = { workspace = true }
 derive_more = { workspace = true }
 
