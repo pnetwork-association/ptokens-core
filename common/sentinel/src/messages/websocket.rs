@@ -20,7 +20,12 @@ pub type Confirmations = u64;
 pub enum WebSocketMessages {
     Error(Error),
     GetLatestBlockNum(MetadataChainId),
-    Initialize(MetadataChainId, Confirmations),
+    Initialize {
+        host_id: MetadataChainId,
+        host_confs: Confirmations,
+        native_id: MetadataChainId,
+        native_confs: Confirmations,
+    },
 }
 
 impl TryFrom<String> for WebSocketMessages {
