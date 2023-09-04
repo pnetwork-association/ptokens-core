@@ -53,7 +53,6 @@ common_metadata = { workspace = true }
 common_chain_ids = { workspace = true }
 common_eth_debug = { workspace = true }
 common_enclave_info = { workspace = true }
-common_rocksdb_database = { workspace = true }
 
 [dev-dependencies]
 simple_logger = { workspace = true }

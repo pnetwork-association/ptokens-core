@@ -1,6 +1,6 @@
 use std::{result::Result, sync::Arc};
 
-use common::{BridgeSide, DatabaseInterface};
+use common::BridgeSide;
 use common_eth::{EthDbUtilsExt, HostDbUtils, NativeDbUtils};
 use common_sentinel::{
     process_batch,
@@ -29,8 +29,8 @@ lazy_static! {
     static ref HEARTBEATS: std::sync::Mutex<Heartbeats> = std::sync::Mutex::new(Heartbeats::new());
 }
 
-async fn handle_message<D: DatabaseInterface>(
-    guarded_db: Arc<Mutex<D>>,
+/*
+async fn handle_message(
     config: &SentinelConfig,
     msg: CoreMessages,
     mongo_tx: MpscTx<MongoMessages>,
@@ -200,9 +200,9 @@ async fn handle_message<D: DatabaseInterface>(
 
     Ok(())
 }
+*/
 
-pub async fn core_loop<D: DatabaseInterface>(
-    guarded_db: Arc<Mutex<D>>,
+pub async fn core_loop(
     config: SentinelConfig,
     mut core_rx: MpscRx<CoreMessages>,
     mongo_tx: MpscTx<MongoMessages>,
@@ -214,10 +214,10 @@ pub async fn core_loop<D: DatabaseInterface>(
 
     'core_loop: loop {
         tokio::select! {
+            /*
             r = core_rx.recv() => {
                 if let Some(msg) = r {
                     handle_message(
-                        guarded_db.clone(),
                         &config,
                         msg,
                         mongo_tx.clone(),
@@ -232,6 +232,7 @@ pub async fn core_loop<D: DatabaseInterface>(
                     break 'core_loop Err(SentinelError::Custom(m.into()))
                 }
             },
+            */
             _ = tokio::signal::ctrl_c() => {
                 warn!("core shutting down...");
                 break 'core_loop Err(SentinelError::SigInt("core".into()))
