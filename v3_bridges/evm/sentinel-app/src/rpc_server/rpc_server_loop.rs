@@ -10,6 +10,7 @@ use common_sentinel::{
     SentinelError,
     UserOpList,
     UserOps,
+    WebSocketMessages,
 };
 use jsonrpsee::ws_client::WsClient;
 use serde::{Deserialize, Serialize};
@@ -21,6 +22,7 @@ type RpcId = Option<u64>;
 type RpcParams = Vec<String>;
 type CoreTx = MpscTx<CoreMessages>;
 type MongoTx = MpscTx<MongoMessages>;
+type WebSocketTx = MpscTx<WebSocketMessages>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Error(String);
@@ -113,6 +115,7 @@ enum RpcCall {
     Unknown(RpcId, String),
     GetUserOps(RpcId, CoreTx),
     GetUserOpList(RpcId, CoreTx),
+    Init(RpcId, RpcParams),
     GetCoreState(RpcId, CoreTx, CoreType),
     RemoveUserOp(RpcId, CoreTx, RpcParams),
     SyncStatus(RpcId, CoreTx, Box<SentinelConfig>),
@@ -120,10 +123,17 @@ enum RpcCall {
 
 // TODO enum for error types with codes etc,then impl into for the rpc error type
 impl RpcCall {
-    fn new(r: JsonRpcRequest, config: SentinelConfig, core_tx: CoreTx, mongo_tx: MongoTx) -> Self {
+    fn new(
+        r: JsonRpcRequest,
+        config: SentinelConfig,
+        core_tx: CoreTx,
+        mongo_tx: MongoTx,
+        websocket_tx: WebSocketTx,
+    ) -> Self {
         match r.method.as_ref() {
             "ping" => Self::Ping(r.id),
             "bpm" => Self::Bpm(r.id, mongo_tx),
+            "init" => Self::Init(r.id, r.params.clone()), // TODO need ws tx
             "getUserOps" => Self::GetUserOps(r.id, core_tx),
             "getUserOpList" => Self::GetUserOpList(r.id, core_tx),
             "syncStatus" => Self::SyncStatus(r.id, core_tx, Box::new(config)),
@@ -136,6 +146,13 @@ impl RpcCall {
     async fn handle(self) -> Result<impl warp::Reply, Rejection> {
         match self {
             Self::Ping(id) => Ok(warp::reply::json(&create_json_rpc_response(id, "pong"))),
+            Self::Init(id, _params) => {
+                // TODO need ws tx
+                Ok(warp::reply::json(&create_json_rpc_response(
+                    id,
+                    "not sure what to put here",
+                )))
+            },
             Self::Unknown(id, method) => Ok(warp::reply::json(&create_json_rpc_error(
                 id,
                 1, // FIXME arbitrary
@@ -205,10 +222,16 @@ impl RpcCall {
     }
 }
 
-async fn start_rpc_server(core_tx: CoreTx, mongo_tx: MongoTx, config: SentinelConfig) -> Result<(), SentinelError> {
+async fn start_rpc_server(
+    core_tx: CoreTx,
+    mongo_tx: MongoTx,
+    websocket_tx: WebSocketTx,
+    config: SentinelConfig,
+) -> Result<(), SentinelError> {
     debug!("rpc server listening!");
     let core_tx_filter = warp::any().map(move || core_tx.clone());
     let mongo_tx_filter = warp::any().map(move || mongo_tx.clone());
+    let websocket_tx_filter = warp::any().map(move || websocket_tx.clone());
 
     let rpc = warp::path("v1")
         .and(warp::path("rpc"))
@@ -219,6 +242,7 @@ async fn start_rpc_server(core_tx: CoreTx, mongo_tx: MongoTx, config: SentinelCo
         .and(warp::any().map(move || config.clone()))
         .and(core_tx_filter.clone())
         .and(mongo_tx_filter.clone())
+        .and(websocket_tx_filter.clone())
         .map(RpcCall::new)
         .and_then(|r: RpcCall| async move { r.handle().await });
 
@@ -228,8 +252,9 @@ async fn start_rpc_server(core_tx: CoreTx, mongo_tx: MongoTx, config: SentinelCo
 }
 
 pub async fn rpc_server_loop(
-    core_tx: MpscTx<CoreMessages>,
-    mongo_tx: MpscTx<MongoMessages>,
+    core_tx: CoreTx,
+    mongo_tx: MongoTx,
+    websocket_tx: WebSocketTx,
     config: SentinelConfig,
     disable: bool,
 ) -> Result<(), SentinelError> {
@@ -240,7 +265,7 @@ pub async fn rpc_server_loop(
     };
     'rpc_server_loop: loop {
         tokio::select! {
-            r = start_rpc_server(core_tx.clone(), mongo_tx.clone(), config.clone()), if rpc_server_is_enabled => {
+            r = start_rpc_server(core_tx.clone(), mongo_tx.clone(), websocket_tx.clone(), config.clone()), if rpc_server_is_enabled => {
                 if r.is_ok() {
                     warn!("{name} returned, restarting {name} now...");
                     continue 'rpc_server_loop

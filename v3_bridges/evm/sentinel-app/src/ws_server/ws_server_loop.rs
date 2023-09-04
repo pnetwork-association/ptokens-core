@@ -11,9 +11,9 @@ use axum::{
     Router,
     TypedHeader,
 };
-use common_sentinel::{CoreMessages, SentinelConfig, SentinelError};
+use common_sentinel::{CoreMessages, SentinelConfig, SentinelError, WebSocketMessages};
 use futures::stream::StreamExt;
-use tokio::sync::mpsc::Sender as MpscTx;
+use tokio::sync::mpsc::{Receiver as MpscRx, Sender as MpscTx};
 use tower_http::services::ServeDir;
 
 async fn handle_socket(mut socket: WebSocket, who: SocketAddr) {
@@ -191,6 +191,7 @@ async fn start_ws_server(core_tx: MpscTx<CoreMessages>, config: SentinelConfig) 
 }
 
 pub async fn ws_server_loop(
+    _websocket_rx: MpscRx<WebSocketMessages>,
     core_tx: MpscTx<CoreMessages>,
     config: SentinelConfig,
     disable: bool,

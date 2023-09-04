@@ -11,6 +11,7 @@ use common_sentinel::{
     MongoMessages,
     SentinelConfig,
     SentinelError,
+    WebSocketMessages,
 };
 use serde_json::json;
 use tokio::sync::{
@@ -40,7 +41,8 @@ pub async fn start_sentinel(
     disable_ws_server: bool,
 ) -> Result<String, SentinelError> {
     let (core_tx, core_rx): (MpscTx<CoreMessages>, MpscRx<CoreMessages>) = mpsc::channel(MAX_CHANNEL_CAPACITY);
-
+    let (websocket_tx, websocket_rx): (MpscTx<WebSocketMessages>, MpscRx<WebSocketMessages>) =
+        mpsc::channel(MAX_CHANNEL_CAPACITY);
     let (mongo_tx, mongo_rx): (MpscTx<MongoMessages>, MpscRx<MongoMessages>) = mpsc::channel(MAX_CHANNEL_CAPACITY);
 
     let (native_eth_rpc_tx, native_eth_rpc_rx): (MpscTx<EthRpcMessages>, MpscRx<EthRpcMessages>) =
@@ -85,11 +87,17 @@ pub async fn start_sentinel(
     let rpc_server_thread = tokio::spawn(rpc_server_loop(
         core_tx.clone(),
         mongo_tx.clone(),
+        websocket_tx.clone(),
         config.clone(),
         disable_rpc_server,
     ));
 
-    let ws_server_thread = tokio::spawn(ws_server_loop(core_tx.clone(), config.clone(), disable_ws_server));
+    let ws_server_thread = tokio::spawn(ws_server_loop(
+        websocket_rx,
+        core_tx.clone(),
+        config.clone(),
+        disable_ws_server,
+    ));
 
     match tokio::try_join!(
         flatten_join_handle(native_syncer_thread),
