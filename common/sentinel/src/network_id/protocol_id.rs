@@ -1,5 +1,6 @@
 use std::{fmt, str::FromStr};
 
+use common_metadata::MetadataProtocolId;
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use strum::IntoEnumIterator;
@@ -38,6 +39,17 @@ impl FromStr for ProtocolId {
             "2" | "eos" | "0x02" | "0x2" | "02" => Ok(Self::Eos),
             "3" | "algorand" | "algo" | "0x03" | "0x3" | "03" => Ok(Self::Algorand),
             _ => Err(NetworkIdError::InvalidProtocolId(s.into())),
+        }
+    }
+}
+
+impl From<MetadataProtocolId> for ProtocolId {
+    fn from(m: MetadataProtocolId) -> Self {
+        match m {
+            MetadataProtocolId::Eos => Self::Eos,
+            MetadataProtocolId::Bitcoin => Self::Bitcoin,
+            MetadataProtocolId::Algorand => Self::Algorand,
+            MetadataProtocolId::Ethereum => Self::Ethereum,
         }
     }
 }
