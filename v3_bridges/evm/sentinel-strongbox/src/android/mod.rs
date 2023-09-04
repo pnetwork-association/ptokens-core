@@ -1,4 +1,5 @@
 mod state;
+mod handle_websocket_message;
 mod database;
 mod type_aliases;
 
@@ -16,11 +17,13 @@ use self::{
     state::State,
     database::Database,
     type_aliases::{Bytes, JavaPointer},
+    handle_websocket_message::handle_websocket_message,
 };
 
 fn call_core_inner(env: &JNIEnv<'_>, db_java_class: JObject, input: JString) -> Result<*mut JavaPointer, SentinelError> {
-    let state = State::new(env, db_java_class, input)?;
-    state.to_return_value_pointer("some str")
+    State::new(env, db_java_class, input)
+        .and_then(handle_websocket_message)
+        .and_then(|state| state.to_return_value_pointer("some str")) // FIXME
 }
 
 // FIXME Important! The java db is NOT single threaded! We need a shim here to intercept errors
