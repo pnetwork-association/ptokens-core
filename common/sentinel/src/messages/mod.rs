@@ -13,5 +13,5 @@ pub use self::{
     mongo::MongoMessages,
     responder::Responder,
     syncer::SyncerMessages,
-    websocket::WebSocketMessages,
+    websocket::{WebSocketMessages, WebSocketMessagesEncodable},
 };
