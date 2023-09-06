@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, ops::ControlFlow, path::PathBuf, result::Result, sync::Arc};
+use std::{net::SocketAddr, ops::ControlFlow, path::PathBuf, result::Result, sync::Arc, time::Duration};
 
 use axum::{
     extract::{
@@ -11,12 +11,22 @@ use axum::{
     Router,
     TypedHeader,
 };
-use common_sentinel::{CoreMessages, SentinelConfig, SentinelError, WebSocketMessages, WebSocketMessagesEncodable};
+use common_sentinel::{
+    CoreMessages,
+    SentinelConfig,
+    SentinelError,
+    WebSocketMessages,
+    WebSocketMessagesEncodable,
+    WebSocketMessagesError,
+};
 use derive_more::Constructor;
 use futures::{stream::StreamExt, SinkExt};
-use tokio::sync::{
-    mpsc::{Receiver as MpscRx, Sender as MpscTx},
-    Mutex,
+use tokio::{
+    sync::{
+        mpsc::{Receiver as MpscRx, Sender as MpscTx},
+        Mutex,
+    },
+    time::sleep,
 };
 use tower_http::services::ServeDir;
 
@@ -95,17 +105,27 @@ async fn handle_socket(
                     // NOTE: Pass the message on to whomever is connected to the server.
                     sender.send(Message::Text(msg.try_into()?)).await?;
 
-                    // TODO race a time out with tokio::select!
-                    match receiver.next().await { // NOTE: Await a response since we always expect one
-                        Some(Ok(Message::Text(m))) => {
-                            // NOTE: Return the response to the whomever sent original msg
-                            let _ = responder.send(WebSocketMessagesEncodable::try_from(m));
+                    let STRONGBOX_TIMEOUT_MS = 1000; // TODO make configurable
+                                                     //
+                     // NOTE: We race the response against a timeout
+                    tokio::select! {
+                        _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+                            let response = WebSocketMessagesError::Timedout(STRONGBOX_TIMEOUT_MS);
+                            let _ = responder.send(Err(response.into()));
                             continue 'ws_loop
                         },
-                        r => {
-                            error!("websocket did not return with expected response: {r:?}");
-                            break 'ws_loop
-                        }
+                        r = receiver.next() => {
+                            match r {
+                                Some(Ok(Message::Text(m))) => {
+                                    let _ = responder.send(WebSocketMessagesEncodable::try_from(m));
+                                    continue 'ws_loop
+                                },
+                                r => {
+                                    error!("websocket did not return with expected response: {r:?}");
+                                    break 'ws_loop
+                                }
+                            }
+                        },
                     }
                 } else {
                     error!("all websocket senders dropped");
