@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, ops::ControlFlow, path::PathBuf, result::Result};
+use std::{net::SocketAddr, ops::ControlFlow, path::PathBuf, result::Result, sync::Arc};
 
 use axum::{
     extract::{
@@ -11,124 +11,18 @@ use axum::{
     Router,
     TypedHeader,
 };
-use common_sentinel::{CoreMessages, SentinelConfig, SentinelError, WebSocketMessages};
-use futures::stream::StreamExt;
-use tokio::sync::mpsc::{Receiver as MpscRx, Sender as MpscTx};
+use common_sentinel::{CoreMessages, SentinelConfig, SentinelError, WebSocketMessages, WebSocketMessagesEncodable};
+use derive_more::Constructor;
+use futures::{stream::StreamExt, SinkExt};
+use tokio::sync::{
+    mpsc::{Receiver as MpscRx, Sender as MpscTx},
+    Mutex,
+};
 use tower_http::services::ServeDir;
 
-async fn handle_socket(mut socket: WebSocket, who: SocketAddr) {
-    // FIXME Return result
-    if socket.send(Message::Ping(vec![1, 3, 3, 7])).await.is_ok() {
-        debug!("pinged {}...", who);
-    } else {
-        error!("could not send ping {}!", who);
-        // NOTE: No Error here since the only thing we can do is to close the connection.
-        // If we can not send messages, there is no way to salvage the statemachine anyway.
-        return;
-    }
-
-    // NOTE: Receive single message from a client (we can either receive or send with socket).
-    // this will likely be the Pong for our Ping or a hello message from client.
-    // waiting for message from a client will block this task, but will not block other client's
-    // connections.
-    if let Some(msg) = socket.recv().await {
-        if let Ok(msg) = msg {
-            if process_message(msg, who).is_break() {
-                return;
-            }
-        } else {
-            error!("client {who} abruptly disconnected");
-            return;
-        }
-    }
-
-    // Since each client gets individual statemachine, we can pause handling
-    // when necessary to wait for some external event (in this case illustrated by sleeping).
-    // Waiting for this client to finish getting its greetings does not prevent other clients from
-    // connecting to server and receiving their greetings.
-    /*
-    for i in 1..5 {
-        if socket
-            .send(Message::Text(format!("Hi {i} times!")))
-            .await
-            .is_err()
-        {
-            debug!("client {who} abruptly disconnected");
-            return;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-    }
-    */
-
-    // By splitting socket we can send and receive at the same time. In this example we will send
-    // unsolicited messages to client based on some sort of server's internal event (i.e .timer).
-    let (mut sender, mut receiver) = socket.split();
-
-    // Spawn a task that will push several messages to the client (does not matter what client does)
-    /*
-    let mut send_task = tokio::spawn(async move {
-        let n_msg = 20;
-        for i in 0..n_msg {
-            // In case of any websocket error, we exit.
-            if sender
-                .send(Message::Text(format!("Server message {i} ...")))
-                .await
-                .is_err()
-            {
-                return i;
-            }
-
-            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
-        }
-
-        debug!("Sending close to {who}...");
-        if let Err(e) = sender
-            .send(Message::Close(Some(CloseFrame {
-                code: axum::extract::ws::close_code::NORMAL,
-                reason: Cow::from("Goodbye"),
-            })))
-            .await
-        {
-            debug!("Could not send Close due to {}, probably it is ok?", e);
-        }
-        n_msg
-    });
-    */
-
-    let mut recv_task = tokio::spawn(async move {
-        let mut cnt = 0;
-        while let Some(Ok(msg)) = receiver.next().await {
-            cnt += 1;
-            if process_message(msg, who).is_break() {
-                break;
-            }
-        }
-        cnt
-    });
-
-    // If any one of the tasks exit, abort the other.
-    tokio::select! {
-        /*
-        rv_a = (&mut send_task) => {
-            match rv_a {
-                Ok(a) => debug!("{} messages sent to {}", a, who),
-                Err(a) => debug!("Error sending messages {:?}", a)
-            }
-            recv_task.abort();
-        },
-        */
-        rv_b = (&mut recv_task) => {
-            match rv_b {
-                Ok(n) => debug!("received {n} messages"),
-                Err(e) => debug!("error receiving messages {e}")
-            }
-            //send_task.abort();
-        }
-    }
-
-    // returning from the handler closes the websocket connection
-    error!("websocket context {} destroyed", who);
-}
+// TODO have somewhere hold all these aliases
+type CoreTx = MpscTx<CoreMessages>;
+type WebSocketRx = MpscRx<WebSocketMessages>;
 
 fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), ()> {
     match msg {
@@ -160,27 +54,120 @@ fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), ()> {
     ControlFlow::Continue(())
 }
 
+async fn handle_socket(
+    mut socket: WebSocket,
+    who: SocketAddr,
+    core_tx: CoreTx,
+    websocket_rx: Arc<Mutex<WebSocketRx>>,
+) -> Result<(), SentinelError> {
+    if socket.send(Message::Ping(vec![1, 3, 3, 7])).await.is_ok() {
+        debug!("pinged {}...", who);
+    } else {
+        error!("could not send ping {}!", who);
+        // NOTE: No Error here since the only thing we can do is to close the connection.
+        // If we can not send messages, there is no way to salvage the statemachine anyway.
+        return Ok(()); // FIXME
+    }
+
+    // NOTE: Receive single message from a client (we can either receive or send with socket).
+    // this will likely be the pong for our ping, or a hello message from client.
+    // Waiting for a message from a client will block this task, but will not block other client's
+    // connections.
+    if let Some(msg) = socket.recv().await {
+        if let Ok(msg) = msg {
+            if process_message(msg, who).is_break() {
+                return Ok(());
+            }
+        } else {
+            error!("client {who} abruptly disconnected");
+            return Ok(()); // FIXME
+        }
+    }
+    let (mut sender, mut receiver) = socket.split();
+
+    // NOTE: Trying the lock here limits us to one active connection.
+    let mut rx = websocket_rx.try_lock()?;
+
+    'ws_loop: loop {
+        tokio::select! {
+            r = rx.recv() => {
+                if let Some(WebSocketMessages(msg, responder)) = r {
+                    // NOTE: Pass the message on to whomever is connected to the server.
+                    sender.send(Message::Text(msg.try_into()?)).await?;
+
+                    // TODO race a time out with tokio::select!
+                    match receiver.next().await { // NOTE: Await a response since we always expect one
+                        Some(Ok(Message::Text(m))) => {
+                            // NOTE: Return the response to the whomever sent original msg
+                            let _ = responder.send(WebSocketMessagesEncodable::try_from(m));
+                            continue 'ws_loop
+                        },
+                        r => {
+                            error!("websocket did not return with expected response: {r:?}");
+                            break 'ws_loop
+                        }
+                    }
+                } else {
+                    error!("all websocket senders dropped");
+                    break 'ws_loop
+                }
+            },
+        }
+    }
+
+    error!("websocket context {who} destroyed");
+    Ok(()) // FIXME Too many connections error or something?
+}
+
+#[derive(Clone)]
+struct AppState {
+    core_tx: CoreTx,
+    websocket_rx: Arc<Mutex<WebSocketRx>>,
+}
+
+impl AppState {
+    fn new(core_tx: CoreTx, websocket_rx: WebSocketRx) -> Self {
+        Self {
+            core_tx,
+            websocket_rx: Arc::new(Mutex::new(websocket_rx)),
+        }
+    }
+}
+
 async fn ws_handler(
     ws: WebSocketUpgrade,
-    State(core_tx): State<MpscTx<CoreMessages>>,
+    State(state): State<AppState>,
     user_agent: Option<TypedHeader<headers::UserAgent>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> impl IntoResponse {
     let user_agent = if let Some(TypedHeader(user_agent)) = user_agent {
         user_agent.to_string()
     } else {
-        String::from("Unknown browser")
+        String::from("unknown browser")
     };
     debug!("`{user_agent}` at {addr} connected.");
-    ws.on_upgrade(move |socket| handle_socket(socket, addr))
+    ws.on_upgrade(move |socket| async move {
+        match handle_socket(socket, addr.clone(), state.core_tx, state.websocket_rx).await {
+            // FIXME what to return from here?
+            Ok(_) => (),
+            Err(e) => {
+                error!("websocket error: {e}");
+            },
+        }
+    })
 }
 
-async fn start_ws_server(core_tx: MpscTx<CoreMessages>, config: SentinelConfig) -> Result<(), SentinelError> {
+async fn start_ws_server(
+    websocket_rx: WebSocketRx,
+    core_tx: CoreTx,
+    config: SentinelConfig,
+) -> Result<(), SentinelError> {
     let assets_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/bin/sentinel/ws_server/assets");
+
     let app = Router::new()
         .fallback_service(ServeDir::new(assets_dir).append_index_html_on_directories(true))
         .route("/ws", get(ws_handler))
-        .with_state(core_tx);
+        .with_state(AppState::new(core_tx, websocket_rx));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000)); // FIXME make configurable
     debug!("ws server listening on {}", addr);
@@ -191,8 +178,8 @@ async fn start_ws_server(core_tx: MpscTx<CoreMessages>, config: SentinelConfig) 
 }
 
 pub async fn ws_server_loop(
-    _websocket_rx: MpscRx<WebSocketMessages>,
-    core_tx: MpscTx<CoreMessages>,
+    websocket_rx: WebSocketRx,
+    core_tx: CoreTx,
     config: SentinelConfig,
     disable: bool,
 ) -> Result<(), SentinelError> {
@@ -204,24 +191,16 @@ pub async fn ws_server_loop(
     };
     let mut ws_server_is_enabled = !disable;
 
-    'ws_server_loop: loop {
-        tokio::select! {
-            r = start_ws_server(core_tx.clone(), config.clone()), if ws_server_is_enabled => {
-                if r.is_ok() {
-                    warn!("{name} returned, restarting {name} now...");
-                    continue 'ws_server_loop
-                } else {
-                    break 'ws_server_loop r
-                }
-            },
-            _ = tokio::signal::ctrl_c() => {
-                warn!("{name} shutting down...");
-                break 'ws_server_loop Err(SentinelError::SigInt(name.into()))
-            },
-            else => {
-                warn!("in {name} `else` branch, {name} is currently {}abled", if ws_server_is_enabled { "en" } else { "dis" });
-                continue 'ws_server_loop
-            }
+    tokio::select! {
+        r = start_ws_server(websocket_rx, core_tx.clone(), config.clone()), if ws_server_is_enabled => r,
+        _ = tokio::signal::ctrl_c() => {
+            warn!("{name} shutting down...");
+            Err(SentinelError::SigInt(name.into()))
+        },
+        else => {
+            let m = format!("in {name} `else` branch, {name} is currently {}abled", if ws_server_is_enabled { "en" } else { "dis" });
+            warn!("{m}");
+            Err(SentinelError::Custom(m))
         }
     }
 }
