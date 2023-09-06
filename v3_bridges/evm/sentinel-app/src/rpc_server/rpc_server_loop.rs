@@ -6,17 +6,19 @@ use common_sentinel::{
     CoreState,
     HeartbeatsJson,
     MongoMessages,
+    Responder,
     SentinelConfig,
     SentinelError,
     UserOpList,
     UserOps,
     WebSocketMessages,
+    WebSocketMessagesEncodable,
 };
 use jsonrpsee::ws_client::WsClient;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
-use tokio::sync::mpsc::Sender as MpscTx;
-use warp::{reject, reject::Reject, Filter, Rejection};
+use tokio::sync::{mpsc::Sender as MpscTx, oneshot, oneshot::Receiver};
+use warp::{reject, reject::Reject, Filter, Rejection, Reply};
 
 type RpcId = Option<u64>;
 type RpcParams = Vec<String>;
@@ -39,6 +41,14 @@ fn create_json_rpc_response<T: Serialize>(id: RpcId, t: T) -> Json {
 
 fn create_json_rpc_error(id: RpcId, code: u64, msg: &str) -> Json {
     json!({ "id": id, "error": { "code": code, "message": msg, }, "jsonrpc": "2.0" })
+}
+
+// FIXME make a type for error code
+fn create_json_rpc_response_from_result<T: Serialize>(id: RpcId, r: Result<T, SentinelError>, error_code: u64) -> Json {
+    match r {
+        Ok(r) => create_json_rpc_response(id, r),
+        Err(e) => create_json_rpc_error(id, error_code, &e.to_string()),
+    }
 }
 
 async fn get_heartbeat_from_mongo(tx: MongoTx) -> Result<HeartbeatsJson, SentinelError> {
@@ -115,7 +125,7 @@ enum RpcCall {
     Unknown(RpcId, String),
     GetUserOps(RpcId, CoreTx),
     GetUserOpList(RpcId, CoreTx),
-    Init(RpcId, RpcParams),
+    Init(RpcId, WebSocketTx, RpcParams),
     GetCoreState(RpcId, CoreTx, CoreType),
     RemoveUserOp(RpcId, CoreTx, RpcParams),
     SyncStatus(RpcId, CoreTx, Box<SentinelConfig>),
@@ -133,9 +143,9 @@ impl RpcCall {
         match r.method.as_ref() {
             "ping" => Self::Ping(r.id),
             "bpm" => Self::Bpm(r.id, mongo_tx),
-            "init" => Self::Init(r.id, r.params.clone()), // TODO need ws tx
             "getUserOps" => Self::GetUserOps(r.id, core_tx),
             "getUserOpList" => Self::GetUserOpList(r.id, core_tx),
+            "init" => Self::Init(r.id, websocket_tx, r.params.clone()),
             "syncStatus" => Self::SyncStatus(r.id, core_tx, Box::new(config)),
             "removeUserOp" => Self::RemoveUserOp(r.id, core_tx, r.params.clone()),
             "getCoreState" => Self::GetCoreState(r.id, core_tx, config.core().core_type()),
@@ -143,15 +153,27 @@ impl RpcCall {
         }
     }
 
+    fn create_args(cmd: &str, params: Vec<String>) -> Vec<String> {
+        vec![vec!["init".to_string()], params].concat()
+    }
+
+    async fn handle_init(
+        websocket_tx: WebSocketTx,
+        params: Vec<String>,
+    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        let encodable_msg = WebSocketMessagesEncodable::try_from(Self::create_args("init", params))?;
+        let (msg, rx) = WebSocketMessages::new(encodable_msg);
+        websocket_tx.send(msg).await?; // NOTE: This sends a msg to the ws loop
+        rx.await?
+    }
+
     async fn handle(self) -> Result<impl warp::Reply, Rejection> {
         match self {
             Self::Ping(id) => Ok(warp::reply::json(&create_json_rpc_response(id, "pong"))),
-            Self::Init(id, _params) => {
-                // TODO need ws tx
-                Ok(warp::reply::json(&create_json_rpc_response(
-                    id,
-                    "not sure what to put here",
-                )))
+            Self::Init(id, websocket_tx, params) => {
+                let result = Self::handle_init(websocket_tx, params).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
             },
             Self::Unknown(id, method) => Ok(warp::reply::json(&create_json_rpc_error(
                 id,
