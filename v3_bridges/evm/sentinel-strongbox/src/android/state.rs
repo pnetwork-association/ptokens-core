@@ -1,30 +1,29 @@
-use super::Database;
-use common_sentinel::{SentinelError, WebSocketMessages};
+use common_sentinel::{SentinelError, WebSocketMessagesEncodable};
 use jni::{
     objects::{JObject, JString, JValue},
     JNIEnv,
 };
-use super::type_aliases::{Bytes, JavaPointer};
+
+use super::{
+    type_aliases::{Bytes, JavaPointer},
+    Database,
+};
 
 pub struct State<'a> {
     db: Database<'a>,
     env: &'a JNIEnv<'a>,
-    msg: WebSocketMessages,
+    msg: WebSocketMessagesEncodable,
 }
 
 impl<'a> State<'a> {
-    pub fn new(
-        env: &'a JNIEnv<'a>,
-        db_java_class: JObject<'a>,
-        input: JString
-    ) -> Result<Self, SentinelError> {
+    pub fn new(env: &'a JNIEnv<'a>, db_java_class: JObject<'a>, input: JString) -> Result<Self, SentinelError> {
         let db = Database::new(env, db_java_class);
         let input_string: String = env.get_string(input)?.into();
-        let msg = WebSocketMessages::try_from(input_string)?;
+        let msg = WebSocketMessagesEncodable::try_from(input_string)?;
         Ok(State { env, db, msg })
     }
 
-    pub fn msg(&self) -> &WebSocketMessages {
+    pub fn msg(&self) -> &WebSocketMessagesEncodable {
         &self.msg
     }
 
@@ -50,7 +49,10 @@ impl<'a> State<'a> {
     }
 
     fn call_callback(&self) -> Result<(), SentinelError> {
-        match self.env.call_static_method(self.db_java_class(), "callback", "()V", &[]) {
+        match self
+            .env
+            .call_static_method(self.db_java_class(), "callback", "()V", &[])
+        {
             Ok(_) => Ok(()),
             Err(e) => {
                 self.env.exception_describe()?;
