@@ -30,6 +30,9 @@ pub enum WebSocketMessagesError {
 
     #[error("unrecognized chain id {0}")]
     UnrecognizedMetadataChainId(String),
+
+    #[error("timed out - strongbox took longer than {0}ms to respond")]
+    Timedout(u64),
 }
 
 pub type Confirmations = u64;
