@@ -55,6 +55,7 @@ pub use self::{
         Responder,
         SyncerMessages,
         WebSocketMessages,
+        WebSocketMessagesError,
         WebSocketMessagesEncodable,
     },
     network_id::{Bytes4, NetworkId, ProtocolId},
