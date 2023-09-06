@@ -11,6 +11,12 @@ impl From<SentinelError> for CommonError {
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("axum error: {0}")]
+    Axum(#[from] axum::Error),
+
+    #[error("tokio try lock error: {0}")]
+    TryLock(#[from] tokio::sync::TryLockError),
+
     #[error("jni error: {0}")]
     JniError(#[from] jni::errors::Error),
 
