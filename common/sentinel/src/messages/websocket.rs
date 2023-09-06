@@ -4,6 +4,7 @@ use base64::{engine::general_purpose, Engine};
 use common_metadata::MetadataChainId;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tokio::sync::{oneshot, oneshot::Receiver};
 
 use crate::{Responder, SentinelError};
 
@@ -42,6 +43,13 @@ pub struct WebSocketMessages(
     pub WebSocketMessagesEncodable,
     pub Responder<WebSocketMessagesEncodable>,
 );
+
+impl WebSocketMessages {
+    pub fn new(msg: WebSocketMessagesEncodable) -> (Self, Receiver<Result<WebSocketMessagesEncodable, SentinelError>>) {
+        let (tx, rx) = oneshot::channel();
+        (Self(msg, tx), rx)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesEncodable {
