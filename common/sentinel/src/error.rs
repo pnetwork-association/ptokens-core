@@ -11,6 +11,9 @@ impl From<SentinelError> for CommonError {
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("websocket messages error: {0}")]
+    WebSocketMessages(#[from] crate::messages::WebSocketMessagesError),
+
     #[error("axum error: {0}")]
     Axum(#[from] axum::Error),
 
