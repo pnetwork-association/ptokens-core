@@ -53,6 +53,7 @@ impl WebSocketMessages {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesEncodable {
+    Null,
     Error(WebSocketMessagesError),
     Success(String),
     GetLatestBlockNum(MetadataChainId),
@@ -68,10 +69,11 @@ impl fmt::Display for WebSocketMessagesEncodable {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let prefix = "WebSocketMessagesEncodable::";
         let s = match self {
+            Self::Null => "Null",
             Self::Error(_) => "Error",
             Self::Success(_) => "Success",
             Self::Initialize { .. } => "Initialize",
-            Self::GetLatestBlockNum(_) => "GetLatest",
+            Self::GetLatestBlockNum(_) => "GetLatestBlockNum",
         };
         write!(f, "{prefix}{s}")
     }

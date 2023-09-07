@@ -19,6 +19,9 @@ impl From<SentinelError> for CommonError {
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("timed out whilst {0}")]
+    Timedout(String),
+
     #[error("websocket messages error: {0}")]
     WebSocketMessages(#[from] crate::messages::WebSocketMessagesError),
 
