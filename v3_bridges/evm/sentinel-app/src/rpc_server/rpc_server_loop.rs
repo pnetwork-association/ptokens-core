@@ -17,7 +17,10 @@ use common_sentinel::{
 use jsonrpsee::ws_client::WsClient;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
-use tokio::sync::{mpsc::Sender as MpscTx, oneshot, oneshot::Receiver};
+use tokio::{
+    sync::{mpsc::Sender as MpscTx, oneshot, oneshot::Receiver},
+    time::{sleep, Duration},
+};
 use warp::{reject, reject::Reject, Filter, Rejection, Reply};
 
 type RpcId = Option<u64>;
@@ -163,8 +166,16 @@ impl RpcCall {
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
         let encodable_msg = WebSocketMessagesEncodable::try_from(Self::create_args("init", params))?;
         let (msg, rx) = WebSocketMessages::new(encodable_msg);
+        const STRONGBOX_TIMEOUT_MS: u64 = 3000; // FIXME make configurable
         websocket_tx.send(msg).await?; // NOTE: This sends a msg to the ws loop
-        rx.await?
+        tokio::select! {
+            response = rx => response?,
+            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+                let m = "initializing core";
+                error!("timed out whilst {m}");
+                Err(SentinelError::Timedout(m.into()))
+            }
+        }
     }
 
     async fn handle(self) -> Result<impl warp::Reply, Rejection> {
