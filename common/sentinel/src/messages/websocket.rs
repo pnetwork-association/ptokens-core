@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 
 use base64::{engine::general_purpose, Engine};
 use common_metadata::MetadataChainId;
@@ -62,6 +62,19 @@ pub enum WebSocketMessagesEncodable {
         native_id: MetadataChainId,
         native_confs: Confirmations,
     },
+}
+
+impl fmt::Display for WebSocketMessagesEncodable {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let prefix = "WebSocketMessagesEncodable::";
+        let s = match self {
+            Self::Error(_) => "Error",
+            Self::Success(_) => "Success",
+            Self::Initialize { .. } => "Initialize",
+            Self::GetLatestBlockNum(_) => "GetLatest",
+        };
+        write!(f, "{prefix}{s}")
+    }
 }
 
 impl TryFrom<String> for WebSocketMessagesEncodable {
