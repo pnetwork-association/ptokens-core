@@ -1,5 +1,6 @@
 mod database;
 mod handle_websocket_message;
+mod handlers;
 mod state;
 mod type_aliases;
 
@@ -24,7 +25,7 @@ fn call_core_inner(
 ) -> Result<*mut JavaPointer, SentinelError> {
     State::new(env, db_java_class, input)
         .and_then(handle_websocket_message)
-        .and_then(|state| state.to_return_value_pointer("some str")) // FIXME
+        .and_then(|state| state.to_response())
 }
 
 // FIXME Important! The java db is NOT single threaded! We need a shim here to intercept errors
