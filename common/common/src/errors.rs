@@ -45,7 +45,7 @@ pub enum AppError {
     FromUtf8Error(#[from] std::str::Utf8Error),
 
     #[error("✘ Error setting up logger: {0}")]
-    SetLoggerError(#[from] log::SetLoggerError),
+    SetLoggerError(log::SetLoggerError),
 
     #[error("✘ Parse Int error: {0}")]
     ParseIntError(#[from] std::num::ParseIntError),
@@ -189,5 +189,11 @@ impl From<serde_json::Value> for AppError {
 impl From<eos_chain::ParseAssetError> for AppError {
     fn from(e: eos_chain::ParseAssetError) -> Self {
         Self::EosParseAssetErr(e)
+    }
+}
+
+impl From<log::SetLoggerError> for AppError {
+    fn from(e: log::SetLoggerError) -> Self {
+        Self::SetLoggerError(e)
     }
 }
