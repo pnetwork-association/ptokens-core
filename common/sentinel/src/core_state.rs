@@ -2,7 +2,8 @@ use std::result::Result;
 
 use common::{CoreType, DatabaseInterface};
 use common_enclave_info::EnclaveInfo;
-use common_eth::{EthDbUtils, EthDbUtilsExt, EvmDbUtils, HostCoreState, NativeCoreState, VaultUsingCores};
+use common_eth::{EthDbUtils, EvmDbUtils, HostCoreState, NativeCoreState};
+use ethereum_types::Address as EthAddress;
 use serde::Serialize;
 use serde_json::{json, Value as JsonValue};
 
@@ -16,22 +17,14 @@ pub struct CoreState {
 }
 
 impl CoreState {
-    pub fn get<D: DatabaseInterface>(db: &D, core_type: &CoreType) -> Result<Self, SentinelError> {
+    pub fn get<D: DatabaseInterface>(db: &D) -> Result<Self, SentinelError> {
         let eth_db_utils = EthDbUtils::new(db);
         let evm_db_utils = EvmDbUtils::new(db);
 
         Ok(Self {
-            info: EnclaveInfo::new_with_core_type(eth_db_utils.get_db(), *core_type)?,
-            host: HostCoreState::new(
-                &evm_db_utils,
-                &VaultUsingCores::from_core_type(core_type)?.get_vault_contract(&evm_db_utils)?,
-                Some(evm_db_utils.get_eth_router_smart_contract_address_from_db()?),
-            )?,
-            native: NativeCoreState::new(
-                &eth_db_utils,
-                &VaultUsingCores::from_core_type(core_type)?.get_vault_contract(&eth_db_utils)?,
-                Some(eth_db_utils.get_eth_router_smart_contract_address_from_db()?),
-            )?,
+            host: HostCoreState::new(&evm_db_utils, &EthAddress::zero(), None)?,
+            native: NativeCoreState::new(&eth_db_utils, &EthAddress::zero(), None)?,
+            info: EnclaveInfo::new_with_core_type(eth_db_utils.get_db(), CoreType::V3Strongbox)?,
         })
     }
 
