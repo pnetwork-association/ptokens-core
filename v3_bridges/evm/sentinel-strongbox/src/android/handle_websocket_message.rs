@@ -1,7 +1,7 @@
 use std::result::Result;
 
 use common_metadata::MetadataChainId;
-use common_sentinel::{check_init, SentinelError, WebSocketMessagesEncodable};
+use common_sentinel::{check_init, SentinelError, WebSocketMessagesEncodable, WebSocketMessagesError};
 
 use super::State;
 
@@ -21,7 +21,7 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
 
     let final_state = match msg {
         WebSocketMessagesEncodable::Initialize(args) => super::handlers::init(*args.clone(), state),
-        _ => todo!("return an error saying that we can't handle wsm: {msg}"),
+        m => Err(WebSocketMessagesError::Unhandled(m.to_string()).into()),
     }?;
 
     final_state.db().end_transaction()?;
