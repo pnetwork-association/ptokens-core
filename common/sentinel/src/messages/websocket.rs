@@ -47,6 +47,9 @@ pub enum WebSocketMessagesError {
 
     #[error("sentinel error: {0}")]
     SentinelError(String),
+
+    #[error("java database error: {0}")]
+    JavaDb(String),
 }
 
 impl From<CommonError> for WebSocketMessagesError {
