@@ -189,14 +189,13 @@ pub fn init_v3_host_core<D: DatabaseInterface>(
     db: &D,
     sub_mat: EthSubmissionMaterial,
     chain_id: &EthChainId,
-    gas_price: u64,
     confs: u64,
     validate: bool,
 ) -> Result<()> {
     initialize_eth_core_maybe_with_contract_tx_and_return_state(
         sub_mat,
         chain_id,
-        gas_price,
+        0, // NOTE: V3 cores don't make transactions unlike previous versions.
         confs,
         EthState::init(db),
         false,
@@ -209,27 +208,23 @@ pub fn init_v3_host_core<D: DatabaseInterface>(
     .and(Ok(()))
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn init_v3_native_core<D: DatabaseInterface>(
     db: &D,
     sub_mat: EthSubmissionMaterial,
     chain_id: &EthChainId,
-    gas_price: u64,
     confs: u64,
-    vault: &EthAddress,
-    vault_using_core: &VaultUsingCores,
     validate: bool,
 ) -> Result<()> {
     initialize_eth_core_maybe_with_contract_tx_and_return_state(
         sub_mat,
         chain_id,
-        gas_price,
+        0, // NOTE: V3 cores don't make transaction unlike previous versions
         confs,
         EthState::init(db),
         true,
-        Some(vault),
-        Some(&EthAddress::zero()), // NOTE: v3 sentinels do not use a router
-        Some(vault_using_core),
+        Some(&EthAddress::zero()), // NOTE: V3 sentinels do not use vaults.
+        Some(&EthAddress::zero()), // NOTE: v3 sentinels do not use a router.
+        None,                      // NOTE: No vault therefore no `VaultUsingCore` required.
         true,
         validate,
     )
