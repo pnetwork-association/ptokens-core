@@ -4,7 +4,6 @@ use base64::{engine::general_purpose, Engine};
 use common::{AppError as CommonError, BridgeSide};
 use common_chain_ids::EthChainId;
 use common_eth::EthSubmissionMaterial;
-use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -95,8 +94,8 @@ pub struct WebSocketMessagesInitArgs {
 pub enum WebSocketMessagesEncodable {
     Null,
     Success(String),
+    GetCoreState,
     Error(WebSocketMessagesError),
-    GetLatestBlockNum(MetadataChainId),
     Initialize(Box<WebSocketMessagesInitArgs>),
 }
 
@@ -142,7 +141,7 @@ impl fmt::Display for WebSocketMessagesEncodable {
             Self::Error(_) => "Error",
             Self::Success(_) => "Success",
             Self::Initialize(_) => "Initialize",
-            Self::GetLatestBlockNum(_) => "GetLatestBlockNum",
+            Self::GetCoreState => "GetCoreState",
         };
         write!(f, "{prefix}{s}")
     }
@@ -229,10 +228,9 @@ mod tests {
 
     #[test]
     fn websocket_messages_encodable_should_make_serde_roundtrip() {
-        let id = MetadataChainId::EthereumMainnet;
-        let m = WebSocketMessagesEncodable::GetLatestBlockNum(id);
+        let m = WebSocketMessagesEncodable::GetCoreState;
         let s: String = m.clone().try_into().unwrap();
-        let expected_s = "eyJHZXRMYXRlc3RCbG9ja051bSI6IkV0aGVyZXVtTWFpbm5ldCJ9";
+        let expected_s = "IkdldEVuY2xhdmVTdGF0ZSI";
         assert_eq!(s, expected_s);
         let r = WebSocketMessagesEncodable::try_from(s).unwrap();
         assert_eq!(r, m);
@@ -240,9 +238,8 @@ mod tests {
 
     #[test]
     fn should_get_init_message_from_string_of_args() {
-        let args = vec!["init", "EthereumMainnet", "10", "BscMainnet", "100"];
+        let args = vec!["init", "true", "true", "EthereumMainnet", "10", "BscMainnet", "100"];
         let r = WebSocketMessagesEncodable::try_from(args);
         assert!(r.is_ok());
-        println!("r {r:?}")
     }
 }
