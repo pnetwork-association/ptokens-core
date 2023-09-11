@@ -49,6 +49,9 @@ pub enum WebSocketMessagesError {
 
     #[error("java database error: {0}")]
     JavaDb(String),
+
+    #[error("unhandled websocket message: {0}")]
+    Unhandled(String),
 }
 
 impl From<CommonError> for WebSocketMessagesError {
