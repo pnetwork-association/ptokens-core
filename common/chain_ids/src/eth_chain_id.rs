@@ -56,7 +56,6 @@ impl FromStr for EthChainId {
     fn from_str(s: &str) -> Result<Self> {
         match &*s.to_lowercase() {
             "bscmainnet" | "bsc" | "56" => Ok(Self::BscMainnet),
-            "ethmainnet" | "mainnet" | "1" => Ok(Self::Mainnet),
             "ethereumgoerli" | "goerli" | "5" => Ok(Self::Goerli),
             "xdaimainnet" | "xdai" | "100" => Ok(Self::XDaiMainnet),
             "ethereumropsten" | "ropsten" | "3" => Ok(Self::Ropsten),
@@ -66,6 +65,7 @@ impl FromStr for EthChainId {
             "ethereumsepolia" | "sepolia" | "11155111" => Ok(Self::Sepolia),
             "polygonmainnet" | "polygon" | "137" => Ok(Self::PolygonMainnet),
             "arbitrummainnet" | "arbitrum" | "42161" => Ok(Self::ArbitrumMainnet),
+            "ethmainnet" | "ethereummainnet" | "mainnet" | "1" => Ok(Self::Mainnet),
             "luxomainnet" | "luxo" | "luxochain" | "110" => Ok(Self::LuxochainMainnet),
             _ => match s.parse::<u64>() {
                 Ok(u_64) => Ok(Self::Unknown(u_64)),
