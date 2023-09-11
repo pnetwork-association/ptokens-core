@@ -1,17 +1,27 @@
+use common::BridgeSide;
+use common_eth::EthSubmissionMaterial;
 use common_metadata::MetadataChainId;
-use common_sentinel::{SentinelError, WebSocketMessagesEncodable};
+use common_sentinel::{SentinelError, WebSocketMessagesEncodable, WebSocketMessagesError, WebSocketMessagesInitArgs};
 
 use crate::android::State;
 
-pub fn init<'a>(
-    native_id: MetadataChainId,
-    native_confs: u64,
-    host_id: MetadataChainId,
-    host_confs: u64,
-    state: State<'a>,
-) -> Result<State<'a>, SentinelError> {
-    let r = WebSocketMessagesEncodable::Success("we got here at least".into());
-    Ok(state.add_response(r))
+pub fn init<'a>(args: WebSocketMessagesInitArgs, state: State<'a>) -> Result<State<'a>, SentinelError> {
+    if args.native_block().is_none() {
+        let r = WebSocketMessagesEncodable::Error(WebSocketMessagesError::NoBlock {
+            side: BridgeSide::Native,
+            struct_name: "init_args".to_string(),
+        });
+        Ok(state.add_response(r))
+    } else if args.host_block().is_none() {
+        let r = WebSocketMessagesEncodable::Error(WebSocketMessagesError::NoBlock {
+            side: BridgeSide::Native,
+            struct_name: "init_args".to_string(),
+        });
+        Ok(state.add_response(r))
+    } else {
+        let r = WebSocketMessagesEncodable::Success("we got here at least".into());
+        Ok(state.add_response(r))
+    }
 }
 
 /*
