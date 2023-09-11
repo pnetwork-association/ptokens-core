@@ -15,10 +15,10 @@ use crate::{Responder, SentinelError};
 #[derive(Error, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesError {
     #[error("core not initialized for chain id: {0}")]
-    Uninitialized(MetadataChainId),
+    Uninitialized(EthChainId),
 
     #[error("core already initialized for chain id: {0}")]
-    AlreadyInitialized(MetadataChainId),
+    AlreadyInitialized(EthChainId),
 
     #[error("cannot create websocket message encodable from args: {0:?}")]
     CannotCreate(Vec<String>),
