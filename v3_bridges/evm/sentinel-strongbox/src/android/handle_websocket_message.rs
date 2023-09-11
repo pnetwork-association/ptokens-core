@@ -8,12 +8,22 @@ use super::State;
 pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
     info!("handling web socket message...");
     state.db().start_transaction()?;
-    check_init(state.db())?;
     let msg = state.msg();
+
+    match &msg {
+        WebSocketMessagesEncodable::Initialize(_) => {
+            warn!("skipping init check");
+            // NOTE: We skip the init check if we actually trying to initialize a core.
+            Ok(())
+        },
+        _ => check_init(state.db()),
+    }?;
+
     let final_state = match msg {
         WebSocketMessagesEncodable::Initialize(args) => super::handlers::init(*args.clone(), state),
         _ => todo!("return an error saying that we can't handle wsm: {msg}"),
     }?;
+
     final_state.db().end_transaction()?;
     Ok(final_state)
 }
