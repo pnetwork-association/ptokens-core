@@ -72,19 +72,17 @@ pub enum WebSocketMessagesEncodable {
     Null,
     Error(WebSocketMessagesError),
     Success(String),
-    Initialize(Box<WebSocketMessagesInitArgs>),
     GetLatestBlockNum(MetadataChainId),
+    Initialize(Box<WebSocketMessagesInitArgs>),
 }
 
 impl WebSocketMessagesInitArgs {
-    pub fn add_host_block(mut self, m: EthSubmissionMaterial) -> Self {
+    pub fn add_host_block(&mut self, m: EthSubmissionMaterial) {
         self.host_block = Some(m);
-        self
     }
 
-    pub fn add_native_block(mut self, m: EthSubmissionMaterial) -> Self {
+    pub fn add_native_block(&mut self, m: EthSubmissionMaterial) {
         self.native_block = Some(m);
-        self
     }
 }
 

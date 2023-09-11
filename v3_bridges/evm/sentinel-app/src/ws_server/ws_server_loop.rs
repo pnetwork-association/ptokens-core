@@ -105,7 +105,7 @@ async fn handle_socket(
                     // NOTE: Pass the message on to whomever is connected to the server.
                     sender.send(Message::Text(msg.try_into()?)).await?;
 
-                    let STRONGBOX_TIMEOUT_MS = 5000; // TODO make configurable
+                    let STRONGBOX_TIMEOUT_MS = 30000; // TODO make configurable
                                                      //
                      // NOTE: We race the response against a timeout
                     tokio::select! {

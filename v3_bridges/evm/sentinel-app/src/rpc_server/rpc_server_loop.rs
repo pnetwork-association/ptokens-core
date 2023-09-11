@@ -4,6 +4,7 @@ use common_sentinel::{
     get_latest_block_num,
     CoreMessages,
     CoreState,
+    EthRpcMessages,
     HeartbeatsJson,
     MongoMessages,
     Responder,
@@ -27,6 +28,7 @@ type RpcId = Option<u64>;
 type RpcParams = Vec<String>;
 type CoreTx = MpscTx<CoreMessages>;
 type MongoTx = MpscTx<MongoMessages>;
+type EthRpcTx = MpscTx<EthRpcMessages>;
 type WebSocketTx = MpscTx<WebSocketMessages>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -128,10 +130,10 @@ enum RpcCall {
     Unknown(RpcId, String),
     GetUserOps(RpcId, CoreTx),
     GetUserOpList(RpcId, CoreTx),
-    Init(RpcId, WebSocketTx, RpcParams),
     GetCoreState(RpcId, CoreTx, CoreType),
     RemoveUserOp(RpcId, CoreTx, RpcParams),
     SyncStatus(RpcId, CoreTx, Box<SentinelConfig>),
+    Init(RpcId, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams),
 }
 
 // TODO enum for error types with codes etc,then impl into for the rpc error type
@@ -142,16 +144,18 @@ impl RpcCall {
         core_tx: CoreTx,
         mongo_tx: MongoTx,
         websocket_tx: WebSocketTx,
+        host_eth_rpc_tx: EthRpcTx,
+        native_eth_rpc_tx: EthRpcTx,
     ) -> Self {
         match r.method.as_ref() {
             "ping" => Self::Ping(r.id),
             "bpm" => Self::Bpm(r.id, mongo_tx),
             "getUserOps" => Self::GetUserOps(r.id, core_tx),
             "getUserOpList" => Self::GetUserOpList(r.id, core_tx),
-            "init" => Self::Init(r.id, websocket_tx, r.params.clone()),
             "syncStatus" => Self::SyncStatus(r.id, core_tx, Box::new(config)),
             "removeUserOp" => Self::RemoveUserOp(r.id, core_tx, r.params.clone()),
             "getCoreState" => Self::GetCoreState(r.id, core_tx, config.core().core_type()),
+            "init" => Self::Init(r.id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, r.params.clone()),
             _ => Self::Unknown(r.id, r.method.clone()),
         }
     }
@@ -162,12 +166,47 @@ impl RpcCall {
 
     async fn handle_init(
         websocket_tx: WebSocketTx,
+        host_eth_rpc_tx: EthRpcTx,
+        native_eth_rpc_tx: EthRpcTx,
         params: Vec<String>,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        // NOTE: Get the latest host & native block numbers from the ETH RPC
+        let (host_latest_block_num_msg, host_latest_block_num_responder) =
+            EthRpcMessages::get_latest_block_num_msg(BridgeSide::Host);
+        let (native_latest_block_num_msg, native_latest_block_num_responder) =
+            EthRpcMessages::get_latest_block_num_msg(BridgeSide::Native);
+        host_eth_rpc_tx.send(host_latest_block_num_msg).await?;
+        native_eth_rpc_tx.send(native_latest_block_num_msg).await?;
+        let host_latest_block_num = host_latest_block_num_responder.await??;
+        let native_latest_block_num = native_latest_block_num_responder.await??;
+
+        // NOTE: Get submission material for those latest block numbers
+        let (host_latest_block_msg, host_latest_block_responder) =
+            EthRpcMessages::get_sub_mat_msg(BridgeSide::Host, host_latest_block_num);
+        let (native_latest_block_msg, native_latest_block_responder) =
+            EthRpcMessages::get_sub_mat_msg(BridgeSide::Native, native_latest_block_num);
+        host_eth_rpc_tx.send(host_latest_block_msg).await?;
+        native_eth_rpc_tx.send(native_latest_block_msg).await?;
+        let host_sub_mat = host_latest_block_responder.await??;
+        let native_sub_mat = native_latest_block_responder.await??;
+
         let encodable_msg = WebSocketMessagesEncodable::try_from(Self::create_args("init", params))?;
-        let (msg, rx) = WebSocketMessages::new(encodable_msg);
-        const STRONGBOX_TIMEOUT_MS: u64 = 3000; // FIXME make configurable
-        websocket_tx.send(msg).await?; // NOTE: This sends a msg to the ws loop
+
+        // NOTE: Now we need to add the sub mat to the args to send to strongbox
+        let final_msg = match encodable_msg {
+            WebSocketMessagesEncodable::Initialize(mut args) => {
+                args.add_host_block(host_sub_mat);
+                args.add_native_block(native_sub_mat);
+                Ok(WebSocketMessagesEncodable::Initialize(args))
+            },
+            _ => Err(SentinelError::Custom("failed to crate initialize arguments".into())),
+        }?;
+
+        // NOTE: Now we send out msg to the websocket loop
+        let (msg, rx) = WebSocketMessages::new(final_msg);
+        websocket_tx.send(msg).await?;
+
+        const STRONGBOX_TIMEOUT_MS: u64 = 30000; // FIXME make configurable
         tokio::select! {
             response = rx => response?,
             _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
@@ -181,8 +220,8 @@ impl RpcCall {
     async fn handle(self) -> Result<impl warp::Reply, Rejection> {
         match self {
             Self::Ping(id) => Ok(warp::reply::json(&create_json_rpc_response(id, "pong"))),
-            Self::Init(id, websocket_tx, params) => {
-                let result = Self::handle_init(websocket_tx, params).await;
+            Self::Init(id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params) => {
+                let result = Self::handle_init(websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, params).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
@@ -258,6 +297,8 @@ impl RpcCall {
 async fn start_rpc_server(
     core_tx: CoreTx,
     mongo_tx: MongoTx,
+    host_eth_rpc_tx: EthRpcTx,
+    native_eth_rpc_tx: EthRpcTx,
     websocket_tx: WebSocketTx,
     config: SentinelConfig,
 ) -> Result<(), SentinelError> {
@@ -265,6 +306,8 @@ async fn start_rpc_server(
     let core_tx_filter = warp::any().map(move || core_tx.clone());
     let mongo_tx_filter = warp::any().map(move || mongo_tx.clone());
     let websocket_tx_filter = warp::any().map(move || websocket_tx.clone());
+    let host_eth_rpc_tx_filter = warp::any().map(move || host_eth_rpc_tx.clone());
+    let native_eth_rpc_tx_filter = warp::any().map(move || native_eth_rpc_tx.clone());
 
     let rpc = warp::path("v1")
         .and(warp::path("rpc"))
@@ -276,6 +319,8 @@ async fn start_rpc_server(
         .and(core_tx_filter.clone())
         .and(mongo_tx_filter.clone())
         .and(websocket_tx_filter.clone())
+        .and(host_eth_rpc_tx_filter.clone())
+        .and(native_eth_rpc_tx_filter.clone())
         .map(RpcCall::new)
         .and_then(|r: RpcCall| async move { r.handle().await });
 
@@ -287,6 +332,8 @@ async fn start_rpc_server(
 pub async fn rpc_server_loop(
     core_tx: CoreTx,
     mongo_tx: MongoTx,
+    host_eth_rpc_tx: EthRpcTx,
+    native_eth_rpc_tx: EthRpcTx,
     websocket_tx: WebSocketTx,
     config: SentinelConfig,
     disable: bool,
@@ -298,7 +345,7 @@ pub async fn rpc_server_loop(
     };
     'rpc_server_loop: loop {
         tokio::select! {
-            r = start_rpc_server(core_tx.clone(), mongo_tx.clone(), websocket_tx.clone(), config.clone()), if rpc_server_is_enabled => {
+            r = start_rpc_server(core_tx.clone(), mongo_tx.clone(), host_eth_rpc_tx.clone(), native_eth_rpc_tx.clone(), websocket_tx.clone(), config.clone()), if rpc_server_is_enabled => {
                 if r.is_ok() {
                     warn!("{name} returned, restarting {name} now...");
                     continue 'rpc_server_loop

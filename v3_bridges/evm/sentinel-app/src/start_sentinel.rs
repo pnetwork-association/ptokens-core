@@ -87,6 +87,8 @@ pub async fn start_sentinel(
     let rpc_server_thread = tokio::spawn(rpc_server_loop(
         core_tx.clone(),
         mongo_tx.clone(),
+        host_eth_rpc_tx.clone(),
+        native_eth_rpc_tx.clone(),
         websocket_tx.clone(),
         config.clone(),
         disable_rpc_server,
