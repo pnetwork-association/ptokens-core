@@ -4,7 +4,7 @@ mod handlers;
 mod state;
 mod type_aliases;
 
-use common_sentinel::{SentinelError, WebSocketMessages};
+use common_sentinel::{SentinelError, WebSocketMessages, WebSocketMessagesEncodable};
 use jni::{
     objects::{JClass, JObject, JString},
     sys::jstring,
@@ -44,9 +44,17 @@ pub extern "C" fn Java_com_ptokenssentinelandroidapp_RustBridge_callCore(
     match call_core_inner(&env, db_java_class, input) {
         Ok(r) => r,
         Err(e) => {
-            // FIXME Wrap any error here in a websocket message and encode & return it
+            // NOTE: Something went wrong. Lets wrap the error in an encodable websocket message
+            // and return it to the caller.
             error!("{e}");
-            env.new_string(e.to_string()).unwrap().into_inner()
+            let r: String = match WebSocketMessagesEncodable::Error(e.into()).try_into() {
+                Ok(s) => s,
+                Err(e) => {
+                    error!("{e}");
+                    format!("{e}")
+                },
+            };
+            env.new_string(r.to_string()).unwrap().into_inner()
         },
     }
 }

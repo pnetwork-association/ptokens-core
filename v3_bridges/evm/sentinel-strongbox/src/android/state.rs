@@ -1,4 +1,5 @@
 use common_sentinel::{SentinelError, WebSocketMessagesEncodable};
+use derive_getters::Getters;
 use jni::{
     objects::{JObject, JString, JValue},
     JNIEnv,
@@ -9,6 +10,7 @@ use super::{
     Database,
 };
 
+#[derive(Getters)]
 pub struct State<'a> {
     db: Database<'a>,
     env: &'a JNIEnv<'a>,
@@ -28,18 +30,10 @@ impl<'a> State<'a> {
         let msg = WebSocketMessagesEncodable::try_from(input_string)?;
         Ok(State {
             env,
-            db,
             msg,
+            db,
             res: None,
         })
-    }
-
-    pub fn msg(&self) -> &WebSocketMessagesEncodable {
-        &self.msg
-    }
-
-    pub fn db(&self) -> &Database<'a> {
-        &self.db
     }
 
     pub fn to_response(&self) -> Result<*mut JavaPointer, SentinelError> {

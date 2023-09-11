@@ -5,7 +5,6 @@ use common_sentinel::{SentinelError, WebSocketMessagesEncodable};
 
 use super::State;
 
-// TODO handle msg, put result in state. If no string to return, just return success WSM
 pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
     info!("handling web socket message...");
     state.db().start_transaction()?;
