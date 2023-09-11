@@ -33,6 +33,7 @@ pub enum CoreType {
     Erc20OnInt,
     Erc20OnEvm,
     V3(V3CoreType),
+    V3Strongbox,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, EnumIter, Serialize, Deserialize)]
@@ -175,6 +176,7 @@ impl fmt::Display for CoreType {
             Self::Erc20OnEos => "ERC20_ON_EOS".into(),
             Self::Erc20OnEvm => "ERC20_ON_EVM".into(),
             Self::Erc20OnInt => "ERC20_ON_INT".into(),
+            Self::V3Strongbox => "V3_STRONGBOX".into(),
             Self::V3(v3_core_type) => format!("V3_{}", v3_core_type),
         };
         write!(f, "{}", s)
