@@ -91,19 +91,43 @@ pub struct WebSocketMessagesInitArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesEncodable {
     Null,
-    Error(WebSocketMessagesError),
     Success(String),
+    Error(WebSocketMessagesError),
     GetLatestBlockNum(MetadataChainId),
     Initialize(Box<WebSocketMessagesInitArgs>),
 }
 
 impl WebSocketMessagesInitArgs {
+    fn name(&self) -> String {
+        "WebSocketMessagesInitArgs".into()
+    }
+
     pub fn add_host_block(&mut self, m: EthSubmissionMaterial) {
         self.host_block = Some(m);
     }
 
     pub fn add_native_block(&mut self, m: EthSubmissionMaterial) {
         self.native_block = Some(m);
+    }
+
+    pub fn to_host_sub_mat(&self) -> Result<EthSubmissionMaterial, WebSocketMessagesError> {
+        match self.host_block {
+            Some(ref b) => Ok(b.clone()),
+            None => Err(WebSocketMessagesError::NoBlock {
+                side: BridgeSide::Host,
+                struct_name: self.name(),
+            }),
+        }
+    }
+
+    pub fn to_native_sub_mat(&self) -> Result<EthSubmissionMaterial, WebSocketMessagesError> {
+        match self.native_block {
+            Some(ref b) => Ok(b.clone()),
+            None => Err(WebSocketMessagesError::NoBlock {
+                side: BridgeSide::Native,
+                struct_name: self.name(),
+            }),
+        }
     }
 }
 
@@ -164,14 +188,8 @@ impl TryFrom<Vec<String>> for WebSocketMessagesEncodable {
                     });
                 }
                 Ok(Self::Initialize(Box::new(WebSocketMessagesInitArgs {
-                    host_validate: match args[1].as_ref() {
-                        "true" => true,
-                        _ => false,
-                    },
-                    native_validate: match args[2].as_ref() {
-                        "true" => true,
-                        _ => false,
-                    },
+                    host_validate: matches!(args[1].as_ref(), "true"),
+                    native_validate: matches!(args[2].as_ref(), "true"),
                     host_chain_id: EthChainId::from_str(&args[3])
                         .map_err(|_| WebSocketMessagesError::UnrecognizedEthChainId(args[3].clone()))?,
                     host_confirmations: args[4]
