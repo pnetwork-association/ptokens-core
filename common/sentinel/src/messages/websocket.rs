@@ -1,7 +1,10 @@
 use std::{fmt, str::FromStr};
 
 use base64::{engine::general_purpose, Engine};
+use common::BridgeSide;
+use common_eth::EthSubmissionMaterial;
 use common_metadata::MetadataChainId;
+use derive_getters::Getters;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::sync::{oneshot, oneshot::Receiver};
@@ -34,6 +37,9 @@ pub enum WebSocketMessagesError {
 
     #[error("timed out - strongbox took longer than {0}ms to respond")]
     Timedout(u64),
+
+    #[error("no {side} block found in {struct_name}")]
+    NoBlock { side: BridgeSide, struct_name: String },
 }
 
 pub type Confirmations = u64;
@@ -51,18 +57,35 @@ impl WebSocketMessages {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Getters)]
+pub struct WebSocketMessagesInitArgs {
+    host_id: MetadataChainId,
+    host_confs: Confirmations,
+    native_id: MetadataChainId,
+    native_confs: Confirmations,
+    host_block: Option<EthSubmissionMaterial>,
+    native_block: Option<EthSubmissionMaterial>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesEncodable {
     Null,
     Error(WebSocketMessagesError),
     Success(String),
+    Initialize(Box<WebSocketMessagesInitArgs>),
     GetLatestBlockNum(MetadataChainId),
-    Initialize {
-        host_id: MetadataChainId,
-        host_confs: Confirmations,
-        native_id: MetadataChainId,
-        native_confs: Confirmations,
-    },
+}
+
+impl WebSocketMessagesInitArgs {
+    pub fn add_host_block(mut self, m: EthSubmissionMaterial) -> Self {
+        self.host_block = Some(m);
+        self
+    }
+
+    pub fn add_native_block(mut self, m: EthSubmissionMaterial) -> Self {
+        self.native_block = Some(m);
+        self
+    }
 }
 
 impl fmt::Display for WebSocketMessagesEncodable {
@@ -72,7 +95,7 @@ impl fmt::Display for WebSocketMessagesEncodable {
             Self::Null => "Null",
             Self::Error(_) => "Error",
             Self::Success(_) => "Success",
-            Self::Initialize { .. } => "Initialize",
+            Self::Initialize(_) => "Initialize",
             Self::GetLatestBlockNum(_) => "GetLatestBlockNum",
         };
         write!(f, "{prefix}{s}")
@@ -121,7 +144,7 @@ impl TryFrom<Vec<String>> for WebSocketMessagesEncodable {
                         args,
                     });
                 }
-                Ok(Self::Initialize {
+                Ok(Self::Initialize(Box::new(WebSocketMessagesInitArgs {
                     host_id: MetadataChainId::from_str(&args[1])
                         .map_err(|_| WebSocketMessagesError::UnrecognizedMetadataChainId(args[1].clone()))?,
                     host_confs: args[2]
@@ -132,7 +155,9 @@ impl TryFrom<Vec<String>> for WebSocketMessagesEncodable {
                     native_confs: args[4]
                         .parse::<Confirmations>()
                         .map_err(|_| WebSocketMessagesError::ParseInt(args[4].clone()))?,
-                })
+                    host_block: None,
+                    native_block: None,
+                })))
             },
             _ => {
                 debug!("cannot create WebSocketMessagesEncodable from args {args:?}");

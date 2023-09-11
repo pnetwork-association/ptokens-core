@@ -57,6 +57,7 @@ pub use self::{
         WebSocketMessages,
         WebSocketMessagesEncodable,
         WebSocketMessagesError,
+        WebSocketMessagesInitArgs,
     },
     network_id::{Bytes4, NetworkId, ProtocolId},
     processor::{process_batch, process_single},

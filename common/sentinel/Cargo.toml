@@ -46,6 +46,7 @@ strum_macros = { workspace = true }
 serde_derive = { workspace = true }
 flexi_logger = { workspace = true }
 futures-retry = { workspace = true }
+derive-getters = { workspace = true }
 ethereum-types = { workspace = true }
 tokio-tungstenite = { workspace = true }
 bounded-vec-deque = { workspace = true }
