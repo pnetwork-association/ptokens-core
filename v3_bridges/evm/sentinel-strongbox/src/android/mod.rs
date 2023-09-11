@@ -4,7 +4,7 @@ mod handlers;
 mod state;
 mod type_aliases;
 
-use common_sentinel::{SentinelError, WebSocketMessages, WebSocketMessagesEncodable};
+use common_sentinel::{SentinelError, WebSocketMessages, WebSocketMessagesEncodable, WebSocketMessagesError};
 use jni::{
     objects::{JClass, JObject, JString},
     sys::jstring,
@@ -44,9 +44,30 @@ pub extern "C" fn Java_com_ptokenssentinelandroidapp_RustBridge_callCore(
     match call_core_inner(&env, db_java_class, input) {
         Ok(r) => r,
         Err(e) => {
-            // NOTE: Something went wrong. Lets wrap the error in an encodable websocket message
-            // and return it to the caller.
             error!("{e}");
+
+            // First we need to cancel the db transaction...
+            if let Err(e) = env.call_method(db_java_class, "cancelTransaction", "()V", &[]) {
+                error!("{e}");
+                let r: String = match WebSocketMessagesEncodable::Error(WebSocketMessagesError::JavaDb(
+                    "could not cancel db tx".into(),
+                ))
+                .try_into()
+                {
+                    Ok(s) => s,
+                    Err(e) => {
+                        error!("{e}");
+                        format!("{e}")
+                    },
+                };
+                return env
+                    .new_string(r.to_string())
+                    .expect("this should not fail")
+                    .into_inner();
+            };
+
+            // NOTE: Now we need to handle whatever went wrong. Lets wrap the error in an encodable websocket
+            // message and return it to the caller.
             let r: String = match WebSocketMessagesEncodable::Error(e.into()).try_into() {
                 Ok(s) => s,
                 Err(e) => {
@@ -54,7 +75,9 @@ pub extern "C" fn Java_com_ptokenssentinelandroidapp_RustBridge_callCore(
                     format!("{e}")
                 },
             };
-            env.new_string(r.to_string()).unwrap().into_inner()
+            env.new_string(r.to_string())
+                .expect("this should not fail")
+                .into_inner()
         },
     }
 }
