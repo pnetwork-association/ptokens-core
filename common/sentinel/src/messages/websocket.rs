@@ -59,6 +59,8 @@ impl WebSocketMessages {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Getters)]
 pub struct WebSocketMessagesInitArgs {
+    host_validate: bool,
+    native_validate: bool,
     host_id: MetadataChainId,
     host_confs: Confirmations,
     native_id: MetadataChainId,
@@ -134,7 +136,7 @@ impl TryFrom<Vec<String>> for WebSocketMessagesEncodable {
         let cmd = args[0].as_ref();
         match cmd {
             "init" | "initialize" => {
-                let expected_num_args = 5;
+                let expected_num_args = 7;
                 if args.len() != expected_num_args {
                     return Err(WebSocketMessagesError::NotEnoughArgs {
                         got: args.len(),
@@ -143,16 +145,24 @@ impl TryFrom<Vec<String>> for WebSocketMessagesEncodable {
                     });
                 }
                 Ok(Self::Initialize(Box::new(WebSocketMessagesInitArgs {
-                    host_id: MetadataChainId::from_str(&args[1])
-                        .map_err(|_| WebSocketMessagesError::UnrecognizedMetadataChainId(args[1].clone()))?,
-                    host_confs: args[2]
-                        .parse::<Confirmations>()
-                        .map_err(|_| WebSocketMessagesError::ParseInt(args[2].clone()))?,
-                    native_id: MetadataChainId::from_str(&args[3])
+                    host_validate: match args[1].as_ref() {
+                        "true" => true,
+                        _ => false,
+                    },
+                    native_validate: match args[2].as_ref() {
+                        "true" => true,
+                        _ => false,
+                    },
+                    host_id: MetadataChainId::from_str(&args[3])
                         .map_err(|_| WebSocketMessagesError::UnrecognizedMetadataChainId(args[3].clone()))?,
-                    native_confs: args[4]
+                    host_confs: args[4]
                         .parse::<Confirmations>()
                         .map_err(|_| WebSocketMessagesError::ParseInt(args[4].clone()))?,
+                    native_id: MetadataChainId::from_str(&args[5])
+                        .map_err(|_| WebSocketMessagesError::UnrecognizedMetadataChainId(args[5].clone()))?,
+                    native_confs: args[6]
+                        .parse::<Confirmations>()
+                        .map_err(|_| WebSocketMessagesError::ParseInt(args[7].clone()))?,
                     host_block: None,
                     native_block: None,
                 })))
