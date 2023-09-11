@@ -130,7 +130,7 @@ enum RpcCall {
     Unknown(RpcId, String),
     GetUserOps(RpcId, CoreTx),
     GetUserOpList(RpcId, CoreTx),
-    GetCoreState(RpcId, CoreTx, CoreType),
+    GetCoreState(RpcId, WebSocketTx),
     RemoveUserOp(RpcId, CoreTx, RpcParams),
     SyncStatus(RpcId, CoreTx, Box<SentinelConfig>),
     Init(RpcId, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams),
@@ -154,7 +154,7 @@ impl RpcCall {
             "getUserOpList" => Self::GetUserOpList(r.id, core_tx),
             "syncStatus" => Self::SyncStatus(r.id, core_tx, Box::new(config)),
             "removeUserOp" => Self::RemoveUserOp(r.id, core_tx, r.params.clone()),
-            "getCoreState" => Self::GetCoreState(r.id, core_tx, config.core().core_type()),
+            "getCoreState" | "getEnclaveState" => Self::GetCoreState(r.id, websocket_tx),
             "init" => Self::Init(r.id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, r.params.clone()),
             _ => Self::Unknown(r.id, r.method.clone()),
         }
@@ -217,6 +217,22 @@ impl RpcCall {
         }
     }
 
+    async fn handle_get_core_state(websocket_tx: WebSocketTx) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        // NOTE: Now we send out msg to the websocket loop
+        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetCoreState);
+        websocket_tx.send(msg).await?;
+
+        const STRONGBOX_TIMEOUT_MS: u64 = 30000; // FIXME make configurable
+        tokio::select! {
+            response = rx => response?,
+            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+                let m = "initializing core";
+                error!("timed out whilst {m}");
+                Err(SentinelError::Timedout(m.into()))
+            }
+        }
+    }
+
     async fn handle(self) -> Result<impl warp::Reply, Rejection> {
         match self {
             Self::Ping(id) => Ok(warp::reply::json(&create_json_rpc_response(id, "pong"))),
@@ -230,12 +246,11 @@ impl RpcCall {
                 1, // FIXME arbitrary
                 &format!("unknown method: {method}"),
             ))),
-            Self::GetCoreState(id, core_tx, core_type) => Ok(warp::reply::json(&create_json_rpc_response(
-                id,
-                get_core_state_from_db(core_tx, &core_type)
-                    .await
-                    .map_err(convert_error_to_rejection)?,
-            ))),
+            Self::GetCoreState(id, websocket_tx) => {
+                let result = Self::handle_get_core_state(websocket_tx).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
             Self::GetUserOps(id, core_tx) => Ok(warp::reply::json(&create_json_rpc_response(
                 id,
                 get_user_ops_from_core(core_tx)
