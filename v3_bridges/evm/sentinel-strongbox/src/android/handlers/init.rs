@@ -7,15 +7,13 @@ use crate::android::State;
 
 pub fn init(args: WebSocketMessagesInitArgs, state: State) -> Result<State, SentinelError> {
     if CoreType::host_core_is_initialized(state.db()) {
-        return Ok(state.add_response(WebSocketMessagesEncodable::Error(
-            WebSocketMessagesError::AlreadyInitialized(args.host_chain_id().clone()),
-        )));
+        return Err(
+            WebSocketMessagesError::AlreadyInitialized(args.host_chain_id().clone()).into()
+        );
     };
 
     if CoreType::native_core_is_initialized(state.db()) {
-        return Ok(state.add_response(WebSocketMessagesEncodable::Error(
-            WebSocketMessagesError::AlreadyInitialized(args.native_chain_id().clone()),
-        )));
+        return Err(WebSocketMessagesError::AlreadyInitialized(args.native_chain_id().clone()).into());
     };
 
     init_v3_host_core(
