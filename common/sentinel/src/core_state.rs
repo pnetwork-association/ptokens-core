@@ -5,7 +5,7 @@ use common_enclave_info::EnclaveInfo;
 use common_eth::{EthDbUtils, EvmDbUtils, HostCoreState, NativeCoreState};
 use ethereum_types::Address as EthAddress;
 use serde::Serialize;
-use serde_json::{json, Value as JsonValue};
+use serde_json::json;
 
 use crate::SentinelError;
 
@@ -27,14 +27,10 @@ impl CoreState {
             info: EnclaveInfo::new_with_core_type(eth_db_utils.get_db(), CoreType::V3Strongbox)?,
         })
     }
-
-    fn to_json(&self) -> JsonValue {
-        json!(self)
-    }
 }
 
 impl std::fmt::Display for CoreState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_json())
+        write!(f, "{}", json!(self))
     }
 }

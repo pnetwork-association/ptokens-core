@@ -6,6 +6,7 @@ use common_chain_ids::EthChainId;
 use common_eth::EthSubmissionMaterial;
 use derive_getters::Getters;
 use serde::{Deserialize, Serialize};
+use serde_json::Value as Json;
 use thiserror::Error;
 use tokio::sync::{oneshot, oneshot::Receiver};
 
@@ -96,8 +97,8 @@ pub struct WebSocketMessagesInitArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesEncodable {
     Null,
-    Success(String),
     GetCoreState,
+    Success(Json),
     Error(WebSocketMessagesError),
     Initialize(Box<WebSocketMessagesInitArgs>),
 }
