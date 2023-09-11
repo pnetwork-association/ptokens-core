@@ -199,9 +199,9 @@ pub fn init_v3_host_core<D: DatabaseInterface>(
         confs,
         EthState::init(db),
         false,
-        None,
-        None,
-        None,
+        None, // NOTE: V3 sentinels do not use vaults.
+        None, // NOTE: v3 sentinels do not use a router.
+        None, // NOTE: No vault therefore no `VaultUsingCore` required.
         false,
         validate,
     )
@@ -222,9 +222,9 @@ pub fn init_v3_native_core<D: DatabaseInterface>(
         confs,
         EthState::init(db),
         true,
-        Some(&EthAddress::zero()), // NOTE: V3 sentinels do not use vaults.
-        Some(&EthAddress::zero()), // NOTE: v3 sentinels do not use a router.
-        None,                      // NOTE: No vault therefore no `VaultUsingCore` required.
+        None, // NOTE: V3 sentinels do not use vaults.
+        None, // NOTE: v3 sentinels do not use a router.
+        None, // NOTE: No vault therefore no `VaultUsingCore` required.
         true,
         validate,
     )
