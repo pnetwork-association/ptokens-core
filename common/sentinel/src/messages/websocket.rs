@@ -1,7 +1,8 @@
 use std::{fmt, str::FromStr};
 
 use base64::{engine::general_purpose, Engine};
-use common::BridgeSide;
+use common::{AppError as CommonError, BridgeSide};
+use common_chain_ids::EthChainId;
 use common_eth::EthSubmissionMaterial;
 use common_metadata::MetadataChainId;
 use derive_getters::Getters;
@@ -33,13 +34,31 @@ pub enum WebSocketMessagesError {
     ParseInt(String),
 
     #[error("unrecognized chain id {0}")]
-    UnrecognizedMetadataChainId(String),
+    UnrecognizedEthChainId(String),
 
     #[error("timed out - strongbox took longer than {0}ms to respond")]
     Timedout(u64),
 
     #[error("no {side} block found in {struct_name}")]
     NoBlock { side: BridgeSide, struct_name: String },
+
+    #[error("common error: {0}")]
+    CommonError(String),
+
+    #[error("sentinel error: {0}")]
+    SentinelError(String),
+}
+
+impl From<CommonError> for WebSocketMessagesError {
+    fn from(e: CommonError) -> Self {
+        Self::CommonError(format!("{e}"))
+    }
+}
+
+impl From<SentinelError> for WebSocketMessagesError {
+    fn from(e: SentinelError) -> Self {
+        Self::SentinelError(format!("{e}"))
+    }
 }
 
 pub type Confirmations = u64;
@@ -61,10 +80,10 @@ impl WebSocketMessages {
 pub struct WebSocketMessagesInitArgs {
     host_validate: bool,
     native_validate: bool,
-    host_id: MetadataChainId,
-    host_confs: Confirmations,
-    native_id: MetadataChainId,
-    native_confs: Confirmations,
+    host_chain_id: EthChainId,
+    host_confirmations: Confirmations,
+    native_chain_id: EthChainId,
+    native_confirmations: Confirmations,
     host_block: Option<EthSubmissionMaterial>,
     native_block: Option<EthSubmissionMaterial>,
 }
@@ -153,14 +172,14 @@ impl TryFrom<Vec<String>> for WebSocketMessagesEncodable {
                         "true" => true,
                         _ => false,
                     },
-                    host_id: MetadataChainId::from_str(&args[3])
-                        .map_err(|_| WebSocketMessagesError::UnrecognizedMetadataChainId(args[3].clone()))?,
-                    host_confs: args[4]
+                    host_chain_id: EthChainId::from_str(&args[3])
+                        .map_err(|_| WebSocketMessagesError::UnrecognizedEthChainId(args[3].clone()))?,
+                    host_confirmations: args[4]
                         .parse::<Confirmations>()
                         .map_err(|_| WebSocketMessagesError::ParseInt(args[4].clone()))?,
-                    native_id: MetadataChainId::from_str(&args[5])
-                        .map_err(|_| WebSocketMessagesError::UnrecognizedMetadataChainId(args[5].clone()))?,
-                    native_confs: args[6]
+                    native_chain_id: EthChainId::from_str(&args[5])
+                        .map_err(|_| WebSocketMessagesError::UnrecognizedEthChainId(args[5].clone()))?,
+                    native_confirmations: args[6]
                         .parse::<Confirmations>()
                         .map_err(|_| WebSocketMessagesError::ParseInt(args[7].clone()))?,
                     host_block: None,
