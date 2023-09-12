@@ -155,6 +155,16 @@ impl WebSocketMessagesInitArgs {
     }
 }
 
+impl WebSocketMessagesEncodable {
+    pub fn is_success(&self) -> bool {
+        matches!(self, Self::Success(_))
+    }
+
+    pub fn is_error(&self) -> bool {
+        matches!(self, Self::Error(_))
+    }
+}
+
 impl fmt::Display for WebSocketMessagesEncodable {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let prefix = "WebSocketMessagesEncodable::";
