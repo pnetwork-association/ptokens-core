@@ -5,6 +5,8 @@ use common::{AppError as CommonError, BridgeSide};
 use common_chain_ids::EthChainId;
 use common_eth::EthSubmissionMaterial;
 use derive_getters::Getters;
+use derive_more::Constructor;
+use ethereum_types::Address as EthAddress;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 use thiserror::Error;
@@ -94,12 +96,24 @@ pub struct WebSocketMessagesInitArgs {
     native_block: Option<EthSubmissionMaterial>,
 }
 
+#[derive(Debug, Clone, PartialEq, Constructor, Serialize, Deserialize, Getters)]
+pub struct WebSocketMessagesSubmitArgs {
+    dry_run: bool,
+    validate: bool,
+    reprocess: bool,
+    side: BridgeSide,
+    eth_chain_id: EthChainId,
+    pnetwork_hub: EthAddress,
+    sub_mat: EthSubmissionMaterial,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesEncodable {
     Null,
     GetCoreState,
     Success(Json),
     Error(WebSocketMessagesError),
+    Submit(Box<WebSocketMessagesSubmitArgs>),
     Initialize(Box<WebSocketMessagesInitArgs>),
 }
 
@@ -143,6 +157,7 @@ impl fmt::Display for WebSocketMessagesEncodable {
         let s = match self {
             Self::Null => "Null",
             Self::Error(_) => "Error",
+            Self::Submit(..) => "Submit",
             Self::Success(_) => "Success",
             Self::Initialize(_) => "Initialize",
             Self::GetCoreState => "GetCoreState",

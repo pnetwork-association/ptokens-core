@@ -80,6 +80,14 @@ impl<C: ChainIdT + Clone> NetworkId<C> {
     }
 }
 
+impl<C: ChainIdT + Clone> TryInto<Bytes4> for NetworkId<C> {
+    type Error = NetworkIdError;
+
+    fn try_into(self) -> Result<Bytes4, NetworkIdError> {
+        self.to_bytes_4()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use common_chain_ids::EthChainId;

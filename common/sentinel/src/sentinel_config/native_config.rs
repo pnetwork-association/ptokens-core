@@ -84,4 +84,8 @@ impl ConfigT for NativeConfig {
     fn pnetwork_hub(&self) -> EthAddress {
         self.pnetwork_hub
     }
+
+    fn chain_id(&self) -> EthChainId {
+        self.eth_chain_id.clone()
+    }
 }

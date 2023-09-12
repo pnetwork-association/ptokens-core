@@ -1,6 +1,7 @@
 use std::result::Result;
 
 use common::BridgeSide;
+use common_chain_ids::EthChainId;
 use ethereum_types::Address as EthAddress;
 use log::Level as LogLevel;
 use serde::Deserialize;
@@ -127,6 +128,14 @@ impl SentinelConfig {
             self.native.pnetwork_hub()
         } else {
             self.host.pnetwork_hub()
+        }
+    }
+
+    pub fn chain_id(&self, side: &BridgeSide) -> EthChainId {
+        if side.is_native() {
+            self.native.chain_id()
+        } else {
+            self.host.chain_id()
         }
     }
 }
