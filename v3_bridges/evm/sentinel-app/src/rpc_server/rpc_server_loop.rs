@@ -16,6 +16,8 @@ use common_sentinel::{
     UserOps,
     WebSocketMessages,
     WebSocketMessagesEncodable,
+    WebSocketMessagesError,
+    WebSocketMessagesSubmitArgs,
 };
 use jsonrpsee::ws_client::WsClient;
 use serde::{Deserialize, Serialize};
@@ -138,7 +140,7 @@ enum RpcCall {
     RemoveUserOp(RpcId, CoreTx, RpcParams),
     SyncStatus(RpcId, CoreTx, Box<SentinelConfig>),
     Init(RpcId, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams),
-    SubmitBlock(RpcId, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams),
+    SubmitBlock(RpcId, Box<SentinelConfig>, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams),
 }
 
 // TODO enum for error types with codes etc,then impl into for the rpc error type
@@ -161,9 +163,14 @@ impl RpcCall {
             "removeUserOp" => Self::RemoveUserOp(r.id, core_tx, r.params.clone()),
             "getCoreState" | "getEnclaveState" => Self::GetCoreState(r.id, websocket_tx),
             "init" => Self::Init(r.id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, r.params.clone()),
-            "submitBlock" | "submit" => {
-                Self::SubmitBlock(r.id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, r.params.clone())
-            },
+            "submitBlock" | "submit" => Self::SubmitBlock(
+                r.id,
+                Box::new(config),
+                host_eth_rpc_tx,
+                native_eth_rpc_tx,
+                websocket_tx,
+                r.params.clone(),
+            ),
             _ => Self::Unknown(r.id, r.method.clone()),
         }
     }
@@ -225,11 +232,22 @@ impl RpcCall {
     }
 
     async fn handle_submit_block(
+        config: SentinelConfig,
         host_eth_rpc_tx: EthRpcTx,
         native_eth_rpc_tx: EthRpcTx,
         websocket_tx: WebSocketTx,
         params: Vec<String>,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        let expected_num_args = 4;
+        if params.len() != expected_num_args {
+            return Err(WebSocketMessagesError::NotEnoughArgs {
+                got: params.len(),
+                expected: expected_num_args,
+                args: params,
+            }
+            .into());
+        };
+
         let side = BridgeSide::from_str(&params[0])?;
         let block_num = params[1].parse::<u64>()?;
         let (eth_rpc_msg, responder) = EthRpcMessages::get_sub_mat_msg(side, block_num);
@@ -239,7 +257,21 @@ impl RpcCall {
             native_eth_rpc_tx.send(eth_rpc_msg).await?;
         };
         let sub_mat = responder.await??;
-        let encodable_msg = WebSocketMessagesEncodable::Submit(side, sub_mat);
+
+        let dry_run = matches!(params[2].as_ref(), "true");
+        let reprocess = matches!(params[3].as_ref(), "true");
+
+        let submit_args = WebSocketMessagesSubmitArgs::new(
+            dry_run,
+            config.is_validating(&side),
+            reprocess,
+            side,
+            config.chain_id(&side),
+            config.pnetwork_hub(&side),
+            sub_mat,
+        );
+        let encodable_msg = WebSocketMessagesEncodable::Submit(Box::new(submit_args));
+
         let (websocket_msg, rx) = WebSocketMessages::new(encodable_msg);
         websocket_tx.send(websocket_msg).await?;
         tokio::select! {
@@ -269,8 +301,9 @@ impl RpcCall {
 
     async fn handle(self) -> Result<impl warp::Reply, Rejection> {
         match self {
-            Self::SubmitBlock(id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params) => {
-                let result = Self::handle_submit_block(host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params).await;
+            Self::SubmitBlock(id, config, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params) => {
+                let result =
+                    Self::handle_submit_block(*config, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
