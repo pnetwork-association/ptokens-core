@@ -138,6 +138,7 @@ enum RpcCall {
     GetUserOpList(RpcId, CoreTx),
     GetCoreState(RpcId, WebSocketTx),
     RemoveUserOp(RpcId, CoreTx, RpcParams),
+    LatestBlockNumbers(RpcId, WebSocketTx),
     SyncStatus(RpcId, CoreTx, Box<SentinelConfig>),
     Init(RpcId, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams),
     SubmitBlock(RpcId, Box<SentinelConfig>, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams),
@@ -162,6 +163,7 @@ impl RpcCall {
             "syncStatus" => Self::SyncStatus(r.id, core_tx, Box::new(config)),
             "removeUserOp" => Self::RemoveUserOp(r.id, core_tx, r.params.clone()),
             "getCoreState" | "getEnclaveState" => Self::GetCoreState(r.id, websocket_tx),
+            "latestBlockNumbers" | "latest" => Self::LatestBlockNumbers(r.id, websocket_tx),
             "init" => Self::Init(r.id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, r.params.clone()),
             "submitBlock" | "submit" => Self::SubmitBlock(
                 r.id,
@@ -285,7 +287,6 @@ impl RpcCall {
     }
 
     async fn handle_get_core_state(websocket_tx: WebSocketTx) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        // NOTE: Now we send out msg to the websocket loop
         let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetCoreState);
         websocket_tx.send(msg).await?;
 
@@ -299,8 +300,30 @@ impl RpcCall {
         }
     }
 
+    async fn handle_get_latest_block_numbers(
+        websocket_tx: WebSocketTx,
+    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetLatestBlockNumbers);
+        websocket_tx.send(msg).await?;
+
+        tokio::select! {
+            response = rx => response?,
+            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+                let m = "getting latest block numbers";
+                error!("timed out whilst {m}");
+                Err(SentinelError::Timedout(m.into()))
+            }
+        }
+    }
+
     async fn handle(self) -> Result<impl warp::Reply, Rejection> {
         match self {
+            // TODO rm repetition in here.
+            Self::LatestBlockNumbers(id, websocket_tx) => {
+                let result = Self::handle_get_latest_block_numbers(websocket_tx).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
             Self::SubmitBlock(id, config, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params) => {
                 let result =
                     Self::handle_submit_block(*config, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params).await;

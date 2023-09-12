@@ -46,12 +46,7 @@ pub fn submit_block(args: WebSocketMessagesSubmitArgs, state: State) -> Result<S
     )?;
 
     let r = WebSocketMessagesEncodable::Success(
-        Response::new(
-            args.side().clone(),
-            user_ops,
-            args.sub_mat().get_block_number()?.as_u64(),
-        )
-        .into(),
+        Response::new(*args.side(), user_ops, args.sub_mat().get_block_number()?.as_u64()).into(),
     );
     Ok(state.add_response(r))
 }

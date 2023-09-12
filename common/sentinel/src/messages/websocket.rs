@@ -112,6 +112,7 @@ pub enum WebSocketMessagesEncodable {
     Null,
     GetCoreState,
     Success(Json),
+    GetLatestBlockNumbers,
     Error(WebSocketMessagesError),
     Submit(Box<WebSocketMessagesSubmitArgs>),
     Initialize(Box<WebSocketMessagesInitArgs>),
@@ -161,6 +162,7 @@ impl fmt::Display for WebSocketMessagesEncodable {
             Self::Success(_) => "Success",
             Self::Initialize(_) => "Initialize",
             Self::GetCoreState => "GetCoreState",
+            Self::GetLatestBlockNumbers => "GetLatestBlockNumbers",
         };
         write!(f, "{prefix}{s}")
     }
