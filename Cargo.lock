@@ -4733,6 +4733,7 @@ dependencies = [
  "log",
  "metadata",
  "sentinel-lib",
+ "serde",
  "serde_json",
  "thiserror",
 ]
