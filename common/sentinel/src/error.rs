@@ -1,4 +1,5 @@
 use common::AppError as CommonError;
+use common_chain_ids::EthChainId;
 use thiserror::Error;
 
 use crate::{
@@ -19,6 +20,9 @@ impl From<SentinelError> for CommonError {
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("no latest block number for chain ID: {0}")]
+    NoLatestBlockNumber(EthChainId),
+
     #[error("timed out whilst {0}")]
     Timedout(String),
 

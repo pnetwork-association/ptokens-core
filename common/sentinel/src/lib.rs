@@ -10,6 +10,7 @@ mod eth_rpc_calls;
 mod flatten_join_handle;
 mod get_rpc_client;
 mod heartbeat;
+mod latest_block_numbers;
 mod logging;
 mod messages;
 mod network_id;
@@ -46,6 +47,7 @@ pub use self::{
     flatten_join_handle::flatten_join_handle,
     get_rpc_client::get_rpc_client,
     heartbeat::{HeartbeatInfo, Heartbeats, HeartbeatsJson},
+    latest_block_numbers::{LatestBlockNumber, LatestBlockNumbers},
     logging::{init_logger, LogLevel},
     messages::{
         BroadcasterMessages,
