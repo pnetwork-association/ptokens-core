@@ -1,6 +1,5 @@
-use common::{BridgeSide, CoreType};
-use common_eth::{init_v3_host_core, init_v3_native_core, EthSubmissionMaterial};
-use common_metadata::MetadataChainId;
+use common::CoreType;
+use common_eth::{init_v3_host_core, init_v3_native_core};
 use common_sentinel::{SentinelError, WebSocketMessagesEncodable, WebSocketMessagesError, WebSocketMessagesInitArgs};
 
 use crate::android::State;

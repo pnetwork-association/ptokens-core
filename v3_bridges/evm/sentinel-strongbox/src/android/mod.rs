@@ -4,7 +4,7 @@ mod handlers;
 mod state;
 mod type_aliases;
 
-use common_sentinel::{SentinelError, WebSocketMessages, WebSocketMessagesEncodable, WebSocketMessagesError};
+use common_sentinel::{SentinelError, WebSocketMessagesEncodable, WebSocketMessagesError};
 use jni::{
     objects::{JClass, JObject, JString},
     sys::jstring,
@@ -15,7 +15,7 @@ use self::{
     database::Database,
     handle_websocket_message::handle_websocket_message,
     state::State,
-    type_aliases::{Bytes, JavaPointer},
+    type_aliases::JavaPointer,
 };
 
 fn call_core_inner(

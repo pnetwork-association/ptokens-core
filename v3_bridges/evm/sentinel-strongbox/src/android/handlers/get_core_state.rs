@@ -1,10 +1,4 @@
-use common_sentinel::{
-    CoreState,
-    SentinelError,
-    WebSocketMessagesEncodable,
-    WebSocketMessagesError,
-    WebSocketMessagesInitArgs,
-};
+use common_sentinel::{CoreState, SentinelError, WebSocketMessagesEncodable};
 use serde_json::json;
 
 use crate::android::State;

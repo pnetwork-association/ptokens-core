@@ -2,11 +2,11 @@ use common::{AppError as CommonError, Bytes, DatabaseInterface};
 use common_sentinel::SentinelError;
 use derive_more::Constructor;
 use jni::{
-    objects::{JObject, JString, JValue},
+    objects::{JObject, JValue},
     JNIEnv,
 };
 
-use super::type_aliases::{ByteArray, DataSensitivity, JavaPointer};
+use super::type_aliases::{ByteArray, DataSensitivity};
 
 #[derive(Constructor)]
 pub struct Database<'a> {

@@ -1,13 +1,5 @@
 use common_eth::{EthDbUtilsExt, HostDbUtils, NativeDbUtils};
-use common_sentinel::{
-    CoreState,
-    LatestBlockNumber,
-    LatestBlockNumbers,
-    SentinelError,
-    WebSocketMessagesEncodable,
-    WebSocketMessagesError,
-    WebSocketMessagesInitArgs,
-};
+use common_sentinel::{LatestBlockNumber, LatestBlockNumbers, SentinelError, WebSocketMessagesEncodable};
 use serde_json::json;
 
 use crate::android::State;

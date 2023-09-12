@@ -1,6 +1,5 @@
 use std::result::Result;
 
-use common_metadata::MetadataChainId;
 use common_sentinel::{check_init, SentinelError, WebSocketMessagesEncodable, WebSocketMessagesError};
 
 use super::State;

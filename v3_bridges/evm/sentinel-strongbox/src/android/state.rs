@@ -1,14 +1,11 @@
 use common_sentinel::{SentinelError, WebSocketMessagesEncodable};
 use derive_getters::Getters;
 use jni::{
-    objects::{JObject, JString, JValue},
+    objects::{JObject, JString},
     JNIEnv,
 };
 
-use super::{
-    type_aliases::{Bytes, JavaPointer},
-    Database,
-};
+use super::{type_aliases::JavaPointer, Database};
 
 #[derive(Getters)]
 pub struct State<'a> {
