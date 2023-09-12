@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use common::{BridgeSide, CoreType};
 use common_eth::convert_hex_to_h256;
 use common_sentinel::{
@@ -30,6 +32,8 @@ type CoreTx = MpscTx<CoreMessages>;
 type MongoTx = MpscTx<MongoMessages>;
 type EthRpcTx = MpscTx<EthRpcMessages>;
 type WebSocketTx = MpscTx<WebSocketMessages>;
+
+const STRONGBOX_TIMEOUT_MS: u64 = 30000; // FIXME make configurable
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Error(String);
@@ -134,6 +138,7 @@ enum RpcCall {
     RemoveUserOp(RpcId, CoreTx, RpcParams),
     SyncStatus(RpcId, CoreTx, Box<SentinelConfig>),
     Init(RpcId, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams),
+    SubmitBlock(RpcId, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams),
 }
 
 // TODO enum for error types with codes etc,then impl into for the rpc error type
@@ -156,6 +161,9 @@ impl RpcCall {
             "removeUserOp" => Self::RemoveUserOp(r.id, core_tx, r.params.clone()),
             "getCoreState" | "getEnclaveState" => Self::GetCoreState(r.id, websocket_tx),
             "init" => Self::Init(r.id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, r.params.clone()),
+            "submitBlock" | "submit" => {
+                Self::SubmitBlock(r.id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, r.params.clone())
+            },
             _ => Self::Unknown(r.id, r.method.clone()),
         }
     }
@@ -206,11 +214,38 @@ impl RpcCall {
         let (msg, rx) = WebSocketMessages::new(final_msg);
         websocket_tx.send(msg).await?;
 
-        const STRONGBOX_TIMEOUT_MS: u64 = 30000; // FIXME make configurable
         tokio::select! {
             response = rx => response?,
             _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
                 let m = "initializing core";
+                error!("timed out whilst {m}");
+                Err(SentinelError::Timedout(m.into()))
+            }
+        }
+    }
+
+    async fn handle_submit_block(
+        host_eth_rpc_tx: EthRpcTx,
+        native_eth_rpc_tx: EthRpcTx,
+        websocket_tx: WebSocketTx,
+        params: Vec<String>,
+    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        let side = BridgeSide::from_str(&params[0])?;
+        let block_num = params[1].parse::<u64>()?;
+        let (eth_rpc_msg, responder) = EthRpcMessages::get_sub_mat_msg(side, block_num);
+        if side.is_host() {
+            host_eth_rpc_tx.send(eth_rpc_msg).await?;
+        } else {
+            native_eth_rpc_tx.send(eth_rpc_msg).await?;
+        };
+        let sub_mat = responder.await??;
+        let encodable_msg = WebSocketMessagesEncodable::Submit(side, sub_mat);
+        let (websocket_msg, rx) = WebSocketMessages::new(encodable_msg);
+        websocket_tx.send(websocket_msg).await?;
+        tokio::select! {
+            response = rx => response?,
+            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+                let m = "submitting block";
                 error!("timed out whilst {m}");
                 Err(SentinelError::Timedout(m.into()))
             }
@@ -222,7 +257,6 @@ impl RpcCall {
         let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetCoreState);
         websocket_tx.send(msg).await?;
 
-        const STRONGBOX_TIMEOUT_MS: u64 = 30000; // FIXME make configurable
         tokio::select! {
             response = rx => response?,
             _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
@@ -235,6 +269,11 @@ impl RpcCall {
 
     async fn handle(self) -> Result<impl warp::Reply, Rejection> {
         match self {
+            Self::SubmitBlock(id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params) => {
+                let result = Self::handle_submit_block(host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
             Self::Ping(id) => Ok(warp::reply::json(&create_json_rpc_response(id, "pong"))),
             Self::Init(id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params) => {
                 let result = Self::handle_init(websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, params).await;
