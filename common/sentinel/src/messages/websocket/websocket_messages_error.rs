@@ -1,4 +1,4 @@
-use common::{AppError as CommonError, BridgeSide};
+use common::{BlockAlreadyInDbError, AppError as CommonError, BridgeSide, NoParentError};
 use common_chain_ids::EthChainId;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -49,6 +49,15 @@ pub enum WebSocketMessagesError {
 
     #[error("cannot convert from: {from} to: {to}")]
     CannotConvert { from: String, to: String },
+
+    #[error("{0}")]
+    NoParent(NoParentError),
+
+    #[error("{0}")]
+    BlockAlreadyInDb(BlockAlreadyInDbError),
+
+    #[error("unexpected websocket response {0}")]
+    UnexpectedResponse(String),
 }
 
 impl From<CommonError> for WebSocketMessagesError {
@@ -59,6 +68,10 @@ impl From<CommonError> for WebSocketMessagesError {
 
 impl From<SentinelError> for WebSocketMessagesError {
     fn from(e: SentinelError) -> Self {
-        Self::SentinelError(format!("{e}"))
+        match e {
+            SentinelError::NoParent(e) => Self::NoParent(e),
+            SentinelError::BlockAlreadyInDb(e) => Self::BlockAlreadyInDb(e),
+            err => Self::SentinelError(format!("{err}"))
+        }
     }
 }
