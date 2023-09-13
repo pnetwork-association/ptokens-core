@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use common::{BridgeSide, CoreType};
-use common_eth::convert_hex_to_h256;
+use common_eth::{convert_hex_to_h256, EthSubmissionMaterials};
 use common_sentinel::{
     get_latest_block_num,
     CoreMessages,
@@ -270,7 +270,7 @@ impl RpcCall {
             side,
             config.chain_id(&side),
             config.pnetwork_hub(&side),
-            sub_mat,
+            EthSubmissionMaterials::new(vec![sub_mat]), // NOTE: The processor always deals with batches of submat
         );
         let encodable_msg = WebSocketMessagesEncodable::Submit(Box::new(submit_args));
 

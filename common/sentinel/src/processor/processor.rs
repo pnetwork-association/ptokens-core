@@ -70,10 +70,10 @@ pub fn process_batch<D: DatabaseInterface>(
     side: BridgeSide,
     network_id: &Bytes4,
     reprocess: bool,
+    dry_run: bool,
 ) -> Result<ProcessorOutput, SentinelError> {
     info!("Processing {side} batch of submission material...");
-    let use_db_tx = false;
-    let dry_run = false;
+    let use_db_tx = !dry_run;
 
     let processed_user_ops = UserOps::from(
         batch
