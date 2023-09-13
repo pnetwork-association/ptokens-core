@@ -20,6 +20,9 @@ impl From<SentinelError> for CommonError {
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("a java exception occurred and was handled - see core logs for details")]
+    JavaExceptionOccurred,
+
     #[error("no latest block number for chain ID: {0}")]
     NoLatestBlockNumber(EthChainId),
 

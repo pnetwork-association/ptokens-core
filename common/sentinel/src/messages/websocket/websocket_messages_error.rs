@@ -47,7 +47,7 @@ pub enum WebSocketMessagesError {
     #[error("unhandled websocket message: {0}")]
     Unhandled(String),
 
-    #[error("cannot convert from: {from} to: {to}")]
+    #[error("cannot convert from: '{from}' to: '{to}'")]
     CannotConvert { from: String, to: String },
 
     #[error("{0}")]

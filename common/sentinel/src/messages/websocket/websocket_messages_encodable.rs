@@ -31,13 +31,13 @@ impl fmt::Display for WebSocketMessagesEncodable {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let prefix = "WebSocketMessagesEncodable::";
         let s = match self {
-            Self::Null => "Null",
-            Self::Error(_) => "Error",
-            Self::Submit(..) => "Submit",
-            Self::Success(_) => "Success",
-            Self::Initialize(_) => "Initialize",
-            Self::GetCoreState => "GetCoreState",
-            Self::GetLatestBlockNumbers => "GetLatestBlockNumbers",
+            Self::Null => "Null".to_string(),
+            Self::Error(e) => format!("Error: {e}"),
+            Self::Submit(..) => "Submit".to_string(),
+            Self::Success(_) => "Success".to_string(),
+            Self::Initialize(_) => "Initialize".to_string(),
+            Self::GetCoreState => "GetCoreState".to_string(),
+            Self::GetLatestBlockNumbers => "GetLatestBlockNumbers".to_string(),
         };
         write!(f, "{prefix}{s}")
     }

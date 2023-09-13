@@ -43,8 +43,7 @@ impl TryFrom<WebSocketMessagesEncodable> for LatestBlockNumbers {
             x => Err(WebSocketMessagesError::CannotConvert {
                 from: x.to_string(),
                 to: "LatestBlockNumbers".into(),
-            }
-            .into()),
+            }.into()),
         }
     }
 }
