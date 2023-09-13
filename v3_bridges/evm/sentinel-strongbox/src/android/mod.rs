@@ -47,24 +47,32 @@ pub extern "C" fn Java_com_ptokenssentinelandroidapp_RustBridge_callCore(
             error!("{e}");
 
             // First we need to cancel the db transaction...
-            if let Err(e) = env.call_method(db_java_class, "cancelTransaction", "()V", &[]) {
-                // FIXME check for java exceptions!
-                error!("{e}");
-                let r: String = match WebSocketMessagesEncodable::Error(WebSocketMessagesError::JavaDb(
-                    "could not cancel db tx".into(),
-                ))
-                .try_into()
-                {
-                    Ok(s) => s,
-                    Err(e) => {
-                        error!("{e}");
-                        format!("{e}")
-                    },
-                };
-                return env
-                    .new_string(r.to_string())
-                    .expect("this should not fail")
-                    .into_inner();
+            match env.call_method(db_java_class, "cancelTransaction", "()V", &[]) {
+                Ok(_) => {
+                    env.exception_describe().expect("this not to fail"); // FIXME
+                    env.exception_clear().expect("this not to fail"); // FIXME
+                                                                      // FIXME How to handle if an exception occurred
+                                                                      // here? Do we return anything?
+                },
+                Err(e) => {
+                    // FIXME check for java exceptions!
+                    error!("{e}");
+                    let r: String = match WebSocketMessagesEncodable::Error(WebSocketMessagesError::JavaDb(
+                        "could not cancel db tx".into(),
+                    ))
+                    .try_into()
+                    {
+                        Ok(s) => s,
+                        Err(e) => {
+                            error!("{e}");
+                            format!("{e}")
+                        },
+                    };
+                    return env
+                        .new_string(r.to_string())
+                        .expect("this should not fail")
+                        .into_inner();
+                },
             };
 
             // NOTE: Now we need to handle whatever went wrong. Lets wrap the error in an encodable websocket
