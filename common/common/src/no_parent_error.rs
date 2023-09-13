@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, derive_more::Constructor)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, derive_more::Constructor)]
 pub struct NoParentError {
     pub block_num: u64,
     pub message: String,
