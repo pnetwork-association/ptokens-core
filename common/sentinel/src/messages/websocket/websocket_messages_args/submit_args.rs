@@ -27,6 +27,14 @@ impl WebSocketMessagesSubmitArgs {
     ) -> Box<Self> {
         let dry_run = false;
         let reprocess = false;
-        Box::new(Self::new(validate, dry_run, reprocess, side, eth_chain_id, pnetwork_hub, sub_mat_batch))
+        Box::new(Self::new(
+            validate,
+            dry_run,
+            reprocess,
+            side,
+            eth_chain_id,
+            pnetwork_hub,
+            sub_mat_batch,
+        ))
     }
 }

@@ -1,24 +1,25 @@
+use std::str::FromStr;
+
 use common::BridgeSide;
 use common_chain_ids::EthChainId;
 use common_eth::EthSubmissionMaterial;
 use derive_getters::Getters;
-use derive_more::Constructor;
 use serde::{Deserialize, Serialize};
 
 use crate::WebSocketMessagesError;
 
 pub type Confirmations = u64;
 
-#[derive(Debug, Clone, PartialEq, Constructor, Serialize, Deserialize, Getters)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Getters)]
 pub struct WebSocketMessagesInitArgs {
-    host_validate: bool,
     native_validate: bool,
-    host_chain_id: EthChainId,
-    host_confirmations: Confirmations,
     native_chain_id: EthChainId,
     native_confirmations: Confirmations,
-    host_block: Option<EthSubmissionMaterial>,
     native_block: Option<EthSubmissionMaterial>,
+    host_validate: bool,
+    host_chain_id: EthChainId,
+    host_confirmations: Confirmations,
+    host_block: Option<EthSubmissionMaterial>,
 }
 
 impl WebSocketMessagesInitArgs {
@@ -52,5 +53,43 @@ impl WebSocketMessagesInitArgs {
                 struct_name: self.name(),
             }),
         }
+    }
+}
+
+// NOTE: Because these args are passed in via an RPC call
+impl TryFrom<Vec<String>> for WebSocketMessagesInitArgs {
+    type Error = WebSocketMessagesError;
+
+    fn try_from(args: Vec<String>) -> Result<Self, WebSocketMessagesError> {
+        if args.is_empty() {
+            return Err(WebSocketMessagesError::CannotCreate(args));
+        };
+
+        let expected_num_args = 6;
+        if args.len() != expected_num_args {
+            return Err(WebSocketMessagesError::NotEnoughArgs {
+                got: args.len(),
+                expected: expected_num_args,
+                args,
+            });
+        }
+
+        Ok(Self {
+            native_validate: matches!(args[0].as_ref(), "true"),
+            native_chain_id: EthChainId::from_str(&args[1])
+                .map_err(|_| WebSocketMessagesError::UnrecognizedEthChainId(args[3].clone()))?,
+            native_confirmations: args[2]
+                .parse::<Confirmations>()
+                .map_err(|_| WebSocketMessagesError::ParseInt(args[4].clone()))?,
+            native_block: None,
+
+            host_validate: matches!(args[3].as_ref(), "true"),
+            host_chain_id: EthChainId::from_str(&args[4])
+                .map_err(|_| WebSocketMessagesError::UnrecognizedEthChainId(args[5].clone()))?,
+            host_confirmations: args[5]
+                .parse::<Confirmations>()
+                .map_err(|_| WebSocketMessagesError::ParseInt(args[7].clone()))?,
+            host_block: None,
+        })
     }
 }

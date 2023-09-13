@@ -1,4 +1,4 @@
-use common::{BlockAlreadyInDbError, AppError as CommonError, BridgeSide, NoParentError};
+use common::{AppError as CommonError, BlockAlreadyInDbError, BridgeSide, NoParentError};
 use common_chain_ids::EthChainId;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -71,7 +71,7 @@ impl From<SentinelError> for WebSocketMessagesError {
         match e {
             SentinelError::NoParent(e) => Self::NoParent(e),
             SentinelError::BlockAlreadyInDb(e) => Self::BlockAlreadyInDb(e),
-            err => Self::SentinelError(format!("{err}"))
+            err => Self::SentinelError(format!("{err}")),
         }
     }
 }

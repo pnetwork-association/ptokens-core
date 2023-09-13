@@ -1,13 +1,10 @@
-use std::{fmt, str::FromStr};
+use std::fmt;
 
 use base64::{engine::general_purpose, Engine};
-use common_chain_ids::EthChainId;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 
 use crate::{SentinelError, WebSocketMessagesError, WebSocketMessagesInitArgs, WebSocketMessagesSubmitArgs};
-
-pub type Confirmations = u64;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesEncodable {
@@ -79,34 +76,11 @@ impl TryFrom<Vec<String>> for WebSocketMessagesEncodable {
         };
         let cmd = args[0].as_ref();
         match cmd {
-            "init" | "initialize" => {
-                let expected_num_args = 7;
-                if args.len() != expected_num_args {
-                    return Err(WebSocketMessagesError::NotEnoughArgs {
-                        got: args.len(),
-                        expected: expected_num_args,
-                        args,
-                    });
-                }
-                Ok(Self::Initialize(Box::new(WebSocketMessagesInitArgs::new(
-                    matches!(args[1].as_ref(), "true"),
-                    matches!(args[2].as_ref(), "true"),
-                    EthChainId::from_str(&args[3])
-                        .map_err(|_| WebSocketMessagesError::UnrecognizedEthChainId(args[3].clone()))?,
-                    args[4]
-                        .parse::<Confirmations>()
-                        .map_err(|_| WebSocketMessagesError::ParseInt(args[4].clone()))?,
-                    EthChainId::from_str(&args[5])
-                        .map_err(|_| WebSocketMessagesError::UnrecognizedEthChainId(args[5].clone()))?,
-                    args[6]
-                        .parse::<Confirmations>()
-                        .map_err(|_| WebSocketMessagesError::ParseInt(args[7].clone()))?,
-                    None,
-                    None,
-                ))))
-            },
+            "init" | "initialize" => Ok(Self::Initialize(Box::new(WebSocketMessagesInitArgs::try_from(
+                args[1..].to_vec(),
+            )?))),
             _ => {
-                debug!("cannot create WebSocketMessagesEncodable from args {args:?}");
+                warn!("cannot create WebSocketMessagesEncodable from args {args:?}");
                 Err(WebSocketMessagesError::CannotCreate(args))
             },
         }
