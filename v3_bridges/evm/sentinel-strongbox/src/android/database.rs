@@ -37,24 +37,20 @@ impl DatabaseInterface for Database<'_> {
 }
 
 impl<'a> Database<'a> {
-    pub fn db_java_class(&self) -> JObject<'a> {
-        self.db_java_class
-    }
-
     fn to_java_byte_array(&self, bs: &ByteArray) -> Result<JValue, SentinelError> {
         Ok(JValue::from(JObject::from(self.env.byte_array_from_slice(bs)?)))
     }
 
     pub fn start_transaction(&self) -> Result<(), SentinelError> {
         match self.env.call_method(self.db_java_class, "startTransaction", "()V", &[]) {
-            Ok(_) => Ok(()),
+            Ok(_) => self.check_and_handle_java_exceptions(),
             Err(e) => self.handle_error(Err(e)),
         }
     }
 
     pub fn end_transaction(&self) -> Result<(), SentinelError> {
         match self.env.call_method(self.db_java_class, "endTransaction", "()V", &[]) {
-            Ok(_) => Ok(()),
+            Ok(_) => self.check_and_handle_java_exceptions(),
             Err(e) => self.handle_error(Err(e)),
         }
     }
@@ -64,7 +60,7 @@ impl<'a> Database<'a> {
             .env
             .call_method(self.db_java_class, "delete", "([B)V", &[self.to_java_byte_array(k)?])
         {
-            Ok(_) => Ok(()),
+            Ok(_) => self.check_and_handle_java_exceptions(),
             Err(e) => self.handle_error(Err(e)),
         }
     }
@@ -80,7 +76,7 @@ impl<'a> Database<'a> {
             .and_then(|ret| ret.l())
             .and_then(|j_value| self.env.convert_byte_array(j_value.into_inner()))
         {
-            Ok(r) => Ok(r),
+            Ok(r) => self.check_and_handle_java_exceptions().map(|_| r),
             Err(e) => self.handle_error(Err(e)),
         }
     }
@@ -92,7 +88,7 @@ impl<'a> Database<'a> {
             JValue::from(sensitivity.unwrap_or_default()),
         ];
         match self.env.call_method(self.db_java_class, "put", "([B[BB)V", &args) {
-            Ok(_) => Ok(()),
+            Ok(_) => self.check_and_handle_java_exceptions(),
             Err(e) => self.handle_error(Err(e)),
         }
     }
@@ -105,6 +101,16 @@ impl<'a> Database<'a> {
             Err(e.into())
         } else {
             r.map_err(|e| e.into())
+        }
+    }
+
+    fn check_and_handle_java_exceptions(&self) -> Result<(), SentinelError> {
+        if matches!(self.env.exception_check(), Ok(true)) {
+            self.env.exception_describe()?;
+            self.env.exception_clear()?;
+            Err(SentinelError::JavaExceptionOccurred)
+        } else {
+            Ok(())
         }
     }
 }

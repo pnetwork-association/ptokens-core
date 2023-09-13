@@ -1,17 +1,12 @@
-use common::BridgeSide;
 use common_sentinel::{
     process_batch,
     NetworkId,
-    ProcessorOutput,
     ProtocolId,
     SentinelError,
-    UserOps,
     WebSocketMessagesEncodable,
     WebSocketMessagesSubmitArgs,
 };
-use derive_more::Constructor;
-use serde::Serialize;
-use serde_json::{json, Value as Json};
+use serde_json::json;
 
 use crate::android::State;
 

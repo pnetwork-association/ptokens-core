@@ -52,29 +52,7 @@ impl<'a> State<'a> {
         Ok(self.to_jstring(s)?.into_inner())
     }
 
-    fn parse_jstring(&self, input: JString) -> Result<String, SentinelError> {
-        Ok(self.env.get_string(input)?.into())
-    }
-
     fn to_jstring(&self, s: &str) -> Result<JString<'_>, SentinelError> {
         Ok(self.env.new_string(s)?)
-    }
-
-    fn db_java_class(&self) -> JObject<'a> {
-        self.db.db_java_class()
-    }
-
-    fn call_callback(&self) -> Result<(), SentinelError> {
-        match self
-            .env
-            .call_static_method(self.db_java_class(), "callback", "()V", &[])
-        {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                self.env.exception_describe()?;
-                self.env.exception_clear()?;
-                Err(e.into())
-            },
-        }
     }
 }

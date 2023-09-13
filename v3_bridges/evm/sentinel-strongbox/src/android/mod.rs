@@ -48,6 +48,7 @@ pub extern "C" fn Java_com_ptokenssentinelandroidapp_RustBridge_callCore(
 
             // First we need to cancel the db transaction...
             if let Err(e) = env.call_method(db_java_class, "cancelTransaction", "()V", &[]) {
+                // FIXME check for java exceptions!
                 error!("{e}");
                 let r: String = match WebSocketMessagesEncodable::Error(WebSocketMessagesError::JavaDb(
                     "could not cancel db tx".into(),

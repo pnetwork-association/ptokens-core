@@ -6,7 +6,9 @@ use super::State;
 
 pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
     info!("handling web socket message...");
-    state.db().start_transaction()?;
+
+    state.db().start_transaction()?; // FIXME check for exceptions
+
     let msg = state.msg();
 
     match &msg {
@@ -26,6 +28,7 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
         m => Err(WebSocketMessagesError::Unhandled(m.to_string()).into()),
     }?;
 
-    final_state.db().end_transaction()?;
+    final_state.db().end_transaction()?; // FIXME check for exceptions
+
     Ok(final_state)
 }
