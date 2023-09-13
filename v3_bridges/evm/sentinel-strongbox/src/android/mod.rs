@@ -1,3 +1,4 @@
+use std::panic;
 mod database;
 mod handle_websocket_message;
 mod handlers;
@@ -41,52 +42,61 @@ pub extern "C" fn Java_com_ptokenssentinelandroidapp_RustBridge_callCore(
     db_java_class: JObject,
     input: JString,
 ) -> jstring {
-    match call_core_inner(&env, db_java_class, input) {
+    let result = panic::catch_unwind(|| {
+        match call_core_inner(&env, db_java_class, input) {
+            Ok(r) => r,
+            Err(e) => {
+                error!("{e}");
+
+                // First we need to cancel the db transaction...
+                match env.call_method(db_java_class, "cancelTransaction", "()V", &[]) {
+                    Ok(_) => {
+                        env.exception_describe().expect("this not to fail"); // FIXME
+                        env.exception_clear().expect("this not to fail"); // FIXME How to handle if an exception occurred here? Do we return anything?
+                    },
+                    Err(e) => {
+                        // FIXME check for java exceptions!
+                        error!("{e}");
+                        let r: String = match WebSocketMessagesEncodable::Error(WebSocketMessagesError::JavaDb(
+                            "could not cancel db tx".into(),
+                        ))
+                        .try_into()
+                        {
+                            Ok(s) => s,
+                            Err(e) => {
+                                error!("{e}");
+                                format!("{e}")
+                            },
+                        };
+                        return env
+                            .new_string(r.to_string())
+                            .expect("this should not fail")
+                            .into_inner();
+                    },
+                };
+
+                // NOTE: Now we need to handle whatever went wrong. Lets wrap the error in an encodable websocket
+                // message and return it to the caller.
+                let r: String = match WebSocketMessagesEncodable::Error(e.into()).try_into() {
+                    Ok(s) => s,
+                    Err(e) => {
+                        error!("{e}");
+                        format!("{e}")
+                    },
+                };
+                env.new_string(r.to_string())
+                    .expect("this should not fail")
+                    .into_inner()
+            },
+        }
+    });
+    match result {
         Ok(r) => r,
         Err(e) => {
-            error!("{e}");
-
-            // First we need to cancel the db transaction...
-            match env.call_method(db_java_class, "cancelTransaction", "()V", &[]) {
-                Ok(_) => {
-                    env.exception_describe().expect("this not to fail"); // FIXME
-                    env.exception_clear().expect("this not to fail"); // FIXME
-                                                                      // FIXME How to handle if an exception occurred
-                                                                      // here? Do we return anything?
-                },
-                Err(e) => {
-                    // FIXME check for java exceptions!
-                    error!("{e}");
-                    let r: String = match WebSocketMessagesEncodable::Error(WebSocketMessagesError::JavaDb(
-                        "could not cancel db tx".into(),
-                    ))
-                    .try_into()
-                    {
-                        Ok(s) => s,
-                        Err(e) => {
-                            error!("{e}");
-                            format!("{e}")
-                        },
-                    };
-                    return env
-                        .new_string(r.to_string())
-                        .expect("this should not fail")
-                        .into_inner();
-                },
-            };
-
-            // NOTE: Now we need to handle whatever went wrong. Lets wrap the error in an encodable websocket
-            // message and return it to the caller.
-            let r: String = match WebSocketMessagesEncodable::Error(e.into()).try_into() {
-                Ok(s) => s,
-                Err(e) => {
-                    error!("{e}");
-                    format!("{e}")
-                },
-            };
-            env.new_string(r.to_string())
+            error!("something panicked: {e:?}");
+            env.new_string(format!("{e:?}")) // TODO wrap in encodeable error?
                 .expect("this should not fail")
                 .into_inner()
-        },
+        }
     }
 }
