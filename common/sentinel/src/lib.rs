@@ -50,6 +50,7 @@ pub use self::{
     latest_block_numbers::{LatestBlockNumber, LatestBlockNumbers},
     logging::{init_logger, LogLevel},
     messages::{
+        BroadcastChannelMessages,
         BroadcasterMessages,
         CoreMessages,
         EthRpcMessages,
