@@ -151,8 +151,8 @@ impl RpcCall {
             "getUserOpList" => Self::GetUserOpList(r.id, core_tx),
             "syncStatus" => Self::SyncStatus(r.id, core_tx, Box::new(config)),
             "removeUserOp" => Self::RemoveUserOp(r.id, core_tx, r.params.clone()),
-            "getCoreState" | "getEnclaveState" => Self::GetCoreState(r.id, websocket_tx),
             "latestBlockNumbers" | "latest" => Self::LatestBlockNumbers(r.id, websocket_tx),
+            "getCoreState" | "getEnclaveState" | "state" => Self::GetCoreState(r.id, websocket_tx),
             "init" => Self::Init(r.id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, r.params.clone()),
             "submitBlock" | "submit" => Self::SubmitBlock(
                 r.id,
@@ -282,7 +282,7 @@ impl RpcCall {
         tokio::select! {
             response = rx => response?,
             _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "initializing core";
+                let m = "getting enclave state";
                 error!("timed out whilst {m}");
                 Err(SentinelError::Timedout(m.into()))
             }
