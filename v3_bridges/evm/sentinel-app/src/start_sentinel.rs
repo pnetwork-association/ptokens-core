@@ -1,8 +1,7 @@
-use std::{result::Result, sync::Arc};
+use std::result::Result;
 
 use common::BridgeSide;
 use common_sentinel::{
-    check_init,
     flatten_join_handle,
     Batch,
     BroadcasterMessages,
@@ -17,7 +16,6 @@ use serde_json::json;
 use tokio::sync::{
     mpsc,
     mpsc::{Receiver as MpscRx, Sender as MpscTx},
-    Mutex,
 };
 
 use crate::{
@@ -56,14 +54,18 @@ pub async fn start_sentinel(
 
     let native_syncer_thread = tokio::spawn(syncer_loop(
         Batch::new_from_config(BridgeSide::Native, config)?,
+        config.clone(),
         core_tx.clone(),
         native_eth_rpc_tx.clone(),
+        websocket_tx.clone(),
         disable_native_syncer,
     ));
     let host_syncer_thread = tokio::spawn(syncer_loop(
         Batch::new_from_config(BridgeSide::Host, config)?,
+        config.clone(),
         core_tx.clone(),
         host_eth_rpc_tx.clone(),
+        websocket_tx.clone(),
         disable_host_syncer,
     ));
 

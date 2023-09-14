@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
-name = "sentinel"
 version = "0.1.0"
+name = "sentinel-app"
 authors = [ "Greg Kapka <gregkapka@gmail.com>" ]
 description = "A pTokens Sentinel for EVM-to-EVM style bridges."
 

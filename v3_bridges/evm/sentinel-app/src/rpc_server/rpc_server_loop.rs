@@ -9,7 +9,6 @@ use common_sentinel::{
     EthRpcMessages,
     HeartbeatsJson,
     MongoMessages,
-    Responder,
     SentinelConfig,
     SentinelError,
     UserOpList,
@@ -23,10 +22,10 @@ use jsonrpsee::ws_client::WsClient;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 use tokio::{
-    sync::{mpsc::Sender as MpscTx, oneshot, oneshot::Receiver},
+    sync::mpsc::Sender as MpscTx,
     time::{sleep, Duration},
 };
-use warp::{reject, reject::Reject, Filter, Rejection, Reply};
+use warp::{reject, reject::Reject, Filter, Rejection};
 
 type RpcId = Option<u64>;
 type RpcParams = Vec<String>;
@@ -177,8 +176,8 @@ impl RpcCall {
         }
     }
 
-    fn create_args(cmd: &str, params: Vec<String>) -> Vec<String> {
-        vec![vec!["init".to_string()], params].concat()
+    fn create_args(_cmd: &str, params: Vec<String>) -> Vec<String> {
+        [vec!["init".to_string()], params].concat()
     }
 
     async fn handle_init(
@@ -448,7 +447,7 @@ pub async fn rpc_server_loop(
     config: SentinelConfig,
     disable: bool,
 ) -> Result<(), SentinelError> {
-    let mut rpc_server_is_enabled = !disable;
+    let rpc_server_is_enabled = !disable;
     let name = "rpc server";
     if disable {
         warn!("{name} disabled!")

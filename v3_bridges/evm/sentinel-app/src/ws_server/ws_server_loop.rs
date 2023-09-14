@@ -3,7 +3,7 @@ use std::{net::SocketAddr, ops::ControlFlow, path::PathBuf, result::Result, sync
 use axum::{
     extract::{
         connect_info::ConnectInfo,
-        ws::{CloseFrame, Message, WebSocket, WebSocketUpgrade},
+        ws::{Message, WebSocket, WebSocketUpgrade},
         State,
     },
     response::IntoResponse,
@@ -19,7 +19,6 @@ use common_sentinel::{
     WebSocketMessagesEncodable,
     WebSocketMessagesError,
 };
-use derive_more::Constructor;
 use futures::{stream::StreamExt, SinkExt};
 use tokio::{
     sync::{
@@ -67,7 +66,7 @@ fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), ()> {
 async fn handle_socket(
     mut socket: WebSocket,
     who: SocketAddr,
-    core_tx: CoreTx,
+    _core_tx: CoreTx,
     websocket_rx: Arc<Mutex<WebSocketRx>>,
 ) -> Result<(), SentinelError> {
     if socket.send(Message::Ping(vec![1, 3, 3, 7])).await.is_ok() {
@@ -105,8 +104,7 @@ async fn handle_socket(
                     // NOTE: Pass the message on to whomever is connected to the server.
                     sender.send(Message::Text(msg.try_into()?)).await?;
 
-                    let STRONGBOX_TIMEOUT_MS = 30000; // TODO make configurable
-                                                     //
+                    const STRONGBOX_TIMEOUT_MS: u64 = 30000; // TODO make configurable
                      // NOTE: We race the response against a timeout
                     tokio::select! {
                         _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
@@ -167,7 +165,7 @@ async fn ws_handler(
     };
     debug!("`{user_agent}` at {addr} connected.");
     ws.on_upgrade(move |socket| async move {
-        match handle_socket(socket, addr.clone(), state.core_tx, state.websocket_rx).await {
+        match handle_socket(socket, addr, state.core_tx, state.websocket_rx).await {
             // FIXME what to return from here?
             Ok(_) => (),
             Err(e) => {
@@ -180,7 +178,7 @@ async fn ws_handler(
 async fn start_ws_server(
     websocket_rx: WebSocketRx,
     core_tx: CoreTx,
-    config: SentinelConfig,
+    _config: SentinelConfig,
 ) -> Result<(), SentinelError> {
     let assets_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/bin/sentinel/ws_server/assets");
 
@@ -209,7 +207,7 @@ pub async fn ws_server_loop(
     } else {
         debug!("{name} started")
     };
-    let mut ws_server_is_enabled = !disable;
+    let ws_server_is_enabled = !disable;
 
     tokio::select! {
         r = start_ws_server(websocket_rx, core_tx.clone(), config.clone()), if ws_server_is_enabled => r,

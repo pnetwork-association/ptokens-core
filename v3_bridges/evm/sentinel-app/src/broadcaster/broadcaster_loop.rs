@@ -196,7 +196,7 @@ pub async fn broadcaster_loop(
     if disable {
         warn!("{name} disabled!")
     };
-    let mut broadcaster_is_enabled = !disable; // FIXME/TODO use a broadcaster channel to flip this switch
+    let broadcaster_is_enabled = !disable; // FIXME/TODO use a broadcaster channel to flip this switch
     Env::init()?;
 
     let host_broadcaster_pk = Env::get_host_broadcaster_private_key()?;

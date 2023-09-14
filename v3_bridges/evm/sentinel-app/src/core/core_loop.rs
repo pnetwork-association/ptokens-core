@@ -1,28 +1,17 @@
-use std::{result::Result, sync::Arc};
+use std::result::Result;
 
-use common::BridgeSide;
-use common_eth::{EthDbUtilsExt, HostDbUtils, NativeDbUtils};
 use common_sentinel::{
-    process_batch,
     BroadcasterMessages,
-    Bytes4,
     CoreMessages,
-    CoreState,
     Heartbeats,
     MongoMessages,
     NetworkId,
     SentinelConfig,
-    SentinelDbUtils,
     SentinelError,
-    UserOpList,
     HOST_PROTOCOL_ID,
     NATIVE_PROTOCOL_ID,
 };
-use serde_json::json;
-use tokio::sync::{
-    mpsc::{Receiver as MpscRx, Sender as MpscTx},
-    Mutex,
-};
+use tokio::sync::mpsc::{Receiver as MpscRx, Sender as MpscTx};
 
 lazy_static! {
     // NOTE: This is just used to give a quick RPC-access way to see how fast the sentinel is syncing
@@ -204,13 +193,13 @@ async fn handle_message(
 
 pub async fn core_loop(
     config: SentinelConfig,
-    mut core_rx: MpscRx<CoreMessages>,
-    mongo_tx: MpscTx<MongoMessages>,
-    broadcaster_tx: MpscTx<BroadcasterMessages>,
+    _core_rx: MpscRx<CoreMessages>,
+    _mongo_tx: MpscTx<MongoMessages>,
+    _broadcaster_tx: MpscTx<BroadcasterMessages>,
 ) -> Result<(), SentinelError> {
     info!("core listening...");
-    let h_origin_network_id = NetworkId::new(config.host().get_eth_chain_id(), *HOST_PROTOCOL_ID).to_bytes_4()?;
-    let n_origin_network_id = NetworkId::new(config.native().get_eth_chain_id(), *NATIVE_PROTOCOL_ID).to_bytes_4()?;
+    let _h_origin_network_id = NetworkId::new(config.host().get_eth_chain_id(), *HOST_PROTOCOL_ID).to_bytes_4()?;
+    let _n_origin_network_id = NetworkId::new(config.native().get_eth_chain_id(), *NATIVE_PROTOCOL_ID).to_bytes_4()?;
 
     'core_loop: loop {
         tokio::select! {
