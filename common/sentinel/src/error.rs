@@ -2,15 +2,7 @@ use common::AppError as CommonError;
 use common_chain_ids::EthChainId;
 use thiserror::Error;
 
-use crate::{
-    BroadcasterMessages,
-    CoreMessages,
-    DbKey,
-    EthRpcMessages,
-    MongoMessages,
-    SyncerMessages,
-    WebSocketMessages,
-};
+use crate::{BroadcasterMessages, CoreMessages, DbKey, EthRpcMessages, SyncerMessages, WebSocketMessages};
 
 impl From<SentinelError> for CommonError {
     fn from(e: SentinelError) -> CommonError {
@@ -104,9 +96,6 @@ pub enum SentinelError {
     #[error("serde json error {0}")]
     SerdeJson(#[from] serde_json::Error),
 
-    #[error("mongo error: {0}")]
-    MongoDb(#[from] mongodb::error::Error),
-
     #[error("no parent error")]
     NoParent(common::NoParentError),
 
@@ -149,9 +138,6 @@ pub enum SentinelError {
     #[error("core channel error: {0}")]
     CoreChannel(Box<tokio::sync::mpsc::error::SendError<CoreMessages>>),
 
-    #[error("mongo channel error: {0}")]
-    MongoChannel(Box<tokio::sync::mpsc::error::SendError<MongoMessages>>),
-
     #[error("eth rpc channel error: {0}")]
     EthRpcChannel(Box<tokio::sync::mpsc::error::SendError<EthRpcMessages>>),
 
@@ -183,12 +169,6 @@ impl From<tokio::sync::mpsc::error::SendError<CoreMessages>> for SentinelError {
 impl From<tokio::sync::broadcast::error::SendError<SyncerMessages>> for SentinelError {
     fn from(e: tokio::sync::broadcast::error::SendError<SyncerMessages>) -> Self {
         Self::SyncerChannel(Box::new(e))
-    }
-}
-
-impl From<tokio::sync::mpsc::error::SendError<MongoMessages>> for SentinelError {
-    fn from(e: tokio::sync::mpsc::error::SendError<MongoMessages>) -> Self {
-        Self::MongoChannel(Box::new(e))
     }
 }
 

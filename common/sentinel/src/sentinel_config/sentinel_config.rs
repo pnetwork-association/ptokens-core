@@ -15,8 +15,6 @@ use crate::{
         HostToml,
         LogConfig,
         LogToml,
-        MongoConfig,
-        MongoToml,
         NativeConfig,
         NativeToml,
         SentinelCoreConfig,
@@ -32,7 +30,6 @@ const CONFIG_FILE_PATH: &str = "sentinel-config";
 struct SentinelConfigToml {
     log: LogToml,
     host: HostToml,
-    mongo: MongoToml,
     native: NativeToml,
     core: SentinelCoreToml,
     batching: BatchingToml,
@@ -51,17 +48,12 @@ impl SentinelConfigToml {
 pub struct SentinelConfig {
     log: LogConfig,
     host: HostConfig,
-    mongo: MongoConfig,
     native: NativeConfig,
     core: SentinelCoreConfig,
     batching: BatchingConfig,
 }
 
 impl SentinelConfig {
-    pub fn mongo(&self) -> &MongoConfig {
-        &self.mongo
-    }
-
     pub fn host(&self) -> &HostConfig {
         &self.host
     }
@@ -95,10 +87,9 @@ impl SentinelConfig {
     fn from_toml(toml: &SentinelConfigToml) -> Result<Self, SentinelError> {
         Ok(Self {
             log: LogConfig::from_toml(&toml.log)?,
-            core: SentinelCoreConfig::from_toml(&toml.core)?,
             host: HostConfig::from_toml(&toml.host)?,
-            mongo: MongoConfig::from_toml(&toml.mongo),
             native: NativeConfig::from_toml(&toml.native)?,
+            core: SentinelCoreConfig::from_toml(&toml.core)?,
             batching: BatchingConfig::from_toml(&toml.batching)?,
         })
     }
