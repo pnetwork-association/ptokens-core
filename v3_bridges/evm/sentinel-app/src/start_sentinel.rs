@@ -13,6 +13,7 @@ use common_sentinel::{
 };
 use serde_json::json;
 use tokio::sync::{
+    broadcast,
     mpsc,
     mpsc::{Receiver as MpscRx, Sender as MpscTx},
 };
@@ -36,6 +37,8 @@ pub async fn start_sentinel(
     disable_rpc_server: bool,
     disable_ws_server: bool,
 ) -> Result<String, SentinelError> {
+    let (broadcast_channel_tx, _) = broadcast::channel(MAX_CHANNEL_CAPACITY);
+
     let (core_tx, core_rx): (MpscTx<CoreMessages>, MpscRx<CoreMessages>) = mpsc::channel(MAX_CHANNEL_CAPACITY);
     let (websocket_tx, websocket_rx): (MpscTx<WebSocketMessages>, MpscRx<WebSocketMessages>) =
         mpsc::channel(MAX_CHANNEL_CAPACITY);
@@ -56,6 +59,8 @@ pub async fn start_sentinel(
         native_eth_rpc_tx.clone(),
         websocket_tx.clone(),
         disable_native_syncer,
+        broadcast_channel_tx.clone(),
+        broadcast_channel_tx.subscribe(),
     ));
     let host_syncer_thread = tokio::spawn(syncer_loop(
         Batch::new_from_config(BridgeSide::Host, config)?,
@@ -64,17 +69,37 @@ pub async fn start_sentinel(
         host_eth_rpc_tx.clone(),
         websocket_tx.clone(),
         disable_host_syncer,
+        broadcast_channel_tx.clone(),
+        broadcast_channel_tx.subscribe(),
     ));
 
-    let core_thread = tokio::spawn(core_loop(config.clone(), core_rx, broadcaster_tx.clone()));
-    let native_eth_rpc_thread = tokio::spawn(eth_rpc_loop(native_eth_rpc_rx, config.clone()));
-    let host_eth_rpc_thread = tokio::spawn(eth_rpc_loop(host_eth_rpc_rx, config.clone()));
+    let core_thread = tokio::spawn(core_loop(
+        config.clone(),
+        core_rx,
+        broadcaster_tx.clone(),
+        broadcast_channel_tx.clone(),
+        broadcast_channel_tx.subscribe(),
+    ));
+    let native_eth_rpc_thread = tokio::spawn(eth_rpc_loop(
+        native_eth_rpc_rx,
+        config.clone(),
+        broadcast_channel_tx.clone(),
+        broadcast_channel_tx.subscribe(),
+    ));
+    let host_eth_rpc_thread = tokio::spawn(eth_rpc_loop(
+        host_eth_rpc_rx,
+        config.clone(),
+        broadcast_channel_tx.clone(),
+        broadcast_channel_tx.subscribe(),
+    ));
     let broadcaster_thread = tokio::spawn(broadcaster_loop(
         broadcaster_rx,
         native_eth_rpc_tx.clone(),
         core_tx.clone(),
         config.clone(),
         disable_broadcaster,
+        broadcast_channel_tx.clone(),
+        broadcast_channel_tx.subscribe(),
     ));
     let rpc_server_thread = tokio::spawn(rpc_server_loop(
         core_tx.clone(),
@@ -83,6 +108,8 @@ pub async fn start_sentinel(
         websocket_tx.clone(),
         config.clone(),
         disable_rpc_server,
+        broadcast_channel_tx.clone(),
+        broadcast_channel_tx.subscribe(),
     ));
 
     let ws_server_thread = tokio::spawn(ws_server_loop(
@@ -90,6 +117,8 @@ pub async fn start_sentinel(
         core_tx.clone(),
         config.clone(),
         disable_ws_server,
+        broadcast_channel_tx.clone(),
+        broadcast_channel_tx.subscribe(),
     ));
 
     match tokio::try_join!(

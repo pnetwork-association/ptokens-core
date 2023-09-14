@@ -3,6 +3,7 @@ use std::result::Result;
 use common::BridgeSide;
 use common_eth::EthPrivateKey;
 use common_sentinel::{
+    BroadcastChannelMessages,
     BroadcasterMessages,
     ConfigT,
     CoreMessages,
@@ -13,7 +14,10 @@ use common_sentinel::{
     UserOp,
 };
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
-use tokio::sync::mpsc::{Receiver as MpscRx, Sender as MpscTx};
+use tokio::sync::{
+    broadcast::{Receiver as MpMcRx, Sender as MpMcTx},
+    mpsc::{Receiver as MpscRx, Sender as MpscTx},
+};
 
 #[allow(clippy::too_many_arguments)]
 async fn cancel_user_op(
@@ -189,6 +193,8 @@ pub async fn broadcaster_loop(
     core_tx: MpscTx<CoreMessages>,
     config: SentinelConfig,
     disable: bool,
+    _broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
+    _broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
 ) -> Result<(), SentinelError> {
     let name = "broadcaster";
     if disable {

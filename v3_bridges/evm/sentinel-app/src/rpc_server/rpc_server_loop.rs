@@ -4,6 +4,7 @@ use common::{BridgeSide, CoreType};
 use common_eth::{convert_hex_to_h256, EthSubmissionMaterials};
 use common_sentinel::{
     get_latest_block_num,
+    BroadcastChannelMessages,
     CoreMessages,
     CoreState,
     EthRpcMessages,
@@ -20,7 +21,10 @@ use jsonrpsee::ws_client::WsClient;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 use tokio::{
-    sync::mpsc::Sender as MpscTx,
+    sync::{
+        broadcast::{Receiver as MpMcRx, Sender as MpMcTx},
+        mpsc::Sender as MpscTx,
+    },
     time::{sleep, Duration},
 };
 use warp::{reject, reject::Reject, Filter, Rejection};
@@ -419,6 +423,7 @@ async fn start_rpc_server(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn rpc_server_loop(
     core_tx: CoreTx,
     host_eth_rpc_tx: EthRpcTx,
@@ -426,6 +431,8 @@ pub async fn rpc_server_loop(
     websocket_tx: WebSocketTx,
     config: SentinelConfig,
     disable: bool,
+    _broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
+    _broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
 ) -> Result<(), SentinelError> {
     let rpc_server_is_enabled = !disable;
     let name = "rpc server";

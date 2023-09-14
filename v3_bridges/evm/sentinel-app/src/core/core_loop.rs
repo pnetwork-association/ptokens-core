@@ -1,6 +1,7 @@
 use std::result::Result;
 
 use common_sentinel::{
+    BroadcastChannelMessages,
     BroadcasterMessages,
     CoreMessages,
     Heartbeats,
@@ -10,7 +11,10 @@ use common_sentinel::{
     HOST_PROTOCOL_ID,
     NATIVE_PROTOCOL_ID,
 };
-use tokio::sync::mpsc::{Receiver as MpscRx, Sender as MpscTx};
+use tokio::sync::{
+    broadcast::{Receiver as MpMcRx, Sender as MpMcTx},
+    mpsc::{Receiver as MpscRx, Sender as MpscTx},
+};
 
 lazy_static! {
     // NOTE: This is just used to give a quick RPC-access way to see how fast the sentinel is syncing
@@ -193,6 +197,8 @@ pub async fn core_loop(
     config: SentinelConfig,
     _core_rx: MpscRx<CoreMessages>,
     _broadcaster_tx: MpscTx<BroadcasterMessages>,
+    _broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
+    _broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
 ) -> Result<(), SentinelError> {
     info!("core listening...");
     let _h_origin_network_id = NetworkId::new(config.host().get_eth_chain_id(), *HOST_PROTOCOL_ID).to_bytes_4()?;

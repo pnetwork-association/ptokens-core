@@ -12,6 +12,7 @@ use axum::{
     TypedHeader,
 };
 use common_sentinel::{
+    BroadcastChannelMessages,
     CoreMessages,
     SentinelConfig,
     SentinelError,
@@ -22,6 +23,7 @@ use common_sentinel::{
 use futures::{stream::StreamExt, SinkExt};
 use tokio::{
     sync::{
+        broadcast::{Receiver as MpMcRx, Sender as MpMcTx},
         mpsc::{Receiver as MpscRx, Sender as MpscTx},
         Mutex,
     },
@@ -200,6 +202,8 @@ pub async fn ws_server_loop(
     core_tx: CoreTx,
     config: SentinelConfig,
     disable: bool,
+    _broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
+    _broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
 ) -> Result<(), SentinelError> {
     let name = "ws server";
     if disable {

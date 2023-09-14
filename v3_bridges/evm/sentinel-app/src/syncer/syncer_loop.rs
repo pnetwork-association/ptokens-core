@@ -2,6 +2,7 @@ use std::result::Result;
 
 use common_sentinel::{
     Batch,
+    BroadcastChannelMessages,
     CoreMessages,
     EthRpcMessages,
     LatestBlockNumbers,
@@ -13,7 +14,10 @@ use common_sentinel::{
     WebSocketMessagesSubmitArgs,
 };
 use tokio::{
-    sync::mpsc::Sender as MpscTx,
+    sync::{
+        broadcast::{Receiver as MpMcRx, Sender as MpMcTx},
+        mpsc::Sender as MpscTx,
+    },
     time::{sleep, Duration},
 };
 
@@ -133,6 +137,7 @@ async fn main_loop(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn syncer_loop(
     batch: Batch,
     config: SentinelConfig,
@@ -140,6 +145,8 @@ pub async fn syncer_loop(
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     websocket_tx: MpscTx<WebSocketMessages>,
     disable: bool,
+    _broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
+    _broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
 ) -> Result<(), SentinelError> {
     let side = batch.side();
     let name = format!("{side} syncer");

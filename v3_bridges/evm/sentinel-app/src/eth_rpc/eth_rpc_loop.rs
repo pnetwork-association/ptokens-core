@@ -9,12 +9,16 @@ use common_sentinel::{
     get_sub_mat,
     get_user_op_state,
     push_tx,
+    BroadcastChannelMessages,
     EthRpcMessages,
     SentinelConfig,
     SentinelError,
 };
 use tokio::{
-    sync::mpsc::Receiver as MpscRx,
+    sync::{
+        broadcast::{Receiver as MpMcRx, Sender as MpMcTx},
+        mpsc::Receiver as MpscRx,
+    },
     time::{sleep, Duration},
 };
 
@@ -27,7 +31,12 @@ use tokio::{
 
 const ENDPOINT_ROTATION_SLEEP_TIME: u64 = 2000;
 
-pub async fn eth_rpc_loop(mut eth_rpc_rx: MpscRx<EthRpcMessages>, config: SentinelConfig) -> Result<(), SentinelError> {
+pub async fn eth_rpc_loop(
+    mut eth_rpc_rx: MpscRx<EthRpcMessages>,
+    config: SentinelConfig,
+    _broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
+    _broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
+) -> Result<(), SentinelError> {
     let mut h_endpoints = config.get_host_endpoints();
     let mut n_endpoints = config.get_native_endpoints();
     let n_sleep_time = n_endpoints.sleep_time();
