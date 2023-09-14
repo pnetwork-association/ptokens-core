@@ -5,12 +5,15 @@ mod handlers;
 mod state;
 mod type_aliases;
 
+use android_logger::Config;
 use common_sentinel::{SentinelError, WebSocketMessagesEncodable, WebSocketMessagesError};
 use jni::{
     objects::{JClass, JObject, JString},
-    sys::jstring,
+    sys::{jint, jstring},
     JNIEnv,
+    JavaVM,
 };
+use log::LevelFilter;
 
 use self::{
     database::Database,
@@ -34,6 +37,14 @@ fn call_core_inner(
 // here where the db tx is never ended (as it shouldn't be in the case of errors), we need to call
 // something to clean up the flags in the java db impl to allow new txs to be started.
 
+#[no_mangle]
+#[allow(non_snake_case, improper_ctypes_definitions)]
+pub extern "system" fn JNI_OnLoad(_vm: JavaVM) -> jint {
+    android_logger::init_once(Config::default().with_max_level(LevelFilter::Debug));
+    info!("android logger loaded");
+    jni::sys::JNI_VERSION_1_6
+}
+
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn Java_com_ptokenssentinelandroidapp_RustBridge_callCore(
@@ -52,7 +63,8 @@ pub extern "C" fn Java_com_ptokenssentinelandroidapp_RustBridge_callCore(
                 match env.call_method(db_java_class, "cancelTransaction", "()V", &[]) {
                     Ok(_) => {
                         env.exception_describe().expect("this not to fail"); // FIXME
-                        env.exception_clear().expect("this not to fail"); // FIXME How to handle if an exception occurred here? Do we return anything?
+                        env.exception_clear().expect("this not to fail"); // FIXME How to handle if an exception
+                                                                          // occurred here? Do we return anything?
                     },
                     Err(e) => {
                         // FIXME check for java exceptions!
@@ -97,6 +109,6 @@ pub extern "C" fn Java_com_ptokenssentinelandroidapp_RustBridge_callCore(
             env.new_string(format!("{e:?}")) // TODO wrap in encodeable error?
                 .expect("this should not fail")
                 .into_inner()
-        }
+        },
     }
 }

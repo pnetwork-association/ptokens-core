@@ -12,6 +12,7 @@ non-validating = ["common_sentinel/non-validating"] # NOTE: Disables block & rec
 crate-type = ["cdylib"]
 
 [dependencies]
+android_logger = "0.13.3"
 jni = { workspace = true }
 log = { workspace = true }
 serde = { workspace = true }
