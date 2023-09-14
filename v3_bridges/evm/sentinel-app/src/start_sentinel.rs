@@ -7,7 +7,6 @@ use common_sentinel::{
     BroadcasterMessages,
     CoreMessages,
     EthRpcMessages,
-    MongoMessages,
     SentinelConfig,
     SentinelError,
     WebSocketMessages,
@@ -22,7 +21,6 @@ use crate::{
     broadcaster::broadcaster_loop,
     core::core_loop,
     eth_rpc::eth_rpc_loop,
-    mongo::mongo_loop,
     rpc_server::rpc_server_loop,
     syncer::syncer_loop,
     ws_server::ws_server_loop,
@@ -41,7 +39,6 @@ pub async fn start_sentinel(
     let (core_tx, core_rx): (MpscTx<CoreMessages>, MpscRx<CoreMessages>) = mpsc::channel(MAX_CHANNEL_CAPACITY);
     let (websocket_tx, websocket_rx): (MpscTx<WebSocketMessages>, MpscRx<WebSocketMessages>) =
         mpsc::channel(MAX_CHANNEL_CAPACITY);
-    let (mongo_tx, mongo_rx): (MpscTx<MongoMessages>, MpscRx<MongoMessages>) = mpsc::channel(MAX_CHANNEL_CAPACITY);
 
     let (native_eth_rpc_tx, native_eth_rpc_rx): (MpscTx<EthRpcMessages>, MpscRx<EthRpcMessages>) =
         mpsc::channel(MAX_CHANNEL_CAPACITY);
@@ -69,18 +66,11 @@ pub async fn start_sentinel(
         disable_host_syncer,
     ));
 
-    let core_thread = tokio::spawn(core_loop(
-        config.clone(),
-        core_rx,
-        mongo_tx.clone(),
-        broadcaster_tx.clone(),
-    ));
+    let core_thread = tokio::spawn(core_loop(config.clone(), core_rx, broadcaster_tx.clone()));
     let native_eth_rpc_thread = tokio::spawn(eth_rpc_loop(native_eth_rpc_rx, config.clone()));
     let host_eth_rpc_thread = tokio::spawn(eth_rpc_loop(host_eth_rpc_rx, config.clone()));
-    let mongo_thread = tokio::spawn(mongo_loop(config.mongo().clone(), mongo_rx));
     let broadcaster_thread = tokio::spawn(broadcaster_loop(
         broadcaster_rx,
-        mongo_tx.clone(),
         native_eth_rpc_tx.clone(),
         core_tx.clone(),
         config.clone(),
@@ -88,7 +78,6 @@ pub async fn start_sentinel(
     ));
     let rpc_server_thread = tokio::spawn(rpc_server_loop(
         core_tx.clone(),
-        mongo_tx.clone(),
         host_eth_rpc_tx.clone(),
         native_eth_rpc_tx.clone(),
         websocket_tx.clone(),
@@ -107,25 +96,23 @@ pub async fn start_sentinel(
         flatten_join_handle(native_syncer_thread),
         flatten_join_handle(host_syncer_thread),
         flatten_join_handle(core_thread),
-        flatten_join_handle(mongo_thread),
         flatten_join_handle(rpc_server_thread),
         flatten_join_handle(native_eth_rpc_thread),
         flatten_join_handle(host_eth_rpc_thread),
         flatten_join_handle(broadcaster_thread),
         flatten_join_handle(ws_server_thread),
     ) {
-        Ok((r1, r2, r3, r4, r5, r6, r7, r8, r9)) => Ok(json!({
+        Ok((r1, r2, r3, r4, r5, r6, r7, r8)) => Ok(json!({
             "jsonrpc": "2.0",
             "result": {
                 "native_syncer_thread": r1,
                 "host_syncer_thread": r2,
                 "core_thread": r3,
-                "mongo_thread": r4,
-                "rpc_server_thread": r5,
-                "native_eth_rpc_thread": r6,
-                "host_eth_rpc_thread": r7,
-                "broadcaster_thread": r8,
-                "ws_server_thread": r9,
+                "rpc_server_thread": r4,
+                "native_eth_rpc_thread": r5,
+                "host_eth_rpc_thread": r6,
+                "broadcaster_thread": r7,
+                "ws_server_thread": r8,
             },
         })
         .to_string()),

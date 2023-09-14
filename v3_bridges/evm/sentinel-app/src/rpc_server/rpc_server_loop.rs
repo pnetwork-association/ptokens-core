@@ -7,8 +7,6 @@ use common_sentinel::{
     CoreMessages,
     CoreState,
     EthRpcMessages,
-    HeartbeatsJson,
-    MongoMessages,
     SentinelConfig,
     SentinelError,
     UserOpList,
@@ -30,9 +28,10 @@ use warp::{reject, reject::Reject, Filter, Rejection};
 type RpcId = Option<u64>;
 type RpcParams = Vec<String>;
 type CoreTx = MpscTx<CoreMessages>;
-type MongoTx = MpscTx<MongoMessages>;
 type EthRpcTx = MpscTx<EthRpcMessages>;
 type WebSocketTx = MpscTx<WebSocketMessages>;
+
+// TODO Need to re-instate BPM/HeartbeatsJson stuff, just kept in memory now rather than mongo
 
 const STRONGBOX_TIMEOUT_MS: u64 = 30000; // FIXME make configurable
 
@@ -59,12 +58,6 @@ fn create_json_rpc_response_from_result<T: Serialize>(id: RpcId, r: Result<T, Se
         Ok(r) => create_json_rpc_response(id, r),
         Err(e) => create_json_rpc_error(id, error_code, &e.to_string()),
     }
-}
-
-async fn get_heartbeat_from_mongo(tx: MongoTx) -> Result<HeartbeatsJson, SentinelError> {
-    let (msg, rx) = MongoMessages::get_heartbeats_msg();
-    tx.send(msg).await?;
-    rx.await?
 }
 
 async fn get_core_state_from_db(tx: MpscTx<CoreMessages>, core_type: &CoreType) -> Result<CoreState, SentinelError> {
@@ -131,7 +124,6 @@ struct JsonRpcRequest {
 
 enum RpcCall {
     Ping(RpcId),
-    Bpm(RpcId, MongoTx),
     Unknown(RpcId, String),
     GetUserOps(RpcId, CoreTx),
     GetUserOpList(RpcId, CoreTx),
@@ -149,14 +141,12 @@ impl RpcCall {
         r: JsonRpcRequest,
         config: SentinelConfig,
         core_tx: CoreTx,
-        mongo_tx: MongoTx,
         websocket_tx: WebSocketTx,
         host_eth_rpc_tx: EthRpcTx,
         native_eth_rpc_tx: EthRpcTx,
     ) -> Self {
         match r.method.as_ref() {
             "ping" => Self::Ping(r.id),
-            "bpm" => Self::Bpm(r.id, mongo_tx),
             "getUserOps" => Self::GetUserOps(r.id, core_tx),
             "getUserOpList" => Self::GetUserOpList(r.id, core_tx),
             "syncStatus" => Self::SyncStatus(r.id, core_tx, Box::new(config)),
@@ -357,12 +347,6 @@ impl RpcCall {
                     .await
                     .map_err(convert_error_to_rejection)?,
             ))),
-            Self::Bpm(id, mongo_tx) => Ok(warp::reply::json(&create_json_rpc_response(
-                id,
-                get_heartbeat_from_mongo(mongo_tx)
-                    .await
-                    .map_err(convert_error_to_rejection)?,
-            ))),
             Self::SyncStatus(id, core_tx, config) => {
                 let h_endpoints = config.host().endpoints();
                 let n_endpoints = config.native().endpoints();
@@ -405,7 +389,6 @@ impl RpcCall {
 
 async fn start_rpc_server(
     core_tx: CoreTx,
-    mongo_tx: MongoTx,
     host_eth_rpc_tx: EthRpcTx,
     native_eth_rpc_tx: EthRpcTx,
     websocket_tx: WebSocketTx,
@@ -413,7 +396,6 @@ async fn start_rpc_server(
 ) -> Result<(), SentinelError> {
     debug!("rpc server listening!");
     let core_tx_filter = warp::any().map(move || core_tx.clone());
-    let mongo_tx_filter = warp::any().map(move || mongo_tx.clone());
     let websocket_tx_filter = warp::any().map(move || websocket_tx.clone());
     let host_eth_rpc_tx_filter = warp::any().map(move || host_eth_rpc_tx.clone());
     let native_eth_rpc_tx_filter = warp::any().map(move || native_eth_rpc_tx.clone());
@@ -426,7 +408,6 @@ async fn start_rpc_server(
         .and(warp::body::json::<JsonRpcRequest>())
         .and(warp::any().map(move || config.clone()))
         .and(core_tx_filter.clone())
-        .and(mongo_tx_filter.clone())
         .and(websocket_tx_filter.clone())
         .and(host_eth_rpc_tx_filter.clone())
         .and(native_eth_rpc_tx_filter.clone())
@@ -440,7 +421,6 @@ async fn start_rpc_server(
 
 pub async fn rpc_server_loop(
     core_tx: CoreTx,
-    mongo_tx: MongoTx,
     host_eth_rpc_tx: EthRpcTx,
     native_eth_rpc_tx: EthRpcTx,
     websocket_tx: WebSocketTx,
@@ -454,7 +434,7 @@ pub async fn rpc_server_loop(
     };
     'rpc_server_loop: loop {
         tokio::select! {
-            r = start_rpc_server(core_tx.clone(), mongo_tx.clone(), host_eth_rpc_tx.clone(), native_eth_rpc_tx.clone(), websocket_tx.clone(), config.clone()), if rpc_server_is_enabled => {
+            r = start_rpc_server(core_tx.clone(), host_eth_rpc_tx.clone(), native_eth_rpc_tx.clone(), websocket_tx.clone(), config.clone()), if rpc_server_is_enabled => {
                 if r.is_ok() {
                     warn!("{name} returned, restarting {name} now...");
                     continue 'rpc_server_loop

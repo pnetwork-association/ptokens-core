@@ -8,7 +8,6 @@ use common_sentinel::{
     CoreMessages,
     Env,
     EthRpcMessages,
-    MongoMessages,
     SentinelConfig,
     SentinelError,
     UserOp,
@@ -186,7 +185,6 @@ async fn cancel_user_ops(
 
 pub async fn broadcaster_loop(
     mut rx: MpscRx<BroadcasterMessages>,
-    _mongo_tx: MpscTx<MongoMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     core_tx: MpscTx<CoreMessages>,
     config: SentinelConfig,

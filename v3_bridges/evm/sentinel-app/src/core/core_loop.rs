@@ -4,7 +4,6 @@ use common_sentinel::{
     BroadcasterMessages,
     CoreMessages,
     Heartbeats,
-    MongoMessages,
     NetworkId,
     SentinelConfig,
     SentinelError,
@@ -22,7 +21,6 @@ lazy_static! {
 async fn handle_message(
     config: &SentinelConfig,
     msg: CoreMessages,
-    mongo_tx: MpscTx<MongoMessages>,
     broadcaster_tx: MpscTx<BroadcasterMessages>,
     n_origin_network_id: Bytes4,
     h_origin_network_id: Bytes4,
@@ -194,7 +192,6 @@ async fn handle_message(
 pub async fn core_loop(
     config: SentinelConfig,
     _core_rx: MpscRx<CoreMessages>,
-    _mongo_tx: MpscTx<MongoMessages>,
     _broadcaster_tx: MpscTx<BroadcasterMessages>,
 ) -> Result<(), SentinelError> {
     info!("core listening...");

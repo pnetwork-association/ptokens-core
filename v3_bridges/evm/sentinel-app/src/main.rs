@@ -1,7 +1,6 @@
 mod broadcaster;
 mod core;
 mod eth_rpc;
-mod mongo;
 mod rpc_server;
 mod start_sentinel;
 mod syncer;
