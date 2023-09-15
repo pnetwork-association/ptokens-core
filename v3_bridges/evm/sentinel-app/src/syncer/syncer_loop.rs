@@ -155,6 +155,7 @@ async fn broadcast_channel_loop(
                     break 'broadcast_channel_loop Ok(msg);
                 } else {
                     // ...but it's not for this syncer so we go back to listening on the receiver
+                    debug!("syncer message: '{msg}' for cid: '{cid}' ignored");
                     continue 'broadcast_channel_loop;
                 }
             },

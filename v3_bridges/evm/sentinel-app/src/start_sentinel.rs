@@ -107,7 +107,6 @@ pub async fn start_sentinel(
         config.clone(),
         disable_rpc_server,
         broadcast_channel_tx.clone(),
-        broadcast_channel_tx.subscribe(),
     ));
 
     let ws_server_thread = tokio::spawn(ws_server_loop(

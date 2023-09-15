@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use common::{BridgeSide, CoreType};
+use common_chain_ids::EthChainId;
 use common_eth::{convert_hex_to_h256, EthSubmissionMaterials};
 use common_sentinel::{
     get_latest_block_num,
@@ -10,6 +11,7 @@ use common_sentinel::{
     EthRpcMessages,
     SentinelConfig,
     SentinelError,
+    SyncerBroadcastChannelMessages,
     UserOpList,
     UserOps,
     WebSocketMessages,
@@ -21,10 +23,7 @@ use jsonrpsee::ws_client::WsClient;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 use tokio::{
-    sync::{
-        broadcast::{Receiver as MpMcRx, Sender as MpMcTx},
-        mpsc::Sender as MpscTx,
-    },
+    sync::{broadcast::Sender as MpmcTx, mpsc::Sender as MpscTx},
     time::{sleep, Duration},
 };
 use warp::{reject, reject::Reject, Filter, Rejection};
@@ -34,6 +33,7 @@ type RpcParams = Vec<String>;
 type CoreTx = MpscTx<CoreMessages>;
 type EthRpcTx = MpscTx<EthRpcMessages>;
 type WebSocketTx = MpscTx<WebSocketMessages>;
+type BroadcastChannelTx = MpmcTx<BroadcastChannelMessages>;
 
 // TODO Need to re-instate BPM/HeartbeatsJson stuff, just kept in memory now rather than mongo
 
@@ -123,7 +123,7 @@ async fn get_sync_status(
 struct JsonRpcRequest {
     id: RpcId,
     method: String,
-    params: Vec<String>,
+    params: RpcParams,
 }
 
 enum RpcCall {
@@ -135,6 +135,8 @@ enum RpcCall {
     RemoveUserOp(RpcId, CoreTx, RpcParams),
     LatestBlockNumbers(RpcId, WebSocketTx),
     SyncStatus(RpcId, CoreTx, Box<SentinelConfig>),
+    StopSyncer(RpcId, BroadcastChannelTx, RpcParams),
+    StartSyncer(RpcId, BroadcastChannelTx, RpcParams),
     Init(RpcId, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams),
     SubmitBlock(RpcId, Box<SentinelConfig>, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams),
 }
@@ -148,6 +150,7 @@ impl RpcCall {
         websocket_tx: WebSocketTx,
         host_eth_rpc_tx: EthRpcTx,
         native_eth_rpc_tx: EthRpcTx,
+        broadcast_channel_tx: BroadcastChannelTx,
     ) -> Self {
         match r.method.as_ref() {
             "ping" => Self::Ping(r.id),
@@ -155,7 +158,9 @@ impl RpcCall {
             "getUserOpList" => Self::GetUserOpList(r.id, core_tx),
             "syncStatus" => Self::SyncStatus(r.id, core_tx, Box::new(config)),
             "removeUserOp" => Self::RemoveUserOp(r.id, core_tx, r.params.clone()),
+            "stopSyncer" => Self::StopSyncer(r.id, broadcast_channel_tx, r.params.clone()),
             "latestBlockNumbers" | "latest" => Self::LatestBlockNumbers(r.id, websocket_tx),
+            "startSyncer" => Self::StartSyncer(r.id, broadcast_channel_tx, r.params.clone()),
             "getCoreState" | "getEnclaveState" | "state" => Self::GetCoreState(r.id, websocket_tx),
             "init" => Self::Init(r.id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, r.params.clone()),
             "submitBlock" | "submit" => Self::SubmitBlock(
@@ -170,7 +175,7 @@ impl RpcCall {
         }
     }
 
-    fn create_args(_cmd: &str, params: Vec<String>) -> Vec<String> {
+    fn create_args(_cmd: &str, params: RpcParams) -> RpcParams {
         [vec!["init".to_string()], params].concat()
     }
 
@@ -178,7 +183,7 @@ impl RpcCall {
         websocket_tx: WebSocketTx,
         host_eth_rpc_tx: EthRpcTx,
         native_eth_rpc_tx: EthRpcTx,
-        params: Vec<String>,
+        params: RpcParams,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
         // NOTE: Get the latest host & native block numbers from the ETH RPC
         let (host_latest_block_num_msg, host_latest_block_num_responder) =
@@ -231,20 +236,12 @@ impl RpcCall {
         host_eth_rpc_tx: EthRpcTx,
         native_eth_rpc_tx: EthRpcTx,
         websocket_tx: WebSocketTx,
-        params: Vec<String>,
+        params: RpcParams,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        let expected_num_args = 4;
-        if params.len() != expected_num_args {
-            return Err(WebSocketMessagesError::NotEnoughArgs {
-                got: params.len(),
-                expected: expected_num_args,
-                args: params,
-            }
-            .into());
-        };
+        let checked_params = Self::check_params(params, 4)?;
 
-        let side = BridgeSide::from_str(&params[0])?;
-        let block_num = params[1].parse::<u64>()?;
+        let side = BridgeSide::from_str(&checked_params[0])?;
+        let block_num = checked_params[1].parse::<u64>()?;
         let (eth_rpc_msg, responder) = EthRpcMessages::get_sub_mat_msg(side, block_num);
         if side.is_host() {
             host_eth_rpc_tx.send(eth_rpc_msg).await?;
@@ -253,8 +250,8 @@ impl RpcCall {
         };
         let sub_mat = responder.await??;
 
-        let dry_run = matches!(params[2].as_ref(), "true");
-        let reprocess = matches!(params[3].as_ref(), "true");
+        let dry_run = matches!(checked_params[2].as_ref(), "true");
+        let reprocess = matches!(checked_params[3].as_ref(), "true");
 
         let submit_args = WebSocketMessagesSubmitArgs::new(
             dry_run,
@@ -276,6 +273,18 @@ impl RpcCall {
                 error!("timed out whilst {m}");
                 Err(SentinelError::Timedout(m.into()))
             }
+        }
+    }
+
+    fn check_params(params: RpcParams, required_num_params: usize) -> Result<RpcParams, WebSocketMessagesError> {
+        if params.len() != required_num_params {
+            Err(WebSocketMessagesError::NotEnoughArgs {
+                got: params.len(),
+                expected: required_num_params,
+                args: params,
+            })
+        } else {
+            Ok(params)
         }
     }
 
@@ -309,9 +318,39 @@ impl RpcCall {
         }
     }
 
+    async fn handle_syncer_start_stop(
+        broadcast_channel_tx: BroadcastChannelTx,
+        params: RpcParams,
+        stop: bool,
+    ) -> Result<Json, SentinelError> {
+        debug!("handling stop syncer rpc call...");
+        let checked_params = Self::check_params(params, 1)?;
+        let cid = EthChainId::from_str(&checked_params[0])?;
+        let syncer_msg = if stop {
+            SyncerBroadcastChannelMessages::Stop
+        } else {
+            SyncerBroadcastChannelMessages::Start
+        };
+        let m = if stop { "stop" } else { "start" };
+        let json = json!({"status": format!("{m} message sent to {cid} syncer")});
+        let broadcast_channel_msg = BroadcastChannelMessages::Syncer(cid, syncer_msg);
+        broadcast_channel_tx.send(broadcast_channel_msg)?;
+        Ok(json)
+    }
+
     async fn handle(self) -> Result<impl warp::Reply, Rejection> {
+        // TODO rm repetition in here.
         match self {
-            // TODO rm repetition in here.
+            Self::StopSyncer(id, broadcast_channel_tx, params) => {
+                let result = Self::handle_syncer_start_stop(broadcast_channel_tx, params, true).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
+            Self::StartSyncer(id, broadcast_channel_tx, params) => {
+                let result = Self::handle_syncer_start_stop(broadcast_channel_tx, params, false).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
             Self::LatestBlockNumbers(id, websocket_tx) => {
                 let result = Self::handle_get_latest_block_numbers(websocket_tx).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
@@ -397,12 +436,14 @@ async fn start_rpc_server(
     native_eth_rpc_tx: EthRpcTx,
     websocket_tx: WebSocketTx,
     config: SentinelConfig,
+    broadcast_channel_tx: BroadcastChannelTx,
 ) -> Result<(), SentinelError> {
     debug!("rpc server listening!");
     let core_tx_filter = warp::any().map(move || core_tx.clone());
     let websocket_tx_filter = warp::any().map(move || websocket_tx.clone());
     let host_eth_rpc_tx_filter = warp::any().map(move || host_eth_rpc_tx.clone());
     let native_eth_rpc_tx_filter = warp::any().map(move || native_eth_rpc_tx.clone());
+    let broadcast_channel_tx_filter = warp::any().map(move || broadcast_channel_tx.clone());
 
     let rpc = warp::path("v1")
         .and(warp::path("rpc"))
@@ -415,6 +456,7 @@ async fn start_rpc_server(
         .and(websocket_tx_filter.clone())
         .and(host_eth_rpc_tx_filter.clone())
         .and(native_eth_rpc_tx_filter.clone())
+        .and(broadcast_channel_tx_filter.clone())
         .map(RpcCall::new)
         .and_then(|r: RpcCall| async move { r.handle().await });
 
@@ -431,8 +473,7 @@ pub async fn rpc_server_loop(
     websocket_tx: WebSocketTx,
     config: SentinelConfig,
     disable: bool,
-    _broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
-    _broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
+    broadcast_channel_tx: BroadcastChannelTx,
 ) -> Result<(), SentinelError> {
     let rpc_server_is_enabled = !disable;
     let name = "rpc server";
@@ -441,7 +482,14 @@ pub async fn rpc_server_loop(
     };
     'rpc_server_loop: loop {
         tokio::select! {
-            r = start_rpc_server(core_tx.clone(), host_eth_rpc_tx.clone(), native_eth_rpc_tx.clone(), websocket_tx.clone(), config.clone()), if rpc_server_is_enabled => {
+            r = start_rpc_server(
+                core_tx.clone(),
+                host_eth_rpc_tx.clone(),
+                native_eth_rpc_tx.clone(),
+                websocket_tx.clone(),
+                config.clone(),
+                broadcast_channel_tx.clone(),
+            ), if rpc_server_is_enabled => {
                 if r.is_ok() {
                     warn!("{name} returned, restarting {name} now...");
                     continue 'rpc_server_loop
