@@ -2,6 +2,7 @@ use std::fmt;
 
 use common::BridgeSide;
 use serde::{Deserialize, Serialize};
+use serde_json::Value as Json;
 
 use crate::{get_utc_timestamp, SentinelError, UserOps};
 
@@ -41,6 +42,14 @@ impl ProcessorOutput {
 
     pub fn has_user_ops(&self) -> bool {
         !self.processed_user_ops.is_empty()
+    }
+}
+
+impl TryFrom<Json> for ProcessorOutput {
+    type Error = SentinelError;
+
+    fn try_from(j: Json) -> Result<Self, SentinelError> {
+        Ok(serde_json::from_value(j)?)
     }
 }
 

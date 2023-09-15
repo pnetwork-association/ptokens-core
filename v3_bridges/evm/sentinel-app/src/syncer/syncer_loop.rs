@@ -97,6 +97,7 @@ async fn main_loop(
                 match websocket_response {
                     Ok(WebSocketMessagesEncodable::Success(output)) => {
                         debug!("{log_prefix} websocket channel returned success output: {output}");
+                        batch.update_bpm_from_json(output);
                         batch.increment_block_num();
                     },
                     Ok(WebSocketMessagesEncodable::Error(WebSocketMessagesError::NoParent(e))) => {

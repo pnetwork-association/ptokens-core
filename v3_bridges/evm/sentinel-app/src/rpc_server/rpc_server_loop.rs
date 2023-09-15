@@ -39,8 +39,6 @@ type WebSocketTx = MpscTx<WebSocketMessages>;
 type BroadcastChannelTx = MpmcTx<BroadcastChannelMessages>;
 type BroadcastChannelRx = MpmcRx<BroadcastChannelMessages>;
 
-// TODO Need to re-instate BPM/HeartbeatsJson stuff, just kept in memory now rather than mongo
-
 const STRONGBOX_TIMEOUT_MS: u64 = 30000; // FIXME make configurable
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

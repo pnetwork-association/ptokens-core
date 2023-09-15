@@ -26,7 +26,7 @@ pub async fn get_block(
     ws_client: &WsClient,
     block_num: u64,
     sleep_time: u64,
-    side: BridgeSide,
+    side: BridgeSide, // FIXME use cid for this!
 ) -> Result<EthBlock, SentinelError> {
     let mut attempt = 1;
     loop {

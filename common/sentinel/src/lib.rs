@@ -1,4 +1,5 @@
 mod batching;
+mod bpm;
 mod check_init;
 mod constants;
 mod core_state;
@@ -9,7 +10,6 @@ mod error;
 mod eth_rpc_calls;
 mod flatten_join_handle;
 mod get_rpc_client;
-mod heartbeat;
 mod latest_block_numbers;
 mod logging;
 mod messages;
@@ -24,6 +24,7 @@ mod utils;
 
 pub use self::{
     batching::Batch,
+    bpm::{Bpm, BpmInfo, Bpms},
     check_init::check_init,
     constants::{DEFAULT_SLEEP_TIME, HOST_PROTOCOL_ID, MILLISECONDS_MULTIPLIER, NATIVE_PROTOCOL_ID},
     core_state::CoreState,
@@ -46,7 +47,6 @@ pub use self::{
     },
     flatten_join_handle::flatten_join_handle,
     get_rpc_client::get_rpc_client,
-    heartbeat::{HeartbeatInfo, Heartbeats, HeartbeatsJson},
     latest_block_numbers::{LatestBlockNumber, LatestBlockNumbers},
     logging::{init_logger, LogLevel},
     messages::{

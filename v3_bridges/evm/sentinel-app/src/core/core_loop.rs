@@ -4,7 +4,6 @@ use common_sentinel::{
     BroadcastChannelMessages,
     BroadcasterMessages,
     CoreMessages,
-    Heartbeats,
     NetworkId,
     SentinelConfig,
     SentinelError,
@@ -15,11 +14,6 @@ use tokio::sync::{
     broadcast::{Receiver as MpMcRx, Sender as MpMcTx},
     mpsc::{Receiver as MpscRx, Sender as MpscTx},
 };
-
-lazy_static! {
-    // NOTE: This is just used to give a quick RPC-access way to see how fast the sentinel is syncing
-    static ref HEARTBEATS: std::sync::Mutex<Heartbeats> = std::sync::Mutex::new(Heartbeats::new());
-}
 
 /*
 async fn handle_message(

@@ -1,14 +1,17 @@
 use std::{result::Result, time::SystemTime};
 
 use common::BridgeSide;
+use common_chain_ids::EthChainId;
 use common_eth::{EthSubmissionMaterial, EthSubmissionMaterials};
 use ethereum_types::{Address as EthAddress, U256};
 use jsonrpsee::ws_client::WsClient;
+use serde_json::Value as Json;
 
-use crate::{endpoints::Endpoints, ConfigT, SentinelConfig, SentinelError};
+use crate::{endpoints::Endpoints, Bpm, ConfigT, ProcessorOutput, SentinelConfig, SentinelError};
 
 #[derive(Debug, Clone)]
 pub struct Batch {
+    bpm: Bpm,
     confs: u64,
     block_num: u64,
     batch_size: u64,
@@ -30,6 +33,7 @@ impl Default for Batch {
             block_num: 0,
             batch_size: 1,
             sleep_duration: 0,
+            bpm: Bpm::default(),
             batch_duration: 300, // NOTE: 5mins
             side: BridgeSide::default(),
             batching_is_disabled: false,
@@ -75,8 +79,26 @@ impl Batch {
         self.block_num
     }
 
-    pub fn new() -> Self {
-        Self::default()
+    pub fn update_bpm_from_json(&mut self, j: Json) {
+        let err_msg = format!("error converting json: '{j}' to processor output:");
+        match ProcessorOutput::try_from(j) {
+            Ok(ref o) => self.update_bpm(o),
+            Err(e) => {
+                warn!("{err_msg}: {e}");
+                warn!("not updating {} syncer bpm", self.bpm.cid());
+            },
+        }
+    }
+
+    pub fn update_bpm(&mut self, o: &ProcessorOutput) {
+        self.bpm.push(o)
+    }
+
+    pub fn new(cid: EthChainId) -> Self {
+        Self {
+            bpm: Bpm::new(cid),
+            ..Default::default()
+        }
     }
 
     pub async fn get_first_ws_client(&self) -> Result<WsClient, SentinelError> {
@@ -124,6 +146,7 @@ impl Batch {
             } else {
                 config.host().pnetwork_hub()
             },
+            bpm: Bpm::new(config.chain_id(&side)),
             ..Default::default()
         };
         if res.endpoints.is_empty() {
