@@ -183,6 +183,7 @@ pub async fn syncer_loop(
     } else {
         info!("starting {name}...")
     };
+    let mut core_is_connected = false;
     let mut syncer_is_enabled = !disable;
 
     'syncer_loop: loop {
@@ -190,17 +191,28 @@ pub async fn syncer_loop(
             r = broadcast_channel_loop(chain_id.clone(), broadcast_channel_tx.subscribe()) => {
                 match r {
                     Ok(msg) => {
+                        let note = format!("(core is currently {core_is_connected})");
                         match msg {
                             SyncerBroadcastChannelMessages::Stop => {
-                                debug!("msg received to stop the {side} syncer");
+                                debug!("msg received to stop the {name} {note}");
                                 syncer_is_enabled = false;
                                 continue 'syncer_loop
                             },
                             SyncerBroadcastChannelMessages::Start => {
-                                debug!("msg received to start the {side} syncer");
+                                debug!("msg received to start the {name} {note}");
                                 syncer_is_enabled = true;
                                 continue 'syncer_loop
-                            }
+                            },
+                            SyncerBroadcastChannelMessages::CoreConnected => {
+                                debug!("core connected message received in {name} {note}");
+                                core_is_connected = true;
+                                continue 'syncer_loop
+                            },
+                            SyncerBroadcastChannelMessages::CoreDisconnected => {
+                                debug!("core disconnected message received in {name} {note}");
+                                core_is_connected = false;
+                                continue 'syncer_loop
+                            },
                         }
                     },
                     Err(e) => break 'syncer_loop Err(e),
@@ -212,7 +224,7 @@ pub async fn syncer_loop(
                 core_tx.clone(),
                 eth_rpc_tx.clone(),
                 websocket_tx.clone(),
-            ), if syncer_is_enabled => {
+            ), if core_is_connected && syncer_is_enabled => {
                 match r {
                     Ok(_)  => {
                         warn!("{name} returned, restarting {name} now...");

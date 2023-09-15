@@ -105,11 +105,11 @@ async fn handle_socket(
     // NOTE: Trying the lock here limits us to one active connection.
     let mut rx = websocket_rx.try_lock()?;
 
-    // NOTE: Now that something is connected, tell the syncers to begin their work.
-    for cid in cids {
+    for cid in cids.iter().cloned() {
+        // NOTE: Tell the syncers that a core is connected.
         broadcast_channel_tx.send(BroadcastChannelMessages::Syncer(
             cid,
-            SyncerBroadcastChannelMessages::Start,
+            SyncerBroadcastChannelMessages::CoreConnected,
         ))?;
     }
 
@@ -165,6 +165,14 @@ async fn handle_socket(
                 }
             },
         }
+    }
+
+    for cid in cids {
+        // NOTE: Tell the syncers that a core is no longer connected.
+        broadcast_channel_tx.send(BroadcastChannelMessages::Syncer(
+            cid,
+            SyncerBroadcastChannelMessages::CoreDisconnected,
+        ))?;
     }
 
     error!("websocket context {who} destroyed");
