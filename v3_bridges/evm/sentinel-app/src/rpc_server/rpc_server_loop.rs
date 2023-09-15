@@ -1,13 +1,12 @@
-use std::{str::FromStr, sync::Mutex};
+use std::str::FromStr;
 
-use common::{BridgeSide, CoreType};
+use common::BridgeSide;
 use common_chain_ids::EthChainId;
 use common_eth::{convert_hex_to_h256, EthSubmissionMaterials};
 use common_sentinel::{
     get_latest_block_num,
     BroadcastChannelMessages,
     CoreMessages,
-    CoreState,
     EthRpcMessages,
     RpcServerBroadcastChannelMessages,
     SentinelConfig,
@@ -44,23 +43,6 @@ type BroadcastChannelRx = MpmcRx<BroadcastChannelMessages>;
 
 const STRONGBOX_TIMEOUT_MS: u64 = 30000; // FIXME make configurable
 
-#[derive(Debug, Copy, Clone, Default)]
-struct CoreConnectionStatus(bool);
-
-impl CoreConnectionStatus {
-    fn set_to_connected(mut self) {
-        self.0 = true
-    }
-
-    fn set_to_disconnected(mut self) {
-        self.0 = false
-    }
-}
-
-lazy_static! {
-    static ref CORE_CONNECTION_STATUS: Mutex<CoreConnectionStatus> = Mutex::new(CoreConnectionStatus::default());
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Error(String);
 
@@ -84,12 +66,6 @@ fn create_json_rpc_response_from_result<T: Serialize>(id: RpcId, r: Result<T, Se
         Ok(r) => create_json_rpc_response(id, r),
         Err(e) => create_json_rpc_error(id, error_code, &e.to_string()),
     }
-}
-
-async fn get_core_state_from_db(tx: MpscTx<CoreMessages>, core_type: &CoreType) -> Result<CoreState, SentinelError> {
-    let (msg, rx) = CoreMessages::get_core_state_msg(core_type);
-    tx.send(msg).await?;
-    rx.await?
 }
 
 async fn get_user_ops_from_core(tx: MpscTx<CoreMessages>) -> Result<UserOps, SentinelError> {
@@ -151,19 +127,27 @@ struct JsonRpcRequest {
 enum RpcCall {
     Ping(RpcId),
     Unknown(RpcId, String),
-    GetUserOps(RpcId, CoreTx),
-    GetUserOpList(RpcId, CoreTx),
-    GetCoreState(RpcId, WebSocketTx),
-    RemoveUserOp(RpcId, CoreTx, RpcParams),
-    LatestBlockNumbers(RpcId, WebSocketTx),
+    GetUserOps(RpcId, CoreTx, bool),
+    GetUserOpList(RpcId, CoreTx, bool),
+    GetCoreState(RpcId, WebSocketTx, bool),
+    RemoveUserOp(RpcId, CoreTx, RpcParams, bool),
+    LatestBlockNumbers(RpcId, WebSocketTx, bool),
     SyncStatus(RpcId, CoreTx, Box<SentinelConfig>),
-    StopSyncer(RpcId, BroadcastChannelTx, RpcParams),
-    StartSyncer(RpcId, BroadcastChannelTx, RpcParams),
-    Init(RpcId, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams),
-    SubmitBlock(RpcId, Box<SentinelConfig>, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams),
+    StopSyncer(RpcId, BroadcastChannelTx, RpcParams, bool),
+    StartSyncer(RpcId, BroadcastChannelTx, RpcParams, bool),
+    Init(RpcId, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams, bool),
+    SubmitBlock(
+        RpcId,
+        Box<SentinelConfig>,
+        EthRpcTx,
+        EthRpcTx,
+        WebSocketTx,
+        RpcParams,
+        bool,
+    ),
 }
 
-// TODO enum for error types with codes etc,then impl into for the rpc error type
+#[allow(clippy::too_many_arguments)]
 impl RpcCall {
     fn new(
         r: JsonRpcRequest,
@@ -173,18 +157,26 @@ impl RpcCall {
         host_eth_rpc_tx: EthRpcTx,
         native_eth_rpc_tx: EthRpcTx,
         broadcast_channel_tx: BroadcastChannelTx,
+        core_cxn: bool,
     ) -> Self {
         match r.method.as_ref() {
             "ping" => Self::Ping(r.id),
-            "getUserOps" => Self::GetUserOps(r.id, core_tx),
-            "getUserOpList" => Self::GetUserOpList(r.id, core_tx),
+            "getUserOps" => Self::GetUserOps(r.id, core_tx, core_cxn),
+            "getUserOpList" => Self::GetUserOpList(r.id, core_tx, core_cxn),
             "syncStatus" => Self::SyncStatus(r.id, core_tx, Box::new(config)),
-            "removeUserOp" => Self::RemoveUserOp(r.id, core_tx, r.params.clone()),
-            "stopSyncer" => Self::StopSyncer(r.id, broadcast_channel_tx, r.params.clone()),
-            "latestBlockNumbers" | "latest" => Self::LatestBlockNumbers(r.id, websocket_tx),
-            "startSyncer" => Self::StartSyncer(r.id, broadcast_channel_tx, r.params.clone()),
-            "getCoreState" | "getEnclaveState" | "state" => Self::GetCoreState(r.id, websocket_tx),
-            "init" => Self::Init(r.id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, r.params.clone()),
+            "removeUserOp" => Self::RemoveUserOp(r.id, core_tx, r.params.clone(), core_cxn),
+            "stopSyncer" => Self::StopSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
+            "latestBlockNumbers" | "latest" => Self::LatestBlockNumbers(r.id, websocket_tx, core_cxn),
+            "startSyncer" => Self::StartSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
+            "getCoreState" | "getEnclaveState" | "state" => Self::GetCoreState(r.id, websocket_tx, core_cxn),
+            "init" => Self::Init(
+                r.id,
+                host_eth_rpc_tx,
+                native_eth_rpc_tx,
+                websocket_tx,
+                r.params.clone(),
+                core_cxn,
+            ),
             "submitBlock" | "submit" => Self::SubmitBlock(
                 r.id,
                 Box::new(config),
@@ -192,6 +184,7 @@ impl RpcCall {
                 native_eth_rpc_tx,
                 websocket_tx,
                 r.params.clone(),
+                core_cxn,
             ),
             _ => Self::Unknown(r.id, r.method.clone()),
         }
@@ -206,8 +199,9 @@ impl RpcCall {
         host_eth_rpc_tx: EthRpcTx,
         native_eth_rpc_tx: EthRpcTx,
         params: RpcParams,
+        core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        check_core_is_connected()?;
+        check_core_is_connected(core_cxn)?;
         // NOTE: Get the latest host & native block numbers from the ETH RPC
         let (host_latest_block_num_msg, host_latest_block_num_responder) =
             EthRpcMessages::get_latest_block_num_msg(BridgeSide::Host);
@@ -260,8 +254,9 @@ impl RpcCall {
         native_eth_rpc_tx: EthRpcTx,
         websocket_tx: WebSocketTx,
         params: RpcParams,
+        core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        check_core_is_connected()?;
+        check_core_is_connected(core_cxn)?;
         let checked_params = Self::check_params(params, 4)?;
 
         let side = BridgeSide::from_str(&checked_params[0])?;
@@ -312,8 +307,11 @@ impl RpcCall {
         }
     }
 
-    async fn handle_get_core_state(websocket_tx: WebSocketTx) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        check_core_is_connected()?;
+    async fn handle_get_core_state(
+        websocket_tx: WebSocketTx,
+        core_cxn: bool,
+    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        check_core_is_connected(core_cxn)?;
         let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetCoreState);
         websocket_tx.send(msg).await?;
 
@@ -329,8 +327,9 @@ impl RpcCall {
 
     async fn handle_get_latest_block_numbers(
         websocket_tx: WebSocketTx,
+        core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        check_core_is_connected()?;
+        check_core_is_connected(core_cxn)?;
         let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetLatestBlockNumbers);
         websocket_tx.send(msg).await?;
 
@@ -348,9 +347,10 @@ impl RpcCall {
         broadcast_channel_tx: BroadcastChannelTx,
         params: RpcParams,
         stop: bool,
+        core_cxn: bool,
     ) -> Result<Json, SentinelError> {
         debug!("handling stop syncer rpc call...");
-        check_core_is_connected()?;
+        check_core_is_connected(core_cxn)?;
         let checked_params = Self::check_params(params, 1)?;
         let cid = EthChainId::from_str(&checked_params[0])?;
         let syncer_msg = if stop {
@@ -368,30 +368,38 @@ impl RpcCall {
     async fn handle(self) -> Result<impl warp::Reply, Rejection> {
         // TODO rm repetition in here.
         match self {
-            Self::StopSyncer(id, broadcast_channel_tx, params) => {
-                let result = Self::handle_syncer_start_stop(broadcast_channel_tx, params, true).await;
+            Self::StopSyncer(id, broadcast_channel_tx, params, core_cxn) => {
+                let result = Self::handle_syncer_start_stop(broadcast_channel_tx, params, true, core_cxn).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
-            Self::StartSyncer(id, broadcast_channel_tx, params) => {
-                let result = Self::handle_syncer_start_stop(broadcast_channel_tx, params, false).await;
+            Self::StartSyncer(id, broadcast_channel_tx, params, core_cxn) => {
+                let result = Self::handle_syncer_start_stop(broadcast_channel_tx, params, false, core_cxn).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
-            Self::LatestBlockNumbers(id, websocket_tx) => {
-                let result = Self::handle_get_latest_block_numbers(websocket_tx).await;
+            Self::LatestBlockNumbers(id, websocket_tx, core_cxn) => {
+                let result = Self::handle_get_latest_block_numbers(websocket_tx, core_cxn).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
-            Self::SubmitBlock(id, config, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params) => {
-                let result =
-                    Self::handle_submit_block(*config, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params).await;
+            Self::SubmitBlock(id, config, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params, core_cxn) => {
+                let result = Self::handle_submit_block(
+                    *config,
+                    host_eth_rpc_tx,
+                    native_eth_rpc_tx,
+                    websocket_tx,
+                    params,
+                    core_cxn,
+                )
+                .await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
             Self::Ping(id) => Ok(warp::reply::json(&create_json_rpc_response(id, "pong"))),
-            Self::Init(id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params) => {
-                let result = Self::handle_init(websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, params).await;
+            Self::Init(id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params, core_cxn) => {
+                let result =
+                    Self::handle_init(websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, params, core_cxn).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
@@ -400,18 +408,18 @@ impl RpcCall {
                 1, // FIXME arbitrary
                 &format!("unknown method: {method}"),
             ))),
-            Self::GetCoreState(id, websocket_tx) => {
-                let result = Self::handle_get_core_state(websocket_tx).await;
+            Self::GetCoreState(id, websocket_tx, core_cxn) => {
+                let result = Self::handle_get_core_state(websocket_tx, core_cxn).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
-            Self::GetUserOps(id, core_tx) => Ok(warp::reply::json(&create_json_rpc_response(
+            Self::GetUserOps(id, core_tx, _core_cxn) => Ok(warp::reply::json(&create_json_rpc_response(
                 id,
                 get_user_ops_from_core(core_tx)
                     .await
                     .map_err(convert_error_to_rejection)?,
             ))),
-            Self::GetUserOpList(id, core_tx) => Ok(warp::reply::json(&create_json_rpc_response(
+            Self::GetUserOpList(id, core_tx, _core_cxn) => Ok(warp::reply::json(&create_json_rpc_response(
                 id,
                 get_user_ops_list_from_core(core_tx)
                     .await
@@ -441,7 +449,7 @@ impl RpcCall {
                     .map_err(convert_error_to_rejection)?,
                 )))
             },
-            Self::RemoveUserOp(id, core_tx, params) => {
+            Self::RemoveUserOp(id, core_tx, params, _core_cxn) => {
                 if params.is_empty() {
                     return Ok(warp::reply::json(&create_json_rpc_error(id, 1, "no params provided")));
                 };
@@ -464,9 +472,11 @@ async fn start_rpc_server(
     websocket_tx: WebSocketTx,
     config: SentinelConfig,
     broadcast_channel_tx: BroadcastChannelTx,
+    core_cxn: bool,
 ) -> Result<(), SentinelError> {
     debug!("rpc server listening!");
     let core_tx_filter = warp::any().map(move || core_tx.clone());
+    let core_cxn_filter = warp::any().map(move || core_cxn);
     let websocket_tx_filter = warp::any().map(move || websocket_tx.clone());
     let host_eth_rpc_tx_filter = warp::any().map(move || host_eth_rpc_tx.clone());
     let native_eth_rpc_tx_filter = warp::any().map(move || native_eth_rpc_tx.clone());
@@ -484,6 +494,7 @@ async fn start_rpc_server(
         .and(host_eth_rpc_tx_filter.clone())
         .and(native_eth_rpc_tx_filter.clone())
         .and(broadcast_channel_tx_filter.clone())
+        .and(core_cxn_filter)
         .map(RpcCall::new)
         .and_then(|r: RpcCall| async move { r.handle().await });
 
@@ -492,51 +503,23 @@ async fn start_rpc_server(
     Ok(())
 }
 
-fn get_core_connection_status() -> Result<bool, SentinelError> {
-    get_core_connection().map(|cxn| cxn.0)
-}
-
-fn set_core_connection_status(status: bool) -> Result<(), SentinelError> {
-    let cxn = get_core_connection()?;
-    if status {
-        cxn.set_to_connected()
+fn check_core_is_connected(is_connected: bool) -> Result<(), SentinelError> {
+    if is_connected {
+        Ok(())
     } else {
-        cxn.set_to_disconnected()
-    };
-    Ok(())
-}
-
-fn get_core_connection() -> Result<CoreConnectionStatus, SentinelError> {
-    Ok(*CORE_CONNECTION_STATUS
-        .lock()
-        .map_err(|_| SentinelError::PoisonedLock("CORE_CONNECTION_STATUS in rpc server".into()))?)
-}
-
-fn check_core_is_connected() -> Result<(), SentinelError> {
-    get_core_connection_status().and_then(|status| if status { Ok(()) } else { Err(SentinelError::NoCore) })
+        Err(SentinelError::NoCore)
+    }
 }
 
 async fn broadcast_channel_loop(
     mut broadcast_channel_rx: BroadcastChannelRx,
+    _core_connection: bool,
 ) -> Result<RpcServerBroadcastChannelMessages, SentinelError> {
     'broadcast_channel_loop: loop {
         match broadcast_channel_rx.recv().await {
             Ok(BroadcastChannelMessages::RpcServer(msg)) => {
-                // NOTE: We have a pertinent message...
-                match msg {
-                    RpcServerBroadcastChannelMessages::CoreConnected => {
-                        // NOTE: We don't need to return here to handle this message, plus doing so
-                        // would should down the server anyway which we don't need to do at this
-                        // moment;
-                        set_core_connection_status(true)?;
-                        continue 'broadcast_channel_loop;
-                    },
-                    RpcServerBroadcastChannelMessages::CoreDisconnected => {
-                        // NOTE: Ibid
-                        set_core_connection_status(false)?;
-                        continue 'broadcast_channel_loop;
-                    },
-                }
+                // NOTE: We have a pertinent message, break and send it to the rpc_server_loop...
+                break 'broadcast_channel_loop Ok(msg);
             },
             Ok(_) => continue 'broadcast_channel_loop, // NOTE: The message wasn't for the syncer
             Err(e) => break 'broadcast_channel_loop Err(e.into()),
@@ -559,13 +542,23 @@ pub async fn rpc_server_loop(
     if disable {
         warn!("{name} disabled!")
     };
+
+    let mut core_connection_status = false;
+
     'rpc_server_loop: loop {
         tokio::select! {
-            r = broadcast_channel_loop(broadcast_channel_tx.subscribe()) => {
-                // NOTE: Currently there are no messages from the broadcast channel that we'd need
-                // to handle here, so we just continue the loop in case of returns
-                debug!("brodacast channel loop in rpc server returned: {r:?}");
-                continue 'rpc_server_loop
+            r = broadcast_channel_loop(broadcast_channel_tx.subscribe(), core_connection_status) => {
+                match r {
+                    Ok(RpcServerBroadcastChannelMessages::CoreConnected) => {
+                        core_connection_status = true;
+                        continue 'rpc_server_loop
+                    },
+                    Ok(RpcServerBroadcastChannelMessages::CoreDisconnected) => {
+                        core_connection_status = false;
+                        continue 'rpc_server_loop
+                    },
+                    Err(e) => break 'rpc_server_loop Err(e),
+                }
             },
             r = start_rpc_server(
                 core_tx.clone(),
@@ -574,6 +567,7 @@ pub async fn rpc_server_loop(
                 websocket_tx.clone(),
                 config.clone(),
                 broadcast_channel_tx.clone(),
+                core_connection_status,
             ), if rpc_server_is_enabled => {
                 if r.is_ok() {
                     warn!("{name} returned, restarting {name} now...");

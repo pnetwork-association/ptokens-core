@@ -185,13 +185,14 @@ pub async fn syncer_loop(
     };
     let mut core_is_connected = false;
     let mut syncer_is_enabled = !disable;
+    warn!("{name} not syncing yet due to no core connection");
 
     'syncer_loop: loop {
         tokio::select! {
             r = broadcast_channel_loop(chain_id.clone(), broadcast_channel_tx.subscribe()) => {
                 match r {
                     Ok(msg) => {
-                        let note = format!("(core is currently {core_is_connected})");
+                        let note = format!("(core is currently {}connected)", if core_is_connected { "" } else { "not "});
                         match msg {
                             SyncerBroadcastChannelMessages::Stop => {
                                 debug!("msg received to stop the {name} {note}");

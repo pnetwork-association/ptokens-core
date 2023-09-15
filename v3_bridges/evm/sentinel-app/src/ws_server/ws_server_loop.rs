@@ -16,10 +16,10 @@ use common_chain_ids::EthChainId;
 use common_sentinel::{
     BroadcastChannelMessages,
     CoreMessages,
+    RpcServerBroadcastChannelMessages,
     SentinelConfig,
     SentinelError,
     SyncerBroadcastChannelMessages,
-    RpcServerBroadcastChannelMessages,
     WebSocketMessages,
     WebSocketMessagesEncodable,
     WebSocketMessagesError,
@@ -112,7 +112,9 @@ async fn handle_socket(
             cid,
             SyncerBroadcastChannelMessages::CoreConnected,
         ))?;
-        broadcast_channel_tx.send(BroadcastChannelMessages::RpcServer(RpcServerBroadcastChannelMessages::CoreConnected))?;
+        broadcast_channel_tx.send(BroadcastChannelMessages::RpcServer(
+            RpcServerBroadcastChannelMessages::CoreConnected,
+        ))?;
     }
 
     'ws_loop: loop {
@@ -175,7 +177,9 @@ async fn handle_socket(
             cid,
             SyncerBroadcastChannelMessages::CoreDisconnected,
         ))?;
-        broadcast_channel_tx.send(BroadcastChannelMessages::RpcServer(RpcServerBroadcastChannelMessages::CoreDisconnected))?;
+        broadcast_channel_tx.send(BroadcastChannelMessages::RpcServer(
+            RpcServerBroadcastChannelMessages::CoreDisconnected,
+        ))?;
     }
 
     error!("websocket context {who} destroyed");
