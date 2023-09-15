@@ -2,7 +2,15 @@ use common::AppError as CommonError;
 use common_chain_ids::EthChainId;
 use thiserror::Error;
 
-use crate::{BroadcasterMessages, CoreMessages, DbKey, EthRpcMessages, SyncerMessages, WebSocketMessages};
+use crate::{
+    BroadcastChannelMessages,
+    BroadcasterMessages,
+    CoreMessages,
+    DbKey,
+    EthRpcMessages,
+    SyncerMessages,
+    WebSocketMessages,
+};
 
 impl From<SentinelError> for CommonError {
     fn from(e: SentinelError) -> CommonError {
@@ -147,17 +155,11 @@ pub enum SentinelError {
     #[error("syncer channel error: {0}")]
     SyncerChannel(Box<tokio::sync::broadcast::error::SendError<SyncerMessages>>),
 
-    #[error("broadcast channel error: {0}")]
-    BroadcastChannel(Box<tokio::sync::broadcast::error::SendError<BroadcasterMessages>>),
-
     #[error("broadcaster channel error: {0}")]
     BroadcasterChannel(Box<tokio::sync::mpsc::error::SendError<BroadcasterMessages>>),
-}
 
-impl From<tokio::sync::broadcast::error::SendError<BroadcasterMessages>> for SentinelError {
-    fn from(e: tokio::sync::broadcast::error::SendError<BroadcasterMessages>) -> Self {
-        Self::BroadcastChannel(Box::new(e))
-    }
+    #[error("broadcast messages channel error: {0}")]
+    BroadcastChannelMessages(Box<tokio::sync::broadcast::error::SendError<BroadcastChannelMessages>>),
 }
 
 impl From<tokio::sync::mpsc::error::SendError<CoreMessages>> for SentinelError {
@@ -187,6 +189,12 @@ impl From<tokio::sync::mpsc::error::SendError<EthRpcMessages>> for SentinelError
 impl From<tokio::sync::mpsc::error::SendError<WebSocketMessages>> for SentinelError {
     fn from(e: tokio::sync::mpsc::error::SendError<WebSocketMessages>) -> Self {
         Self::WebSocketChannel(Box::new(e))
+    }
+}
+
+impl From<tokio::sync::broadcast::error::SendError<BroadcastChannelMessages>> for SentinelError {
+    fn from(e: tokio::sync::broadcast::error::SendError<BroadcastChannelMessages>) -> Self {
+        Self::BroadcastChannelMessages(Box::new(e))
     }
 }
 
