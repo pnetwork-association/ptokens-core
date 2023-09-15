@@ -11,11 +11,14 @@ use axum::{
     Router,
     TypedHeader,
 };
+use common::BridgeSide;
+use common_chain_ids::EthChainId;
 use common_sentinel::{
     BroadcastChannelMessages,
     CoreMessages,
     SentinelConfig,
     SentinelError,
+    SyncerBroadcastChannelMessages,
     WebSocketMessages,
     WebSocketMessagesEncodable,
     WebSocketMessagesError,
@@ -34,6 +37,7 @@ use tower_http::services::ServeDir;
 // TODO have somewhere hold all these aliases
 type CoreTx = MpscTx<CoreMessages>;
 type WebSocketRx = MpscRx<WebSocketMessages>;
+type BroadcastChannelTx = MpMcTx<BroadcastChannelMessages>;
 
 fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), ()> {
     match msg {
@@ -70,6 +74,8 @@ async fn handle_socket(
     who: SocketAddr,
     _core_tx: CoreTx,
     websocket_rx: Arc<Mutex<WebSocketRx>>,
+    broadcast_channel_tx: BroadcastChannelTx,
+    cids: Vec<EthChainId>,
 ) -> Result<(), SentinelError> {
     if socket.send(Message::Ping(vec![1, 3, 3, 7])).await.is_ok() {
         debug!("pinged {}...", who);
@@ -98,6 +104,14 @@ async fn handle_socket(
 
     // NOTE: Trying the lock here limits us to one active connection.
     let mut rx = websocket_rx.try_lock()?;
+
+    // NOTE: Now that something is connected, tell the syncers to begin their work.
+    for cid in cids {
+        broadcast_channel_tx.send(BroadcastChannelMessages::Syncer(
+            cid,
+            SyncerBroadcastChannelMessages::Start,
+        ))?;
+    }
 
     'ws_loop: loop {
         tokio::select! {
@@ -160,13 +174,22 @@ async fn handle_socket(
 #[derive(Clone)]
 struct AppState {
     core_tx: CoreTx,
+    cids: Vec<EthChainId>,
     websocket_rx: Arc<Mutex<WebSocketRx>>,
+    broadcast_channel_tx: BroadcastChannelTx,
 }
 
 impl AppState {
-    fn new(core_tx: CoreTx, websocket_rx: WebSocketRx) -> Self {
+    fn new(
+        core_tx: CoreTx,
+        websocket_rx: WebSocketRx,
+        broadcast_channel_tx: BroadcastChannelTx,
+        cids: Vec<EthChainId>,
+    ) -> Self {
         Self {
+            cids,
             core_tx,
+            broadcast_channel_tx,
             websocket_rx: Arc::new(Mutex::new(websocket_rx)),
         }
     }
@@ -185,7 +208,16 @@ async fn ws_handler(
     };
     debug!("`{user_agent}` at {addr} connected.");
     ws.on_upgrade(move |socket| async move {
-        match handle_socket(socket, addr, state.core_tx, state.websocket_rx).await {
+        match handle_socket(
+            socket,
+            addr,
+            state.core_tx,
+            state.websocket_rx,
+            state.broadcast_channel_tx,
+            state.cids,
+        )
+        .await
+        {
             // FIXME what to return from here?
             Ok(_) => (),
             Err(e) => {
@@ -198,14 +230,18 @@ async fn ws_handler(
 async fn start_ws_server(
     websocket_rx: WebSocketRx,
     core_tx: CoreTx,
-    _config: SentinelConfig,
+    config: SentinelConfig,
+    broadcast_channel_tx: BroadcastChannelTx,
 ) -> Result<(), SentinelError> {
     let assets_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/bin/sentinel/ws_server/assets");
 
     let app = Router::new()
         .fallback_service(ServeDir::new(assets_dir).append_index_html_on_directories(true))
         .route("/ws", get(ws_handler))
-        .with_state(AppState::new(core_tx, websocket_rx));
+        .with_state(AppState::new(core_tx, websocket_rx, broadcast_channel_tx, vec![
+            config.chain_id(&BridgeSide::Native),
+            config.chain_id(&BridgeSide::Host),
+        ]));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000)); // FIXME make configurable
     debug!("ws server listening on {}", addr);
@@ -220,7 +256,7 @@ pub async fn ws_server_loop(
     core_tx: CoreTx,
     config: SentinelConfig,
     disable: bool,
-    _broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
+    broadcast_channel_tx: BroadcastChannelTx,
 ) -> Result<(), SentinelError> {
     let name = "ws server";
     if disable {
@@ -231,7 +267,12 @@ pub async fn ws_server_loop(
     let ws_server_is_enabled = !disable;
 
     tokio::select! {
-        r = start_ws_server(websocket_rx, core_tx.clone(), config.clone()), if ws_server_is_enabled => r,
+        r = start_ws_server(
+            websocket_rx,
+            core_tx.clone(),
+            config.clone(),
+            broadcast_channel_tx.clone(),
+        ), if ws_server_is_enabled => r,
         _ = tokio::signal::ctrl_c() => {
             warn!("{name} shutting down...");
             Err(SentinelError::SigInt(name.into()))
