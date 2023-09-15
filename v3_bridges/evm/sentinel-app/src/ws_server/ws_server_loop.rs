@@ -23,7 +23,7 @@ use common_sentinel::{
 use futures::{stream::StreamExt, SinkExt};
 use tokio::{
     sync::{
-        broadcast::{Receiver as MpMcRx, Sender as MpMcTx},
+        broadcast::Sender as MpMcTx,
         mpsc::{Receiver as MpscRx, Sender as MpscTx},
         Mutex,
     },
@@ -132,6 +132,24 @@ async fn handle_socket(
                     break 'ws_loop
                 }
             },
+            msg = receiver.next() => {
+                // NOTE: When we send a message via the arm above this one, we await a response in
+                // that block of code. As such, if this arm is ever tripped, we must have received
+                // a message that we weren't prepared for, and we handle it thusly here.
+                match msg {
+                    Some(Ok(Message::Close(maybe_reason))) => {
+                        warn!("close msg received from websocket");
+                        if let Some(x) = maybe_reason {
+                            warn!("code: {}, reason: {}", x.code, x.reason);
+                        };
+                        break 'ws_loop
+                    },
+                    m => {
+                        warn!("unexpected msg received from websocket: {m:?}");
+                        continue 'ws_loop
+                    },
+                }
+            },
         }
     }
 
@@ -203,7 +221,6 @@ pub async fn ws_server_loop(
     config: SentinelConfig,
     disable: bool,
     _broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
-    _broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
 ) -> Result<(), SentinelError> {
     let name = "ws server";
     if disable {

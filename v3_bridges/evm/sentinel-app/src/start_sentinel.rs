@@ -115,7 +115,6 @@ pub async fn start_sentinel(
         config.clone(),
         disable_ws_server,
         broadcast_channel_tx.clone(),
-        broadcast_channel_tx.subscribe(),
     ));
 
     match tokio::try_join!(
