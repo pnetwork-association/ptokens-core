@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::Mutex};
 
 use common::{BridgeSide, CoreType};
 use common_chain_ids::EthChainId;
@@ -9,6 +9,7 @@ use common_sentinel::{
     CoreMessages,
     CoreState,
     EthRpcMessages,
+    RpcServerBroadcastChannelMessages,
     SentinelConfig,
     SentinelError,
     SyncerBroadcastChannelMessages,
@@ -23,7 +24,10 @@ use jsonrpsee::ws_client::WsClient;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 use tokio::{
-    sync::{broadcast::Sender as MpmcTx, mpsc::Sender as MpscTx},
+    sync::{
+        broadcast::{Receiver as MpmcRx, Sender as MpmcTx},
+        mpsc::Sender as MpscTx,
+    },
     time::{sleep, Duration},
 };
 use warp::{reject, reject::Reject, Filter, Rejection};
@@ -34,10 +38,28 @@ type CoreTx = MpscTx<CoreMessages>;
 type EthRpcTx = MpscTx<EthRpcMessages>;
 type WebSocketTx = MpscTx<WebSocketMessages>;
 type BroadcastChannelTx = MpmcTx<BroadcastChannelMessages>;
+type BroadcastChannelRx = MpmcRx<BroadcastChannelMessages>;
 
 // TODO Need to re-instate BPM/HeartbeatsJson stuff, just kept in memory now rather than mongo
 
 const STRONGBOX_TIMEOUT_MS: u64 = 30000; // FIXME make configurable
+
+#[derive(Debug, Copy, Clone, Default)]
+struct CoreConnectionStatus(bool);
+
+impl CoreConnectionStatus {
+    fn set_to_connected(mut self) {
+        self.0 = true
+    }
+
+    fn set_to_disconnected(mut self) {
+        self.0 = false
+    }
+}
+
+lazy_static! {
+    static ref CORE_CONNECTION_STATUS: Mutex<CoreConnectionStatus> = Mutex::new(CoreConnectionStatus::default());
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Error(String);
@@ -185,6 +207,7 @@ impl RpcCall {
         native_eth_rpc_tx: EthRpcTx,
         params: RpcParams,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        check_core_is_connected()?;
         // NOTE: Get the latest host & native block numbers from the ETH RPC
         let (host_latest_block_num_msg, host_latest_block_num_responder) =
             EthRpcMessages::get_latest_block_num_msg(BridgeSide::Host);
@@ -238,6 +261,7 @@ impl RpcCall {
         websocket_tx: WebSocketTx,
         params: RpcParams,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        check_core_is_connected()?;
         let checked_params = Self::check_params(params, 4)?;
 
         let side = BridgeSide::from_str(&checked_params[0])?;
@@ -289,6 +313,7 @@ impl RpcCall {
     }
 
     async fn handle_get_core_state(websocket_tx: WebSocketTx) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        check_core_is_connected()?;
         let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetCoreState);
         websocket_tx.send(msg).await?;
 
@@ -305,6 +330,7 @@ impl RpcCall {
     async fn handle_get_latest_block_numbers(
         websocket_tx: WebSocketTx,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        check_core_is_connected()?;
         let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetLatestBlockNumbers);
         websocket_tx.send(msg).await?;
 
@@ -324,6 +350,7 @@ impl RpcCall {
         stop: bool,
     ) -> Result<Json, SentinelError> {
         debug!("handling stop syncer rpc call...");
+        check_core_is_connected()?;
         let checked_params = Self::check_params(params, 1)?;
         let cid = EthChainId::from_str(&checked_params[0])?;
         let syncer_msg = if stop {
@@ -465,6 +492,58 @@ async fn start_rpc_server(
     Ok(())
 }
 
+fn get_core_connection_status() -> Result<bool, SentinelError> {
+    get_core_connection().map(|cxn| cxn.0)
+}
+
+fn set_core_connection_status(status: bool) -> Result<(), SentinelError> {
+    let cxn = get_core_connection()?;
+    if status {
+        cxn.set_to_connected()
+    } else {
+        cxn.set_to_disconnected()
+    };
+    Ok(())
+}
+
+fn get_core_connection() -> Result<CoreConnectionStatus, SentinelError> {
+    Ok(*CORE_CONNECTION_STATUS
+        .lock()
+        .map_err(|_| SentinelError::PoisonedLock("CORE_CONNECTION_STATUS in rpc server".into()))?)
+}
+
+fn check_core_is_connected() -> Result<(), SentinelError> {
+    get_core_connection_status().and_then(|status| if status { Ok(()) } else { Err(SentinelError::NoCore) })
+}
+
+async fn broadcast_channel_loop(
+    mut broadcast_channel_rx: BroadcastChannelRx,
+) -> Result<RpcServerBroadcastChannelMessages, SentinelError> {
+    'broadcast_channel_loop: loop {
+        match broadcast_channel_rx.recv().await {
+            Ok(BroadcastChannelMessages::RpcServer(msg)) => {
+                // NOTE: We have a pertinent message...
+                match msg {
+                    RpcServerBroadcastChannelMessages::CoreConnected => {
+                        // NOTE: We don't need to return here to handle this message, plus doing so
+                        // would should down the server anyway which we don't need to do at this
+                        // moment;
+                        set_core_connection_status(true)?;
+                        continue 'broadcast_channel_loop;
+                    },
+                    RpcServerBroadcastChannelMessages::CoreDisconnected => {
+                        // NOTE: Ibid
+                        set_core_connection_status(false)?;
+                        continue 'broadcast_channel_loop;
+                    },
+                }
+            },
+            Ok(_) => continue 'broadcast_channel_loop, // NOTE: The message wasn't for the syncer
+            Err(e) => break 'broadcast_channel_loop Err(e.into()),
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn rpc_server_loop(
     core_tx: CoreTx,
@@ -482,6 +561,12 @@ pub async fn rpc_server_loop(
     };
     'rpc_server_loop: loop {
         tokio::select! {
+            r = broadcast_channel_loop(broadcast_channel_tx.subscribe()) => {
+                // NOTE: Currently there are no messages from the broadcast channel that we'd need
+                // to handle here, so we just continue the loop in case of returns
+                debug!("brodacast channel loop in rpc server returned: {r:?}");
+                continue 'rpc_server_loop
+            },
             r = start_rpc_server(
                 core_tx.clone(),
                 host_eth_rpc_tx.clone(),

@@ -19,6 +19,7 @@ use common_sentinel::{
     SentinelConfig,
     SentinelError,
     SyncerBroadcastChannelMessages,
+    RpcServerBroadcastChannelMessages,
     WebSocketMessages,
     WebSocketMessagesEncodable,
     WebSocketMessagesError,
@@ -106,11 +107,12 @@ async fn handle_socket(
     let mut rx = websocket_rx.try_lock()?;
 
     for cid in cids.iter().cloned() {
-        // NOTE: Tell the syncers that a core is connected.
+        // NOTE: Tell the various components that a core is connected.
         broadcast_channel_tx.send(BroadcastChannelMessages::Syncer(
             cid,
             SyncerBroadcastChannelMessages::CoreConnected,
         ))?;
+        broadcast_channel_tx.send(BroadcastChannelMessages::RpcServer(RpcServerBroadcastChannelMessages::CoreConnected))?;
     }
 
     'ws_loop: loop {
@@ -168,11 +170,12 @@ async fn handle_socket(
     }
 
     for cid in cids {
-        // NOTE: Tell the syncers that a core is no longer connected.
+        // NOTE: Tell the various components that a core is no longer connected.
         broadcast_channel_tx.send(BroadcastChannelMessages::Syncer(
             cid,
             SyncerBroadcastChannelMessages::CoreDisconnected,
         ))?;
+        broadcast_channel_tx.send(BroadcastChannelMessages::RpcServer(RpcServerBroadcastChannelMessages::CoreDisconnected))?;
     }
 
     error!("websocket context {who} destroyed");

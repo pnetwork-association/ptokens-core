@@ -20,6 +20,9 @@ impl From<SentinelError> for CommonError {
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("no core connected to sentinel app")]
+    NoCore,
+
     #[error("a java exception occurred and was handled - see core logs for details")]
     JavaExceptionOccurred,
 
@@ -65,8 +68,8 @@ pub enum SentinelError {
     #[error("network ID error: {0}")]
     NetworkId(#[from] crate::network_id::NetworkIdError),
 
-    #[error("poisoned lock encountered")]
-    PoisonedLock,
+    #[error("poisoned lock encountered when accessing")]
+    PoisonedLock(String),
 
     #[error("no block {0}")]
     NoBlock(u64),

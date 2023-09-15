@@ -55,6 +55,7 @@ pub use self::{
         CoreMessages,
         EthRpcMessages,
         Responder,
+        RpcServerBroadcastChannelMessages,
         SyncerBroadcastChannelMessages,
         SyncerMessages,
         WebSocketMessages,
