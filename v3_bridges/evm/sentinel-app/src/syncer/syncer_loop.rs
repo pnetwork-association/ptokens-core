@@ -1,5 +1,6 @@
 use std::result::Result;
 
+use common_chain_ids::EthChainId;
 use common_sentinel::{
     Batch,
     BroadcastChannelMessages,
@@ -8,6 +9,7 @@ use common_sentinel::{
     LatestBlockNumbers,
     SentinelConfig,
     SentinelError,
+    SyncerBroadcastChannelMessages,
     WebSocketMessages,
     WebSocketMessagesEncodable,
     WebSocketMessagesError,
@@ -137,6 +139,31 @@ async fn main_loop(
     }
 }
 
+async fn broadcast_channel_loop(
+    chain_id: EthChainId,
+    mut broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
+) -> Result<SyncerBroadcastChannelMessages, SentinelError> {
+    // NOTE: This loops continuously listening to the broadcasting channel, and only returns if we
+    // receive a pertinent message. This way, other messages won't cause early returns in the main
+    // tokios::select, so then the main_loop can continue doing it's work.
+    'broadcast_channel_loop: loop {
+        match broadcast_channel_rx.recv().await {
+            Ok(BroadcastChannelMessages::Syncer(cid, msg)) => {
+                // NOTE: We have a syncer message...
+                if cid == chain_id {
+                    // ...and it's for this syncer so we return it
+                    break 'broadcast_channel_loop Ok(msg);
+                } else {
+                    // ...but it's not for this syncer so we go back to listening on the receiver
+                    continue 'broadcast_channel_loop;
+                }
+            },
+            Ok(_) => continue 'broadcast_channel_loop, // NOTE: The message wasn't for the syncer
+            Err(e) => break 'broadcast_channel_loop Err(e.into()),
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn syncer_loop(
     batch: Batch,
@@ -145,21 +172,46 @@ pub async fn syncer_loop(
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     websocket_tx: MpscTx<WebSocketMessages>,
     disable: bool,
-    _broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
-    _broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
+    broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
 ) -> Result<(), SentinelError> {
     let side = batch.side();
+    let chain_id = config.chain_id(&side);
     let name = format!("{side} syncer");
     if disable {
         warn!("{name} disabled!")
     } else {
         info!("starting {name}...")
     };
-    let syncer_is_enabled = !disable;
+    let mut syncer_is_enabled = !disable;
 
     'syncer_loop: loop {
         tokio::select! {
-            r = main_loop(batch.clone(), config.clone(), core_tx.clone(), eth_rpc_tx.clone(), websocket_tx.clone()), if syncer_is_enabled => {
+            r = broadcast_channel_loop(chain_id.clone(), broadcast_channel_tx.subscribe()) => {
+                match r {
+                    Ok(msg) => {
+                        match msg {
+                            SyncerBroadcastChannelMessages::Stop => {
+                                debug!("msg received to stop the {side} syncer");
+                                syncer_is_enabled = false;
+                                continue 'syncer_loop
+                            },
+                            SyncerBroadcastChannelMessages::Start => {
+                                debug!("msg received to start the {side} syncer");
+                                syncer_is_enabled = true;
+                                continue 'syncer_loop
+                            }
+                        }
+                    },
+                    Err(e) => break 'syncer_loop Err(e),
+                }
+            },
+            r = main_loop(
+                batch.clone(),
+                config.clone(),
+                core_tx.clone(),
+                eth_rpc_tx.clone(),
+                websocket_tx.clone(),
+            ), if syncer_is_enabled => {
                 match r {
                     Ok(_)  => {
                         warn!("{name} returned, restarting {name} now...");

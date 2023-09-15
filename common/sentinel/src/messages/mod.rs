@@ -7,7 +7,7 @@ mod syncer;
 mod websocket;
 
 pub use self::{
-    broadcast_channel::BroadcastChannelMessages,
+    broadcast_channel::{BroadcastChannelMessages, SyncerBroadcastChannelMessages},
     broadcaster::BroadcasterMessages,
     core::CoreMessages,
     eth_rpc::EthRpcMessages,

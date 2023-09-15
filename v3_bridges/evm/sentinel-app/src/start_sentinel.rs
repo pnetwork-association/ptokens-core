@@ -60,7 +60,6 @@ pub async fn start_sentinel(
         websocket_tx.clone(),
         disable_native_syncer,
         broadcast_channel_tx.clone(),
-        broadcast_channel_tx.subscribe(),
     ));
     let host_syncer_thread = tokio::spawn(syncer_loop(
         Batch::new_from_config(BridgeSide::Host, config)?,
@@ -70,7 +69,6 @@ pub async fn start_sentinel(
         websocket_tx.clone(),
         disable_host_syncer,
         broadcast_channel_tx.clone(),
-        broadcast_channel_tx.subscribe(),
     ));
 
     let core_thread = tokio::spawn(core_loop(
