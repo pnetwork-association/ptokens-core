@@ -20,6 +20,9 @@ impl From<SentinelError> for CommonError {
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("rustc hex error: {0}")]
+    RustCHex(#[from] rustc_hex::FromHexError),
+
     #[error("no core connected to sentinel app")]
     NoCore,
 

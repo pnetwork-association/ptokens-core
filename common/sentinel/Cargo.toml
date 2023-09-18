@@ -33,6 +33,7 @@ futures = { workspace = true }
 mongodb = { workspace = true }
 reqwest = { workspace = true }
 headers = { workspace = true }
+rustc-hex = { workspace = true }
 thiserror = { workspace = true }
 jsonrpsee = { workspace = true }
 tower-http = { workspace = true }

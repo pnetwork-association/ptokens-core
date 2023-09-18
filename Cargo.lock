@@ -4732,6 +4732,7 @@ dependencies = [
  "mongodb",
  "paste",
  "reqwest",
+ "rustc-hex",
  "serde",
  "serde_derive",
  "serde_json",
