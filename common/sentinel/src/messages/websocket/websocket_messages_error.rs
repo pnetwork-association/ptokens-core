@@ -7,6 +7,9 @@ use crate::SentinelError;
 
 #[derive(Error, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesError {
+    #[error("strongbox panicked - check the logs for more info")]
+    Panicked,
+
     #[error("from hex error: {0}")]
     Hex(String),
 

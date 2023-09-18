@@ -106,9 +106,9 @@ pub extern "C" fn Java_com_ptokenssentinelandroidapp_RustBridge_callCore(
         Ok(r) => r,
         Err(e) => {
             error!("something panicked: {e:?}");
-            env.new_string(format!("{e:?}")) // TODO wrap in encodeable error?
-                .expect("this should not fail")
-                .into_inner()
+            let msg = WebSocketMessagesEncodable::Error(WebSocketMessagesError::Panicked);
+            let s: String = msg.try_into().expect("this not to fail");
+            env.new_string(s).expect("this should not fail").into_inner()
         },
     }
 }
