@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, str::FromStr};
 
 use base64::{engine::general_purpose, Engine};
 use serde::{Deserialize, Serialize};
@@ -6,6 +6,7 @@ use serde_json::Value as Json;
 
 use crate::{
     SentinelError,
+    UserOpUniqueId,
     WebSocketMessagesError,
     WebSocketMessagesInitArgs,
     WebSocketMessagesResetChainArgs,
@@ -20,6 +21,7 @@ pub enum WebSocketMessagesEncodable {
     GetUserOpList,
     Success(Json),
     GetLatestBlockNumbers,
+    RemoveUserOp(UserOpUniqueId),
     Error(WebSocketMessagesError),
     Submit(Box<WebSocketMessagesSubmitArgs>),
     Initialize(Box<WebSocketMessagesInitArgs>),
@@ -40,16 +42,25 @@ impl fmt::Display for WebSocketMessagesEncodable {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let prefix = "WebSocketMessagesEncodable::";
         let s = match self {
-            Self::Null => "Null".to_string(),
+            // NOTE: We can't get a ref of this, so otherwise we'd have to convert all others
+            // `.to_string()` individually.
             Self::Error(e) => format!("Error: {e}"),
-            Self::Submit(..) => "Submit".to_string(),
-            Self::Success(_) => "Success".to_string(),
-            Self::GetUserOps => "GetUserOps".to_string(),
-            Self::Initialize(_) => "Initialize".to_string(),
-            Self::ResetChain(_) => "ResetChain".to_string(),
-            Self::GetCoreState => "GetCoreState".to_string(),
-            Self::GetUserOpList => "GetUserOpList".to_string(),
-            Self::GetLatestBlockNumbers => "GetLatestBlockNumbers".to_string(),
+            others => {
+                let s = match others {
+                    Self::Null => "Null",
+                    Self::Submit(..) => "Submit",
+                    Self::Success(_) => "Success",
+                    Self::GetUserOps => "GetUserOps",
+                    Self::Initialize(_) => "Initialize",
+                    Self::ResetChain(_) => "ResetChain",
+                    Self::GetCoreState => "GetCoreState",
+                    Self::GetUserOpList => "GetUserOpList",
+                    Self::RemoveUserOp(_) => "RemoveUserOp",
+                    Self::GetLatestBlockNumbers => "GetLatestBlockNumbers",
+                    Self::Error(_) => "we should never reach here",
+                };
+                s.to_string()
+            },
         };
         write!(f, "{prefix}{s}")
     }
@@ -94,6 +105,10 @@ impl TryFrom<Vec<String>> for WebSocketMessagesEncodable {
             "reset" | "resetChain" => Ok(Self::ResetChain(Box::new(WebSocketMessagesResetChainArgs::try_from(
                 args[1..].to_vec(),
             )?))),
+            "removeUserOp" => {
+                let uid = UserOpUniqueId::from_str(&args[1])?;
+                Ok(Self::RemoveUserOp(uid))
+            },
             _ => {
                 warn!("cannot create WebSocketMessagesEncodable from args {args:?}");
                 Err(WebSocketMessagesError::CannotCreate(args))
