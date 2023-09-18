@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use common::BridgeSide;
 use common_chain_ids::EthChainId;
-use common_eth::{convert_hex_to_h256, EthSubmissionMaterials};
+use common_eth::EthSubmissionMaterials;
 use common_sentinel::{
     get_latest_block_num,
     BroadcastChannelMessages,
@@ -66,14 +66,6 @@ fn create_json_rpc_response_from_result<T: Serialize>(id: RpcId, r: Result<T, Se
     }
 }
 
-async fn remove_user_op_from_core(uid_string: String, tx: MpscTx<CoreMessages>) -> Result<Json, SentinelError> {
-    let uid = convert_hex_to_h256(&uid_string)?;
-    let (msg, rx) = CoreMessages::get_remove_user_op_msg(uid);
-    tx.send(msg).await?;
-    rx.await??;
-    Ok(json!({"succes": true, "uid": format!("0x{}", hex::encode(uid.as_bytes()))}))
-}
-
 async fn get_sync_status(
     n_ws_client: &WsClient,
     h_ws_client: &WsClient,
@@ -117,8 +109,8 @@ enum RpcCall {
     SyncStatus(RpcId, CoreTx, Box<SentinelConfig>),
     GetCoreState(RpcId, WebSocketTx, CoreCxnStatus),
     GetUserOpList(RpcId, WebSocketTx, CoreCxnStatus),
-    RemoveUserOp(RpcId, CoreTx, RpcParams, CoreCxnStatus),
     LatestBlockNumbers(RpcId, WebSocketTx, CoreCxnStatus),
+    RemoveUserOp(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     Init(RpcId, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams, CoreCxnStatus),
@@ -159,7 +151,7 @@ impl RpcCall {
             "getUserOps" => Self::GetUserOps(r.id, websocket_tx, core_cxn),
             "syncStatus" => Self::SyncStatus(r.id, core_tx, Box::new(config)),
             "getUserOpList" => Self::GetUserOpList(r.id, websocket_tx, core_cxn),
-            "removeUserOp" => Self::RemoveUserOp(r.id, core_tx, r.params.clone(), core_cxn),
+            "removeUserOp" => Self::RemoveUserOp(r.id, websocket_tx, r.params.clone(), core_cxn),
             "stopSyncer" => Self::StopSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
             "latestBlockNumbers" | "latest" => Self::LatestBlockNumbers(r.id, websocket_tx, core_cxn),
             "startSyncer" => Self::StartSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
@@ -403,7 +395,7 @@ impl RpcCall {
         tokio::select! {
             response = rx => response?,
             _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "getting enclave state";
+                let m = "getting user ops";
                 error!("timed out whilst {m}");
                 Err(SentinelError::Timedout(m.into()))
             }
@@ -421,7 +413,7 @@ impl RpcCall {
         tokio::select! {
             response = rx => response?,
             _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "getting enclave state";
+                let m = "getting user op list";
                 error!("timed out whilst {m}");
                 Err(SentinelError::Timedout(m.into()))
             }
@@ -440,6 +432,26 @@ impl RpcCall {
             response = rx => response?,
             _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
                 let m = "getting latest block numbers";
+                error!("timed out whilst {m}");
+                Err(SentinelError::Timedout(m.into()))
+            }
+        }
+    }
+
+    async fn handle_remove_user_op(
+        websocket_tx: WebSocketTx,
+        params: RpcParams,
+        core_cxn: bool,
+    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        check_core_is_connected(core_cxn)?;
+        let encodable_msg = WebSocketMessagesEncodable::try_from(Self::create_args("removeUserOp", params))?;
+        let (msg, rx) = WebSocketMessages::new(encodable_msg);
+        websocket_tx.send(msg).await?;
+
+        tokio::select! {
+            response = rx => response?,
+            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+                let m = "removing user op";
                 error!("timed out whilst {m}");
                 Err(SentinelError::Timedout(m.into()))
             }
@@ -563,17 +575,10 @@ impl RpcCall {
                     .map_err(convert_error_to_rejection)?,
                 )))
             },
-            Self::RemoveUserOp(id, core_tx, params, _core_cxn) => {
-                if params.is_empty() {
-                    return Ok(warp::reply::json(&create_json_rpc_error(id, 1, "no params provided")));
-                };
-
-                Ok(warp::reply::json(&create_json_rpc_response(
-                    id,
-                    remove_user_op_from_core(params[0].clone(), core_tx)
-                        .await
-                        .map_err(convert_error_to_rejection)?,
-                )))
+            Self::RemoveUserOp(id, websocket_tx, params, core_cxn) => {
+                let result = Self::handle_remove_user_op(websocket_tx, params, core_cxn).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
             },
         }
     }
