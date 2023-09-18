@@ -21,7 +21,9 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
     }?;
 
     let final_state = match msg {
+        WebSocketMessagesEncodable::GetUserOps => super::handlers::get_user_ops(state),
         WebSocketMessagesEncodable::GetCoreState => super::handlers::get_core_state(state),
+        WebSocketMessagesEncodable::GetUserOpList => super::handlers::get_user_op_list(state),
         WebSocketMessagesEncodable::Initialize(args) => super::handlers::init(*args.clone(), state),
         WebSocketMessagesEncodable::Submit(args) => super::handlers::submit_blocks(*args.clone(), state),
         WebSocketMessagesEncodable::ResetChain(args) => super::handlers::reset_chain(*args.clone(), state),
