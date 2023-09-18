@@ -12,6 +12,7 @@ mod user_op_router_log;
 mod user_op_smart_contract_state;
 mod user_op_state;
 mod user_op_state_manager_log;
+mod user_op_uid;
 #[allow(clippy::module_inception)]
 mod user_ops;
 
@@ -20,6 +21,7 @@ pub use self::{
     user_op::UserOp,
     user_op_list::UserOpList,
     user_op_smart_contract_state::UserOpSmartContractState,
+    user_op_uid::UserOpUniqueId,
     user_ops::UserOps,
 };
 use self::{
