@@ -114,6 +114,7 @@ enum RpcCall {
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     Init(RpcId, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams, CoreCxnStatus),
+    GetCancellableUserOps(RpcId, Box<SentinelConfig>, WebSocketTx, CoreCxnStatus),
     ResetChain(
         RpcId,
         Box<SentinelConfig>,
@@ -156,6 +157,9 @@ impl RpcCall {
             "latestBlockNumbers" | "latest" => Self::LatestBlockNumbers(r.id, websocket_tx, core_cxn),
             "startSyncer" => Self::StartSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
             "getCoreState" | "getEnclaveState" | "state" => Self::GetCoreState(r.id, websocket_tx, core_cxn),
+            "getCancellableUserOps" | "getCancellable" => {
+                Self::GetCancellableUserOps(r.id, Box::new(config), websocket_tx, core_cxn)
+            },
             "reset" | "resetChain" => Self::ResetChain(
                 r.id,
                 Box::new(config),
@@ -458,6 +462,27 @@ impl RpcCall {
         }
     }
 
+    async fn handle_get_cancellable_user_ops(
+        config: Box<SentinelConfig>,
+        websocket_tx: WebSocketTx,
+        core_cxn: bool,
+    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        check_core_is_connected(core_cxn)?;
+        let max_delta = config.core().max_cancellable_time_delta();
+        let encodable_msg = WebSocketMessagesEncodable::GetCancellableUserOps(max_delta);
+        let (msg, rx) = WebSocketMessages::new(encodable_msg);
+        websocket_tx.send(msg).await?;
+
+        tokio::select! {
+            response = rx => response?,
+            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+                let m = "getting cancellable user ops";
+                error!("timed out whilst {m}");
+                Err(SentinelError::Timedout(m.into()))
+            }
+        }
+    }
+
     async fn handle_syncer_start_stop(
         broadcast_channel_tx: BroadcastChannelTx,
         params: RpcParams,
@@ -548,6 +573,11 @@ impl RpcCall {
             },
             Self::GetUserOpList(id, websocket_tx, core_cxn) => {
                 let result = Self::handle_get_user_op_list(websocket_tx, core_cxn).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
+            Self::GetCancellableUserOps(id, config, websocket_tx, core_cxn) => {
+                let result = Self::handle_get_cancellable_user_ops(config, websocket_tx, core_cxn).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
