@@ -66,7 +66,7 @@ pub use self::{
         WebSocketMessagesSubmitArgs,
     },
     network_id::{Bytes4, NetworkId, ProtocolId},
-    processor::{process_batch, process_single},
+    processor::{process_batch, process_single, reset_chain},
     processor_output::ProcessorOutput,
     sentinel_config::{
         ConfigT,
