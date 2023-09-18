@@ -1,3 +1,4 @@
+mod db_ops;
 mod get_cancellable_user_ops;
 mod get_core_state;
 mod get_latest_block_numbers;
@@ -9,6 +10,7 @@ mod reset_chain;
 mod submit_blocks;
 
 pub(crate) use self::{
+    db_ops::{delete, get, put},
     get_cancellable_user_ops::get_cancellable_user_ops,
     get_core_state::get_core_state,
     get_latest_block_numbers::get_latest_block_numbers,

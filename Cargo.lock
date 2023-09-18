@@ -4758,6 +4758,7 @@ dependencies = [
  "derive-getters",
  "derive_more",
  "ethereum",
+ "hex",
  "jni",
  "log",
  "metadata",

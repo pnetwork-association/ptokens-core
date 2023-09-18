@@ -13,6 +13,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 android_logger = "0.13.3"
+hex = { workspace = true }
 jni = { workspace = true }
 log = { workspace = true }
 serde = { workspace = true }
