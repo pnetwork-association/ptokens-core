@@ -21,6 +21,7 @@ pub enum WebSocketMessagesEncodable {
     GetUserOpList,
     Success(Json),
     GetLatestBlockNumbers,
+    GetCancellableUserOps(u64),
     RemoveUserOp(UserOpUniqueId),
     Error(WebSocketMessagesError),
     Submit(Box<WebSocketMessagesSubmitArgs>),
@@ -57,7 +58,8 @@ impl fmt::Display for WebSocketMessagesEncodable {
                     Self::GetUserOpList => "GetUserOpList",
                     Self::RemoveUserOp(_) => "RemoveUserOp",
                     Self::GetLatestBlockNumbers => "GetLatestBlockNumbers",
-                    Self::Error(_) => "we should never reach here",
+                    Self::GetCancellableUserOps(_) => "GetCancellableUserOps",
+                    Self::Error(_) => "we should never reach this match arm of this",
                 };
                 s.to_string()
             },
