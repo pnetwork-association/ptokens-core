@@ -29,6 +29,9 @@ pub enum WebSocketMessagesError {
     #[error("unrecognized chain id {0}")]
     UnrecognizedEthChainId(String),
 
+    #[error("unsupported chain id {0}")]
+    Unsupported(EthChainId),
+
     #[error("timed out - strongbox took longer than {0}ms to respond")]
     Timedout(u64),
 

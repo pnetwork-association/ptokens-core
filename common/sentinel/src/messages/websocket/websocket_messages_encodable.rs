@@ -4,7 +4,13 @@ use base64::{engine::general_purpose, Engine};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 
-use crate::{SentinelError, WebSocketMessagesError, WebSocketMessagesInitArgs, WebSocketMessagesSubmitArgs};
+use crate::{
+    SentinelError,
+    WebSocketMessagesError,
+    WebSocketMessagesInitArgs,
+    WebSocketMessagesResetChainArgs,
+    WebSocketMessagesSubmitArgs,
+};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesEncodable {
@@ -15,6 +21,7 @@ pub enum WebSocketMessagesEncodable {
     Error(WebSocketMessagesError),
     Submit(Box<WebSocketMessagesSubmitArgs>),
     Initialize(Box<WebSocketMessagesInitArgs>),
+    ResetChain(Box<WebSocketMessagesResetChainArgs>),
 }
 
 impl WebSocketMessagesEncodable {
@@ -36,6 +43,7 @@ impl fmt::Display for WebSocketMessagesEncodable {
             Self::Submit(..) => "Submit".to_string(),
             Self::Success(_) => "Success".to_string(),
             Self::Initialize(_) => "Initialize".to_string(),
+            Self::ResetChain(_) => "ResetChain".to_string(),
             Self::GetCoreState => "GetCoreState".to_string(),
             Self::GetLatestBlockNumbers => "GetLatestBlockNumbers".to_string(),
         };
@@ -77,6 +85,9 @@ impl TryFrom<Vec<String>> for WebSocketMessagesEncodable {
         let cmd = args[0].as_ref();
         match cmd {
             "init" | "initialize" => Ok(Self::Initialize(Box::new(WebSocketMessagesInitArgs::try_from(
+                args[1..].to_vec(),
+            )?))),
+            "reset" | "resetChain" => Ok(Self::ResetChain(Box::new(WebSocketMessagesResetChainArgs::try_from(
                 args[1..].to_vec(),
             )?))),
             _ => {

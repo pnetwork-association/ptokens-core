@@ -62,6 +62,7 @@ pub use self::{
         WebSocketMessagesEncodable,
         WebSocketMessagesError,
         WebSocketMessagesInitArgs,
+        WebSocketMessagesResetChainArgs,
         WebSocketMessagesSubmitArgs,
     },
     network_id::{Bytes4, NetworkId, ProtocolId},
