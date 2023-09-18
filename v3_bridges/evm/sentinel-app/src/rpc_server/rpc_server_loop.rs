@@ -12,8 +12,6 @@ use common_sentinel::{
     SentinelConfig,
     SentinelError,
     SyncerBroadcastChannelMessages,
-    UserOpList,
-    UserOps,
     WebSocketMessages,
     WebSocketMessagesEncodable,
     WebSocketMessagesError,
@@ -68,18 +66,6 @@ fn create_json_rpc_response_from_result<T: Serialize>(id: RpcId, r: Result<T, Se
     }
 }
 
-async fn get_user_ops_from_core(tx: MpscTx<CoreMessages>) -> Result<UserOps, SentinelError> {
-    let (msg, rx) = CoreMessages::get_user_ops_msg();
-    tx.send(msg).await?;
-    rx.await?
-}
-
-async fn get_user_ops_list_from_core(tx: MpscTx<CoreMessages>) -> Result<UserOpList, SentinelError> {
-    let (msg, rx) = CoreMessages::get_user_ops_list_msg();
-    tx.send(msg).await?;
-    rx.await?
-}
-
 async fn remove_user_op_from_core(uid_string: String, tx: MpscTx<CoreMessages>) -> Result<Json, SentinelError> {
     let uid = convert_hex_to_h256(&uid_string)?;
     let (msg, rx) = CoreMessages::get_remove_user_op_msg(uid);
@@ -127,10 +113,10 @@ struct JsonRpcRequest {
 enum RpcCall {
     Ping(RpcId),
     Unknown(RpcId, String),
-    GetUserOps(RpcId, CoreTx, CoreCxnStatus),
-    GetUserOpList(RpcId, CoreTx, CoreCxnStatus),
+    GetUserOps(RpcId, WebSocketTx, CoreCxnStatus),
     SyncStatus(RpcId, CoreTx, Box<SentinelConfig>),
     GetCoreState(RpcId, WebSocketTx, CoreCxnStatus),
+    GetUserOpList(RpcId, WebSocketTx, CoreCxnStatus),
     RemoveUserOp(RpcId, CoreTx, RpcParams, CoreCxnStatus),
     LatestBlockNumbers(RpcId, WebSocketTx, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
@@ -170,9 +156,9 @@ impl RpcCall {
     ) -> Self {
         match r.method.as_ref() {
             "ping" => Self::Ping(r.id),
-            "getUserOps" => Self::GetUserOps(r.id, core_tx, core_cxn),
-            "getUserOpList" => Self::GetUserOpList(r.id, core_tx, core_cxn),
+            "getUserOps" => Self::GetUserOps(r.id, websocket_tx, core_cxn),
             "syncStatus" => Self::SyncStatus(r.id, core_tx, Box::new(config)),
+            "getUserOpList" => Self::GetUserOpList(r.id, websocket_tx, core_cxn),
             "removeUserOp" => Self::RemoveUserOp(r.id, core_tx, r.params.clone(), core_cxn),
             "stopSyncer" => Self::StopSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
             "latestBlockNumbers" | "latest" => Self::LatestBlockNumbers(r.id, websocket_tx, core_cxn),
@@ -406,6 +392,42 @@ impl RpcCall {
         }
     }
 
+    async fn handle_get_user_ops(
+        websocket_tx: WebSocketTx,
+        core_cxn: bool,
+    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        check_core_is_connected(core_cxn)?;
+        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetUserOps);
+        websocket_tx.send(msg).await?;
+
+        tokio::select! {
+            response = rx => response?,
+            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+                let m = "getting enclave state";
+                error!("timed out whilst {m}");
+                Err(SentinelError::Timedout(m.into()))
+            }
+        }
+    }
+
+    async fn handle_get_user_op_list(
+        websocket_tx: WebSocketTx,
+        core_cxn: bool,
+    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        check_core_is_connected(core_cxn)?;
+        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetUserOpList);
+        websocket_tx.send(msg).await?;
+
+        tokio::select! {
+            response = rx => response?,
+            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+                let m = "getting enclave state";
+                error!("timed out whilst {m}");
+                Err(SentinelError::Timedout(m.into()))
+            }
+        }
+    }
+
     async fn handle_get_latest_block_numbers(
         websocket_tx: WebSocketTx,
         core_cxn: bool,
@@ -507,18 +529,16 @@ impl RpcCall {
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
-            Self::GetUserOps(id, core_tx, _core_cxn) => Ok(warp::reply::json(&create_json_rpc_response(
-                id,
-                get_user_ops_from_core(core_tx)
-                    .await
-                    .map_err(convert_error_to_rejection)?,
-            ))),
-            Self::GetUserOpList(id, core_tx, _core_cxn) => Ok(warp::reply::json(&create_json_rpc_response(
-                id,
-                get_user_ops_list_from_core(core_tx)
-                    .await
-                    .map_err(convert_error_to_rejection)?,
-            ))),
+            Self::GetUserOps(id, websocket_tx, core_cxn) => {
+                let result = Self::handle_get_user_ops(websocket_tx, core_cxn).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
+            Self::GetUserOpList(id, websocket_tx, core_cxn) => {
+                let result = Self::handle_get_user_op_list(websocket_tx, core_cxn).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
             Self::SyncStatus(id, core_tx, config) => {
                 let h_endpoints = config.host().endpoints();
                 let n_endpoints = config.native().endpoints();
