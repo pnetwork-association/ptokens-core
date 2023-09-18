@@ -61,6 +61,9 @@ pub enum WebSocketMessagesError {
 
     #[error("unexpected websocket response {0}")]
     UnexpectedResponse(String),
+
+    #[error("expected Some(..) arg name {arg_name} in location {location}, but got None")]
+    NoneError { arg_name: String, location: String },
 }
 
 impl From<CommonError> for WebSocketMessagesError {
