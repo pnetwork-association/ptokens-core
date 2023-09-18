@@ -16,6 +16,7 @@ pub use self::{
     websocket::{
         WebSocketMessages,
         WebSocketMessagesEncodable,
+        WebSocketMessagesEncodableDbOps,
         WebSocketMessagesError,
         WebSocketMessagesInitArgs,
         WebSocketMessagesResetChainArgs,

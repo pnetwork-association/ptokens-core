@@ -109,6 +109,9 @@ enum RpcCall {
     SyncStatus(RpcId, CoreTx, Box<SentinelConfig>),
     GetCoreState(RpcId, WebSocketTx, CoreCxnStatus),
     GetUserOpList(RpcId, WebSocketTx, CoreCxnStatus),
+    Get(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
+    Put(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
+    Delete(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     LatestBlockNumbers(RpcId, WebSocketTx, CoreCxnStatus),
     RemoveUserOp(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
@@ -151,7 +154,10 @@ impl RpcCall {
             "ping" => Self::Ping(r.id),
             "getUserOps" => Self::GetUserOps(r.id, websocket_tx, core_cxn),
             "syncStatus" => Self::SyncStatus(r.id, core_tx, Box::new(config)),
+            "get" => Self::Get(r.id, websocket_tx, r.params.clone(), core_cxn),
+            "put" => Self::Put(r.id, websocket_tx, r.params.clone(), core_cxn),
             "getUserOpList" => Self::GetUserOpList(r.id, websocket_tx, core_cxn),
+            "delete" => Self::Delete(r.id, websocket_tx, r.params.clone(), core_cxn),
             "removeUserOp" => Self::RemoveUserOp(r.id, websocket_tx, r.params.clone(), core_cxn),
             "stopSyncer" => Self::StopSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
             "latestBlockNumbers" | "latest" => Self::LatestBlockNumbers(r.id, websocket_tx, core_cxn),
@@ -505,9 +511,90 @@ impl RpcCall {
         Ok(json)
     }
 
+    async fn handle_get(
+        websocket_tx: WebSocketTx,
+        params: RpcParams,
+        core_cxn: bool,
+    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        debug!("handling db get...");
+        check_core_is_connected(core_cxn)?;
+        let checked_params = Self::check_params(params, 1)?;
+        let encodable_msg = WebSocketMessagesEncodable::try_from(Self::create_args("get", checked_params))?;
+        let (msg, rx) = WebSocketMessages::new(encodable_msg);
+        websocket_tx.send(msg).await?;
+
+        tokio::select! {
+            response = rx => response?,
+            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+                let m = "getting value from db";
+                error!("timed out whilst {m}");
+                Err(SentinelError::Timedout(m.into()))
+            }
+        }
+    }
+
+    async fn handle_put(
+        websocket_tx: WebSocketTx,
+        params: RpcParams,
+        core_cxn: bool,
+    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        debug!("handling db put...");
+        check_core_is_connected(core_cxn)?;
+        let checked_params = Self::check_params(params, 2)?;
+        let encodable_msg = WebSocketMessagesEncodable::try_from(Self::create_args("put", checked_params))?;
+        let (msg, rx) = WebSocketMessages::new(encodable_msg);
+        websocket_tx.send(msg).await?;
+
+        tokio::select! {
+            response = rx => response?,
+            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+                let m = "putting value in db";
+                error!("timed out whilst {m}");
+                Err(SentinelError::Timedout(m.into()))
+            }
+        }
+    }
+
+    async fn handle_delete(
+        websocket_tx: WebSocketTx,
+        params: RpcParams,
+        core_cxn: bool,
+    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        debug!("handling db delete...");
+        check_core_is_connected(core_cxn)?;
+        let checked_params = Self::check_params(params, 1)?;
+        let encodable_msg = WebSocketMessagesEncodable::try_from(Self::create_args("delete", checked_params))?;
+        let (msg, rx) = WebSocketMessages::new(encodable_msg);
+        websocket_tx.send(msg).await?;
+
+        tokio::select! {
+            response = rx => response?,
+            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+                let m = "deleting value from db";
+                error!("timed out whilst {m}");
+                Err(SentinelError::Timedout(m.into()))
+            }
+        }
+    }
+
     async fn handle(self) -> Result<impl warp::Reply, Rejection> {
         // TODO rm repetition in here.
         match self {
+            Self::Get(id, websocket_tx, params, core_cxn) => {
+                let result = Self::handle_get(websocket_tx, params, core_cxn).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
+            Self::Put(id, websocket_tx, params, core_cxn) => {
+                let result = Self::handle_put(websocket_tx, params, core_cxn).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
+            Self::Delete(id, websocket_tx, params, core_cxn) => {
+                let result = Self::handle_delete(websocket_tx, params, core_cxn).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
             Self::ResetChain(id, config, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params, core_cxn) => {
                 let result = Self::handle_reset_chain(
                     *config,

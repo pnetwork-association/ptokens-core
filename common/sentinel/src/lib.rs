@@ -60,6 +60,7 @@ pub use self::{
         SyncerMessages,
         WebSocketMessages,
         WebSocketMessagesEncodable,
+        WebSocketMessagesEncodableDbOps,
         WebSocketMessagesError,
         WebSocketMessagesInitArgs,
         WebSocketMessagesResetChainArgs,
