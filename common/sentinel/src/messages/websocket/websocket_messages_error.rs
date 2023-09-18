@@ -7,6 +7,9 @@ use crate::SentinelError;
 
 #[derive(Error, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesError {
+    #[error("from hex error: {0}")]
+    Hex(String),
+
     #[error("core not initialized for chain id: {0}")]
     Uninitialized(EthChainId),
 
@@ -79,5 +82,11 @@ impl From<SentinelError> for WebSocketMessagesError {
             SentinelError::BlockAlreadyInDb(e) => Self::BlockAlreadyInDb(e),
             err => Self::SentinelError(format!("{err}")),
         }
+    }
+}
+
+impl From<hex::FromHexError> for WebSocketMessagesError {
+    fn from(e: hex::FromHexError) -> Self {
+        Self::Hex(format!("{e}"))
     }
 }
