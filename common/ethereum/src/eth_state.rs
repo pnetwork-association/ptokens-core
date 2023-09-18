@@ -75,6 +75,12 @@ impl<'a, D: DatabaseInterface> EthState<'a, D> {
         }
     }
 
+    pub fn new_with_sub_mat(db: &'a D, s: EthSubmissionMaterial) -> Self {
+        let mut state = Self::init(db);
+        state.eth_submission_material = Some(s);
+        state
+    }
+
     pub fn get_eth_submission_material(&self) -> Result<&EthSubmissionMaterial> {
         match self.eth_submission_material {
             Some(ref eth_submission_material) => Ok(eth_submission_material),
