@@ -32,7 +32,6 @@ members = [
     "v1_bridges/erc20_on_eos",
     "v2_bridges/erc20_on_int",
     "v3_bridges/evm/sentinel-app",
-    "v3_bridges/evm/sentinel-cli",
     "v3_bridges/evm/sentinel-strongbox",
     "v2_bridges/vanilla_apps/pint-on-evm",
     "v1_bridges/vanilla_apps/pbtc-on-eos",
