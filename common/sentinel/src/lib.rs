@@ -52,7 +52,6 @@ pub use self::{
     messages::{
         BroadcastChannelMessages,
         BroadcasterMessages,
-        CoreMessages,
         EthRpcMessages,
         Responder,
         RpcServerBroadcastChannelMessages,
