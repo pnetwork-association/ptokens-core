@@ -434,14 +434,20 @@ pub trait EthDbUtilsExt<D: DatabaseInterface> {
         block_hash: &EthHash,
         n: u64,
     ) -> Result<Option<EthSubmissionMaterial>> {
-        trace!("✔ Getting {}th ancestor ETH block from db...", n);
-        match self.maybe_get_eth_submission_material_from_db(block_hash) {
-            None => Ok(None),
-            Some(block_and_receipts) => match n {
-                0 => Ok(Some(block_and_receipts)),
-                _ => self.maybe_get_nth_ancestor_eth_submission_material(&block_and_receipts.get_parent_hash()?, n - 1),
-            },
+        trace!("getting {}th ancestor ETH block from db...", n);
+        let mut sub_mat = self.maybe_get_eth_submission_material_from_db(block_hash);
+        let mut num = n;
+
+        while let Some(m) = sub_mat {
+            if num == 0 {
+                return Ok(Some(m));
+            } else {
+                sub_mat = self.maybe_get_eth_submission_material_from_db(&m.get_parent_hash()?);
+                num -= 1
+            }
         }
+
+        Ok(None)
     }
 
     fn maybe_get_eth_submission_material_from_db(&self, block_hash: &EthHash) -> Option<EthSubmissionMaterial> {
