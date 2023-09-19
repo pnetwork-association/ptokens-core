@@ -15,7 +15,6 @@ use common::BridgeSide;
 use common_chain_ids::EthChainId;
 use common_sentinel::{
     BroadcastChannelMessages,
-    CoreMessages,
     RpcServerBroadcastChannelMessages,
     SentinelConfig,
     SentinelError,
@@ -26,17 +25,12 @@ use common_sentinel::{
 };
 use futures::{stream::StreamExt, SinkExt};
 use tokio::{
-    sync::{
-        broadcast::Sender as MpMcTx,
-        mpsc::{Receiver as MpscRx, Sender as MpscTx},
-        Mutex,
-    },
+    sync::{broadcast::Sender as MpMcTx, mpsc::Receiver as MpscRx, Mutex},
     time::sleep,
 };
 use tower_http::services::ServeDir;
 
 // TODO have somewhere hold all these aliases
-type CoreTx = MpscTx<CoreMessages>;
 type WebSocketRx = MpscRx<WebSocketMessages>;
 type BroadcastChannelTx = MpMcTx<BroadcastChannelMessages>;
 
@@ -73,7 +67,6 @@ fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), ()> {
 async fn handle_socket(
     mut socket: WebSocket,
     who: SocketAddr,
-    _core_tx: CoreTx,
     websocket_rx: Arc<Mutex<WebSocketRx>>,
     broadcast_channel_tx: BroadcastChannelTx,
     cids: Vec<EthChainId>,
@@ -188,22 +181,15 @@ async fn handle_socket(
 
 #[derive(Clone)]
 struct AppState {
-    core_tx: CoreTx,
     cids: Vec<EthChainId>,
     websocket_rx: Arc<Mutex<WebSocketRx>>,
     broadcast_channel_tx: BroadcastChannelTx,
 }
 
 impl AppState {
-    fn new(
-        core_tx: CoreTx,
-        websocket_rx: WebSocketRx,
-        broadcast_channel_tx: BroadcastChannelTx,
-        cids: Vec<EthChainId>,
-    ) -> Self {
+    fn new(websocket_rx: WebSocketRx, broadcast_channel_tx: BroadcastChannelTx, cids: Vec<EthChainId>) -> Self {
         Self {
             cids,
-            core_tx,
             broadcast_channel_tx,
             websocket_rx: Arc::new(Mutex::new(websocket_rx)),
         }
@@ -223,16 +209,7 @@ async fn ws_handler(
     };
     debug!("`{user_agent}` at {addr} connected.");
     ws.on_upgrade(move |socket| async move {
-        match handle_socket(
-            socket,
-            addr,
-            state.core_tx,
-            state.websocket_rx,
-            state.broadcast_channel_tx,
-            state.cids,
-        )
-        .await
-        {
+        match handle_socket(socket, addr, state.websocket_rx, state.broadcast_channel_tx, state.cids).await {
             // FIXME what to return from here?
             Ok(_) => (),
             Err(e) => {
@@ -244,7 +221,6 @@ async fn ws_handler(
 
 async fn start_ws_server(
     websocket_rx: WebSocketRx,
-    core_tx: CoreTx,
     config: SentinelConfig,
     broadcast_channel_tx: BroadcastChannelTx,
 ) -> Result<(), SentinelError> {
@@ -253,7 +229,7 @@ async fn start_ws_server(
     let app = Router::new()
         .fallback_service(ServeDir::new(assets_dir).append_index_html_on_directories(true))
         .route("/ws", get(ws_handler))
-        .with_state(AppState::new(core_tx, websocket_rx, broadcast_channel_tx, vec![
+        .with_state(AppState::new(websocket_rx, broadcast_channel_tx, vec![
             config.chain_id(&BridgeSide::Native),
             config.chain_id(&BridgeSide::Host),
         ]));
@@ -268,7 +244,6 @@ async fn start_ws_server(
 
 pub async fn ws_server_loop(
     websocket_rx: WebSocketRx,
-    core_tx: CoreTx,
     config: SentinelConfig,
     disable: bool,
     broadcast_channel_tx: BroadcastChannelTx,
@@ -284,7 +259,6 @@ pub async fn ws_server_loop(
     tokio::select! {
         r = start_ws_server(
             websocket_rx,
-            core_tx.clone(),
             config.clone(),
             broadcast_channel_tx.clone(),
         ), if ws_server_is_enabled => r,

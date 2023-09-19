@@ -1,3 +1,4 @@
+#![allow(unused)] // FIXME rm
 use std::result::Result;
 
 use common::BridgeSide;
@@ -6,7 +7,6 @@ use common_sentinel::{
     BroadcastChannelMessages,
     BroadcasterMessages,
     ConfigT,
-    CoreMessages,
     Env,
     EthRpcMessages,
     SentinelConfig,
@@ -19,6 +19,7 @@ use tokio::sync::{
     mpsc::{Receiver as MpscRx, Sender as MpscTx},
 };
 
+/* FIXME Rm core stuff!
 #[allow(clippy::too_many_arguments)]
 async fn cancel_user_op(
     op: UserOp,
@@ -186,11 +187,11 @@ async fn cancel_user_ops(
 
     Ok(())
 }
+*/
 
 pub async fn broadcaster_loop(
     mut rx: MpscRx<BroadcasterMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
-    core_tx: MpscTx<CoreMessages>,
     config: SentinelConfig,
     disable: bool,
     _broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
@@ -206,15 +207,18 @@ pub async fn broadcaster_loop(
     let host_broadcaster_pk = Env::get_host_broadcaster_private_key()?;
     let native_broadcaster_pk = Env::get_native_broadcaster_private_key()?;
 
+    /* FIXME use websocket to get this stuff
     let (host_msg, host_rx) = CoreMessages::get_address_msg(BridgeSide::Host);
     let (native_msg, native_rx) = CoreMessages::get_address_msg(BridgeSide::Native);
     core_tx.send(host_msg).await?;
     core_tx.send(native_msg).await?;
     let host_address = host_rx.await??;
     let native_address = native_rx.await??;
+    */
 
     'broadcaster_loop: loop {
         tokio::select! {
+            /* FIXME reinstate this!
             r = rx.recv() , if broadcaster_is_enabled => match r {
                 Some(BroadcasterMessages::CancelUserOps) => {
                     match cancel_user_ops(
@@ -241,6 +245,7 @@ pub async fn broadcaster_loop(
                     break 'broadcaster_loop Err(SentinelError::Custom(name.into()))
                 },
             },
+            */
             _ = tokio::signal::ctrl_c() => {
                 warn!("{name} shutting down...");
                 break 'broadcaster_loop Err(SentinelError::SigInt(name.into()))

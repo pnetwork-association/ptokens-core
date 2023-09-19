@@ -4,9 +4,7 @@ use common::BridgeSide;
 use common_chain_ids::EthChainId;
 use common_eth::EthSubmissionMaterials;
 use common_sentinel::{
-    get_latest_block_num,
     BroadcastChannelMessages,
-    CoreMessages,
     EthRpcMessages,
     RpcServerBroadcastChannelMessages,
     SentinelConfig,
@@ -18,7 +16,6 @@ use common_sentinel::{
     WebSocketMessagesResetChainArgs,
     WebSocketMessagesSubmitArgs,
 };
-use jsonrpsee::ws_client::WsClient;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 use tokio::{
@@ -33,7 +30,6 @@ use warp::{reject, reject::Reject, Filter, Rejection};
 type RpcId = Option<u64>;
 type CoreCxnStatus = bool;
 type RpcParams = Vec<String>;
-type CoreTx = MpscTx<CoreMessages>;
 type EthRpcTx = MpscTx<EthRpcMessages>;
 type WebSocketTx = MpscTx<WebSocketMessages>;
 type BroadcastChannelTx = MpmcTx<BroadcastChannelMessages>;
@@ -46,6 +42,7 @@ struct Error(String);
 
 impl Reject for Error {}
 
+#[allow(unused)]
 fn convert_error_to_rejection<T: core::fmt::Display>(e: T) -> Rejection {
     reject::custom(Error(e.to_string())) // TODO rpc error spec adherence required
 }
@@ -66,35 +63,6 @@ fn create_json_rpc_response_from_result<T: Serialize>(id: RpcId, r: Result<T, Se
     }
 }
 
-async fn get_sync_status(
-    n_ws_client: &WsClient,
-    h_ws_client: &WsClient,
-    n_sleep_time: u64,
-    h_sleep_time: u64,
-    tx: MpscTx<CoreMessages>,
-) -> Result<Json, SentinelError> {
-    let n_e = get_latest_block_num(n_ws_client, n_sleep_time, BridgeSide::Native).await?;
-    let h_e = get_latest_block_num(h_ws_client, h_sleep_time, BridgeSide::Host).await?;
-
-    let (msg, rx) = CoreMessages::get_latest_block_numbers_msg();
-    tx.send(msg).await?;
-    let (n_c, h_c) = rx.await??;
-
-    let n_d = if n_e > n_c { n_e - n_c } else { 0 };
-    let h_d = if h_e > h_c { h_e - h_c } else { 0 };
-
-    let r = json!({
-        "host_delta": h_d,
-        "native_delta": n_d,
-        "host_core_latest_block_num": h_c,
-        "native_core_latest_block_num": n_c,
-        "host_endpoint_latest_block_num": h_e,
-        "native_endpoint_latest_block_num": n_e,
-    });
-
-    Ok(r)
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 struct JsonRpcRequest {
     id: RpcId,
@@ -106,7 +74,6 @@ enum RpcCall {
     Ping(RpcId),
     Unknown(RpcId, String),
     GetUserOps(RpcId, WebSocketTx, CoreCxnStatus),
-    SyncStatus(RpcId, CoreTx, Box<SentinelConfig>),
     GetCoreState(RpcId, WebSocketTx, CoreCxnStatus),
     GetUserOpList(RpcId, WebSocketTx, CoreCxnStatus),
     Get(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
@@ -143,7 +110,6 @@ impl RpcCall {
     fn new(
         r: JsonRpcRequest,
         config: SentinelConfig,
-        core_tx: CoreTx,
         websocket_tx: WebSocketTx,
         host_eth_rpc_tx: EthRpcTx,
         native_eth_rpc_tx: EthRpcTx,
@@ -153,7 +119,6 @@ impl RpcCall {
         match r.method.as_ref() {
             "ping" => Self::Ping(r.id),
             "getUserOps" => Self::GetUserOps(r.id, websocket_tx, core_cxn),
-            "syncStatus" => Self::SyncStatus(r.id, core_tx, Box::new(config)),
             "get" => Self::Get(r.id, websocket_tx, r.params.clone(), core_cxn),
             "put" => Self::Put(r.id, websocket_tx, r.params.clone(), core_cxn),
             "getUserOpList" => Self::GetUserOpList(r.id, websocket_tx, core_cxn),
@@ -668,30 +633,6 @@ impl RpcCall {
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
-            Self::SyncStatus(id, core_tx, config) => {
-                let h_endpoints = config.host().endpoints();
-                let n_endpoints = config.native().endpoints();
-                let h_sleep_time = h_endpoints.sleep_time();
-                let n_sleep_time = n_endpoints.sleep_time();
-                Ok(warp::reply::json(&create_json_rpc_response(
-                    id,
-                    get_sync_status(
-                        &n_endpoints
-                            .get_first_ws_client()
-                            .await
-                            .map_err(convert_error_to_rejection)?,
-                        &h_endpoints
-                            .get_first_ws_client()
-                            .await
-                            .map_err(convert_error_to_rejection)?,
-                        n_sleep_time,
-                        h_sleep_time,
-                        core_tx,
-                    )
-                    .await
-                    .map_err(convert_error_to_rejection)?,
-                )))
-            },
             Self::RemoveUserOp(id, websocket_tx, params, core_cxn) => {
                 let result = Self::handle_remove_user_op(websocket_tx, params, core_cxn).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
@@ -702,7 +643,6 @@ impl RpcCall {
 }
 
 async fn start_rpc_server(
-    core_tx: CoreTx,
     host_eth_rpc_tx: EthRpcTx,
     native_eth_rpc_tx: EthRpcTx,
     websocket_tx: WebSocketTx,
@@ -711,7 +651,6 @@ async fn start_rpc_server(
     core_cxn: bool,
 ) -> Result<(), SentinelError> {
     debug!("rpc server listening!");
-    let core_tx_filter = warp::any().map(move || core_tx.clone());
     let core_cxn_filter = warp::any().map(move || core_cxn);
     let websocket_tx_filter = warp::any().map(move || websocket_tx.clone());
     let host_eth_rpc_tx_filter = warp::any().map(move || host_eth_rpc_tx.clone());
@@ -725,7 +664,6 @@ async fn start_rpc_server(
         .and(warp::body::content_length_limit(1024 * 16)) // FIXME make configurable
         .and(warp::body::json::<JsonRpcRequest>())
         .and(warp::any().map(move || config.clone()))
-        .and(core_tx_filter.clone())
         .and(websocket_tx_filter.clone())
         .and(host_eth_rpc_tx_filter.clone())
         .and(native_eth_rpc_tx_filter.clone())
@@ -765,7 +703,6 @@ async fn broadcast_channel_loop(
 
 #[allow(clippy::too_many_arguments)]
 pub async fn rpc_server_loop(
-    core_tx: CoreTx,
     host_eth_rpc_tx: EthRpcTx,
     native_eth_rpc_tx: EthRpcTx,
     websocket_tx: WebSocketTx,
@@ -797,7 +734,6 @@ pub async fn rpc_server_loop(
                 }
             },
             r = start_rpc_server(
-                core_tx.clone(),
                 host_eth_rpc_tx.clone(),
                 native_eth_rpc_tx.clone(),
                 websocket_tx.clone(),

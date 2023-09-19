@@ -1,5 +1,4 @@
 mod broadcaster;
-mod core;
 mod eth_rpc;
 mod rpc_server;
 mod start_sentinel;

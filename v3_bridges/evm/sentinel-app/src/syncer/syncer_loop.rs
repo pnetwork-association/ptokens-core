@@ -4,7 +4,6 @@ use common_chain_ids::EthChainId;
 use common_sentinel::{
     Batch,
     BroadcastChannelMessages,
-    CoreMessages,
     EthRpcMessages,
     LatestBlockNumbers,
     SentinelConfig,
@@ -26,7 +25,6 @@ use tokio::{
 async fn main_loop(
     mut batch: Batch,
     config: SentinelConfig,
-    _core_tx: MpscTx<CoreMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     websocket_tx: MpscTx<WebSocketMessages>,
 ) -> Result<(), SentinelError> {
@@ -170,7 +168,6 @@ async fn broadcast_channel_loop(
 pub async fn syncer_loop(
     batch: Batch,
     config: SentinelConfig,
-    core_tx: MpscTx<CoreMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     websocket_tx: MpscTx<WebSocketMessages>,
     disable: bool,
@@ -223,7 +220,6 @@ pub async fn syncer_loop(
             r = main_loop(
                 batch.clone(),
                 config.clone(),
-                core_tx.clone(),
                 eth_rpc_tx.clone(),
                 websocket_tx.clone(),
             ), if core_is_connected && syncer_is_enabled => {
