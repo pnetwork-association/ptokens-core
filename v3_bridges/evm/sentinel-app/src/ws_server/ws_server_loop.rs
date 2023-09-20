@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, ops::ControlFlow, path::PathBuf, result::Result, sync::Arc, time::Duration};
+use std::{net::SocketAddr, path::PathBuf, result::Result, sync::Arc, time::Duration};
 
 use axum::{
     extract::{
@@ -34,36 +34,6 @@ use tower_http::services::ServeDir;
 type WebSocketRx = MpscRx<WebSocketMessages>;
 type BroadcastChannelTx = MpMcTx<BroadcastChannelMessages>;
 
-fn process_message(msg: Message, who: SocketAddr) -> ControlFlow<(), ()> {
-    match msg {
-        Message::Text(t) => {
-            debug!("{} sent str: {:?}", who, t);
-        },
-        Message::Binary(d) => {
-            debug!("{} sent {} bytes: {:?}", who, d.len(), d);
-        },
-        Message::Close(c) => {
-            if let Some(cf) = c {
-                debug!("{} sent close with code {} and reason `{}`", who, cf.code, cf.reason);
-            } else {
-                debug!("{} somehow sent close message without CloseFrame", who);
-            }
-            return ControlFlow::Break(());
-        },
-
-        Message::Pong(v) => {
-            debug!("{} sent pong with {:?}", who, v);
-        },
-        // You should never need to manually handle Message::Ping, as axum's websocket library
-        // will do so for you automagically by replying with Pong and copying the v according to
-        // spec. But if you need the contents of the pings you can see them here.
-        Message::Ping(v) => {
-            debug!("{} sent ping with {:?}", who, v);
-        },
-    }
-    ControlFlow::Continue(())
-}
-
 async fn handle_socket(
     mut socket: WebSocket,
     who: SocketAddr,
@@ -76,24 +46,27 @@ async fn handle_socket(
     } else {
         error!("could not send ping {}!", who);
         // NOTE: No Error here since the only thing we can do is to close the connection.
-        // If we can not send messages, there is no way to salvage the statemachine anyway.
-        return Ok(()); // FIXME
+        // If we cannot send messages, there is no way to salvage the statemachine anyway.
+        return Ok(());
     }
 
-    // NOTE: Receive single message from a client (we can either receive or send with socket).
-    // this will likely be the pong for our ping, or a hello message from client.
-    // Waiting for a message from a client will block this task, but will not block other client's
-    // connections.
-    if let Some(msg) = socket.recv().await {
-        if let Ok(msg) = msg {
-            if process_message(msg, who).is_break() {
-                return Ok(());
-            }
-        } else {
-            error!("client {who} abruptly disconnected");
-            return Ok(()); // FIXME
-        }
-    }
+    // NOTE: Await a response to our ping...
+    match socket.recv().await {
+        Some(Ok(Message::Pong(v))) => debug!("{} sent pong with {:?}", who, v),
+        Some(Ok(Message::Close(maybe_close_frame))) => {
+            if let Some(cf) = maybe_close_frame {
+                debug!("{} sent close with code {} and reason `{}`", who, cf.code, cf.reason);
+            } else {
+                debug!("{} somehow sent close message without CloseFrame", who);
+            };
+            return Ok(());
+        },
+        _ => {
+            error!("did not receive expected response to ping - terminating connection");
+            return Ok(());
+        },
+    };
+
     let (mut sender, mut receiver) = socket.split();
 
     // NOTE: Trying the lock here limits us to one active connection.
@@ -156,8 +129,15 @@ async fn handle_socket(
                         break 'ws_loop
                     },
                     m => {
-                        warn!("unexpected msg received from websocket: {m:?}");
-                        continue 'ws_loop
+                        if m.is_none() {
+                            // NOTE: If the core unexpected disconnects with no message, we enter
+                            // an infinite loop here, with this msg being `None`. As such, lets
+                            // break out instead and kill the connection.
+                            break 'ws_loop
+                        } else {
+                            warn!("unexpected msg received from websocket: {m:?}");
+                            continue 'ws_loop
+                        }
                     },
                 }
             },
@@ -176,7 +156,7 @@ async fn handle_socket(
     }
 
     error!("websocket context {who} destroyed");
-    Ok(()) // FIXME Too many connections error or something?
+    Ok(())
 }
 
 #[derive(Clone)]
