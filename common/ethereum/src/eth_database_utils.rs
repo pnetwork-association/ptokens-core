@@ -205,6 +205,14 @@ pub trait EthDbUtilsExt<D: DatabaseInterface> {
         !self.get_is_for_evm()
     }
 
+    fn get_symbol(&self) -> &str {
+        if self.get_is_for_eth() {
+            "ETH"
+        } else {
+            "EVM"
+        }
+    }
+
     fn delete_block_by_block_hash(&self, block: &EthSubmissionMaterial) -> Result<()> {
         let key = self.normalize_key(block.get_block_hash()?.as_bytes().to_vec());
         debug!("Deleting block by blockhash under key: 0x{}", hex::encode(&key));
@@ -255,7 +263,7 @@ pub trait EthDbUtilsExt<D: DatabaseInterface> {
     }
 
     fn put_eth_latest_block_hash_in_db(&self, eth_hash: &EthHash) -> Result<()> {
-        info!("✔ Putting ETH latest block hash in db...");
+        info!("putting {} latest block hash in db...", self.get_symbol());
         self.put_special_eth_hash_in_db("latest", eth_hash)
     }
 
@@ -323,7 +331,7 @@ pub trait EthDbUtilsExt<D: DatabaseInterface> {
     }
 
     fn get_latest_eth_block_timestamp(&self) -> Result<u64> {
-        info!("✔ Getting latest ETH block number from db...");
+        info!("getting latest {} block number from db...", self.get_symbol());
         match self.get_special_eth_block_from_db("latest") {
             Ok(result) => Ok(result.get_timestamp().as_secs()),
             Err(e) => Err(e),

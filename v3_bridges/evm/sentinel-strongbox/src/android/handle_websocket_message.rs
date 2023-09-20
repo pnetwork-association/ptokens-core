@@ -26,6 +26,7 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
         _ => check_init(state.db()),
     }?;
 
+    info!("handling websocket msg: '{msg}'...");
     let final_state = match msg {
         WebSocketMessagesEncodable::GetUserOps => super::handlers::get_user_ops(state),
         WebSocketMessagesEncodable::GetCoreState => super::handlers::get_core_state(state),

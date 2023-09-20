@@ -13,12 +13,15 @@ pub fn get_cancellable_user_ops(max_delta: u64, state: State) -> Result<State, S
     let h_latest_block_timestamp = h_db_utils.get_latest_eth_block_timestamp()?;
 
     let list = UserOpList::get(&s_db_utils);
+    debug!("user op list: {list}");
+
     let cancellable_ops = list.get_cancellable_ops(
         max_delta,
         &s_db_utils,
         n_latest_block_timestamp,
         h_latest_block_timestamp,
     )?;
+    debug!("cancellable ops: {cancellable_ops}");
 
     let j = json!({ "cancellable_ops": cancellable_ops });
     let r = WebSocketMessagesEncodable::Success(j);
