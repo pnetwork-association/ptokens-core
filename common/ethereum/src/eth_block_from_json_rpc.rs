@@ -49,6 +49,7 @@ impl EthSubmissionMaterial {
             eos_ref_block_prefix: None,
             algo_first_valid_round: None,
             receipts: EthReceipts(vec![]),
+            timestamp: Some(block.timestamp),
             block_number: Some(block.number),
             parent_hash: Some(block.parent_hash),
             receipts_root: Some(block.receipts_root),

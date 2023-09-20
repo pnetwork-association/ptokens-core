@@ -86,7 +86,7 @@ impl FromStr for EthSubmissionMaterial {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Eq, Deserialize, Serialize)]
 pub struct EthSubmissionMaterial {
     pub block: Option<EthBlock>,
     pub receipts: EthReceipts,
@@ -97,14 +97,43 @@ pub struct EthSubmissionMaterial {
     pub parent_hash: Option<EthHash>,
     pub receipts_root: Option<EthHash>,
     pub algo_first_valid_round: Option<u64>,
+    pub timestamp: Option<U256>,
+}
+
+impl PartialEq for EthSubmissionMaterial {
+    // NOTE:The timestamp field was added later and this API change broke a lot of tests, so as a
+    // quick solution we impl `PartialEq` manually, omitting the new timestmap field.
+    //
+    // The reason reason this timestamp field was added is because v3 Sentinels need to know what
+    // the latest block timestamp they have for various reasons. However, due to constraints in
+    // TEEs, once a block has been submitted to a sentinel and validated, the submission material
+    // is made as small as possible by removing the block itself and any non-pertinent receipts.
+    // These leaves the TEEE-constrained database as light as possible. Howwever this also means we
+    // lose access to the block timestamps, and so they're added to this struct upon creation.
+    fn eq(&self, other: &Self) -> bool {
+        self.hash == other.hash
+            && self.block == other.block
+            && self.receipts == other.receipts
+            && self.parent_hash == other.parent_hash
+            && self.block_number == other.block_number
+            && self.receipts_root == other.receipts_root
+            && self.eos_ref_block_num == other.eos_ref_block_num
+            && self.eos_ref_block_prefix == other.eos_ref_block_prefix
+            && self.algo_first_valid_round == other.algo_first_valid_round
+        // NOTE: We omit the timestamp!
+    }
 }
 
 impl EthSubmissionMaterial {
+    pub fn timestamp(&self) -> Duration {
+        self.get_timestamp()
+    }
+
     pub fn get_timestamp(&self) -> Duration {
-        match self.block {
-            Some(ref b) => Duration::new(b.get_timestamp().as_u64(), NANO_SECONDS),
+        match self.timestamp {
+            Some(t) => Duration::new(t.as_u64(), NANO_SECONDS),
             None => {
-                warn!("no block in submission material to get timestamp from!");
+                warn!("no timestamp in submission material, defaulting to zero");
                 Duration::new(0, NANO_SECONDS)
             },
         }
@@ -155,6 +184,7 @@ impl EthSubmissionMaterial {
             eos_ref_block_num,
             eos_ref_block_prefix,
             hash: Some(block.hash),
+            timestamp: Some(block.timestamp),
             block_number: Some(block.number),
             parent_hash: Some(block.parent_hash),
             receipts_root: Some(block.receipts_root),
@@ -256,10 +286,14 @@ impl EthSubmissionMaterial {
             Some(ref block_json) => Some(EthBlock::from_json(block_json)?),
             None => None,
         };
+
+        let timestamp = block.as_ref().map(|b| b.timestamp);
+
         let receipts = EthReceipts::from_jsons(&json.receipts.clone())?;
         match block {
             Some(block) => Ok(EthSubmissionMaterial {
                 receipts,
+                timestamp,
                 hash: Some(block.hash),
                 block_number: Some(block.number),
                 parent_hash: Some(block.parent_hash),
@@ -281,6 +315,7 @@ impl EthSubmissionMaterial {
                 };
                 Ok(EthSubmissionMaterial {
                     receipts,
+                    timestamp,
                     block: None,
                     hash: json.hash,
                     parent_hash: json.parent_hash,
@@ -707,11 +742,12 @@ mod tests {
     }
 
     #[test]
-    fn should_get_zero_as_timestamp_if_no_block_in_submission_material() {
+    fn should_get_correct_timestamp_if_no_block_in_submission_material() {
         let mut sub_mat = get_sample_eth_submission_material();
         sub_mat.block = None;
+        assert_eq!(sub_mat.block, None);
         let result = sub_mat.get_timestamp();
-        let expected_result = Duration::new(0, NANO_SECONDS);
+        let expected_result = Duration::new(1567871882, NANO_SECONDS);
         assert_eq!(result, expected_result)
     }
 }
