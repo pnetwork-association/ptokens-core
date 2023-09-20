@@ -5,6 +5,7 @@ use common::BridgeSide;
 use common_eth::EthPrivateKey;
 use common_sentinel::{
     BroadcastChannelMessages,
+    BroadcasterBroadcastChannelMessages,
     BroadcasterMessages,
     ConfigT,
     Env,
@@ -189,21 +190,38 @@ async fn cancel_user_ops(
 }
 */
 
+async fn broadcast_channel_loop(
+    mut broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
+) -> Result<BroadcasterBroadcastChannelMessages, SentinelError> {
+    // NOTE: This loops continuously listening to the broadcasting channel, and only returns if we
+    // receive a pertinent message. This way, other messages won't cause early returns in the main
+    // tokios::select, so then the main_loop can continue doing it's work.
+    'broadcast_channel_loop: loop {
+        match broadcast_channel_rx.recv().await {
+            Ok(BroadcastChannelMessages::Broadcaster(msg)) => break 'broadcast_channel_loop Ok(msg),
+            Ok(_) => continue 'broadcast_channel_loop, // NOTE: The message wasn't for us
+            Err(e) => break 'broadcast_channel_loop Err(e.into()),
+        }
+    }
+}
+
 pub async fn broadcaster_loop(
     mut rx: MpscRx<BroadcasterMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     config: SentinelConfig,
     disable: bool,
-    _broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
+    broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
     _broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
 ) -> Result<(), SentinelError> {
     let name = "broadcaster";
     if disable {
         warn!("{name} disabled!")
     };
-    let broadcaster_is_enabled = !disable; // FIXME/TODO use a broadcaster channel to flip this switch
-    Env::init()?;
+    let mut broadcaster_is_enabled = !disable;
+    let mut core_is_connected = false;
+    warn!("{name} not active yet due to no core connection");
 
+    Env::init()?;
     let host_broadcaster_pk = Env::get_host_broadcaster_private_key()?;
     let native_broadcaster_pk = Env::get_native_broadcaster_private_key()?;
 
@@ -218,8 +236,38 @@ pub async fn broadcaster_loop(
 
     'broadcaster_loop: loop {
         tokio::select! {
+            r = broadcast_channel_loop(broadcast_channel_tx.subscribe()) => {
+                match r {
+                    Ok(msg) => {
+                        let note = format!("(core is currently {}connected)", if core_is_connected { "" } else { "not "});
+                        match msg {
+                            BroadcasterBroadcastChannelMessages::Stop => {
+                                debug!("msg received to stop the {name} {note}");
+                                broadcaster_is_enabled = false;
+                                continue 'broadcaster_loop
+                            },
+                            BroadcasterBroadcastChannelMessages::Start => {
+                                debug!("msg received to start the {name} {note}");
+                                broadcaster_is_enabled = true;
+                                continue 'broadcaster_loop
+                            },
+                            BroadcasterBroadcastChannelMessages::CoreConnected => {
+                                debug!("core connected message received in {name} {note}");
+                                core_is_connected = true;
+                                continue 'broadcaster_loop
+                            },
+                            BroadcasterBroadcastChannelMessages::CoreDisconnected => {
+                                debug!("core disconnected message received in {name} {note}");
+                                core_is_connected = false;
+                                continue 'broadcaster_loop
+                            },
+                        }
+                    },
+                    Err(e) => break 'broadcaster_loop Err(e),
+                }
+            },
             /* FIXME reinstate this!
-            r = rx.recv() , if broadcaster_is_enabled => match r {
+            r = rx.recv() , if broadcaster_is_enabled && core_is_connected => match r {
                 Some(BroadcasterMessages::CancelUserOps) => {
                     match cancel_user_ops(
                         &config,
