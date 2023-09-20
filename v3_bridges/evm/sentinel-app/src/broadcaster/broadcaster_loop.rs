@@ -242,22 +242,22 @@ pub async fn broadcaster_loop(
                         let note = format!("(core is currently {}connected)", if core_is_connected { "" } else { "not "});
                         match msg {
                             BroadcasterBroadcastChannelMessages::Stop => {
-                                debug!("msg received to stop the {name} {note}");
+                                warn!("msg received to stop the {name} {note}");
                                 broadcaster_is_enabled = false;
                                 continue 'broadcaster_loop
                             },
                             BroadcasterBroadcastChannelMessages::Start => {
-                                debug!("msg received to start the {name} {note}");
+                                warn!("msg received to start the {name} {note}");
                                 broadcaster_is_enabled = true;
                                 continue 'broadcaster_loop
                             },
                             BroadcasterBroadcastChannelMessages::CoreConnected => {
-                                debug!("core connected message received in {name} {note}");
+                                warn!("core connected message received in {name} {note}");
                                 core_is_connected = true;
                                 continue 'broadcaster_loop
                             },
                             BroadcasterBroadcastChannelMessages::CoreDisconnected => {
-                                debug!("core disconnected message received in {name} {note}");
+                                warn!("core disconnected message received in {name} {note}");
                                 core_is_connected = false;
                                 continue 'broadcaster_loop
                             },
