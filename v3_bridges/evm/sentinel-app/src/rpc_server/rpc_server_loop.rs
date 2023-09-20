@@ -3,11 +3,12 @@ use common_sentinel::{
     RpcServerBroadcastChannelMessages,
     SentinelConfig,
     SentinelError,
+    WebSocketMessagesEncodable,
     WebSocketMessagesError,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
-use warp::{reject, reject::Reject, Filter, Rejection};
+use warp::{reject::Reject, Filter, Rejection};
 
 use crate::rpc_server::constants::{
     BroadcastChannelRx,
@@ -23,11 +24,6 @@ use crate::rpc_server::constants::{
 struct Error(String);
 
 impl Reject for Error {}
-
-#[allow(unused)]
-fn convert_error_to_rejection<T: core::fmt::Display>(e: T) -> Rejection {
-    reject::custom(Error(e.to_string())) // TODO rpc error spec adherence required
-}
 
 fn create_json_rpc_response<T: Serialize>(id: RpcId, t: T) -> Json {
     json!({ "id": id, "result": t, "jsonrpc": "2.0" })
@@ -205,41 +201,35 @@ impl RpcCall {
     }
 
     async fn handle(self) -> Result<impl warp::Reply, Rejection> {
-        // TODO rm repetition in here.
         match self {
             Self::GetSyncState(id, config, websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, core_cxn) => {
-                let result =
-                    Self::handle_sync_state(*config, websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, core_cxn).await;
-                let json = create_json_rpc_response_from_result(id, result, 1337);
-                Ok(warp::reply::json(&json))
+                Self::handle_ws_result(
+                    id,
+                    Self::handle_sync_state(*config, websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, core_cxn).await,
+                )
             },
             Self::Get(id, websocket_tx, params, core_cxn) => {
-                let result = Self::handle_get(websocket_tx, params, core_cxn).await;
-                let json = create_json_rpc_response_from_result(id, result, 1337);
-                Ok(warp::reply::json(&json))
+                Self::handle_ws_result(id, Self::handle_get(websocket_tx, params, core_cxn).await)
             },
             Self::Put(id, websocket_tx, params, core_cxn) => {
-                let result = Self::handle_put(websocket_tx, params, core_cxn).await;
-                let json = create_json_rpc_response_from_result(id, result, 1337);
-                Ok(warp::reply::json(&json))
+                Self::handle_ws_result(id, Self::handle_put(websocket_tx, params, core_cxn).await)
             },
             Self::Delete(id, websocket_tx, params, core_cxn) => {
-                let result = Self::handle_delete(websocket_tx, params, core_cxn).await;
-                let json = create_json_rpc_response_from_result(id, result, 1337);
-                Ok(warp::reply::json(&json))
+                Self::handle_ws_result(id, Self::handle_delete(websocket_tx, params, core_cxn).await)
             },
             Self::ResetChain(id, config, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params, core_cxn) => {
-                let result = Self::handle_reset_chain(
-                    *config,
-                    host_eth_rpc_tx,
-                    native_eth_rpc_tx,
-                    websocket_tx,
-                    params,
-                    core_cxn,
+                Self::handle_ws_result(
+                    id,
+                    Self::handle_reset_chain(
+                        *config,
+                        host_eth_rpc_tx,
+                        native_eth_rpc_tx,
+                        websocket_tx,
+                        params,
+                        core_cxn,
+                    )
+                    .await,
                 )
-                .await;
-                let json = create_json_rpc_response_from_result(id, result, 1337);
-                Ok(warp::reply::json(&json))
             },
             Self::StopSyncer(id, broadcast_channel_tx, params, core_cxn) => {
                 let result = Self::handle_syncer_start_stop(broadcast_channel_tx, params, true, core_cxn).await;
@@ -247,79 +237,84 @@ impl RpcCall {
                 Ok(warp::reply::json(&json))
             },
             Self::GetUserOpState(id, config, websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, params, core_cxn) => {
-                let result = Self::handle_get_user_op_state(
-                    *config,
-                    websocket_tx,
-                    host_eth_rpc_tx,
-                    native_eth_rpc_tx,
-                    params,
-                    core_cxn,
+                Self::handle_ws_result(
+                    id,
+                    Self::handle_get_user_op_state(
+                        *config,
+                        websocket_tx,
+                        host_eth_rpc_tx,
+                        native_eth_rpc_tx,
+                        params,
+                        core_cxn,
+                    )
+                    .await,
                 )
-                .await;
-                let json = create_json_rpc_response_from_result(id, result, 1337);
-                Ok(warp::reply::json(&json))
             },
             Self::StartSyncer(id, broadcast_channel_tx, params, core_cxn) => {
+                // TODO enum for syncer state
                 let result = Self::handle_syncer_start_stop(broadcast_channel_tx, params, false, core_cxn).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
             Self::LatestBlockNumbers(id, websocket_tx, core_cxn) => {
-                let result = Self::handle_get_latest_block_numbers(websocket_tx, core_cxn).await;
-                let json = create_json_rpc_response_from_result(id, result, 1337);
-                Ok(warp::reply::json(&json))
+                Self::handle_ws_result(id, Self::handle_get_latest_block_numbers(websocket_tx, core_cxn).await)
             },
             Self::SubmitBlock(id, config, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params, core_cxn) => {
-                let result = Self::handle_submit_block(
-                    *config,
-                    host_eth_rpc_tx,
-                    native_eth_rpc_tx,
-                    websocket_tx,
-                    params,
-                    core_cxn,
+                Self::handle_ws_result(
+                    id,
+                    Self::handle_submit_block(
+                        *config,
+                        host_eth_rpc_tx,
+                        native_eth_rpc_tx,
+                        websocket_tx,
+                        params,
+                        core_cxn,
+                    )
+                    .await,
                 )
-                .await;
-                let json = create_json_rpc_response_from_result(id, result, 1337);
-                Ok(warp::reply::json(&json))
             },
             Self::Ping(id) => Ok(warp::reply::json(&create_json_rpc_response(id, "pong"))),
             Self::Init(id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params, core_cxn) => {
-                let result =
-                    Self::handle_init(websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, params, core_cxn).await;
-                let json = create_json_rpc_response_from_result(id, result, 1337);
-                Ok(warp::reply::json(&json))
+                Self::handle_ws_result(
+                    id,
+                    Self::handle_init(websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, params, core_cxn).await,
+                )
+            },
+            Self::GetCoreState(id, websocket_tx, core_cxn) => {
+                Self::handle_ws_result(id, Self::handle_get_core_state(websocket_tx, core_cxn).await)
+            },
+            Self::GetUserOps(id, websocket_tx, core_cxn) => {
+                Self::handle_ws_result(id, Self::handle_get_user_ops(websocket_tx, core_cxn).await)
+            },
+            Self::GetUserOpList(id, websocket_tx, core_cxn) => {
+                Self::handle_ws_result(id, Self::handle_get_user_op_list(websocket_tx, core_cxn).await)
+            },
+            Self::GetCancellableUserOps(id, config, websocket_tx, core_cxn) => Self::handle_ws_result(
+                id,
+                Self::handle_get_cancellable_user_ops(config, websocket_tx, core_cxn).await,
+            ),
+            Self::RemoveUserOp(id, websocket_tx, params, core_cxn) => {
+                Self::handle_ws_result(id, Self::handle_remove_user_op(websocket_tx, params, core_cxn).await)
             },
             Self::Unknown(id, method) => Ok(warp::reply::json(&create_json_rpc_error(
                 id,
                 1, // FIXME arbitrary
                 &format!("unknown method: {method}"),
             ))),
-            Self::GetCoreState(id, websocket_tx, core_cxn) => {
-                let result = Self::handle_get_core_state(websocket_tx, core_cxn).await;
-                let json = create_json_rpc_response_from_result(id, result, 1337);
-                Ok(warp::reply::json(&json))
-            },
-            Self::GetUserOps(id, websocket_tx, core_cxn) => {
-                let result = Self::handle_get_user_ops(websocket_tx, core_cxn).await;
-                let json = create_json_rpc_response_from_result(id, result, 1337);
-                Ok(warp::reply::json(&json))
-            },
-            Self::GetUserOpList(id, websocket_tx, core_cxn) => {
-                let result = Self::handle_get_user_op_list(websocket_tx, core_cxn).await;
-                let json = create_json_rpc_response_from_result(id, result, 1337);
-                Ok(warp::reply::json(&json))
-            },
-            Self::GetCancellableUserOps(id, config, websocket_tx, core_cxn) => {
-                let result = Self::handle_get_cancellable_user_ops(config, websocket_tx, core_cxn).await;
-                let json = create_json_rpc_response_from_result(id, result, 1337);
-                Ok(warp::reply::json(&json))
-            },
-            Self::RemoveUserOp(id, websocket_tx, params, core_cxn) => {
-                let result = Self::handle_remove_user_op(websocket_tx, params, core_cxn).await;
-                let json = create_json_rpc_response_from_result(id, result, 1337);
-                Ok(warp::reply::json(&json))
-            },
         }
+    }
+
+    // NOTE: This is because anything involving the core returns an encodable result from which we
+    // need to extract either the successful json response, or turn an error into an error response.
+    fn handle_ws_result(
+        id: RpcId,
+        r: Result<WebSocketMessagesEncodable, SentinelError>,
+    ) -> Result<warp::reply::Json, Rejection> {
+        let j = match r {
+            Ok(WebSocketMessagesEncodable::Success(j)) => create_json_rpc_response(id, j),
+            other => create_json_rpc_response_from_result(id, other, 1337),
+        };
+        Ok(warp::reply::json(&j))
     }
 }
 
