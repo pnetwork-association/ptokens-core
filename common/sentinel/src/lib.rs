@@ -51,6 +51,7 @@ pub use self::{
     logging::{init_logger, LogLevel},
     messages::{
         BroadcastChannelMessages,
+        BroadcasterBroadcastChannelMessages,
         BroadcasterMessages,
         EthRpcMessages,
         Responder,
