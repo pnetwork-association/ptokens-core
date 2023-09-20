@@ -11,13 +11,18 @@ impl UserOpList {
         db_utils: &SentinelDbUtils<D>,
         x: usize,
     ) -> Result<UserOps, SentinelError> {
-        let num_ops = self.len();
+        if self.is_empty() || x == 0 {
+            return Ok(UserOps::empty());
+        };
 
-        let idx = if num_ops >= x { num_ops - x } else { 0 };
-        debug!("getting {} user ops from idx {idx} to {}", num_ops - idx, num_ops - 1);
+        let num_ops = self.len();
+        let num_ops_to_get = if x > num_ops { num_ops } else { x };
+        let start_idx = num_ops - num_ops_to_get;
+
+        debug!("getting {num_ops_to_get} user ops (from idx {start_idx} to {num_ops}");
 
         Ok(UserOps::new(
-            self[idx..]
+            self[start_idx..]
                 .iter()
                 .map(|entry| UserOp::get_from_db(db_utils, &entry.uid().into()))
                 .collect::<Result<Vec<UserOp>, SentinelError>>()?,
@@ -31,6 +36,10 @@ impl UserOpList {
         n_latest_block_timestamp: u64,
         h_latest_block_timestamp: u64,
     ) -> Result<UserOps, SentinelError> {
+        if self.is_empty() {
+            return Ok(UserOps::empty());
+        };
+
         self.get_up_to_last_x_ops(db_utils, NUM_PAST_OPS_TO_CHECK_FOR_CANCELLABILITY)
             .map(|ops| ops.get_enqueued_but_not_witnessed())
             .and_then(|potentially_cancellable_ops| {
