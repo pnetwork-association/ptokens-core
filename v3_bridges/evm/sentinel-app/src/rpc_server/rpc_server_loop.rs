@@ -1,77 +1,23 @@
-use std::str::FromStr;
-
-use common::BridgeSide;
-use common_chain_ids::EthChainId;
-use common_eth::EthSubmissionMaterials;
 use common_sentinel::{
     BroadcastChannelMessages,
-    EthRpcMessages,
     RpcServerBroadcastChannelMessages,
     SentinelConfig,
     SentinelError,
-    SyncerBroadcastChannelMessages,
-    UserOpUniqueId,
-    UserOps,
-    WebSocketMessages,
-    WebSocketMessagesEncodable,
     WebSocketMessagesError,
-    WebSocketMessagesResetChainArgs,
-    WebSocketMessagesSubmitArgs,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
-use tokio::{
-    sync::{
-        broadcast::{Receiver as MpmcRx, Sender as MpmcTx},
-        mpsc::Sender as MpscTx,
-    },
-    time::{sleep, Duration},
-};
 use warp::{reject, reject::Reject, Filter, Rejection};
 
-type RpcId = Option<u64>;
-type CoreCxnStatus = bool;
-type RpcParams = Vec<String>;
-type EthRpcTx = MpscTx<EthRpcMessages>;
-type WebSocketTx = MpscTx<WebSocketMessages>;
-type BroadcastChannelTx = MpmcTx<BroadcastChannelMessages>;
-type BroadcastChannelRx = MpmcRx<BroadcastChannelMessages>;
-
-const STRONGBOX_TIMEOUT_MS: u64 = 30000; // FIXME make configurable
-
-// TODO getUserOpState
-
-/*
-pub async fn get_user_op_state(config: &SentinelConfig, args: &GetUserOpStateCliArgs) -> Result<String, SentinelError> {
-    let db = get_db_at_path(&config.get_db_path())?;
-    let db_utils = SentinelDbUtils::new(&db);
-    check_init(&db)?;
-
-    let uid = convert_hex_to_h256(&args.uid)?;
-    match UserOp::get_from_db(&db_utils, &uid.into()) {
-        Err(e) => {
-            warn!("{e}");
-            Err(SentinelError::Custom(format!("no user op in db with uid {uid}")))
-        },
-        Ok(op) => {
-            let side = op.destination_side();
-            let pnework_hub = config.pnetwork_hub(&side);
-            let ws_client = if side.is_native() {
-                config.native().endpoints().get_first_ws_client().await?
-            } else {
-                config.host().endpoints().get_first_ws_client().await?
-            };
-
-            let state = get_user_op_state_rpc_call(&op, &pnework_hub, &ws_client, DEFAULT_SLEEP_TIME, side).await?;
-
-            let r = json!({"jsonrpc": "2.0", "result": { "user_op_state": state.to_string(), "uid": args.uid }})
-                .to_string();
-
-            Ok(r)
-        },
-    }
-}
- */
+use crate::rpc_server::constants::{
+    BroadcastChannelRx,
+    BroadcastChannelTx,
+    CoreCxnStatus,
+    EthRpcTx,
+    RpcId,
+    RpcParams,
+    WebSocketTx,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Error(String);
@@ -106,7 +52,7 @@ struct JsonRpcRequest {
     params: RpcParams,
 }
 
-enum RpcCall {
+pub(crate) enum RpcCall {
     Ping(RpcId),
     Unknown(RpcId, String),
     GetUserOps(RpcId, WebSocketTx, CoreCxnStatus),
@@ -121,6 +67,14 @@ enum RpcCall {
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     Init(RpcId, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams, CoreCxnStatus),
     GetCancellableUserOps(RpcId, Box<SentinelConfig>, WebSocketTx, CoreCxnStatus),
+    GetSyncState(
+        RpcId,
+        Box<SentinelConfig>,
+        WebSocketTx,
+        EthRpcTx,
+        EthRpcTx,
+        CoreCxnStatus,
+    ),
     GetUserOpState(
         RpcId,
         Box<SentinelConfig>,
@@ -173,6 +127,14 @@ impl RpcCall {
             "latestBlockNumbers" | "latest" => Self::LatestBlockNumbers(r.id, websocket_tx, core_cxn),
             "startSyncer" => Self::StartSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
             "getCoreState" | "getEnclaveState" | "state" => Self::GetCoreState(r.id, websocket_tx, core_cxn),
+            "getSyncState" => Self::GetSyncState(
+                r.id,
+                Box::new(config),
+                websocket_tx,
+                host_eth_rpc_tx,
+                native_eth_rpc_tx,
+                core_cxn,
+            ),
             "getUserOpState" => Self::GetUserOpState(
                 r.id,
                 Box::new(config),
@@ -215,175 +177,22 @@ impl RpcCall {
         }
     }
 
-    fn create_args(_cmd: &str, params: RpcParams) -> RpcParams {
+    pub(crate) fn check_core_is_connected(is_connected: bool) -> Result<(), SentinelError> {
+        if is_connected {
+            Ok(())
+        } else {
+            Err(SentinelError::NoCore)
+        }
+    }
+
+    pub(crate) fn create_args(_cmd: &str, params: RpcParams) -> RpcParams {
         [vec!["init".to_string()], params].concat()
     }
 
-    async fn handle_init(
-        websocket_tx: WebSocketTx,
-        host_eth_rpc_tx: EthRpcTx,
-        native_eth_rpc_tx: EthRpcTx,
+    pub(crate) fn check_params(
         params: RpcParams,
-        core_cxn: bool,
-    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        check_core_is_connected(core_cxn)?;
-        // NOTE: Get the latest host & native block numbers from the ETH RPC
-        let (host_latest_block_num_msg, host_latest_block_num_responder) =
-            EthRpcMessages::get_latest_block_num_msg(BridgeSide::Host);
-        let (native_latest_block_num_msg, native_latest_block_num_responder) =
-            EthRpcMessages::get_latest_block_num_msg(BridgeSide::Native);
-        host_eth_rpc_tx.send(host_latest_block_num_msg).await?;
-        native_eth_rpc_tx.send(native_latest_block_num_msg).await?;
-        let host_latest_block_num = host_latest_block_num_responder.await??;
-        let native_latest_block_num = native_latest_block_num_responder.await??;
-
-        // NOTE: Get submission material for those latest block numbers
-        let (host_latest_block_msg, host_latest_block_responder) =
-            EthRpcMessages::get_sub_mat_msg(BridgeSide::Host, host_latest_block_num);
-        let (native_latest_block_msg, native_latest_block_responder) =
-            EthRpcMessages::get_sub_mat_msg(BridgeSide::Native, native_latest_block_num);
-        host_eth_rpc_tx.send(host_latest_block_msg).await?;
-        native_eth_rpc_tx.send(native_latest_block_msg).await?;
-        let host_sub_mat = host_latest_block_responder.await??;
-        let native_sub_mat = native_latest_block_responder.await??;
-
-        let encodable_msg = WebSocketMessagesEncodable::try_from(Self::create_args("init", params))?;
-
-        // NOTE: Now we need to add the sub mat to the args to send to strongbox
-        let final_msg = match encodable_msg {
-            WebSocketMessagesEncodable::Initialize(mut args) => {
-                args.add_host_block(host_sub_mat);
-                args.add_native_block(native_sub_mat);
-                Ok(WebSocketMessagesEncodable::Initialize(args))
-            },
-            _ => Err(SentinelError::Custom("failed to crate initialize arguments".into())),
-        }?;
-
-        // NOTE: Now we send out msg to the websocket loop
-        let (msg, rx) = WebSocketMessages::new(final_msg);
-        websocket_tx.send(msg).await?;
-
-        tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "initializing core";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
-        }
-    }
-
-    async fn handle_submit_block(
-        config: SentinelConfig,
-        host_eth_rpc_tx: EthRpcTx,
-        native_eth_rpc_tx: EthRpcTx,
-        websocket_tx: WebSocketTx,
-        params: RpcParams,
-        core_cxn: bool,
-    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        check_core_is_connected(core_cxn)?;
-        let checked_params = Self::check_params(params, 4)?;
-
-        let side = BridgeSide::from_str(&checked_params[0])?;
-        let block_num = checked_params[1].parse::<u64>()?;
-        let (eth_rpc_msg, responder) = EthRpcMessages::get_sub_mat_msg(side, block_num);
-        if side.is_host() {
-            host_eth_rpc_tx.send(eth_rpc_msg).await?;
-        } else {
-            native_eth_rpc_tx.send(eth_rpc_msg).await?;
-        };
-        let sub_mat = responder.await??;
-
-        let dry_run = matches!(checked_params[2].as_ref(), "true");
-        let reprocess = matches!(checked_params[3].as_ref(), "true");
-
-        let submit_args = WebSocketMessagesSubmitArgs::new(
-            dry_run,
-            config.is_validating(&side),
-            reprocess,
-            side,
-            config.chain_id(&side),
-            config.pnetwork_hub(&side),
-            EthSubmissionMaterials::new(vec![sub_mat]), // NOTE: The processor always deals with batches of submat
-        );
-        let encodable_msg = WebSocketMessagesEncodable::Submit(Box::new(submit_args));
-
-        let (websocket_msg, rx) = WebSocketMessages::new(encodable_msg);
-        websocket_tx.send(websocket_msg).await?;
-        tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "submitting block";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
-        }
-    }
-
-    async fn handle_reset_chain(
-        config: SentinelConfig,
-        host_eth_rpc_tx: EthRpcTx,
-        native_eth_rpc_tx: EthRpcTx,
-        websocket_tx: WebSocketTx,
-        params: RpcParams,
-        core_cxn: bool,
-    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        check_core_is_connected(core_cxn)?;
-        let mut args = WebSocketMessagesResetChainArgs::try_from(Self::create_args("reset", params))?;
-
-        let side = if args.chain_id() == &config.chain_id(&BridgeSide::Host) {
-            BridgeSide::Host
-        } else if args.chain_id() == &config.chain_id(&BridgeSide::Native) {
-            BridgeSide::Native
-        } else {
-            return Ok(WebSocketMessagesEncodable::Error(WebSocketMessagesError::Unsupported(
-                args.chain_id().clone(),
-            )));
-        };
-
-        let block_num = if let Some(n) = args.block_num() {
-            *n
-        } else {
-            let (msg, responder) = EthRpcMessages::get_latest_block_num_msg(side);
-            if side.is_host() {
-                host_eth_rpc_tx.send(msg).await?;
-            } else {
-                native_eth_rpc_tx.send(msg).await?;
-            };
-            responder.await??
-        };
-
-        debug!(
-            "getting sub mat for block num {block_num} on side {side} for cid {}",
-            args.chain_id()
-        );
-
-        let (eth_rpc_msg, responder) = EthRpcMessages::get_sub_mat_msg(side, block_num);
-        if side.is_host() {
-            host_eth_rpc_tx.send(eth_rpc_msg).await?;
-        } else {
-            native_eth_rpc_tx.send(eth_rpc_msg).await?;
-        };
-        let sub_mat = responder.await??;
-
-        args.add_sub_mat(sub_mat);
-        args.add_side(side);
-
-        let encodable_msg = WebSocketMessagesEncodable::ResetChain(Box::new(args));
-
-        let (websocket_msg, rx) = WebSocketMessages::new(encodable_msg);
-        websocket_tx.send(websocket_msg).await?;
-        tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "submitting block";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
-        }
-    }
-
-    fn check_params(params: RpcParams, required_num_params: usize) -> Result<RpcParams, WebSocketMessagesError> {
+        required_num_params: usize,
+    ) -> Result<RpcParams, WebSocketMessagesError> {
         if params.len() != required_num_params {
             Err(WebSocketMessagesError::NotEnoughArgs {
                 got: params.len(),
@@ -395,259 +204,15 @@ impl RpcCall {
         }
     }
 
-    async fn handle_get_core_state(
-        websocket_tx: WebSocketTx,
-        core_cxn: bool,
-    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        check_core_is_connected(core_cxn)?;
-        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetCoreState);
-        websocket_tx.send(msg).await?;
-
-        tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "getting enclave state";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
-        }
-    }
-
-    async fn handle_get_user_ops(
-        websocket_tx: WebSocketTx,
-        core_cxn: bool,
-    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        check_core_is_connected(core_cxn)?;
-        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetUserOps);
-        websocket_tx.send(msg).await?;
-
-        tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "getting user ops";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
-        }
-    }
-
-    async fn handle_get_user_op_list(
-        websocket_tx: WebSocketTx,
-        core_cxn: bool,
-    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        check_core_is_connected(core_cxn)?;
-        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetUserOpList);
-        websocket_tx.send(msg).await?;
-
-        tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "getting user op list";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
-        }
-    }
-
-    async fn handle_get_latest_block_numbers(
-        websocket_tx: WebSocketTx,
-        core_cxn: bool,
-    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        check_core_is_connected(core_cxn)?;
-        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetLatestBlockNumbers);
-        websocket_tx.send(msg).await?;
-
-        tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "getting latest block numbers";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
-        }
-    }
-
-    async fn handle_remove_user_op(
-        websocket_tx: WebSocketTx,
-        params: RpcParams,
-        core_cxn: bool,
-    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        check_core_is_connected(core_cxn)?;
-        let encodable_msg = WebSocketMessagesEncodable::try_from(Self::create_args("removeUserOp", params))?;
-        let (msg, rx) = WebSocketMessages::new(encodable_msg);
-        websocket_tx.send(msg).await?;
-
-        tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "removing user op";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
-        }
-    }
-
-    async fn handle_get_cancellable_user_ops(
-        config: Box<SentinelConfig>,
-        websocket_tx: WebSocketTx,
-        core_cxn: bool,
-    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        check_core_is_connected(core_cxn)?;
-        let max_delta = config.core().max_cancellable_time_delta();
-        let encodable_msg = WebSocketMessagesEncodable::GetCancellableUserOps(max_delta);
-        let (msg, rx) = WebSocketMessages::new(encodable_msg);
-        websocket_tx.send(msg).await?;
-
-        tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "getting cancellable user ops";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
-        }
-    }
-
-    async fn handle_syncer_start_stop(
-        broadcast_channel_tx: BroadcastChannelTx,
-        params: RpcParams,
-        stop: bool,
-        core_cxn: bool,
-    ) -> Result<Json, SentinelError> {
-        debug!("handling stop syncer rpc call...");
-        check_core_is_connected(core_cxn)?;
-        let checked_params = Self::check_params(params, 1)?;
-        let cid = EthChainId::from_str(&checked_params[0])?;
-        let syncer_msg = if stop {
-            SyncerBroadcastChannelMessages::Stop
-        } else {
-            SyncerBroadcastChannelMessages::Start
-        };
-        let m = if stop { "stop" } else { "start" };
-        let json = json!({"status": format!("{m} message sent to {cid} syncer")});
-        let broadcast_channel_msg = BroadcastChannelMessages::Syncer(cid, syncer_msg);
-        broadcast_channel_tx.send(broadcast_channel_msg)?;
-        Ok(json)
-    }
-
-    async fn handle_get(
-        websocket_tx: WebSocketTx,
-        params: RpcParams,
-        core_cxn: bool,
-    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        debug!("handling db get...");
-        check_core_is_connected(core_cxn)?;
-        let checked_params = Self::check_params(params, 1)?;
-        let encodable_msg = WebSocketMessagesEncodable::try_from(Self::create_args("get", checked_params))?;
-        let (msg, rx) = WebSocketMessages::new(encodable_msg);
-        websocket_tx.send(msg).await?;
-
-        tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "getting value from db";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
-        }
-    }
-
-    async fn handle_put(
-        websocket_tx: WebSocketTx,
-        params: RpcParams,
-        core_cxn: bool,
-    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        debug!("handling db put...");
-        check_core_is_connected(core_cxn)?;
-        let checked_params = Self::check_params(params, 2)?;
-        let encodable_msg = WebSocketMessagesEncodable::try_from(Self::create_args("put", checked_params))?;
-        let (msg, rx) = WebSocketMessages::new(encodable_msg);
-        websocket_tx.send(msg).await?;
-
-        tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "putting value in db";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
-        }
-    }
-
-    async fn handle_get_user_op_state(
-        config: SentinelConfig,
-        websocket_tx: WebSocketTx,
-        host_eth_rpc_tx: EthRpcTx,
-        native_eth_rpc_tx: EthRpcTx,
-        params: RpcParams,
-        core_cxn: bool,
-    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        debug!("handling get user op state...");
-        let checked_params = Self::check_params(params, 1)?;
-        let uid = UserOpUniqueId::from_str(&checked_params[0])?;
-
-        // NOTE: Core cxn checked for us in list handler
-        let user_ops = match Self::handle_get_user_ops(websocket_tx, core_cxn).await? {
-            WebSocketMessagesEncodable::Success(j) => {
-                Ok::<UserOps, SentinelError>(serde_json::from_value::<UserOps>(j)?)
-            },
-            WebSocketMessagesEncodable::Error(e) => Err(e.into()),
-            other => Err(WebSocketMessagesError::UnexpectedResponse(other.to_string()).into()),
-        }?;
-
-        let user_op = user_ops.get(&uid)?;
-        let origin_side = user_op.destination_side();
-        let destination_side = user_op.destination_side();
-
-        let (origin_msg, origin_rx) =
-            EthRpcMessages::get_user_op_state_msg(origin_side, user_op.clone(), config.pnetwork_hub(&origin_side));
-        let (destination_msg, destination_rx) =
-            EthRpcMessages::get_user_op_state_msg(destination_side, user_op, config.pnetwork_hub(&destination_side));
-
-        if destination_side.is_host() {
-            native_eth_rpc_tx.send(origin_msg).await?;
-            host_eth_rpc_tx.send(destination_msg).await?;
-        } else {
-            host_eth_rpc_tx.send(origin_msg).await?;
-            native_eth_rpc_tx.send(destination_msg).await?;
-        };
-        let origin_user_op_state = origin_rx.await??;
-        let destination_user_op_state = destination_rx.await??;
-
-        Ok(WebSocketMessagesEncodable::Success(json!({
-            "uid": uid,
-            "originChainId": config.chain_id(&origin_side),
-            "originState": origin_user_op_state.to_string(),
-            "destinationChainId": config.chain_id(&destination_side),
-            "destinationState": destination_user_op_state.to_string(),
-        })))
-    }
-
-    async fn handle_delete(
-        websocket_tx: WebSocketTx,
-        params: RpcParams,
-        core_cxn: bool,
-    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        debug!("handling db delete...");
-        check_core_is_connected(core_cxn)?;
-        let checked_params = Self::check_params(params, 1)?;
-        let encodable_msg = WebSocketMessagesEncodable::try_from(Self::create_args("delete", checked_params))?;
-        let (msg, rx) = WebSocketMessages::new(encodable_msg);
-        websocket_tx.send(msg).await?;
-
-        tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "deleting value from db";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
-        }
-    }
-
     async fn handle(self) -> Result<impl warp::Reply, Rejection> {
         // TODO rm repetition in here.
         match self {
+            Self::GetSyncState(id, config, websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, core_cxn) => {
+                let result =
+                    Self::handle_sync_state(*config, websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, core_cxn).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
             Self::Get(id, websocket_tx, params, core_cxn) => {
                 let result = Self::handle_get(websocket_tx, params, core_cxn).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
@@ -791,14 +356,6 @@ async fn start_rpc_server(
     warp::serve(rpc).run(([127, 0, 0, 1], 3030)).await; // FIXME make configurable
 
     Ok(())
-}
-
-fn check_core_is_connected(is_connected: bool) -> Result<(), SentinelError> {
-    if is_connected {
-        Ok(())
-    } else {
-        Err(SentinelError::NoCore)
-    }
 }
 
 async fn broadcast_channel_loop(
