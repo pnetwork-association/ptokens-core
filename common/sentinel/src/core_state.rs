@@ -4,12 +4,12 @@ use common::{CoreType, DatabaseInterface};
 use common_enclave_info::EnclaveInfo;
 use common_eth::{EthDbUtils, EvmDbUtils, HostCoreState, NativeCoreState};
 use ethereum_types::Address as EthAddress;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::SentinelError;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct CoreState {
     info: EnclaveInfo,
     host: HostCoreState,
