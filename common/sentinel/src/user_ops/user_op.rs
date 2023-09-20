@@ -91,6 +91,10 @@ impl UserOp {
         self.into()
     }
 
+    pub fn origin_network_id(&self) -> Bytes {
+        self.origin_network_id.clone()
+    }
+
     pub fn origin_side(&self) -> BridgeSide {
         // NOTE: This depends entirely on which side of the bridge sees the user op first, since
         // that's not guaranteed to be either or.

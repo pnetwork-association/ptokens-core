@@ -10,6 +10,8 @@ use common_sentinel::{
     SentinelConfig,
     SentinelError,
     SyncerBroadcastChannelMessages,
+    UserOpUniqueId,
+    UserOps,
     WebSocketMessages,
     WebSocketMessagesEncodable,
     WebSocketMessagesError,
@@ -36,6 +38,40 @@ type BroadcastChannelTx = MpmcTx<BroadcastChannelMessages>;
 type BroadcastChannelRx = MpmcRx<BroadcastChannelMessages>;
 
 const STRONGBOX_TIMEOUT_MS: u64 = 30000; // FIXME make configurable
+
+// TODO getUserOpState
+
+/*
+pub async fn get_user_op_state(config: &SentinelConfig, args: &GetUserOpStateCliArgs) -> Result<String, SentinelError> {
+    let db = get_db_at_path(&config.get_db_path())?;
+    let db_utils = SentinelDbUtils::new(&db);
+    check_init(&db)?;
+
+    let uid = convert_hex_to_h256(&args.uid)?;
+    match UserOp::get_from_db(&db_utils, &uid.into()) {
+        Err(e) => {
+            warn!("{e}");
+            Err(SentinelError::Custom(format!("no user op in db with uid {uid}")))
+        },
+        Ok(op) => {
+            let side = op.destination_side();
+            let pnework_hub = config.pnetwork_hub(&side);
+            let ws_client = if side.is_native() {
+                config.native().endpoints().get_first_ws_client().await?
+            } else {
+                config.host().endpoints().get_first_ws_client().await?
+            };
+
+            let state = get_user_op_state_rpc_call(&op, &pnework_hub, &ws_client, DEFAULT_SLEEP_TIME, side).await?;
+
+            let r = json!({"jsonrpc": "2.0", "result": { "user_op_state": state.to_string(), "uid": args.uid }})
+                .to_string();
+
+            Ok(r)
+        },
+    }
+}
+ */
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Error(String);
@@ -85,6 +121,15 @@ enum RpcCall {
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     Init(RpcId, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams, CoreCxnStatus),
     GetCancellableUserOps(RpcId, Box<SentinelConfig>, WebSocketTx, CoreCxnStatus),
+    GetUserOpState(
+        RpcId,
+        Box<SentinelConfig>,
+        WebSocketTx,
+        EthRpcTx,
+        EthRpcTx,
+        RpcParams,
+        CoreCxnStatus,
+    ),
     ResetChain(
         RpcId,
         Box<SentinelConfig>,
@@ -128,6 +173,15 @@ impl RpcCall {
             "latestBlockNumbers" | "latest" => Self::LatestBlockNumbers(r.id, websocket_tx, core_cxn),
             "startSyncer" => Self::StartSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
             "getCoreState" | "getEnclaveState" | "state" => Self::GetCoreState(r.id, websocket_tx, core_cxn),
+            "getUserOpState" => Self::GetUserOpState(
+                r.id,
+                Box::new(config),
+                websocket_tx,
+                host_eth_rpc_tx,
+                native_eth_rpc_tx,
+                r.params.clone(),
+                core_cxn,
+            ),
             "getCancellableUserOps" | "getCancellable" => {
                 Self::GetCancellableUserOps(r.id, Box::new(config), websocket_tx, core_cxn)
             },
@@ -520,6 +574,55 @@ impl RpcCall {
         }
     }
 
+    async fn handle_get_user_op_state(
+        config: SentinelConfig,
+        websocket_tx: WebSocketTx,
+        host_eth_rpc_tx: EthRpcTx,
+        native_eth_rpc_tx: EthRpcTx,
+        params: RpcParams,
+        core_cxn: bool,
+    ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        debug!("handling get user op state...");
+        let checked_params = Self::check_params(params, 1)?;
+        let uid = UserOpUniqueId::from_str(&checked_params[0])?;
+
+        // NOTE: Core cxn checked for us in list handler
+        let user_ops = match Self::handle_get_user_ops(websocket_tx, core_cxn).await? {
+            WebSocketMessagesEncodable::Success(j) => {
+                Ok::<UserOps, SentinelError>(serde_json::from_value::<UserOps>(j)?)
+            },
+            WebSocketMessagesEncodable::Error(e) => Err(e.into()),
+            other => Err(WebSocketMessagesError::UnexpectedResponse(other.to_string()).into()),
+        }?;
+
+        let user_op = user_ops.get(&uid)?;
+        let origin_side = user_op.destination_side();
+        let destination_side = user_op.destination_side();
+
+        let (origin_msg, origin_rx) =
+            EthRpcMessages::get_user_op_state_msg(origin_side, user_op.clone(), config.pnetwork_hub(&origin_side));
+        let (destination_msg, destination_rx) =
+            EthRpcMessages::get_user_op_state_msg(destination_side, user_op, config.pnetwork_hub(&destination_side));
+
+        if destination_side.is_host() {
+            native_eth_rpc_tx.send(origin_msg).await?;
+            host_eth_rpc_tx.send(destination_msg).await?;
+        } else {
+            host_eth_rpc_tx.send(origin_msg).await?;
+            native_eth_rpc_tx.send(destination_msg).await?;
+        };
+        let origin_user_op_state = origin_rx.await??;
+        let destination_user_op_state = destination_rx.await??;
+
+        Ok(WebSocketMessagesEncodable::Success(json!({
+            "uid": uid,
+            "originChainId": config.chain_id(&origin_side),
+            "originState": origin_user_op_state.to_string(),
+            "destinationChainId": config.chain_id(&destination_side),
+            "destinationState": destination_user_op_state.to_string(),
+        })))
+    }
+
     async fn handle_delete(
         websocket_tx: WebSocketTx,
         params: RpcParams,
@@ -575,6 +678,19 @@ impl RpcCall {
             },
             Self::StopSyncer(id, broadcast_channel_tx, params, core_cxn) => {
                 let result = Self::handle_syncer_start_stop(broadcast_channel_tx, params, true, core_cxn).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
+            Self::GetUserOpState(id, config, websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, params, core_cxn) => {
+                let result = Self::handle_get_user_op_state(
+                    *config,
+                    websocket_tx,
+                    host_eth_rpc_tx,
+                    native_eth_rpc_tx,
+                    params,
+                    core_cxn,
+                )
+                .await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },

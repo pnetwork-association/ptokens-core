@@ -47,4 +47,7 @@ pub enum UserOpError {
 
     #[error("user op has not been enqueued")]
     HasNotBeenEnqueued,
+
+    #[error("no user op exists with hash: {0}")]
+    NoUserOp(EthHash),
 }

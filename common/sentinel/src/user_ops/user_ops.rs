@@ -6,13 +6,31 @@ use derive_more::{Constructor, Deref};
 use ethereum_types::{Address as EthAddress, U256};
 use serde::{Deserialize, Serialize};
 
-use super::{UserOp, CANCELLED_USER_OP_TOPIC, ENQUEUED_USER_OP_TOPIC, EXECUTED_USER_OP_TOPIC, WITNESSED_USER_OP_TOPIC};
+use super::{
+    UserOp,
+    UserOpError,
+    UserOpUniqueId,
+    CANCELLED_USER_OP_TOPIC,
+    ENQUEUED_USER_OP_TOPIC,
+    EXECUTED_USER_OP_TOPIC,
+    WITNESSED_USER_OP_TOPIC,
+};
 use crate::{get_utc_timestamp, SentinelError};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Deref, Serialize, Deserialize)]
 pub struct UserOps(Vec<UserOp>);
 
 impl UserOps {
+    pub fn get(&self, uid: &UserOpUniqueId) -> Result<UserOp, UserOpError> {
+        #[allow(clippy::manual_try_fold)]
+        self.iter().fold(Err(UserOpError::NoUserOp(*uid.clone())), |mut r, e| {
+            if e.uid == **uid && r.is_err() {
+                r = Ok(e.clone());
+            }
+            r
+        })
+    }
+
     pub fn get_tx_cost(&self, gas_limit: usize, gas_price: u64) -> U256 {
         UserOp::get_tx_cost(gas_limit, gas_price) * U256::from(self.len())
     }
