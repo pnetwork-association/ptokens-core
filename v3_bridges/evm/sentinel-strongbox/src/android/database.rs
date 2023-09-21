@@ -103,7 +103,8 @@ impl<'a> Database<'a> {
     }
 
     fn handle_error<T, E: Into<SentinelError> + std::fmt::Display>(
-        &self, r: Result<T, E>,
+        &self,
+        r: Result<T, E>,
         print_exceptions: bool,
     ) -> Result<T, SentinelError> {
         if let Err(e) = r {
