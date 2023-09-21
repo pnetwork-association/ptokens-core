@@ -115,7 +115,15 @@ pub use self::{
         ERC_777_REDEEM_EVENT_TOPIC_WITHOUT_USER_DATA,
         ERC_777_REDEEM_EVENT_TOPIC_WITH_USER_DATA,
     },
-    eth_crypto::{get_signed_minting_tx, EthPrivateKey, EthPublicKey, EthSignature, EthTransaction, EthTransactions},
+    eth_crypto::{
+        get_signed_minting_tx,
+        EthPrivateKey,
+        EthPublicKey,
+        EthSignature,
+        EthTransaction,
+        EthTransactions,
+        ETH_SIGNATURE_NUM_BYTES,
+    },
     eth_database_transactions::{end_eth_db_transaction_and_return_state, start_eth_db_transaction_and_return_state},
     eth_database_utils::{
         EthDatabaseKeysJson,

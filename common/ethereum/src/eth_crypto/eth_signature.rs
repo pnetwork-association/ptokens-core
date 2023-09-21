@@ -9,7 +9,7 @@ use derive_more::{Constructor, Deref, DerefMut};
 use ethereum_types::{Address as EthAddress, H256};
 use web3::signing::recover;
 
-const ETH_SIGNATURE_NUM_BYTES: usize = 65;
+pub const ETH_SIGNATURE_NUM_BYTES: usize = 65;
 
 #[derive(Clone, Debug, Eq, PartialEq, Deref, DerefMut, Constructor)]
 pub struct EthSignature(pub [u8; 65]);
