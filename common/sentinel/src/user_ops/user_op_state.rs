@@ -137,7 +137,7 @@ impl UserOpState {
         match self {
             Self::Witnessed(side, ..) => Ok((self, Self::Cancelled(side, tx_hash, get_utc_timestamp()?))),
             Self::Enqueued(side, ..) => Ok((self, Self::Cancelled(side, tx_hash, get_utc_timestamp()?))),
-            op_state => Err(UserOpError::CannotCancel(op_state)),
+            op_state => Err(UserOpError::CannotCancelOpInState(op_state)),
         }
     }
 

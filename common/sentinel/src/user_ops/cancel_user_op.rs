@@ -46,7 +46,7 @@ impl UserOp {
 
     pub fn get_cancellation_signature(&self, pk: &EthPrivateKey) -> Result<UserOpCancellationSignature, UserOpError> {
         if self.state().is_cancelled() || self.state().is_executed() {
-            Err(UserOpError::CannotCancel(self.state))
+            Err(UserOpError::CannotCancel(Box::new(self.clone())))
         } else {
             let signer = pk.to_address();
             let uid = UserOpUniqueId::new(self.uid()?);
@@ -79,7 +79,7 @@ impl UserOp {
         cancellation_sig: &UserOpCancellationSignature,
     ) -> Result<EthTransaction, UserOpError> {
         if self.state().is_cancelled() || self.state().is_executed() {
-            Err(UserOpError::CannotCancel(self.state))
+            Err(UserOpError::CannotCancel(Box::new(self.clone())))
         } else {
             let value = 0;
             let data = self.encode_cancellation_fxn_data(cancellation_sig)?;

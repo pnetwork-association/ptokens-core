@@ -2,10 +2,16 @@ use common::Byte;
 use ethereum_types::{H256 as EthHash, U256};
 use thiserror::Error;
 
-use super::UserOpState;
+use super::{UserOp, UserOpState};
 
 #[derive(Error, Debug)]
 pub enum UserOpError {
+    #[error("cannot cancel user op from state: {0}")]
+    CannotCancelOpInState(UserOpState),
+
+    #[error("cannot determine smart-contract user op state from: {0}")]
+    CannotDetermineUserOpSmartContractState(UserOpState),
+
     #[error("insufficient ETH balance to cancel tx - have: {have} need: {need}")]
     InsufficientBalance { have: U256, need: U256 },
 
@@ -30,8 +36,8 @@ pub enum UserOpError {
     #[error("{0}")]
     AppError(#[from] common::AppError),
 
-    #[error("cannot cancel because user op was {0}")]
-    CannotCancel(UserOpState),
+    #[error("cannot cancel user op: {0}")]
+    CannotCancel(Box<UserOp>),
 
     #[error("user ops UIDs do not match ({a} != {b})")]
     UidMismatch { a: EthHash, b: EthHash },

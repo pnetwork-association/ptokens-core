@@ -3,7 +3,7 @@ use std::fmt;
 use common::{Byte, Bytes};
 use common_eth::encode_fxn_call;
 
-use super::{UserOp, UserOpError};
+use super::{UserOp, UserOpError, UserOpState};
 use crate::SentinelError;
 
 const GET_USER_OP_STATE_ABI: &str = "[{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"originBlockHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"originTransactionHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"optionsMask\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"underlyingAssetDecimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"assetAmount\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"underlyingAssetTokenAddress\",\"type\":\"address\"},{\"internalType\":\"bytes4\",\"name\":\"originNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"bytes4\",\"name\":\"destinationNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"bytes4\",\"name\":\"underlyingAssetNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"string\",\"name\":\"destinationAccount\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"underlyingAssetName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"underlyingAssetSymbol\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"userData\",\"type\":\"bytes\"}],\"internalType\":\"structIStateManager.Operation\",\"name\":\"operation\",\"type\":\"tuple\"}],\"name\":\"operationStatusOf\",\"outputs\":[{\"internalType\":\"bytes1\",\"name\":\"\",\"type\":\"bytes1\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]";
@@ -14,6 +14,19 @@ pub enum UserOpSmartContractState {
     Enqueued  = 1,
     Executed  = 2,
     Cancelled = 3,
+}
+
+impl TryFrom<UserOpState> for UserOpSmartContractState {
+    type Error = UserOpError;
+
+    fn try_from(s: UserOpState) -> Result<UserOpSmartContractState, Self::Error> {
+        match s {
+            UserOpState::Enqueued(..) => Ok(UserOpSmartContractState::Enqueued),
+            UserOpState::Executed(..) => Ok(UserOpSmartContractState::Executed),
+            UserOpState::Cancelled(..) => Ok(UserOpSmartContractState::Cancelled),
+            other => Err(UserOpError::CannotDetermineUserOpSmartContractState(other)),
+        }
+    }
 }
 
 impl TryFrom<Byte> for UserOpSmartContractState {
