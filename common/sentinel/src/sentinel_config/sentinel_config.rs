@@ -129,6 +129,22 @@ impl SentinelConfig {
             self.host.chain_id()
         }
     }
+
+    pub fn gas_price(&self, side: &BridgeSide) -> Option<u64> {
+        if side.is_native() {
+            self.native.gas_price()
+        } else {
+            self.host.gas_price()
+        }
+    }
+
+    pub fn gas_limit(&self, side: &BridgeSide) -> usize {
+        if side.is_native() {
+            self.native.gas_limit()
+        } else {
+            self.host.gas_limit()
+        }
+    }
 }
 
 #[cfg(test)]
