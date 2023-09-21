@@ -1,8 +1,9 @@
 use common_chain_ids::EthChainId;
 use derive_more::{Constructor, Deref};
 use serde::{Deserialize, Serialize};
+use serde_json::Value as Json;
 
-use crate::{SentinelError, WebSocketMessagesEncodable, WebSocketMessagesError};
+use crate::{SentinelError, WebSocketMessagesEncodable};
 
 #[derive(Clone, Debug, Deref, Constructor, Serialize, Deserialize)]
 pub struct LatestBlockNumbers(Vec<LatestBlockNumber>);
@@ -34,17 +35,13 @@ impl LatestBlockNumbers {
         }
     }
 }
+
 impl TryFrom<WebSocketMessagesEncodable> for LatestBlockNumbers {
     type Error = SentinelError;
 
     fn try_from(m: WebSocketMessagesEncodable) -> Result<Self, Self::Error> {
-        match m {
-            WebSocketMessagesEncodable::Success(json) => Ok(serde_json::from_value(json)?),
-            x => Err(WebSocketMessagesError::CannotConvert {
-                from: x.to_string(),
-                to: "LatestBlockNumbers".into(),
-            }
-            .into()),
-        }
+        debug!("trying to get `LatestBlockNumbers` from `WebSocketMessagesEncodable`...");
+        let j = Json::try_from(m)?;
+        Ok(serde_json::from_value(j)?)
     }
 }

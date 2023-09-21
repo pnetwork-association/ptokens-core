@@ -31,6 +31,20 @@ pub enum WebSocketMessagesEncodable {
     ResetChain(Box<WebSocketMessagesResetChainArgs>),
 }
 
+impl TryFrom<WebSocketMessagesEncodable> for Json {
+    type Error = WebSocketMessagesError;
+
+    fn try_from(w: WebSocketMessagesEncodable) -> Result<Json, Self::Error> {
+        match w {
+            WebSocketMessagesEncodable::Success(json) => Ok(json),
+            other => Err(WebSocketMessagesError::CannotConvert {
+                to: "json".to_string(),
+                from: other.to_string(),
+            }),
+        }
+    }
+}
+
 impl WebSocketMessagesEncodable {
     pub fn is_success(&self) -> bool {
         matches!(self, Self::Success(_))
