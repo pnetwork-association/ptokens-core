@@ -4,6 +4,7 @@ mod error;
 mod get_cancellable_user_ops;
 mod test_utils;
 mod user_op;
+mod user_op_cancellation_signature;
 mod user_op_constants;
 mod user_op_flag;
 mod user_op_list;
@@ -19,12 +20,14 @@ mod user_ops;
 pub use self::{
     error::UserOpError,
     user_op::UserOp,
+    user_op_cancellation_signature::UserOpCancellationSignature,
     user_op_list::UserOpList,
     user_op_smart_contract_state::UserOpSmartContractState,
     user_op_uid::UserOpUniqueId,
     user_ops::UserOps,
 };
 use self::{
+    user_op_cancellation_signature::CancellationSignature,
     user_op_constants::{
         CANCELLED_USER_OP_TOPIC,
         ENQUEUED_USER_OP_TOPIC,

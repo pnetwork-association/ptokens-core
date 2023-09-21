@@ -80,7 +80,15 @@ pub use self::{
         SentinelCoreConfig,
     },
     side::Side,
-    user_ops::{UserOp, UserOpError, UserOpList, UserOpSmartContractState, UserOpUniqueId, UserOps},
+    user_ops::{
+        UserOp,
+        UserOpCancellationSignature,
+        UserOpError,
+        UserOpList,
+        UserOpSmartContractState,
+        UserOpUniqueId,
+        UserOps,
+    },
     utils::{get_utc_timestamp, run_timer},
 };
 

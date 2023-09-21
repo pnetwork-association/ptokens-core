@@ -39,8 +39,12 @@ pub enum UserOpError {
     #[error("unrecognized smart-contract user op state: {0}")]
     UnrecognizedSmartContractUserOpState(Byte),
 
-    #[error("cannot get smart-contract user op state from no bytes")]
-    NotEnoughBytes,
+    #[error("not enough bytes - got: {got}, expected: {expected} in '{location}'")]
+    NotEnoughBytes {
+        got: usize,
+        expected: String,
+        location: String,
+    },
 
     #[error("`UserOpLog` is missing field: '{0}'")]
     MissingField(String),

@@ -34,8 +34,14 @@ impl TryFrom<Bytes> for UserOpSmartContractState {
     type Error = UserOpError;
 
     fn try_from(bs: Bytes) -> Result<Self, Self::Error> {
+        let name = "UserOpSmartContractState";
+        debug!("getting '{name}' from bytes...");
         if bs.is_empty() {
-            Err(UserOpError::NotEnoughBytes)
+            Err(UserOpError::NotEnoughBytes {
+                got: 0,
+                expected: "some".to_string(),
+                location: name.to_string(),
+            })
         } else {
             Self::try_from(bs[0])
         }

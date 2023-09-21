@@ -1,12 +1,12 @@
 use std::{fmt, str::FromStr};
 
-use derive_more::Deref;
+use derive_more::{Constructor, Deref};
 use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 
 use crate::SentinelError;
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Deref)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Deref, Constructor)]
 pub struct UserOpUniqueId(EthHash);
 
 impl FromStr for UserOpUniqueId {
@@ -14,6 +14,12 @@ impl FromStr for UserOpUniqueId {
 
     fn from_str(s: &str) -> Result<Self, SentinelError> {
         Ok(Self(EthHash::from_str(s)?))
+    }
+}
+
+impl From<EthHash> for UserOpUniqueId {
+    fn from(h: EthHash) -> UserOpUniqueId {
+        UserOpUniqueId::new(h)
     }
 }
 
