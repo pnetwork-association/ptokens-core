@@ -5,6 +5,7 @@ use common_eth::EthSubmissionMaterial;
 use derive_more::{Constructor, Deref};
 use ethereum_types::{Address as EthAddress, U256};
 use serde::{Deserialize, Serialize};
+use serde_json::Value as Json;
 
 use super::{
     UserOp,
@@ -15,7 +16,7 @@ use super::{
     EXECUTED_USER_OP_TOPIC,
     WITNESSED_USER_OP_TOPIC,
 };
-use crate::{get_utc_timestamp, SentinelError};
+use crate::{get_utc_timestamp, SentinelError, WebSocketMessagesEncodable};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Deref, Serialize, Deserialize)]
 pub struct UserOps(Vec<UserOp>);
@@ -150,6 +151,15 @@ impl TryFrom<Bytes> for UserOps {
 
     fn try_from(b: Bytes) -> Result<Self, Self::Error> {
         Ok(serde_json::from_slice(&b)?)
+    }
+}
+
+impl TryFrom<WebSocketMessagesEncodable> for UserOps {
+    type Error = SentinelError;
+
+    fn try_from(m: WebSocketMessagesEncodable) -> Result<Self, Self::Error> {
+        let j = Json::try_from(m)?;
+        Ok(serde_json::from_value(j)?)
     }
 }
 
