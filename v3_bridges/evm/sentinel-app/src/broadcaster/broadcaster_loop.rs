@@ -1,4 +1,3 @@
-#![allow(unused)] // FIXME rm
 use std::result::Result;
 
 use common::BridgeSide;
@@ -7,71 +6,95 @@ use common_sentinel::{
     BroadcastChannelMessages,
     BroadcasterBroadcastChannelMessages,
     BroadcasterMessages,
-    ConfigT,
     Env,
     EthRpcMessages,
     SentinelConfig,
     SentinelError,
     UserOp,
+    UserOpCancellationSignature,
+    UserOpError,
+    UserOps,
+    WebSocketMessages,
+    WebSocketMessagesEncodable,
 };
-use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
-use tokio::sync::{
-    broadcast::{Receiver as MpMcRx, Sender as MpMcTx},
-    mpsc::{Receiver as MpscRx, Sender as MpscTx},
+use ethereum_types::{H256 as EthHash, U256};
+use tokio::{
+    sync::{
+        broadcast::{Receiver as MpMcRx, Sender as MpMcTx},
+        mpsc::{Receiver as MpscRx, Sender as MpscTx},
+    },
+    time::{sleep, Duration},
 };
 
-/* FIXME Rm core stuff!
+const STRONGBOX_TIMEOUT_MS: u64 = 30_000; // FIXME get from config
+
 #[allow(clippy::too_many_arguments)]
 async fn cancel_user_op(
     op: UserOp,
     nonce: u64,
+    balance: U256,
     gas_price: u64,
     gas_limit: usize,
-    core_tx: MpscTx<CoreMessages>,
-    eth_rpc_tx: MpscTx<EthRpcMessages>,
-    pnetwork_hub: &EthAddress,
+    config: &SentinelConfig,
     broadcaster_pk: &EthPrivateKey,
-    balance: U256,
+    eth_rpc_tx: MpscTx<EthRpcMessages>,
+    websocket_tx: MpscTx<WebSocketMessages>,
 ) -> Result<EthHash, SentinelError> {
     op.check_affordability(balance, gas_limit, gas_price)?;
 
     let side = op.destination_side();
+    let pnetwork_hub = config.pnetwork_hub(&side);
     debug!("cancelling user op on side: {side} nonce: {nonce} gas price: {gas_price}");
 
-    let (msg, rx) = EthRpcMessages::get_user_op_state_msg(side, op.clone(), *pnetwork_hub);
+    let (msg, rx) = EthRpcMessages::get_user_op_state_msg(side, op.clone(), pnetwork_hub);
     eth_rpc_tx.send(msg).await?;
     let user_op_smart_contract_state = rx.await??;
     debug!("user op state before cancellation: {user_op_smart_contract_state}");
 
-    let tx_hash = if user_op_smart_contract_state.is_cancellable() {
-        warn!("sending cancellation tx for user op: {op}");
-        let (msg, rx) = CoreMessages::get_cancellation_signature_msg(
-            op.clone(),
-            nonce,
-            gas_price,
-            gas_limit,
-            *pnetwork_hub,
-            broadcaster_pk.clone(),
-        );
-        core_tx.send(msg).await?;
-        let signed_tx = rx.await??;
-        debug!("signed tx: {}", signed_tx.serialize_hex());
+    if !user_op_smart_contract_state.is_cancellable() {
+        return Err(UserOpError::CannotCancel(Box::new(op)).into());
+    }
 
-        let (msg, rx) = EthRpcMessages::get_push_tx_msg(signed_tx, side);
-        eth_rpc_tx.send(msg).await?;
-        let tx_hash = rx.await??;
-        info!("tx hash: {tx_hash}");
-        tx_hash
-    } else {
-        EthHash::zero()
-    };
+    let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetUserOpCancellationSiganture(Box::new(
+        op.clone(),
+    )));
+    websocket_tx.send(msg).await?;
 
+    let cancellation_sig = UserOpCancellationSignature::try_from(tokio::select! {
+        response = rx => response?,
+        _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+            let m = "getting cancellation signature";
+            error!("timed out whilst {m}");
+            Err(SentinelError::Timedout(m.into()))
+        }
+    }?)?;
+
+    let signed_tx = op.get_cancellation_tx(
+        nonce,
+        gas_price,
+        gas_limit,
+        &pnetwork_hub,
+        &config.chain_id(&side),
+        broadcaster_pk,
+        &cancellation_sig,
+    )?;
+
+    debug!("signed tx: {}", signed_tx.serialize_hex());
+
+    let (msg, rx) = EthRpcMessages::get_push_tx_msg(signed_tx, side);
+    eth_rpc_tx.send(msg).await?;
+    let tx_hash = rx.await??;
+
+    info!("tx hash: {tx_hash}");
     Ok(tx_hash)
 }
 
-async fn get_gas_price(config: &impl ConfigT, eth_rpc_tx: MpscTx<EthRpcMessages>) -> Result<u64, SentinelError> {
-    let side = config.side();
-    let p = if let Some(p) = config.gas_price() {
+async fn get_gas_price(
+    config: &SentinelConfig,
+    side: BridgeSide,
+    eth_rpc_tx: MpscTx<EthRpcMessages>,
+) -> Result<u64, SentinelError> {
+    let p = if let Some(p) = config.gas_price(&side) {
         debug!("using {side} gas price from config: {p}");
         p
     } else {
@@ -84,44 +107,50 @@ async fn get_gas_price(config: &impl ConfigT, eth_rpc_tx: MpscTx<EthRpcMessages>
     Ok(p)
 }
 
-#[allow(clippy::too_many_arguments)]
 async fn cancel_user_ops(
     config: &SentinelConfig,
-    host_address: &EthAddress,
-    native_address: &EthAddress,
-    core_tx: MpscTx<CoreMessages>,
+    websocket_tx: MpscTx<WebSocketMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     native_broadcaster_pk: &EthPrivateKey,
     host_broadcaster_pk: &EthPrivateKey,
 ) -> Result<(), SentinelError> {
-    let host_pnetwork_hub = config.host().pnetwork_hub();
-    let native_pnetwork_hub = config.native().pnetwork_hub();
+    let host_address = host_broadcaster_pk.to_address();
+    let native_address = native_broadcaster_pk.to_address();
 
-    let (host_msg, host_rx) = EthRpcMessages::get_nonce_msg(BridgeSide::Host, *host_address);
+    let (host_msg, host_rx) = EthRpcMessages::get_nonce_msg(BridgeSide::Host, host_address);
     eth_rpc_tx.send(host_msg).await?;
     let mut host_nonce = host_rx.await??;
 
-    let (native_msg, native_rx) = EthRpcMessages::get_nonce_msg(BridgeSide::Native, *native_address);
+    let (native_msg, native_rx) = EthRpcMessages::get_nonce_msg(BridgeSide::Native, native_address);
     eth_rpc_tx.send(native_msg).await?;
     let mut native_nonce = native_rx.await??;
 
-    let host_gas_price = get_gas_price(config.host(), eth_rpc_tx.clone()).await?;
-    let native_gas_price = get_gas_price(config.native(), eth_rpc_tx.clone()).await?;
+    let host_gas_price = get_gas_price(config, BridgeSide::Host, eth_rpc_tx.clone()).await?;
+    let native_gas_price = get_gas_price(config, BridgeSide::Native, eth_rpc_tx.clone()).await?;
 
-    let host_gas_limit = config.host().gas_limit();
-    let native_gas_limit = config.native().gas_limit();
+    let host_gas_limit = config.gas_limit(&BridgeSide::Host);
+    let native_gas_limit = config.gas_limit(&BridgeSide::Native);
 
-    let (host_balance_msg, host_balance_rx) = EthRpcMessages::get_eth_balance_msg(BridgeSide::Host, *host_address);
+    let (host_balance_msg, host_balance_rx) = EthRpcMessages::get_eth_balance_msg(BridgeSide::Host, host_address);
     let (native_balance_msg, native_balance_rx) =
-        EthRpcMessages::get_eth_balance_msg(BridgeSide::Native, *native_address);
+        EthRpcMessages::get_eth_balance_msg(BridgeSide::Native, native_address);
     eth_rpc_tx.send(native_balance_msg).await?;
     let mut host_balance = host_balance_rx.await??;
     eth_rpc_tx.send(host_balance_msg).await?;
     let mut native_balance = native_balance_rx.await??;
 
-    let (cancellable_ops_msg, cancellable_ops_rx) = CoreMessages::get_cancellable_user_ops_msg();
-    core_tx.send(cancellable_ops_msg).await?;
-    let cancellable_user_ops = cancellable_ops_rx.await??;
+    let max_delta = config.core().max_cancellable_time_delta();
+    let encodable_msg = WebSocketMessagesEncodable::GetCancellableUserOps(max_delta);
+    let (msg, rx) = WebSocketMessages::new(encodable_msg);
+    websocket_tx.send(msg).await?;
+    let cancellable_user_ops = UserOps::try_from(tokio::select! {
+        response = rx => response?,
+        _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+            let m = "getting cancellable user ops";
+            error!("timed out whilst {m}");
+            Err(SentinelError::Timedout(m.into()))
+        }
+    }?)?;
 
     let err_msg = "error cancelling user op ";
 
@@ -132,13 +161,13 @@ async fn cancel_user_ops(
                 match cancel_user_op(
                     op.clone(),
                     native_nonce,
+                    native_balance,
                     native_gas_price,
                     native_gas_limit,
-                    core_tx.clone(),
-                    eth_rpc_tx.clone(),
-                    &native_pnetwork_hub,
+                    &config,
                     native_broadcaster_pk,
-                    native_balance,
+                    eth_rpc_tx.clone(),
+                    websocket_tx.clone(),
                 )
                 .await
                 {
@@ -160,13 +189,13 @@ async fn cancel_user_ops(
                 match cancel_user_op(
                     op.clone(),
                     host_nonce,
+                    host_balance,
                     host_gas_price,
                     host_gas_limit,
-                    core_tx.clone(),
-                    eth_rpc_tx.clone(),
-                    &host_pnetwork_hub,
+                    &config,
                     host_broadcaster_pk,
-                    host_balance,
+                    eth_rpc_tx.clone(),
+                    websocket_tx.clone(),
                 )
                 .await
                 {
@@ -188,7 +217,6 @@ async fn cancel_user_ops(
 
     Ok(())
 }
-*/
 
 async fn broadcast_channel_loop(
     mut broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
@@ -211,7 +239,7 @@ pub async fn broadcaster_loop(
     config: SentinelConfig,
     disable: bool,
     broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
-    _broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
+    websocket_tx: MpscTx<WebSocketMessages>,
 ) -> Result<(), SentinelError> {
     let name = "broadcaster";
     if disable {
@@ -224,15 +252,6 @@ pub async fn broadcaster_loop(
     Env::init()?;
     let host_broadcaster_pk = Env::get_host_broadcaster_private_key()?;
     let native_broadcaster_pk = Env::get_native_broadcaster_private_key()?;
-
-    /* FIXME use websocket to get this stuff
-    let (host_msg, host_rx) = CoreMessages::get_address_msg(BridgeSide::Host);
-    let (native_msg, native_rx) = CoreMessages::get_address_msg(BridgeSide::Native);
-    core_tx.send(host_msg).await?;
-    core_tx.send(native_msg).await?;
-    let host_address = host_rx.await??;
-    let native_address = native_rx.await??;
-    */
 
     'broadcaster_loop: loop {
         tokio::select! {
@@ -266,14 +285,11 @@ pub async fn broadcaster_loop(
                     Err(e) => break 'broadcaster_loop Err(e),
                 }
             },
-            /* FIXME reinstate this!
             r = rx.recv() , if broadcaster_is_enabled && core_is_connected => match r {
                 Some(BroadcasterMessages::CancelUserOps) => {
                     match cancel_user_ops(
                         &config,
-                        &host_address,
-                        &native_address,
-                        core_tx.clone(),
+                        websocket_tx.clone(),
                         eth_rpc_tx.clone(),
                         &native_broadcaster_pk,
                         &host_broadcaster_pk,
@@ -293,7 +309,6 @@ pub async fn broadcaster_loop(
                     break 'broadcaster_loop Err(SentinelError::Custom(name.into()))
                 },
             },
-            */
             _ = tokio::signal::ctrl_c() => {
                 warn!("{name} shutting down...");
                 break 'broadcaster_loop Err(SentinelError::SigInt(name.into()))
