@@ -7,6 +7,7 @@ use serde_json::Value as Json;
 use super::WebSocketMessagesEncodableDbOps;
 use crate::{
     SentinelError,
+    UserOp,
     UserOpUniqueId,
     WebSocketMessagesError,
     WebSocketMessagesInitArgs,
@@ -28,6 +29,7 @@ pub enum WebSocketMessagesEncodable {
     DbOps(WebSocketMessagesEncodableDbOps),
     Submit(Box<WebSocketMessagesSubmitArgs>),
     Initialize(Box<WebSocketMessagesInitArgs>),
+    GetUserOpCancellationSiganture(Box<UserOp>),
     ResetChain(Box<WebSocketMessagesResetChainArgs>),
 }
 
@@ -72,6 +74,7 @@ impl fmt::Display for WebSocketMessagesEncodable {
             Self::RemoveUserOp(_) => "RemoveUserOp".to_string(),
             Self::GetLatestBlockNumbers => "GetLatestBlockNumbers".to_string(),
             Self::GetCancellableUserOps(_) => "GetCancellableUserOps".to_string(),
+            Self::GetUserOpCancellationSiganture(..) => "GetUserOpCancellationSiganture".to_string(),
         };
         write!(f, "{prefix}{s}")
     }
