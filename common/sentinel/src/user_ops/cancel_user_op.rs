@@ -44,7 +44,7 @@ impl UserOp {
         ]))
     }
 
-    fn get_cancellation_signature(&self, pk: &EthPrivateKey) -> Result<UserOpCancellationSignature, UserOpError> {
+    pub fn get_cancellation_signature(&self, pk: &EthPrivateKey) -> Result<UserOpCancellationSignature, UserOpError> {
         if self.state().is_cancelled() || self.state().is_executed() {
             Err(UserOpError::CannotCancel(self.state))
         } else {
@@ -55,10 +55,15 @@ impl UserOp {
         }
     }
 
-    fn encode_cancellation_fxn_data(&self, pk: &EthPrivateKey) -> Result<Bytes, UserOpError> {
+    fn encode_cancellation_fxn_data(
+        &self,
+        cancellation_sig: &UserOpCancellationSignature,
+    ) -> Result<Bytes, UserOpError> {
+        todo!("FIXME update abi & impl of this");
+        // FIXME abi needs updating!
         Ok(encode_fxn_call(CANCEL_FXN_ABI, "protocolSentinelCancelOperation", &[
             self.encode_as_eth_abi_token()?,
-            EthAbiToken::Bytes(self.get_cancellation_signature(pk)?.sig().to_vec()),
+            EthAbiToken::Bytes(cancellation_sig.sig().to_vec()),
         ])?)
     }
 
@@ -70,14 +75,14 @@ impl UserOp {
         gas_limit: usize,
         pnetwork_hub: &EthAddress,
         chain_id: &EthChainId,
-        core_pk: &EthPrivateKey,
         broadcaster_pk: &EthPrivateKey,
+        cancellation_sig: &UserOpCancellationSignature,
     ) -> Result<EthTransaction, UserOpError> {
         if self.state().is_cancelled() || self.state().is_executed() {
             Err(UserOpError::CannotCancel(self.state))
         } else {
             let value = 0;
-            let data = self.encode_cancellation_fxn_data(core_pk)?;
+            let data = self.encode_cancellation_fxn_data(cancellation_sig)?;
             Ok(
                 EthTransaction::new_unsigned(data, nonce, value, *pnetwork_hub, chain_id, gas_limit, gas_price)
                     .sign(broadcaster_pk)?,
