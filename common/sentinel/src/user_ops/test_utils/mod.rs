@@ -1,9 +1,23 @@
 #![cfg(test)]
+use std::{fs::read_to_string, str::FromStr};
+
 use common::BridgeSide;
-use common_eth::convert_hex_to_eth_address;
+use common_eth::{convert_hex_to_eth_address, EthSubmissionMaterial};
 
 use super::{UserOp, UserOps};
-use crate::test_utils::get_sample_sub_mat_n;
+
+pub fn get_sample_sub_mat_n(n: usize) -> EthSubmissionMaterial {
+    let suffix = match n {
+        _ => "bsc-block-31915441-with-user-send.json",
+    };
+    let prefix = "src/lib/user_ops/test_utils/";
+    let path = format!("{prefix}{suffix}");
+    EthSubmissionMaterial::from_str(&read_to_string(path).unwrap()).unwrap()
+}
+
+fn get_sample_submission_material_with_user_send() -> EthSubmissionMaterial {
+    get_sample_sub_mat_n(1)
+}
 
 pub fn get_sample_witnessed_user_op() -> UserOp {
     let side = BridgeSide::Native;

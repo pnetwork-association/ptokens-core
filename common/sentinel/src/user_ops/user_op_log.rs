@@ -13,6 +13,28 @@ use super::{
     EXECUTED_USER_OP_TOPIC,
     WITNESSED_USER_OP_TOPIC,
 };
+/*
+[x]  originBlockHash:              bytes32
+[x]  originTransactionHash:        bytes32
+[x]  optionsMask:                  bytes32
+[x]  nonce:                        uint256
+[x]  underlyingAssetDecimals:      uint256
+[x]  assetAmount:                  uint256
+[ ]  protocolFeeAssetAmount:       uint256
+[ ]  networkFeeAssetAmount:        uint256
+[ ]  forwardNetworkFeeAssetAmount: uint256
+[x]  underlyingAssetTokenAddress:  address
+[x]  originNetworkId:              bytes4
+[x]  destinationNetworkId:         bytes4
+[ ]  forwardDestinationNetworkId:  bytes4
+[x]  underlyingAssetNetworkId:     bytes4
+[ ]  originAccount:                string
+[x]  destinationAccount:           string
+[x]  underlyingAssetName:          string
+[x]  underlyingAssetSymbol:        string
+[x]  userData:                     bytes
+[ ]  isForProtocol:                bool
+*/
 
 #[serde_as]
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

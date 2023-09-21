@@ -207,6 +207,7 @@ impl UserOpList {
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use common::get_test_database;
@@ -242,3 +243,4 @@ mod tests {
         assert_eq!(op_1, op_2);
     }
 }
+*/

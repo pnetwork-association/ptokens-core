@@ -6,7 +6,7 @@ use ethereum_types::{Address as EthAddress, U256};
 
 use super::{CancellationSignature, UserOp, UserOpCancellationSignature, UserOpError, UserOpUniqueId};
 
-const CANCEL_FXN_ABI: &str = "[{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"originBlockHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"originTransactionHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"optionsMask\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"underlyingAssetDecimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"assetAmount\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"underlyingAssetTokenAddress\",\"type\":\"address\"},{\"internalType\":\"bytes4\",\"name\":\"originNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"bytes4\",\"name\":\"destinationNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"bytes4\",\"name\":\"underlyingAssetNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"string\",\"name\":\"destinationAccount\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"underlyingAssetName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"underlyingAssetSymbol\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"userData\",\"type\":\"bytes\"}],\"internalType\":\"struct IStateManager.Operation\",\"name\":\"operation\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"}],\"name\":\"protocolSentinelCancelOperation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]";
+const CANCEL_FXN_ABI: &str = "{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"originBlockHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"originTransactionHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"optionsMask\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"underlyingAssetDecimals\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"assetAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"protocolFeeAssetAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"networkFeeAssetAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"forwardNetworkFeeAssetAmount\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"underlyingAssetTokenAddress\",\"type\":\"address\"},{\"internalType\":\"bytes4\",\"name\":\"originNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"bytes4\",\"name\":\"destinationNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"bytes4\",\"name\":\"forwardDestinationNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"bytes4\",\"name\":\"underlyingAssetNetworkId\",\"type\":\"bytes4\"},{\"internalType\":\"string\",\"name\":\"originAccount\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"destinationAccount\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"underlyingAssetName\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"underlyingAssetSymbol\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"userData\",\"type\":\"bytes\"},{\"internalType\":\"bool\",\"name\":\"isForProtocol\",\"type\":\"bool\"}],\"internalType\":\"struct IPNetworkHub.Operation\",\"name\":\"operation\",\"type\":\"tuple\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"name\":\"protocolSentinelCancelOperation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}";
 
 impl UserOp {
     pub fn check_affordability(&self, balance: U256, gas_limit: usize, gas_price: u64) -> Result<(), UserOpError> {
@@ -26,6 +26,7 @@ impl UserOp {
     }
 
     pub fn encode_as_eth_abi_token(&self) -> Result<EthAbiToken, UserOpError> {
+        todo!("FIXME fix this encoding");
         Ok(EthAbiToken::Tuple(vec![
             EthAbiToken::FixedBytes(self.user_op_log.origin_block_hash()?.as_bytes().to_vec()),
             EthAbiToken::FixedBytes(self.user_op_log.origin_transaction_hash()?.as_bytes().to_vec()),
@@ -44,6 +45,29 @@ impl UserOp {
         ]))
     }
 
+    /*
+    [x]  originBlockHash:              bytes32
+    [x]  originTransactionHash:        bytes32
+    [x]  optionsMask:                  bytes32
+    [x]  nonce:                        uint256
+    [x]  underlyingAssetDecimals:      uint256
+    [x]  assetAmount:                  uint256
+    [ ]  protocolFeeAssetAmount:       uint256
+    [ ]  networkFeeAssetAmount:        uint256
+    [ ]  forwardNetworkFeeAssetAmount: uint256
+    [x]  underlyingAssetTokenAddress:  address
+    [x]  originNetworkId:              bytes4
+    [x]  destinationNetworkId:         bytes4
+    [ ]  forwardDestinationNetworkId:  bytes4
+    [x]  underlyingAssetNetworkId:     bytes4
+    [ ]  originAccount:                string
+    [x]  destinationAccount:           string
+    [x]  underlyingAssetName:          string
+    [x]  underlyingAssetSymbol:        string
+    [x]  userData:                     bytes
+    [ ]  isForProtocol:                bool
+    */
+
     pub fn get_cancellation_signature(&self, pk: &EthPrivateKey) -> Result<UserOpCancellationSignature, UserOpError> {
         if self.state().is_cancelled() || self.state().is_executed() {
             Err(UserOpError::CannotCancel(Box::new(self.clone())))
@@ -59,10 +83,9 @@ impl UserOp {
         &self,
         cancellation_sig: &UserOpCancellationSignature,
     ) -> Result<Bytes, UserOpError> {
-        todo!("FIXME update abi & impl of this");
-        // FIXME abi needs updating!
         Ok(encode_fxn_call(CANCEL_FXN_ABI, "protocolSentinelCancelOperation", &[
             self.encode_as_eth_abi_token()?,
+            EthAbiToken::FixedBytes([0u8; 32].to_vec()),
             EthAbiToken::Bytes(cancellation_sig.sig().to_vec()),
         ])?)
     }
@@ -91,6 +114,7 @@ impl UserOp {
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use common_chain_ids::EthChainId;
@@ -183,3 +207,4 @@ mod tests {
         }
     }
 }
+*/

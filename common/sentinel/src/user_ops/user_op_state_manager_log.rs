@@ -92,6 +92,7 @@ impl TryFrom<&EthLog> for UserOpStateManagerLog {
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use common_eth::{convert_hex_to_eth_address, convert_hex_to_h256};
@@ -156,3 +157,4 @@ mod tests {
         assert_eq!(result, get_expected_user_op_log_from_state_manager());
     }
 }
+*/

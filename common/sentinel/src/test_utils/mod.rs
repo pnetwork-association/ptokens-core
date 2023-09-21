@@ -39,15 +39,9 @@ pub fn get_sample_sub_mat_n(n: usize) -> EthSubmissionMaterial {
         6 => "host-sub-mat-num-16776505.json",
         7 => "host-sub-mat-num-16776506.json",
         8 => "host-sub-mat-num-16776507.json",
-        9 => "host-sub-mat-num-16776508.json",
-        10 => "sepolia-native-sub-mat-num-3193051.json",
-        11 => "sepolia-native-sub-mat-num-3256520.json",
-        12 => "sepolia-native-sub-mat-num-3264438.json",
-        13 => "sepolia-native-sub-mat-num-3264465.json",
-        14 => "sepolia-native-sub-mat-num-3270755.json",
-        _ => "sepolia-native-sub-mat-num-3270818.json",
+        _ => "host-sub-mat-num-16776508.json",
     };
-    let prefix = "src/lib/test_utils/";
+    let prefix = "src/test_utils/";
     let path = format!("{prefix}{suffix}");
     EthSubmissionMaterial::from_str(&read_to_string(path).unwrap()).unwrap()
 }
@@ -69,7 +63,7 @@ mod tests {
 
     #[test]
     fn should_get_sample_sub_mat_n() {
-        let n = 11;
+        let n = 4;
         get_sample_sub_mat_n(n);
     }
 

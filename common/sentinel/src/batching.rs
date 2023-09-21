@@ -325,7 +325,8 @@ mod tests {
 
     #[test]
     fn should_enable_batching() {
-        let mut batch = Batch::new();
+        let cid = EthChainId::Mainnet;
+        let mut batch = Batch::new(cid);
         batch.disable_batching();
         assert!(!batch.batching_is_enabled());
         batch.enable_batching();
@@ -335,7 +336,8 @@ mod tests {
 
     #[test]
     fn should_disable_batching() {
-        let mut batch = Batch::new();
+        let cid = EthChainId::Mainnet;
+        let mut batch = Batch::new(cid);
         batch.disable_batching();
         let result = batch.batching_is_enabled();
         assert!(!result);
@@ -343,7 +345,8 @@ mod tests {
 
     #[test]
     fn should_set_time_of_last_submission() {
-        let mut batch = Batch::new();
+        let cid = EthChainId::Mainnet;
+        let mut batch = Batch::new(cid);
         let timestamp_before = batch.get_time_of_last_submission();
         batch.set_time_of_last_submission();
         let result = batch.get_time_of_last_submission();
@@ -352,7 +355,8 @@ mod tests {
 
     #[test]
     fn should_push_to_batch() {
-        let mut batch = Batch::new();
+        let cid = EthChainId::Mainnet;
+        let mut batch = Batch::new(cid);
         assert!(batch.is_empty());
         let sub_mat = EthSubmissionMaterial::default();
         batch.push(sub_mat);
@@ -361,7 +365,8 @@ mod tests {
 
     #[test]
     fn should_drain_batch() {
-        let mut batch = Batch::new();
+        let cid = EthChainId::Mainnet;
+        let mut batch = Batch::new(cid);
         let sub_mat = EthSubmissionMaterial::default();
         batch.push(sub_mat);
         assert!(!batch.is_empty());
@@ -371,7 +376,8 @@ mod tests {
 
     #[test]
     fn should_get_size_in_blocks_of_batch() {
-        let mut batch = Batch::new();
+        let cid = EthChainId::Mainnet;
+        let mut batch = Batch::new(cid);
         assert_eq!(batch.size_in_blocks(), 0);
         let sub_mat = EthSubmissionMaterial::default();
         batch.push(sub_mat);
@@ -431,13 +437,15 @@ mod tests {
 
     #[test]
     fn should_pass_is_chained_check_if_batch_is_empty() {
-        let batch = Batch::new();
+        let cid = EthChainId::Mainnet;
+        let batch = Batch::new(cid);
         assert!(batch.check_is_chained().is_ok())
     }
 
     #[test]
     fn should_pass_is_chained_check_if_batch_has_one_member() {
-        let mut batch = Batch::new();
+        let cid = EthChainId::Mainnet;
+        let mut batch = Batch::new(cid);
         let sub_mat = EthSubmissionMaterial::default();
         batch.push(sub_mat);
         assert_eq!(batch.size_in_blocks(), 1);

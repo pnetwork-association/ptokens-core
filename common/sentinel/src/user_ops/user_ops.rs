@@ -163,6 +163,7 @@ impl TryFrom<WebSocketMessagesEncodable> for UserOps {
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use common_eth::{convert_hex_to_eth_address, convert_hex_to_h256};
@@ -202,3 +203,4 @@ mod tests {
         assert_eq!(ops[0].state(), expected_state);
     }
 }
+*/

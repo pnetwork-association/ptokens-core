@@ -148,16 +148,9 @@ mod tests {
     fn websocket_messages_encodable_should_make_serde_roundtrip() {
         let m = WebSocketMessagesEncodable::GetCoreState;
         let s: String = m.clone().try_into().unwrap();
-        let expected_s = "IkdldEVuY2xhdmVTdGF0ZSI";
+        let expected_s = "IkdldENvcmVTdGF0ZSI";
         assert_eq!(s, expected_s);
         let r = WebSocketMessagesEncodable::try_from(s).unwrap();
         assert_eq!(r, m);
-    }
-
-    #[test]
-    fn should_get_init_message_from_string_of_args() {
-        let args = vec!["init", "true", "true", "EthereumMainnet", "10", "BscMainnet", "100"];
-        let r = WebSocketMessagesEncodable::try_from(args);
-        assert!(r.is_ok());
     }
 }

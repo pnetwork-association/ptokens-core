@@ -93,3 +93,15 @@ impl TryFrom<Vec<String>> for WebSocketMessagesInitArgs {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::WebSocketMessagesEncodable;
+
+    #[test]
+    fn should_get_init_message_from_string_of_args() {
+        let args = vec!["init", "true", "EthereumMainnet", "10", "true", "BscMainnet", "100"];
+        let r = WebSocketMessagesEncodable::try_from(args);
+        assert!(r.is_ok());
+    }
+}

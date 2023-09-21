@@ -24,8 +24,6 @@ use crate::{
     SentinelError,
 };
 
-const CONFIG_FILE_PATH: &str = "sentinel-config";
-
 #[derive(Debug, Clone, Deserialize)]
 struct SentinelConfigToml {
     log: LogToml,
@@ -36,9 +34,9 @@ struct SentinelConfigToml {
 }
 
 impl SentinelConfigToml {
-    pub fn new() -> Result<Self, SentinelError> {
+    pub fn new(path: &str) -> Result<Self, SentinelError> {
         Ok(config::Config::builder()
-            .add_source(config::File::with_name(CONFIG_FILE_PATH))
+            .add_source(config::File::with_name(path))
             .build()?
             .try_deserialize()?)
     }
@@ -74,12 +72,8 @@ impl SentinelConfig {
         &self.batching
     }
 
-    pub fn get_db_path(&self) -> String {
-        self.core().get_db_path()
-    }
-
-    pub fn new() -> Result<Self, SentinelError> {
-        let res = Self::from_toml(&SentinelConfigToml::new()?)?;
+    pub fn new(path: &str) -> Result<Self, SentinelError> {
+        let res = Self::from_toml(&SentinelConfigToml::new(path)?)?;
         debug!("sentinel config {:?}", res);
         Ok(res)
     }
@@ -153,7 +147,8 @@ mod tests {
 
     #[test]
     fn should_get_config() {
-        let result = SentinelConfig::new();
+        let path = "src/sentinel_config/sample-config";
+        let result = SentinelConfig::new(path);
         result.unwrap();
     }
 }
