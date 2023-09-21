@@ -21,6 +21,10 @@ pub struct Cli {
     #[arg(long, short)]
     log_level: Option<LogLevel>,
 
+    /// Configuration toml file path (default `./sentinel-config`)
+    #[arg(long, short)]
+    config_path: Option<String>,
+
     /// Disable the ws server
     #[arg(short = 'v', long)]
     disable_ws_server: bool,
@@ -49,9 +53,13 @@ impl Cli {
 }
 
 async fn start() -> Result<String, SentinelError> {
-    let config = SentinelConfig::new()?;
-
     let cli_args = Cli::parse();
+    let config_path = if let Some(ref path) = cli_args.config_path {
+        path.to_string()
+    } else {
+        "sentinel-config".to_string()
+    };
+    let config = SentinelConfig::new(&config_path)?;
 
     if config.log().is_enabled() {
         init_logger(config.log(), cli_args.log_level())?

@@ -26,8 +26,6 @@ use tokio::{
     time::{sleep, Duration},
 };
 
-const STRONGBOX_TIMEOUT_MS: u64 = 30_000; // FIXME get from config
-
 #[allow(clippy::too_many_arguments)]
 async fn cancel_user_op(
     op: UserOp,
@@ -62,7 +60,7 @@ async fn cancel_user_op(
 
     let cancellation_sig = UserOpCancellationSignature::try_from(tokio::select! {
         response = rx => response?,
-        _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+        _ = sleep(Duration::from_secs(*config.core().timeout())) => {
             let m = "getting cancellation signature";
             error!("timed out whilst {m}");
             Err(SentinelError::Timedout(m.into()))
@@ -140,12 +138,12 @@ async fn cancel_user_ops(
     let mut native_balance = native_balance_rx.await??;
 
     let max_delta = config.core().max_cancellable_time_delta();
-    let encodable_msg = WebSocketMessagesEncodable::GetCancellableUserOps(max_delta);
+    let encodable_msg = WebSocketMessagesEncodable::GetCancellableUserOps(*max_delta);
     let (msg, rx) = WebSocketMessages::new(encodable_msg);
     websocket_tx.send(msg).await?;
     let cancellable_user_ops = UserOps::try_from(tokio::select! {
         response = rx => response?,
-        _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+        _ = sleep(Duration::from_secs(*config.core().timeout())) => {
             let m = "getting cancellable user ops";
             error!("timed out whilst {m}");
             Err(SentinelError::Timedout(m.into()))

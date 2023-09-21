@@ -14,7 +14,7 @@ impl RpcCall {
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
         Self::check_core_is_connected(core_cxn)?;
         let max_delta = config.core().max_cancellable_time_delta();
-        let encodable_msg = WebSocketMessagesEncodable::GetCancellableUserOps(max_delta);
+        let encodable_msg = WebSocketMessagesEncodable::GetCancellableUserOps(*max_delta);
         let (msg, rx) = WebSocketMessages::new(encodable_msg);
         websocket_tx.send(msg).await?;
 
