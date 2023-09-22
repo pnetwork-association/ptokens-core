@@ -132,7 +132,7 @@ pub struct EthReceiptJson {
     pub logs_bloom: String,
     pub logs: Vec<EthLogJson>,
     pub block_number: usize,
-    pub to: serde_json::Value,
+    pub to: Option<serde_json::Value>,
     pub transaction_hash: String,
     pub transaction_index: usize,
     pub cumulative_gas_used: usize,
@@ -239,8 +239,9 @@ impl EthReceipt {
             cumulative_gas_used: U256::from(json.cumulative_gas_used),
             transaction_hash: convert_hex_to_h256(&json.transaction_hash)?,
             to: match json.to {
-                serde_json::Value::Null => H160::zero(),
-                _ => convert_hex_to_eth_address(&convert_json_value_to_string(&json.to)?)?,
+                Some(serde_json::Value::String(ref s)) => convert_hex_to_eth_address(s)?,
+                // NOTE: Some chains like goerli may not have a `to` field in their receipts
+                _ => H160::zero(),
             },
             contract_address: match json.contract_address {
                 serde_json::Value::Null => EthAddress::zero(),
