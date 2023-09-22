@@ -132,9 +132,6 @@ pub enum SentinelError {
     #[error("{0}")]
     BlockAlreadyInDb(common::BlockAlreadyInDbError),
 
-    #[error("ethers coreencode packed error: {0}")]
-    EncodePacked(#[from] ethers_core::abi::EncodePackedError),
-
     #[error("tokio receiver error: {0}")]
     Receiver(#[from] tokio::sync::broadcast::error::RecvError),
 

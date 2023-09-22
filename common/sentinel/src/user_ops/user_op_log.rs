@@ -6,35 +6,13 @@ use serde_with::serde_as;
 
 use super::{
     UserOpError,
-    UserOpRouterLog,
-    UserOpStateManagerLog,
+    UserOpPnetworkHubLog,
+    UserSendLog,
     CANCELLED_USER_OP_TOPIC,
     ENQUEUED_USER_OP_TOPIC,
     EXECUTED_USER_OP_TOPIC,
     WITNESSED_USER_OP_TOPIC,
 };
-/*
-[x]  originBlockHash:              bytes32
-[x]  originTransactionHash:        bytes32
-[x]  optionsMask:                  bytes32
-[x]  nonce:                        uint256
-[x]  underlyingAssetDecimals:      uint256
-[x]  assetAmount:                  uint256
-[ ]  protocolFeeAssetAmount:       uint256
-[ ]  networkFeeAssetAmount:        uint256
-[ ]  forwardNetworkFeeAssetAmount: uint256
-[x]  underlyingAssetTokenAddress:  address
-[x]  originNetworkId:              bytes4
-[x]  destinationNetworkId:         bytes4
-[ ]  forwardDestinationNetworkId:  bytes4
-[x]  underlyingAssetNetworkId:     bytes4
-[ ]  originAccount:                string
-[x]  destinationAccount:           string
-[x]  underlyingAssetName:          string
-[x]  underlyingAssetSymbol:        string
-[x]  userData:                     bytes
-[ ]  isForProtocol:                bool
-*/
 
 #[serde_as]
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -45,39 +23,52 @@ pub struct UserOpLog {
     pub(super) options_mask: EthHash,
     pub(super) nonce: U256,
     pub(super) underlying_asset_decimals: U256,
-    pub(super) amount: U256,
+    pub(super) asset_amount: U256,
+    pub(super) protocol_fee_asset_amount: U256,
+    pub(super) network_fee_asset_amount: U256,
+    pub(super) forward_network_fee_asset_amount: U256,
     pub(super) underlying_asset_token_address: EthAddress,
     pub(super) origin_network_id: Option<Bytes>, // TODO use type for this!
     #[serde_as(as = "serde_with::hex::Hex")]
     pub(super) destination_network_id: Bytes, // TODO use type for this!
     #[serde_as(as = "serde_with::hex::Hex")]
+    pub(super) forward_destination_network_id: Bytes, // TODO use type for this!
+    #[serde_as(as = "serde_with::hex::Hex")]
     pub(super) underlying_asset_network_id: Bytes, // TODO use type for this!
+    pub(super) origin_account: String,
     pub(super) destination_account: String,
     pub(super) underlying_asset_name: String,
     pub(super) underlying_asset_symbol: String,
     #[serde_as(as = "serde_with::hex::Hex")]
     pub(super) user_data: Bytes,
+    pub(super) is_for_protocol: bool,
 }
 
 impl Default for UserOpLog {
     fn default() -> Self {
         Self {
-            // NOTE The optional fields cannot be missing. They're only optional due to parsing
+            // NOTE The optional fields here cannot be missing. They're only optional due to parsing
             // from logs where in the case of a WITNESSED event, the log does NOT contain them.
-            origin_network_id: Some(vec![]),
-            origin_block_hash: Some(EthHash::zero()),
-            origin_transaction_hash: Some(EthHash::zero()),
-            options_mask: EthHash::default(),
+            user_data: vec![],
             nonce: U256::default(),
-            underlying_asset_decimals: U256::default(),
-            amount: U256::default(),
-            underlying_asset_token_address: EthAddress::default(),
+            is_for_protocol: false,
+            asset_amount: U256::default(),
             destination_network_id: vec![],
+            origin_network_id: Some(vec![]),
+            options_mask: EthHash::default(),
+            origin_account: String::default(),
             underlying_asset_network_id: vec![],
+            forward_destination_network_id: vec![],
             destination_account: String::default(),
             underlying_asset_name: String::default(),
+            origin_block_hash: Some(EthHash::zero()),
+            network_fee_asset_amount: U256::default(),
+            underlying_asset_decimals: U256::default(),
             underlying_asset_symbol: String::default(),
-            user_data: vec![],
+            protocol_fee_asset_amount: U256::default(),
+            origin_transaction_hash: Some(EthHash::zero()),
+            forward_network_fee_asset_amount: U256::default(),
+            underlying_asset_token_address: EthAddress::default(),
         }
     }
 }
@@ -131,7 +122,7 @@ impl TryFrom<&EthLog> for UserOpLog {
         if l.topics.is_empty() {
             return Err(Self::Error::NoTopics);
         } else if l.topics[0] == *WITNESSED_USER_OP_TOPIC {
-            return Ok(Self::from(UserOpRouterLog::try_from(l)?));
+            return Ok(Self::from(UserSendLog::try_from(l)?));
         }
 
         let topics = [
@@ -141,51 +132,63 @@ impl TryFrom<&EthLog> for UserOpLog {
         ];
 
         if topics.contains(&l.topics[0]) {
-            Ok(Self::from(UserOpStateManagerLog::try_from(l)?))
+            Ok(Self::from(UserOpPnetworkHubLog::try_from(l)?))
         } else {
             Err(UserOpError::UnrecognizedTopic(l.topics[0]))
         }
     }
 }
 
-impl From<UserOpStateManagerLog> for UserOpLog {
-    fn from(l: UserOpStateManagerLog) -> Self {
+impl From<UserOpPnetworkHubLog> for UserOpLog {
+    fn from(l: UserOpPnetworkHubLog) -> Self {
         Self {
-            origin_block_hash: Some(l.origin_block_hash),
-            origin_transaction_hash: Some(l.origin_transaction_hash),
-            options_mask: l.options_mask,
             nonce: l.nonce,
-            underlying_asset_decimals: l.underlying_asset_decimals,
-            amount: l.amount,
-            underlying_asset_token_address: l.underlying_asset_token_address,
-            origin_network_id: Some(l.origin_network_id),
-            destination_network_id: l.destination_network_id,
-            underlying_asset_network_id: l.underlying_asset_network_id,
-            destination_account: l.destination_account,
-            underlying_asset_name: l.underlying_asset_name,
-            underlying_asset_symbol: l.underlying_asset_symbol,
             user_data: l.user_data,
+            asset_amount: l.asset_amount,
+            options_mask: l.options_mask,
+            origin_account: l.origin_account,
+            is_for_protocol: l.is_for_protocol,
+            destination_account: l.destination_account,
+            origin_network_id: Some(l.origin_network_id),
+            origin_block_hash: Some(l.origin_block_hash),
+            underlying_asset_name: l.underlying_asset_name,
+            destination_network_id: l.destination_network_id,
+            underlying_asset_symbol: l.underlying_asset_symbol,
+            network_fee_asset_amount: l.network_fee_asset_amount,
+            underlying_asset_decimals: l.underlying_asset_decimals,
+            protocol_fee_asset_amount: l.protocol_fee_asset_amount,
+            origin_transaction_hash: Some(l.origin_transaction_hash),
+            underlying_asset_network_id: l.underlying_asset_network_id,
+            forward_destination_network_id: l.forward_destination_network_id,
+            underlying_asset_token_address: l.underlying_asset_token_address,
+            forward_network_fee_asset_amount: l.forward_network_fee_asset_amount,
         }
     }
 }
 
-impl From<UserOpRouterLog> for UserOpLog {
-    fn from(l: UserOpRouterLog) -> Self {
+impl From<UserSendLog> for UserOpLog {
+    fn from(l: UserSendLog) -> Self {
         Self {
-            origin_block_hash: None,
-            origin_transaction_hash: None,
-            options_mask: l.options_mask,
             nonce: l.nonce,
-            underlying_asset_decimals: l.underlying_asset_decimals,
-            amount: l.asset_amount,
-            underlying_asset_token_address: l.underlying_asset_token_address,
+            user_data: l.user_data,
             origin_network_id: None,
-            destination_network_id: l.destination_network_id,
-            underlying_asset_network_id: l.underlying_asset_network_id,
+            origin_block_hash: None,
+            asset_amount: l.asset_amount,
+            options_mask: l.options_mask,
+            origin_transaction_hash: None,
+            origin_account: l.origin_account,
+            is_for_protocol: l.is_for_protocol,
             destination_account: l.destination_account,
             underlying_asset_name: l.underlying_asset_name,
+            destination_network_id: l.destination_network_id,
             underlying_asset_symbol: l.underlying_asset_symbol,
-            user_data: l.user_data,
+            network_fee_asset_amount: l.network_fee_asset_amount,
+            underlying_asset_decimals: l.underlying_asset_decimals,
+            protocol_fee_asset_amount: l.protocol_fee_asset_amount,
+            underlying_asset_network_id: l.underlying_asset_network_id,
+            forward_destination_network_id: l.forward_destination_network_id,
+            underlying_asset_token_address: l.underlying_asset_token_address,
+            forward_network_fee_asset_amount: l.forward_network_fee_asset_amount,
         }
     }
 }

@@ -119,7 +119,6 @@ impl UserOpFlag {
     }
 }
 
-/*
 #[cfg(test)]
 mod tests {
     use common::BridgeSide;
@@ -193,4 +192,3 @@ mod tests {
         assert_eq!(result, states);
     }
 }
-*/

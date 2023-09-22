@@ -1,4 +1,5 @@
 use common::Byte;
+use ethabi::Token as EthAbiToken;
 use ethereum_types::{H256 as EthHash, U256};
 use thiserror::Error;
 
@@ -6,6 +7,16 @@ use super::{UserOp, UserOpState};
 
 #[derive(Error, Debug)]
 pub enum UserOpError {
+    #[error("ethabi error: {0}")]
+    EthAbi(#[from] ethabi::Error),
+
+    #[error("not enough tokens, got: {got}, expected: {expected} in {location}")]
+    NotEnoughTokens {
+        got: usize,
+        expected: usize,
+        location: String,
+    },
+
     #[error("cannot cancel user op from state: {0}")]
     CannotCancelOpInState(UserOpState),
 
@@ -60,4 +71,7 @@ pub enum UserOpError {
 
     #[error("no user op exists with hash: {0}")]
     NoUserOp(EthHash),
+
+    #[error("cannot convert ethabi token from: {from} to: {to}")]
+    CannotConvertEthAbiToken { from: EthAbiToken, to: String },
 }

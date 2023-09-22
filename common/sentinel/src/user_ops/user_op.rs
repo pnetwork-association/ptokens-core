@@ -2,12 +2,11 @@ use std::{convert::TryFrom, fmt};
 
 use common::{BridgeSide, Byte, Bytes, MIN_DATA_SENSITIVITY_LEVEL};
 use common_eth::EthLog;
-use ethabi::Token as EthAbiToken;
+use ethabi::{encode as eth_abi_encode, Token as EthAbiToken};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
-use ethers_core::abi::{self, Token};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
-use tiny_keccak::{Hasher, Keccak};
+use sha2::{Digest, Sha256};
 
 use super::{UserOpError, UserOpFlag, UserOpLog, UserOpState};
 use crate::{DbKey, DbUtilsT, SentinelError};
@@ -144,6 +143,19 @@ impl UserOp {
 }
 
 impl UserOp {
+    pub(super) fn check_num_tokens(tokens: &[EthAbiToken], n: usize, location: &str) -> Result<(), UserOpError> {
+        let l = tokens.len();
+        if l != n {
+            Err(UserOpError::NotEnoughTokens {
+                got: l,
+                expected: n,
+                location: location.into(),
+            })
+        } else {
+            Ok(())
+        }
+    }
+
     pub fn has_been_enqueued(&self) -> bool {
         self.state.is_enqueued() || self.previous_states.iter().any(|state| state.is_enqueued())
     }
@@ -196,105 +208,126 @@ impl UserOp {
     }
 
     pub fn uid(&self) -> Result<EthHash, UserOpError> {
-        let mut hasher = Keccak::v256();
+        let mut hasher = Sha256::new();
         let input = self.abi_encode()?;
-        let mut output = [0u8; 32];
         hasher.update(&input);
-        hasher.finalize(&mut output);
-        Ok(EthHash::from_slice(&output))
+        Ok(EthHash::from_slice(&hasher.finalize()))
     }
 
     pub fn uid_hex(&self) -> Result<String, UserOpError> {
         self.uid().map(|uid| format!("0x{}", hex::encode(uid.as_bytes())))
     }
 
+    pub(super) fn to_tokens(&self) -> Result<Vec<EthAbiToken>, UserOpError> {
+        Ok(vec![
+            EthAbiToken::FixedBytes(self.user_op_log.origin_block_hash()?.as_bytes().to_vec()),
+            EthAbiToken::FixedBytes(self.user_op_log.origin_transaction_hash()?.as_bytes().to_vec()),
+            EthAbiToken::FixedBytes(self.user_op_log.options_mask.as_bytes().to_vec()),
+            EthAbiToken::Uint(self.user_op_log.nonce),
+            EthAbiToken::Uint(self.user_op_log.underlying_asset_decimals),
+            EthAbiToken::Uint(self.user_op_log.asset_amount),
+            EthAbiToken::Uint(self.user_op_log.protocol_fee_asset_amount),
+            EthAbiToken::Uint(self.user_op_log.network_fee_asset_amount),
+            EthAbiToken::Uint(self.user_op_log.forward_network_fee_asset_amount),
+            EthAbiToken::Address(self.user_op_log.underlying_asset_token_address),
+            EthAbiToken::FixedBytes(self.user_op_log.origin_network_id()?),
+            EthAbiToken::FixedBytes(self.user_op_log.destination_network_id.clone()),
+            EthAbiToken::FixedBytes(self.user_op_log.forward_destination_network_id.clone()),
+            EthAbiToken::FixedBytes(self.user_op_log.underlying_asset_network_id.clone()),
+            EthAbiToken::String(self.user_op_log.origin_account.clone()),
+            EthAbiToken::String(self.user_op_log.destination_account.clone()),
+            EthAbiToken::String(self.user_op_log.underlying_asset_name.clone()),
+            EthAbiToken::String(self.user_op_log.underlying_asset_symbol.clone()),
+            EthAbiToken::Bytes(self.user_op_log.user_data.clone()),
+            EthAbiToken::Bool(self.user_op_log.is_for_protocol),
+        ])
+    }
+
     fn abi_encode(&self) -> Result<Bytes, UserOpError> {
-        todo!("FIXME this encoding has changed");
-        Ok(abi::encode(&[
-            Token::FixedBytes(self.user_op_log.origin_block_hash()?.as_bytes().to_vec()),
-            Token::FixedBytes(self.user_op_log.origin_transaction_hash()?.as_bytes().to_vec()),
-            Token::FixedBytes(self.user_op_log.origin_network_id()?),
-            Token::Uint(Self::convert_u256_type(self.user_op_log.nonce)),
-            Token::String(self.user_op_log.destination_account.clone()),
-            Token::FixedBytes(self.user_op_log.destination_network_id.clone()),
-            Token::String(self.user_op_log.underlying_asset_name.clone()),
-            Token::String(self.user_op_log.underlying_asset_symbol.clone()),
-            Token::Uint(Self::convert_u256_type(self.user_op_log.underlying_asset_decimals)),
-            Token::Address(Self::convert_address_type(
-                self.user_op_log.underlying_asset_token_address,
-            )),
-            Token::FixedBytes(self.user_op_log.underlying_asset_network_id.clone()),
-            Token::Uint(Self::convert_u256_type(self.user_op_log.amount)),
-            Token::Bytes(self.user_op_log.user_data.clone()),
-            Token::FixedBytes(self.user_op_log.options_mask.as_bytes().to_vec()),
-        ]))
+        Ok(eth_abi_encode(&self.to_tokens()?[..]))
     }
 
-    pub(super) fn convert_address_type(t: EthAddress) -> ethers_core::types::Address {
-        // NOTE: Sigh. The ethabi crate re-exports the ethereum_types which we use elsewhere, so
-        // that's annoying.
-        let s = t.as_bytes();
-        ethers_core::types::Address::from_slice(s)
-    }
-
-    pub(super) fn convert_u256_type(t: U256) -> ethers_core::types::U256 {
-        // NOTE: Sigh. The ethabi crate re-exports the ethereum_types which we use elsewhere, so
-        // that's annoying.
-        let mut r = [0u8; 32];
-        t.to_big_endian(&mut r);
-        ethers_core::types::U256::from_big_endian(&r)
-    }
-
-    pub(super) fn get_tuple_from_token(t: &EthAbiToken) -> Result<Vec<EthAbiToken>, SentinelError> {
+    pub(super) fn get_tuple_from_token(t: &EthAbiToken) -> Result<Vec<EthAbiToken>, UserOpError> {
         match t {
             EthAbiToken::Tuple(v) => Ok(v.to_vec()),
-            _ => Err(SentinelError::Custom(format!("Cannot convert `{t}` to tuple token"))),
+            _ => Err(UserOpError::CannotConvertEthAbiToken {
+                from: t.clone(),
+                to: "tuple token".into(),
+            }),
         }
     }
 
-    pub(super) fn get_address_from_token(t: &EthAbiToken) -> Result<EthAddress, SentinelError> {
+    pub(super) fn get_address_from_token(t: &EthAbiToken) -> Result<EthAddress, UserOpError> {
         match t {
             EthAbiToken::Address(t) => Ok(EthAddress::from_slice(t.as_bytes())),
-            _ => Err(SentinelError::Custom(format!("Cannot convert `{t}` to ETH address!"))),
+            _ => Err(UserOpError::CannotConvertEthAbiToken {
+                from: t.clone(),
+                to: "ETH address".into(),
+            }),
         }
     }
 
-    pub(super) fn get_string_from_token(t: &EthAbiToken) -> Result<String, SentinelError> {
+    pub(super) fn get_string_from_token(t: &EthAbiToken) -> Result<String, UserOpError> {
         match t {
             EthAbiToken::String(ref t) => Ok(t.clone()),
-            _ => Err(SentinelError::Custom(format!("Cannot convert `{t}` to string!"))),
+            _ => Err(UserOpError::CannotConvertEthAbiToken {
+                from: t.clone(),
+                to: "string".into(),
+            }),
         }
     }
 
-    pub(super) fn get_bytes_from_token(t: &EthAbiToken) -> Result<Bytes, SentinelError> {
+    pub(super) fn get_bytes_from_token(t: &EthAbiToken) -> Result<Bytes, UserOpError> {
         match t {
             EthAbiToken::Bytes(b) => Ok(b.clone()),
-            _ => Err(SentinelError::Custom(format!("Cannot convert `{t}` to bytes:"))),
+            _ => Err(UserOpError::CannotConvertEthAbiToken {
+                from: t.clone(),
+                to: "bytes".into(),
+            }),
         }
     }
 
-    pub(super) fn get_fixed_bytes_from_token(t: &EthAbiToken) -> Result<Bytes, SentinelError> {
+    pub(super) fn get_fixed_bytes_from_token(t: &EthAbiToken) -> Result<Bytes, UserOpError> {
         match t {
             EthAbiToken::FixedBytes(b) => Ok(b.to_vec()),
-            _ => Err(SentinelError::Custom(format!("Cannot convert `{t}` to bytes:"))),
+            _ => Err(UserOpError::CannotConvertEthAbiToken {
+                from: t.clone(),
+                to: "fixed bytes".into(),
+            }),
         }
     }
 
-    pub(super) fn get_eth_hash_from_token(t: &EthAbiToken) -> Result<EthHash, SentinelError> {
+    pub(super) fn get_eth_hash_from_token(t: &EthAbiToken) -> Result<EthHash, UserOpError> {
         match t {
             EthAbiToken::FixedBytes(ref b) => Ok(EthHash::from_slice(b)),
-            _ => Err(SentinelError::Custom(format!("Cannot convert `{t}` to EthHash!"))),
+            _ => Err(UserOpError::CannotConvertEthAbiToken {
+                from: t.clone(),
+                to: "EthHash".into(),
+            }),
         }
     }
 
-    pub(super) fn get_u256_from_token(t: &EthAbiToken) -> Result<U256, SentinelError> {
+    pub(super) fn get_u256_from_token(t: &EthAbiToken) -> Result<U256, UserOpError> {
         match t {
             EthAbiToken::Uint(u) => {
                 let mut b = [0u8; 32];
                 u.to_big_endian(&mut b);
                 Ok(U256::from_big_endian(&b))
             },
-            _ => Err(SentinelError::Custom(format!("Cannot convert `{t}` to U256!"))),
+            _ => Err(UserOpError::CannotConvertEthAbiToken {
+                from: t.clone(),
+                to: "U256".into(),
+            }),
+        }
+    }
+
+    pub(super) fn get_bool_from_token(t: &EthAbiToken) -> Result<bool, UserOpError> {
+        match t {
+            EthAbiToken::Bool(b) => Ok(*b),
+            _ => Err(UserOpError::CannotConvertEthAbiToken {
+                from: t.clone(),
+                to: "U256".into(),
+            }),
         }
     }
 }
@@ -308,59 +341,28 @@ impl fmt::Display for UserOp {
     }
 }
 
-/*
 #[cfg(test)]
 mod tests {
-    use common_eth::convert_hex_to_h256;
+    use common_eth::convert_hex_to_eth_address;
 
     use super::*;
-    use crate::{
-        get_utc_timestamp,
-        test_utils::get_sample_sub_mat_n,
-        user_ops::test_utils::{get_sample_enqueued_user_op, get_sample_witnessed_user_op},
-    };
+    use crate::user_ops::{test_utils::get_sample_submission_material_with_user_send, UserOps};
 
     #[test]
-    fn should_get_user_op_correctly_from_log() {
-        let sub_mat = get_sample_sub_mat_n(11);
-        let bridge_side = BridgeSide::Native;
-        let witnessed_timestamp = get_utc_timestamp().unwrap();
-        let block_timestamp = sub_mat.get_timestamp().as_secs();
-        let block_hash = sub_mat.block.unwrap().hash;
-        let receipt = sub_mat.receipts[1].clone();
-        let tx_hash = receipt.transaction_hash;
-        let origin_network_id = hex::decode("01020304").unwrap();
-        let log = receipt.logs[0].clone();
-        let result = UserOp::from_log(
-            bridge_side,
-            witnessed_timestamp,
-            block_timestamp,
-            block_hash,
-            tx_hash,
-            &origin_network_id,
-            &log,
-        )
-        .unwrap();
-        let expected_state = UserOpState::Enqueued(bridge_side, tx_hash, 1);
-        assert_eq!(result.state, expected_state);
-    }
-
-    #[test]
-    fn should_get_enqueued_user_op_uid() {
-        let user_op = get_sample_enqueued_user_op();
-        let expected_uid =
-            convert_hex_to_h256("be0a969cf68c8a51804458b2d841df79e2c7fa2f0e94b72b2859c5f8d660083d").unwrap();
-        let uid = user_op.uid().unwrap();
-        assert_eq!(uid, expected_uid);
-    }
-
-    #[test]
-    fn should_get_witnessed_user_op_uid() {
-        let user_op = get_sample_witnessed_user_op();
-        let expected_uid =
-            convert_hex_to_h256("68387313a7d1eacdbc7b8e8f6125bc4c6efaece93eee4d93ce6c1324ecb85c8c").unwrap();
-        let uid = user_op.uid().unwrap();
+    fn should_get_user_op_from_user_send() {
+        let side = BridgeSide::Native;
+        let origin_network_id = hex::decode("5aca268b").unwrap(); // NOTE Bsc
+        let pnetwork_hub = convert_hex_to_eth_address("0x22BeC08c2241Ef915ed72bd876F4e4Bc4336d055").unwrap();
+        let sub_mat = get_sample_submission_material_with_user_send();
+        let ops = UserOps::from_sub_mat(side, &origin_network_id[..], &pnetwork_hub, &sub_mat).unwrap();
+        assert_eq!(ops.len(), 1);
+        println!("{}", ops[0]);
+        let op = ops[0].clone();
+        let bytes = hex::encode(op.abi_encode().unwrap());
+        let expected_bytes = "a64cb6297de82bf16aca0b38760991cc0eec7b3ca5ae2e93d8754902eb927744eadd7dcd6beae94fceac5322937fb9994ee32e25cc12a54959eadc0d5b36e7ca0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001d2d700000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000002710000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000640000000000000000000000000000000000000000000000000000000000000064000000000000000000000000daacb0ab6fb34d24e8a67bfa14bf4d95d4c7af925aca268b00000000000000000000000000000000000000000000000000000000f9b459a1000000000000000000000000000000000000000000000000000000005aca268b000000000000000000000000000000000000000000000000000000005aca268b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000028000000000000000000000000000000000000000000000000000000000000002e00000000000000000000000000000000000000000000000000000000000000340000000000000000000000000000000000000000000000000000000000000038000000000000000000000000000000000000000000000000000000000000003c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a30786464623566343533353132336461613561653334336332343030366634303735616261663566376200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a30786444623566343533353132334441613561453334336332343030364634303735614241463546374200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e704e6574776f726b20546f6b656e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003504e5400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+        assert_eq!(bytes, expected_bytes);
+        let uid = op.uid_hex().unwrap();
+        let expected_uid = "0x1fad0561e399c841089dbb94f226f712e9792cff615457698c752a7d296d534f";
         assert_eq!(uid, expected_uid);
     }
 }
-*/
