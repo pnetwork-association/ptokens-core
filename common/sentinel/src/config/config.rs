@@ -7,7 +7,7 @@ use log::Level as LogLevel;
 use serde::Deserialize;
 
 use crate::{
-    sentinel_config::{
+    config::{
         BatchingConfig,
         BatchingToml,
         ConfigT,
@@ -147,7 +147,7 @@ mod tests {
 
     #[test]
     fn should_get_config() {
-        let path = "src/sentinel_config/sample-config";
+        let path = "src/config/test_utils/sample-config";
         let result = SentinelConfig::new(path);
         result.unwrap();
     }

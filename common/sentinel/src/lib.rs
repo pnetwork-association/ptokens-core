@@ -1,6 +1,7 @@
 mod batching;
 mod bpm;
 mod check_init;
+mod config;
 mod constants;
 mod core_state;
 mod db_utils;
@@ -16,7 +17,6 @@ mod messages;
 mod network_id;
 mod processor;
 mod processor_output;
-mod sentinel_config;
 mod side;
 mod test_utils;
 mod user_ops;
@@ -26,6 +26,16 @@ pub use self::{
     batching::Batch,
     bpm::{Bpm, BpmInfo, Bpms},
     check_init::check_init,
+    config::{
+        ConfigT,
+        HostConfig,
+        LogConfig,
+        LogToml,
+        NativeConfig,
+        SentinelConfig,
+        SentinelConfigError,
+        SentinelCoreConfig,
+    },
     constants::{DEFAULT_SLEEP_TIME, HOST_PROTOCOL_ID, MILLISECONDS_MULTIPLIER, NATIVE_PROTOCOL_ID},
     core_state::CoreState,
     db_utils::{DbKey, DbUtilsT, SentinelDbUtils},
@@ -69,16 +79,6 @@ pub use self::{
     network_id::{Bytes4, NetworkId, ProtocolId},
     processor::{process_batch, process_single, reset_chain},
     processor_output::ProcessorOutput,
-    sentinel_config::{
-        ConfigT,
-        HostConfig,
-        LogConfig,
-        LogToml,
-        NativeConfig,
-        SentinelConfig,
-        SentinelConfigError,
-        SentinelCoreConfig,
-    },
     side::Side,
     user_ops::{
         UserOp,

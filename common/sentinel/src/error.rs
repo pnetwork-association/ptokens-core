@@ -127,7 +127,7 @@ pub enum SentinelError {
     Endpoint(#[from] crate::endpoints::EndpointError),
 
     #[error("sentinel config error {0}")]
-    SentinelConfig(#[from] crate::sentinel_config::SentinelConfigError),
+    SentinelConfig(#[from] crate::config::SentinelConfigError),
 
     #[error("{0}")]
     BlockAlreadyInDb(common::BlockAlreadyInDbError),

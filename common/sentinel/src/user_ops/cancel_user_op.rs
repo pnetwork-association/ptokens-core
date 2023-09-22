@@ -25,13 +25,6 @@ impl UserOp {
         U256::from(gas_limit as u64 * gas_price)
     }
 
-    pub fn to_tuple_token(&self) -> Result<EthAbiToken, UserOpError> {
-        // NOTE: When encoding for a function call, the `Operation` struct is wrapped as an enum.
-        // Hopefully we fix the hasher to also has this tuple and not destructure it as it
-        // currently does.
-        Ok(EthAbiToken::Tuple(self.to_tokens()?))
-    }
-
     pub fn get_cancellation_signature(&self, pk: &EthPrivateKey) -> Result<UserOpCancellationSignature, UserOpError> {
         if self.state().is_cancelled() || self.state().is_executed() {
             Err(UserOpError::CannotCancel(Box::new(self.clone())))
@@ -48,7 +41,7 @@ impl UserOp {
         cancellation_sig: &UserOpCancellationSignature,
     ) -> Result<Bytes, UserOpError> {
         Ok(encode_fxn_call(CANCEL_FXN_ABI, "protocolSentinelCancelOperation", &[
-            self.to_tuple_token()?,
+            self.to_eth_abi_token()?,
             EthAbiToken::FixedBytes([0u8; 32].to_vec()),
             EthAbiToken::Bytes(cancellation_sig.sig().to_vec()),
         ])?)

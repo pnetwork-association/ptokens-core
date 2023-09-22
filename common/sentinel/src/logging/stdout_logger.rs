@@ -3,7 +3,7 @@ use std::result::Result;
 use flexi_logger::Logger;
 use log::Level;
 
-use crate::{sentinel_config::LogConfig, SentinelError};
+use crate::{config::LogConfig, SentinelError};
 
 pub fn initialize_stdout_logger(config: &LogConfig, cli_args_log_level: Option<Level>) -> Result<(), SentinelError> {
     let log_str = if let Some(l) = cli_args_log_level {
