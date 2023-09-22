@@ -9,11 +9,9 @@ mod user_op_error;
 mod user_op_flag;
 mod user_op_list;
 mod user_op_log;
-mod user_op_pnetwork_hub_log;
 mod user_op_smart_contract_state;
 mod user_op_state;
 mod user_op_uid;
-mod user_op_user_send_log;
 #[allow(clippy::module_inception)]
 mod user_ops;
 
@@ -36,8 +34,6 @@ use self::{
         WITNESSED_USER_OP_TOPIC,
     },
     user_op_flag::UserOpFlag,
-    user_op_log::UserOpLog,
-    user_op_pnetwork_hub_log::UserOpPnetworkHubLog,
+    user_op_log::{UserOpLog, UserOpProtocolLog, UserSendLog},
     user_op_state::UserOpState,
-    user_op_user_send_log::UserSendLog,
 };

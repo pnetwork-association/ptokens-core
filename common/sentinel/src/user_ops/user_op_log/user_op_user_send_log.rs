@@ -7,31 +7,31 @@ use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use serde::{Deserialize, Serialize};
 
-use super::{UserOp, UserOpError};
+use crate::user_ops::{UserOp, UserOpError};
 
 // NOTE: See example here: https://bscscan.com/tx/0xeadd7dcd6beae94fceac5322937fb9994ee32e25cc12a54959eadc0d5b36e7ca#eventlog
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Getters, Dissolve)]
 pub struct UserSendLog {
-    pub(super) nonce: U256,
-    pub(super) origin_account: String,
-    pub(super) destination_account: String,
-    pub(super) destination_network_id: Bytes,
-    pub(super) underlying_asset_name: String,
-    pub(super) underlying_asset_symbol: String,
-    pub(super) underlying_asset_decimals: U256,
-    pub(super) underlying_asset_token_address: EthAddress,
-    pub(super) underlying_asset_network_id: Bytes,
-    pub(super) asset_token_address: EthAddress,
-    pub(super) asset_amount: U256,
-    pub(super) protocol_fee_asset_token_address: EthAddress,
-    pub(super) protocol_fee_asset_amount: U256,
-    pub(super) network_fee_asset_amount: U256,
-    pub(super) forward_network_fee_asset_amount: U256,
-    pub(super) forward_destination_network_id: Bytes,
-    pub(super) user_data: Bytes,
-    pub(super) options_mask: EthHash,
-    pub(super) is_for_protocol: bool,
+    pub(crate) nonce: U256,
+    pub(crate) origin_account: String,
+    pub(crate) destination_account: String,
+    pub(crate) destination_network_id: Bytes,
+    pub(crate) underlying_asset_name: String,
+    pub(crate) underlying_asset_symbol: String,
+    pub(crate) underlying_asset_decimals: U256,
+    pub(crate) underlying_asset_token_address: EthAddress,
+    pub(crate) underlying_asset_network_id: Bytes,
+    pub(crate) asset_token_address: EthAddress,
+    pub(crate) asset_amount: U256,
+    pub(crate) protocol_fee_asset_token_address: EthAddress,
+    pub(crate) protocol_fee_asset_amount: U256,
+    pub(crate) network_fee_asset_amount: U256,
+    pub(crate) forward_network_fee_asset_amount: U256,
+    pub(crate) forward_destination_network_id: Bytes,
+    pub(crate) user_data: Bytes,
+    pub(crate) options_mask: EthHash,
+    pub(crate) is_for_protocol: bool,
 }
 
 impl TryFrom<&EthLog> for UserSendLog {

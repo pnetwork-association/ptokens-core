@@ -6,32 +6,10 @@ use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use serde::{Deserialize, Serialize};
 
-use super::{UserOp, UserOpError};
+use crate::user_ops::{UserOp, UserOpError};
 
-/*
-   [x] bytes32 originBlockHash;
-   [x] bytes32 originTransactionHash;
-   [x] bytes32 optionsMask;
-   [x] uint256 nonce;
-   [x] uint256 underlyingAssetDecimals;
-   [x] uint256 assetAmount;
-   [x] uint256 protocolFeeAssetAmount;
-   [x] uint256 networkFeeAssetAmount;
-   [x] uint256 forwardNetworkFeeAssetAmount;
-   [x] address underlyingAssetTokenAddress;
-   [x] bytes4 originNetworkId;
-   [x] bytes4 destinationNetworkId;
-   [x] bytes4 forwardDestinationNetworkId;
-   [x] bytes4 underlyingAssetNetworkId;
-   [x] string originAccount;
-   [x] string destinationAccount;
-   [x] string underlyingAssetName;
-   [x] string underlyingAssetSymbol;
-   [x] bytes userData;
-   [x] bool isForProtocol;
-*/
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
-pub struct UserOpPnetworkHubLog {
+pub struct UserOpProtocolLog {
     pub(super) origin_block_hash: EthHash,
     pub(super) origin_transaction_hash: EthHash,
     pub(super) options_mask: EthHash,
@@ -54,7 +32,7 @@ pub struct UserOpPnetworkHubLog {
     pub(super) is_for_protocol: bool,
 }
 
-impl TryFrom<&EthLog> for UserOpPnetworkHubLog {
+impl TryFrom<&EthLog> for UserOpProtocolLog {
     type Error = UserOpError;
 
     fn try_from(l: &EthLog) -> Result<Self, Self::Error> {
@@ -90,7 +68,7 @@ impl TryFrom<&EthLog> for UserOpPnetworkHubLog {
         )?;
 
         let tokens = UserOp::get_tuple_from_token(&tuple_of_tokens[0])?;
-        UserOp::check_num_tokens(&tokens, 20, "UserOpPnetworkHubLog")?;
+        UserOp::check_num_tokens(&tokens, 20, "UserOpProtocolLog")?;
 
         let origin_block_hash = UserOp::get_eth_hash_from_token(&tokens[0])?;
         let origin_transaction_hash = UserOp::get_eth_hash_from_token(&tokens[1])?;
@@ -144,9 +122,9 @@ mod tests {
     use crate::user_ops::test_utils::get_sample_log_with_protocol_queue;
 
     #[test]
-    fn should_parse_log_with_queue_event() {
+    fn should_parse_protocol_log_correctly() {
         let l = get_sample_log_with_protocol_queue();
-        let r = UserOpPnetworkHubLog::try_from(&l);
+        let r = UserOpProtocolLog::try_from(&l);
         assert!(r.is_ok())
     }
 }

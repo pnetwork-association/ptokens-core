@@ -4,9 +4,9 @@ use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
-use super::{
+use crate::user_ops::{
     UserOpError,
-    UserOpPnetworkHubLog,
+    UserOpProtocolLog,
     UserSendLog,
     CANCELLED_USER_OP_TOPIC,
     ENQUEUED_USER_OP_TOPIC,
@@ -14,34 +14,45 @@ use super::{
     WITNESSED_USER_OP_TOPIC,
 };
 
+// NOTE: So we have to parse a user op log from one of two types of logs. First there are logs
+// fired from protocol events, these contain the entire `UserOperation` structure, with all fields
+// present and correct. This `Operation` gets hashed and becomes the UID for the operation.
+//
+// The second type of log is the event emitted when a user interatcts with the contract via
+// `userSend`. This log does _not_ contain all the required fields for a user `Operation`.
+//
+// The missing fields are from the block & transaction the event is emitted in. These fields
+// are the `Option`al ones below. They however _must_ be present in order to correctly
+// encode the user operation for future interactions (querying, enqueueing, executing, cancelling
+// etc). This is enforced via `Result` usage in th main `UserOp` struct.
+
 #[serde_as]
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct UserOpLog {
-    // TODO should have the state inside it? Or the topic hash?
-    pub(super) origin_block_hash: Option<EthHash>,
-    pub(super) origin_transaction_hash: Option<EthHash>,
-    pub(super) options_mask: EthHash,
-    pub(super) nonce: U256,
-    pub(super) underlying_asset_decimals: U256,
-    pub(super) asset_amount: U256,
-    pub(super) protocol_fee_asset_amount: U256,
-    pub(super) network_fee_asset_amount: U256,
-    pub(super) forward_network_fee_asset_amount: U256,
-    pub(super) underlying_asset_token_address: EthAddress,
-    pub(super) origin_network_id: Option<Bytes>, // TODO use type for this!
+    pub(crate) origin_block_hash: Option<EthHash>,
+    pub(crate) origin_transaction_hash: Option<EthHash>,
+    pub(crate) options_mask: EthHash,
+    pub(crate) nonce: U256,
+    pub(crate) underlying_asset_decimals: U256,
+    pub(crate) asset_amount: U256,
+    pub(crate) protocol_fee_asset_amount: U256,
+    pub(crate) network_fee_asset_amount: U256,
+    pub(crate) forward_network_fee_asset_amount: U256,
+    pub(crate) underlying_asset_token_address: EthAddress,
+    pub(crate) origin_network_id: Option<Bytes>,
     #[serde_as(as = "serde_with::hex::Hex")]
-    pub(super) destination_network_id: Bytes, // TODO use type for this!
+    pub(crate) destination_network_id: Bytes,
     #[serde_as(as = "serde_with::hex::Hex")]
-    pub(super) forward_destination_network_id: Bytes, // TODO use type for this!
+    pub(crate) forward_destination_network_id: Bytes,
     #[serde_as(as = "serde_with::hex::Hex")]
-    pub(super) underlying_asset_network_id: Bytes, // TODO use type for this!
-    pub(super) origin_account: String,
-    pub(super) destination_account: String,
-    pub(super) underlying_asset_name: String,
-    pub(super) underlying_asset_symbol: String,
+    pub(crate) underlying_asset_network_id: Bytes,
+    pub(crate) origin_account: String,
+    pub(crate) destination_account: String,
+    pub(crate) underlying_asset_name: String,
+    pub(crate) underlying_asset_symbol: String,
     #[serde_as(as = "serde_with::hex::Hex")]
-    pub(super) user_data: Bytes,
-    pub(super) is_for_protocol: bool,
+    pub(crate) user_data: Bytes,
+    pub(crate) is_for_protocol: bool,
 }
 
 impl Default for UserOpLog {
@@ -132,15 +143,15 @@ impl TryFrom<&EthLog> for UserOpLog {
         ];
 
         if topics.contains(&l.topics[0]) {
-            Ok(Self::from(UserOpPnetworkHubLog::try_from(l)?))
+            Ok(Self::from(UserOpProtocolLog::try_from(l)?))
         } else {
             Err(UserOpError::UnrecognizedTopic(l.topics[0]))
         }
     }
 }
 
-impl From<UserOpPnetworkHubLog> for UserOpLog {
-    fn from(l: UserOpPnetworkHubLog) -> Self {
+impl From<UserOpProtocolLog> for UserOpLog {
+    fn from(l: UserOpProtocolLog) -> Self {
         Self {
             nonce: l.nonce,
             user_data: l.user_data,
