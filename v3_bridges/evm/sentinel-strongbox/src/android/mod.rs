@@ -92,7 +92,7 @@ pub extern "C" fn Java_com_ptokenssentinelandroidapp_RustBridge_callCore(
                 let r: String = match WebSocketMessagesEncodable::Error(e.into()).try_into() {
                     Ok(s) => s,
                     Err(e) => {
-                        error!("{e}");
+                        error!("error encoding error into WebsocketMessagesEncodable: {e}");
                         format!("{e}")
                     },
                 };
