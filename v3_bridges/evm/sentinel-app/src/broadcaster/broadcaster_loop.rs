@@ -231,6 +231,21 @@ async fn broadcast_channel_loop(
     }
 }
 
+const CANCELLABLE_OPS_CHECK_FREQUENCY: u64 = 120; // FIXME make configurable! Make updatable whilst running too!
+
+async fn cancellation_loop(frequency: u64, broadcaster_tx: MpscTx<BroadcasterMessages>) -> Result<(), SentinelError> {
+    // NOTE: This loop runs to send messages to the broadcaster at a configruable frequency to tell
+    // it to try and cancel any cancellable user ops. It should never return, except in error.
+    'cancellation_loop: loop {
+        sleep(Duration::from_secs(frequency)).await;
+        warn!("{frequency}s has elapeed - sending message to cancel any cancellable user ops");
+        match broadcaster_tx.send(BroadcasterMessages::CancelUserOps).await {
+            Ok(_) => continue 'cancellation_loop,
+            Err(e) => break 'cancellation_loop Err(e.into()),
+        }
+    }
+}
+
 pub async fn broadcaster_loop(
     mut rx: MpscRx<BroadcasterMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
@@ -238,6 +253,7 @@ pub async fn broadcaster_loop(
     disable: bool,
     broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
     websocket_tx: MpscTx<WebSocketMessages>,
+    broadcaster_tx: MpscTx<BroadcasterMessages>,
 ) -> Result<(), SentinelError> {
     let name = "broadcaster";
     if disable {
@@ -253,6 +269,20 @@ pub async fn broadcaster_loop(
 
     'broadcaster_loop: loop {
         tokio::select! {
+            r = cancellation_loop(CANCELLABLE_OPS_CHECK_FREQUENCY, broadcaster_tx.clone()), if (broadcaster_is_enabled && core_is_connected) => {
+                let sleep_time = 30;
+                match r {
+                    Ok(_) => {
+                        warn!("broadcaster cancellation loop returned Ok(()) for some reason");
+                    },
+                    Err(e) => {
+                        error!("broadcaster cancellation loop error: {e}");
+                    }
+                }
+                warn!("sleeping for {sleep_time}s and restarting broadcaster loop");
+                sleep(Duration::from_secs(sleep_time)).await;
+                continue 'broadcaster_loop
+            },
             r = broadcast_channel_loop(broadcast_channel_tx.subscribe()) => {
                 match r {
                     Ok(msg) => {
