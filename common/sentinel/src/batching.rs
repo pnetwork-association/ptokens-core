@@ -101,6 +101,10 @@ impl Batch {
         }
     }
 
+    pub async fn check_endpoint(&self) -> Result<(), SentinelError> {
+        self.endpoints.check_endpoint(30).await
+    }
+
     pub async fn get_first_ws_client(&self) -> Result<WsClient, SentinelError> {
         self.endpoints.get_first_ws_client().await
     }
