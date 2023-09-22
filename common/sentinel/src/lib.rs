@@ -39,7 +39,7 @@ pub use self::{
     constants::{DEFAULT_SLEEP_TIME, HOST_PROTOCOL_ID, MILLISECONDS_MULTIPLIER, NATIVE_PROTOCOL_ID},
     core_state::CoreState,
     db_utils::{DbKey, DbUtilsT, SentinelDbUtils},
-    endpoints::{check_endpoint, EndpointError, Endpoints},
+    endpoints::{EndpointError, Endpoints},
     env::Env,
     error::SentinelError,
     eth_rpc_calls::{
