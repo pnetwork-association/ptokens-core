@@ -46,7 +46,7 @@ pub async fn start_sentinel(
     let (host_eth_rpc_tx, host_eth_rpc_rx): (MpscTx<EthRpcMessages>, MpscRx<EthRpcMessages>) =
         mpsc::channel(MAX_CHANNEL_CAPACITY);
 
-    let (_broadcaster_tx, broadcaster_rx): (MpscTx<BroadcasterMessages>, MpscRx<BroadcasterMessages>) =
+    let (broadcaster_tx, broadcaster_rx): (MpscTx<BroadcasterMessages>, MpscRx<BroadcasterMessages>) =
         mpsc::channel(MAX_CHANNEL_CAPACITY);
 
     let native_syncer_thread = tokio::spawn(syncer_loop(
@@ -93,6 +93,7 @@ pub async fn start_sentinel(
         config.clone(),
         disable_rpc_server,
         broadcast_channel_tx.clone(),
+        broadcaster_tx.clone(),
     ));
 
     let ws_server_thread = tokio::spawn(ws_server_loop(
