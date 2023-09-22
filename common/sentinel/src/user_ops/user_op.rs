@@ -346,7 +346,10 @@ mod tests {
     use common_eth::convert_hex_to_eth_address;
 
     use super::*;
-    use crate::user_ops::{test_utils::get_sample_submission_material_with_user_send, UserOps};
+    use crate::user_ops::{
+        test_utils::{get_sample_submission_material_with_user_send, get_sample_submission_material_with_user_send_2},
+        UserOps,
+    };
 
     #[test]
     fn should_get_user_op_from_user_send() {
@@ -363,6 +366,20 @@ mod tests {
         assert_eq!(bytes, expected_bytes);
         let uid = op.uid_hex().unwrap();
         let expected_uid = "0x724820e71f874192a9c41ea55b36a2a4f3b98be0b8cfb617295cdf21010bfeb3";
+        assert_eq!(uid, expected_uid);
+    }
+
+    #[test]
+    fn should_get_user_op_from_user_send_2() {
+        let sub_mat = get_sample_submission_material_with_user_send_2();
+        let side = BridgeSide::Native;
+        let origin_network_id = hex::decode("5aca268b").unwrap(); // NOTE Bsc
+        let pnetwork_hub = convert_hex_to_eth_address("0x02878021ba5472F7F1e2bfb223ee6cf4b1eadA07").unwrap();
+        let ops = UserOps::from_sub_mat(side, &origin_network_id[..], &pnetwork_hub, &sub_mat).unwrap();
+        assert_eq!(ops.len(), 1);
+        let op = ops[0].clone();
+        let uid = op.uid_hex().unwrap();
+        let expected_uid = "0xd9feb6e60cd73c396cbaeb3e5fa55c774c03a274c54f5bc53a62a59855ec7cc4";
         assert_eq!(uid, expected_uid);
     }
 }
