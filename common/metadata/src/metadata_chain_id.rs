@@ -56,43 +56,44 @@ impl FromStr for MetadataChainId {
     type Err = AppError;
 
     fn from_str(s: &str) -> Result<Self> {
-        match s {
+        let x = s.to_lowercase();
+        match x.as_ref() {
             // Algorand...
-            "AlgorandMainnet" | "0x03c38e67" => Ok(Self::AlgorandMainnet),
+            "algo" | "algorand" | "algorandmainnet" | "0x03c38e67" => Ok(Self::AlgorandMainnet),
 
             // Bitcoin...
-            "BtcUnknown" | "0x01000000" => Ok(Self::BtcUnknown),
-            "BitcoinMainnet" | "0x01ec97de" => Ok(Self::BitcoinMainnet),
-            "BitcoinTestnet" | "0x018afeb2" => Ok(Self::BitcoinTestnet),
+            "btcunknown" | "0x01000000" => Ok(Self::BtcUnknown),
+            "btc" | "bitcoinmainnet" | "0x01ec97de" => Ok(Self::BitcoinMainnet),
+            "bitcointestnet" | "0x018afeb2" => Ok(Self::BitcoinTestnet),
 
             // Eos...
-            "EosMainnet" | "0x02e7261c" => Ok(Self::EosMainnet),
-            "FioMainnet" | "0x02174f20" => Ok(Self::FioMainnet),
-            "EosUnknown" | "0x02000000" => Ok(Self::EosUnknown),
-            "TelosMainnet" | "0x028c7109" => Ok(Self::TelosMainnet),
-            "UltraTestnet" | "0x02b5a4d6" => Ok(Self::UltraTestnet),
-            "LibreTestnet" | "0x02a75f2c" => Ok(Self::LibreTestnet),
-            "LibreMainnet" | "0x026776fa" => Ok(Self::LibreMainnet),
-            "UltraMainnet" | "0x025d3c68" => Ok(Self::UltraMainnet),
-            "EosJungleTestnet" | "0x0282317f" => Ok(Self::EosJungleTestnet),
+            "eosunknown" | "0x02000000" => Ok(Self::EosUnknown),
+            "ultratestnet" | "0x02b5a4d6" => Ok(Self::UltraTestnet),
+            "libretestnet" | "0x02a75f2c" => Ok(Self::LibreTestnet),
+            "eos" | "eosmainnet" | "0x02e7261c" => Ok(Self::EosMainnet),
+            "fio" | "fiomainnet" | "0x02174f20" => Ok(Self::FioMainnet),
+            "eosjungletestnet" | "0x0282317f" => Ok(Self::EosJungleTestnet),
+            "telos" | "telosmainnet" | "0x028c7109" => Ok(Self::TelosMainnet),
+            "libre" | "libremainnet" | "0x026776fa" => Ok(Self::LibreMainnet),
+            "ultra" | "ultramainnet" | "0x025d3c68" => Ok(Self::UltraMainnet),
 
             // Eth...
-            "EthUnknown" | "0x00000000" => Ok(Self::EthUnknown),
-            "BscMainnet" | "0x00e4b170" => Ok(Self::BscMainnet),
-            "XDaiMainnet" | "0x00f1918e" => Ok(Self::XDaiMainnet),
-            "InterimChain" | "0xffffffff" => Ok(Self::InterimChain),
-            "FantomMainnet" | "0x0022af98" => Ok(Self::FantomMainnet),
-            "EthereumGoerli" | "0x00b4f6c5" => Ok(Self::EthereumGoerli),
-            "PolygonMainnet" | "0x0075dd4c" => Ok(Self::PolygonMainnet),
-            "EthereumMainnet" | "0x005fe7f9" => Ok(Self::EthereumMainnet),
-            "EthereumRinkeby" | "0x00f34368" => Ok(Self::EthereumRinkeby),
-            "EthereumSepolia" | "0x0030d6b5" => Ok(Self::EthereumSepolia),
-            "EthereumRopsten" | "0x0069c322" => Ok(Self::EthereumRopsten),
-            "ArbritrumMainnet" | "0x00ce98c4" => Ok(Self::ArbitrumMainnet),
-            "LuxochainMainnet" | "0x00d5beb0" => Ok(Self::LuxochainMainnet),
+            "ethunknown" | "0x00000000" => Ok(Self::EthUnknown),
+            "goerli" | "ethereumgoerli" | "0x00b4f6c5" => Ok(Self::EthereumGoerli),
+            "polygon" | "polygonmainnet" | "0x0075dd4c" => Ok(Self::PolygonMainnet),
+            "binance" | "bsc" | "bscmainnet" | "0x00e4b170" => Ok(Self::BscMainnet),
+            "luxo" | "luxochainmainnet" | "0x00d5beb0" => Ok(Self::LuxochainMainnet),
+            "ropsten" | "ethereumropsten" | "0x0069c322" => Ok(Self::EthereumRopsten),
+            "sepolia" | "ethereumsepolia" | "0x0030d6b5" => Ok(Self::EthereumSepolia),
+            "xdai" | "gnosis" | "xdaimainnet" | "0x00f1918e" => Ok(Self::XDaiMainnet),
+            "rinkeby" | "ethereumrinkeby" | "0x00f34368" => Ok(Self::EthereumRinkeby),
+            "int" | "interim" | "interimchain" | "0xffffffff" => Ok(Self::InterimChain),
+            "fmt" | "fantom" | "fantommainnet" | "0x0022af98" => Ok(Self::FantomMainnet),
+            "arb" | "arbitrum" | "arbritrummainnet" | "0x00ce98c4" => Ok(Self::ArbitrumMainnet),
+            "eth" | "ethMainnet" | "ethereummainnet" | "0x005fe7f9" => Ok(Self::EthereumMainnet),
 
             // Ltc...
-            "LitecoinMainnet" | "0x01840435" => Ok(Self::LitecoinMainnet),
+            "ltc" | "litecoin" | "litecoinmainnet" | "0x01840435" => Ok(Self::LitecoinMainnet),
 
             _ => Err(format!("Unrecognised chain id: '{s}'").into()),
         }
