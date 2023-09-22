@@ -38,7 +38,10 @@ fn create_json_rpc_error(id: RpcId, code: u64, msg: &str) -> Json {
 fn create_json_rpc_response_from_result<T: Serialize>(id: RpcId, r: Result<T, SentinelError>, error_code: u64) -> Json {
     match r {
         Ok(r) => create_json_rpc_response(id, r),
-        Err(e) => create_json_rpc_error(id, error_code, &e.to_string()),
+        Err(e) => {
+            warn!("creating json rpc error response: {e}");
+            create_json_rpc_error(id, error_code, &e.to_string())
+        },
     }
 }
 
@@ -328,6 +331,7 @@ impl RpcCall {
         id: RpcId,
         r: Result<WebSocketMessagesEncodable, SentinelError>,
     ) -> Result<warp::reply::Json, Rejection> {
+        debug!("handling websocket encodable result: {r:?}");
         let j = match r {
             Ok(WebSocketMessagesEncodable::Success(j)) => create_json_rpc_response(id, j),
             other => create_json_rpc_response_from_result(id, other, 1337),
