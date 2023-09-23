@@ -23,6 +23,7 @@ strum = { workspace = true }
 serde = { workspace = true }
 ethabi = { workspace = true }
 triehash = { workspace = true }
+thiserror = { workspace = true }
 secp256k1 = { workspace = true }
 serde_json = { workspace = true }
 lazy_static = { workspace = true }
@@ -31,6 +32,7 @@ derive_more = { workspace = true }
 strum_macros = { workspace = true }
 keccak-hasher = { workspace = true }
 rust-algorand = { workspace = true }
+derive-getters = { workspace = true }
 ethereum-types = { workspace = true }
 
 common = { workspace = true }

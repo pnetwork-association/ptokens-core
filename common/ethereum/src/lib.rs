@@ -2,6 +2,7 @@ mod add_block_and_receipts_to_db;
 mod any_sender;
 mod append_to_blockchain;
 mod calculate_linker_hash;
+mod chain;
 mod check_parent_exists;
 mod core_initialization;
 mod default_block_parameter;
@@ -47,6 +48,7 @@ pub use self::{
     },
     any_sender::{RelayTransaction, RelayTransactions},
     append_to_blockchain::append_to_blockchain,
+    chain::Chain,
     check_parent_exists::{check_for_parent_of_eth_block_in_state, check_for_parent_of_evm_block_in_state},
     core_initialization::{
         add_eth_block_to_db_and_return_state,
