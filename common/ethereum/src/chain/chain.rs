@@ -1,17 +1,22 @@
 use std::collections::VecDeque;
 
-use common::DatabaseInterface;
+use common::{crypto_utils::keccak_hash_bytes, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
 use common_metadata::MetadataChainId;
+use derive_getters::Getters;
 use derive_more::{Constructor, Deref};
 use ethereum_types::{Address as EthAddress, H256 as EthHash};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    chain::chain_error::{ChainError, NoParentError},
+    chain::{ChainDbUtils, ChainError, NoParentError},
     EthSubmissionMaterial as EthSubMat,
 };
 
-#[derive(Debug, Clone, Eq, PartialEq, Constructor, Serialize, Deserialize)]
+// TODO init check
+// TODO init
+// TODO get canon block from db
+
+#[derive(Debug, Clone, Eq, PartialEq, Constructor, Serialize, Deserialize, Getters)]
 struct BlockData {
     hash: EthHash,
     parent_hash: EthHash,
@@ -22,6 +27,25 @@ impl TryFrom<&EthSubMat> for BlockData {
 
     fn try_from(m: &EthSubMat) -> Result<Self, Self::Error> {
         Ok(Self::new(Chain::block_hash(m)?, Chain::parent_hash(m)?))
+    }
+}
+
+#[derive(Clone, Debug, Constructor, Deref)]
+struct DbKey(EthHash);
+
+impl DbKey {
+    fn to_vec(&self) -> Vec<u8> {
+        self.0.as_bytes().to_vec()
+    }
+
+    fn from(mcid: &MetadataChainId, hash: EthHash) -> Result<Self, ChainError> {
+        // NOTE: We hash the block hash with the chain ID to get a unique key for the db.
+        let mcid_bytes = mcid.to_bytes().map_err(|e| {
+            error!("{e}");
+            ChainError::CouldNotGetChainIdBytes(mcid.clone())
+        })?;
+        let hash_bytes = DbKey(hash).to_vec();
+        Ok(Self(keccak_hash_bytes(&[mcid_bytes, hash_bytes].concat())))
     }
 }
 
@@ -36,14 +60,22 @@ pub struct Chain {
     chain_id: MetadataChainId,
 }
 
-// TODO strip receipts (if any) after validating (if any)
-
 #[derive(Debug, Clone, Deref, Constructor)]
-struct InsertionIndex(u64);
+struct ParentIndex(u64);
 
-impl From<u64> for InsertionIndex {
+impl From<u64> for ParentIndex {
     fn from(n: u64) -> Self {
         Self(n)
+    }
+}
+
+impl ParentIndex {
+    fn is_zero(&self) -> bool {
+        self.0 == 0
+    }
+
+    fn as_usize(&self) -> usize {
+        self.0 as usize
     }
 }
 
@@ -77,7 +109,6 @@ impl Chain {
         chain_id: MetadataChainId,
     ) -> Result<Self, ChainError> {
         let n = Self::block_num(&sub_mat)?;
-        let h = Self::block_hash(&sub_mat)?;
         Ok(Self {
             hub,
             chain_id,
@@ -89,15 +120,6 @@ impl Chain {
         })
     }
 
-    fn save<D>(self, db: D) -> Result<(), ChainError> {
-        todo!("save self under key which is the bytes of the metadata chain id");
-        Ok(())
-    }
-
-    fn to_db_key(m: &EthSubMat) -> EthHash {
-        todo!("hash block hash with chain id")
-    }
-
     fn latest_block_num(&self) -> u64 {
         self.offset
     }
@@ -106,7 +128,7 @@ impl Chain {
         self.chain.len() as u64
     }
 
-    fn check_for_parent(&self, sub_mat: &EthSubMat) -> Result<InsertionIndex, ChainError> {
+    fn check_for_parent(&self, sub_mat: &EthSubMat) -> Result<ParentIndex, ChainError> {
         let submat_block_num = Self::block_num(sub_mat)?;
         let oldest_block_num = self.offset - self.chain_len();
         let latest_block_num = self.offset;
@@ -136,48 +158,121 @@ impl Chain {
             )));
         }
 
-        let parent_index = if submat_block_num == latest_block_num + 1 {
-            0
+        let parent_index: ParentIndex = if submat_block_num == latest_block_num + 1 {
+            0.into()
         } else {
             let own_index = latest_block_num - submat_block_num;
             let parent_index = own_index + 1;
             debug!("submission material's own index: {own_index}, parent_index {parent_index}");
-            parent_index
+            parent_index.into()
         };
 
-        let insertion_index = if parent_index == 0 { 0 } else { parent_index + 1 };
-
-        let parent_hash = Self::parent_hash(sub_mat)?;
-
-        let error = ChainError::NoParent(NoParentError::new(
+        let no_parent_error = NoParentError::new(
             submat_block_num,
             format!("no parent exists in chain for block num {submat_block_num} on chain {cid}"),
             cid,
-        ));
+        );
 
-        let potential_parents = self.chain.get(parent_index as usize).ok_or_else(|| {
-            error!("{error}");
-            error.clone()
+        let potential_parents = self.chain.get(parent_index.as_usize()).ok_or_else(|| {
+            error!("{no_parent_error}");
+            ChainError::NoParent(no_parent_error.clone())
         })?;
 
         if !potential_parents.contains(&block_data) {
-            Err(error)
+            Err(ChainError::NoParent(no_parent_error))
         } else {
-            Ok(insertion_index.into())
+            Ok(parent_index)
         }
     }
 
-    fn add<D: DatabaseInterface>(&mut self, db: &D, m: EthSubMat) {
-        todo!()
-        // [ ] check for parent
-        // [ ] get index to insert
-        // [ ] check block num is in bounds w/r/t vec index
-        // [ ] if all fine:
-        //  [ ] get block key and add to db via it
-        //  [ ] insert hash into vec wherever it belongs
-        // [ ] linker hash!
-        // [ ] remove elements after tail
-        // [ ] truncate the dec
-        // [ ] update offset if front of queue
+    fn insert<D: DatabaseInterface>(
+        &mut self,
+        db_utils: &ChainDbUtils<D>,
+        parent_index: ParentIndex,
+        sub_mat: EthSubMat,
+    ) -> Result<(), ChainError> {
+        let block_data = BlockData::try_from(&sub_mat)?;
+
+        // NOTE: First we update our chain data...
+        if parent_index.is_zero() {
+            // NOTE: Block can't already exist in db!
+            self.chain.push_front(vec![block_data]);
+            Ok(())
+        } else {
+            let insertion_index = parent_index.as_usize() - 1;
+            match self.chain.get_mut(insertion_index) {
+                None => Err(ChainError::FailedToInsert(insertion_index)),
+                Some(existing_block_data) => {
+                    if existing_block_data.contains(&block_data) {
+                        Err(ChainError::BlockAlreadyInDb(self.chain_id.clone(), *block_data.hash()))
+                    } else {
+                        existing_block_data.push(block_data);
+                        Ok(())
+                    }
+                },
+            }
+        }?;
+
+        // NOTE: Now we prune receipts we don't care about
+        let pruned_sub_mat = sub_mat.remove_receipts_if_no_logs_from_addresses(&[self.hub]);
+        let sub_mat_bytes = serde_json::to_vec(&pruned_sub_mat)?;
+
+        // NOTE: Now we save the block itself in the db...
+        let db_key = self.to_db_key(&pruned_sub_mat)?;
+        db_utils
+            .db()
+            .put(db_key.to_vec(), sub_mat_bytes, MIN_DATA_SENSITIVITY_LEVEL)
+            .map_err(|e| {
+                error!("{e}");
+                ChainError::DbInsert(format!("{e}"))
+            })?;
+
+        // NOTE: Now we prune any excess off the end of the chain that we don't need any more.
+        let total_allowable_length = self.confirmations + self.tail_length;
+        if self.chain_len() > total_allowable_length {
+            let excess_length = self.chain_len() - total_allowable_length;
+            let mut block_data_to_delete: Vec<Vec<BlockData>> = vec![];
+            for _ in 0..excess_length {
+                let data = self.chain.pop_back().ok_or_else(|| ChainError::ExpectedABlock)?;
+                block_data_to_delete.push(data);
+            }
+            // NOTE: Now we must remove those saved blocks from the db
+            block_data_to_delete.iter().flatten().try_for_each(|data| {
+                let key = DbKey::from(&self.chain_id, *data.hash())?;
+                db_utils.db().delete(key.to_vec()).map_err(|e| {
+                    error!("{e}");
+                    ChainError::DbDelete(format!("{e}"))
+                })?;
+                Ok::<(), ChainError>(())
+            })?;
+        };
+
+        // TODO update the linker hash <- is this meaningless though? What if there are forked blocks there?
+
+        Ok(())
+    }
+
+    fn to_db_key(&self, sub_mat: &EthSubMat) -> Result<DbKey, ChainError> {
+        let block_num = Self::block_num(sub_mat)?;
+        let block_hash = Self::block_hash(sub_mat)?;
+        let db_key = DbKey::from(&self.chain_id, block_hash)?;
+        debug!("db key for block num: {block_num}: 0x{}", hex::encode(&*db_key));
+        Ok(db_key)
+    }
+
+    fn save<D: DatabaseInterface>(self, db_utils: ChainDbUtils<D>) -> Result<(), ChainError> {
+        let key = self.chain_id.to_bytes().map_err(|e| {
+            error!("{e}");
+            ChainError::CouldNotGetChainIdBytes(self.chain_id)
+        })?;
+        let value = serde_json::to_vec(&self)?;
+        db_utils.db().put(key, value, MIN_DATA_SENSITIVITY_LEVEL).map_err(|e| {
+            error!("{e}");
+            ChainError::DbInsert(format!("{e}"))
+        })
+    }
+
+    fn get_canonical_sub_mat() -> Result<Option<EthSubMat>, ChainError> {
+        todo!("walk back the chain confs number of times to get this");
     }
 }
