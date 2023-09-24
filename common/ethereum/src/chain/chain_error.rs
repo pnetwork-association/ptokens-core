@@ -9,6 +9,9 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ChainError {
+    #[error("chain not initialized for id: {0}")]
+    NotInitialized(MetadataChainId),
+
     #[error("expected a block when getting from the chain vecdeque")]
     ExpectedABlock,
 

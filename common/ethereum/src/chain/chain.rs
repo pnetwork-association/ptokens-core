@@ -12,12 +12,12 @@ use crate::{
     EthSubmissionMaterial as EthSubMat,
 };
 
-// TODO init check
-// TODO init
-// TODO get canon block from db
+// TODO init (call new and save it in the db)
+// TODO get canon block receipts
+// TODO take flag for validation on insert fxn. Only validate if flag is true
 
 #[derive(Debug, Clone, Eq, PartialEq, Constructor, Serialize, Deserialize, Getters)]
-struct BlockData {
+pub struct BlockData {
     hash: EthHash,
     parent_hash: EthHash,
 }
@@ -42,14 +42,14 @@ impl DbKey {
         // NOTE: We hash the block hash with the chain ID to get a unique key for the db.
         let mcid_bytes = mcid.to_bytes().map_err(|e| {
             error!("{e}");
-            ChainError::CouldNotGetChainIdBytes(mcid.clone())
+            ChainError::CouldNotGetChainIdBytes(*mcid)
         })?;
         let hash_bytes = DbKey(hash).to_vec();
         Ok(Self(keccak_hash_bytes(&[mcid_bytes, hash_bytes].concat())))
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Getters)]
 pub struct Chain {
     offset: u64,
     hub: EthAddress,
@@ -204,7 +204,7 @@ impl Chain {
                 None => Err(ChainError::FailedToInsert(insertion_index)),
                 Some(existing_block_data) => {
                     if existing_block_data.contains(&block_data) {
-                        Err(ChainError::BlockAlreadyInDb(self.chain_id.clone(), *block_data.hash()))
+                        Err(ChainError::BlockAlreadyInDb(self.chain_id, *block_data.hash()))
                     } else {
                         existing_block_data.push(block_data);
                         Ok(())
@@ -218,7 +218,7 @@ impl Chain {
         let sub_mat_bytes = serde_json::to_vec(&pruned_sub_mat)?;
 
         // NOTE: Now we save the block itself in the db...
-        let db_key = self.to_db_key(&pruned_sub_mat)?;
+        let db_key = self.sub_mat_to_db_key(&pruned_sub_mat)?;
         db_utils
             .db()
             .put(db_key.to_vec(), sub_mat_bytes, MIN_DATA_SENSITIVITY_LEVEL)
@@ -252,24 +252,49 @@ impl Chain {
         Ok(())
     }
 
-    fn to_db_key(&self, sub_mat: &EthSubMat) -> Result<DbKey, ChainError> {
+    fn sub_mat_to_db_key(&self, sub_mat: &EthSubMat) -> Result<DbKey, ChainError> {
         let block_num = Self::block_num(sub_mat)?;
         let block_hash = Self::block_hash(sub_mat)?;
         let db_key = DbKey::from(&self.chain_id, block_hash)?;
-        debug!("db key for block num: {block_num}: 0x{}", hex::encode(&*db_key));
+        debug!("db key for block num: {block_num}: 0x{}", hex::encode(*db_key));
         Ok(db_key)
     }
 
+    fn db_key(&self) -> Result<DbKey, ChainError> {
+        Self::db_key_from_chain_id(self.chain_id())
+    }
+
+    fn db_key_from_chain_id(mcid: &MetadataChainId) -> Result<DbKey, ChainError> {
+        mcid.to_bytes()
+            .map(|bs| DbKey(EthHash::from_slice(&bs[..])))
+            .map_err(|e| {
+                error!("{e}");
+                ChainError::CouldNotGetChainIdBytes(*mcid)
+            })
+    }
+
     fn save<D: DatabaseInterface>(self, db_utils: ChainDbUtils<D>) -> Result<(), ChainError> {
-        let key = self.chain_id.to_bytes().map_err(|e| {
-            error!("{e}");
-            ChainError::CouldNotGetChainIdBytes(self.chain_id)
-        })?;
+        let key = self.db_key()?;
         let value = serde_json::to_vec(&self)?;
-        db_utils.db().put(key, value, MIN_DATA_SENSITIVITY_LEVEL).map_err(|e| {
-            error!("{e}");
-            ChainError::DbInsert(format!("{e}"))
-        })
+        db_utils
+            .db()
+            .put(key.to_vec(), value, MIN_DATA_SENSITIVITY_LEVEL)
+            .map_err(|e| {
+                error!("{e}");
+                ChainError::DbInsert(format!("{e}"))
+            })
+    }
+
+    fn get<D: DatabaseInterface>(db_utils: &ChainDbUtils<D>, mcid: MetadataChainId) -> Result<Self, ChainError> {
+        let key = Self::db_key_from_chain_id(&mcid)?;
+        db_utils
+            .db()
+            .get(key.to_vec(), MIN_DATA_SENSITIVITY_LEVEL)
+            .and_then(|bs| Ok(serde_json::from_slice(&bs)?))
+            .map_err(|e| {
+                error!("error getting chain for chain id '{mcid}': {e}");
+                ChainError::NotInitialized(mcid)
+            })
     }
 
     fn get_canonical_sub_mat() -> Result<Option<EthSubMat>, ChainError> {
