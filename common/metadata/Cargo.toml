@@ -17,6 +17,7 @@ serde = { workspace = true }
 ethabi = { workspace = true }
 bitcoin = { workspace = true }
 eos-chain = { workspace = true }
+thiserror = { workspace = true }
 rmp-serde = { workspace = true }
 serde_bytes = { workspace = true }
 derive_more = { workspace = true }

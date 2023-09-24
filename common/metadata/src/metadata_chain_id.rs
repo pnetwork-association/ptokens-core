@@ -10,6 +10,13 @@ use common_chain_ids::{AlgoChainId, BtcChainId, EosChainId, EthChainId};
 use ethereum_types::H256 as KeccakHash;
 use serde::{Deserialize, Serialize};
 use strum_macros::EnumIter;
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum MetadataChainIdError {
+    #[error("cannot convert `MetadataChainId`: `{0}` to `{1}`")]
+    CannotConvert(MetadataChainId, String),
+}
 
 use crate::MetadataProtocolId;
 
@@ -129,6 +136,24 @@ impl MetadataChainId {
             | Self::ArbitrumMainnet
             | Self::LuxochainMainnet
             | Self::PolygonMainnet => MetadataProtocolId::Ethereum,
+        }
+    }
+
+    pub fn to_eth_chain_id(&self) -> std::result::Result<EthChainId, MetadataChainIdError> {
+        match self {
+            Self::BscMainnet => Ok(EthChainId::BscMainnet),
+            Self::EthereumGoerli => Ok(EthChainId::Goerli),
+            Self::EthereumMainnet => Ok(EthChainId::Mainnet),
+            Self::EthereumRopsten => Ok(EthChainId::Ropsten),
+            Self::EthereumRinkeby => Ok(EthChainId::Rinkeby),
+            Self::EthereumSepolia => Ok(EthChainId::Sepolia),
+            Self::XDaiMainnet => Ok(EthChainId::XDaiMainnet),
+            Self::InterimChain => Ok(EthChainId::InterimChain),
+            Self::FantomMainnet => Ok(EthChainId::FantomMainnet),
+            Self::PolygonMainnet => Ok(EthChainId::PolygonMainnet),
+            // NOTE: Important -> this catch all arm means that any NEW evm based metadata chain
+            // ids will fall into this arm, unless they're explicitly added above.
+            other => Err(MetadataChainIdError::CannotConvert(*other, "EthChainId".into())),
         }
     }
 

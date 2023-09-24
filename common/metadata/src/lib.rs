@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 pub use self::{
     eos_metadata::EosMetadata,
     metadata_address::MetadataAddress,
-    metadata_chain_id::{MetadataChainId, METADATA_CHAIN_ID_NUMBER_OF_BYTES},
+    metadata_chain_id::{MetadataChainId, MetadataChainIdError, METADATA_CHAIN_ID_NUMBER_OF_BYTES},
     metadata_protocol_id::MetadataProtocolId,
     metadata_traits::{ToMetadata, ToMetadataChainId},
     metadata_version::MetadataVersion,
