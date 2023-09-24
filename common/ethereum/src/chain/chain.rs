@@ -13,7 +13,6 @@ use crate::{
 };
 
 // TODO get canon block receipts
-// TODO take flag for validation on insert fxn. Only validate if flag is true
 
 #[derive(Debug, Clone, Eq, PartialEq, Constructor, Serialize, Deserialize, Getters)]
 pub struct BlockData {
@@ -115,20 +114,7 @@ impl Chain {
         };
 
         // NOTE: Now lets validate the block & receipts if we're required to
-        if validate {
-            let n = Self::block_num(&sub_mat)?;
-            let h = Self::block_hash(&sub_mat)?;
-            if let Err(e) = sub_mat.block_is_valid(&mcid.to_eth_chain_id()?) {
-                error!("invalid block: {e}");
-                return Err(ChainError::InvalidBlock(mcid, h, n));
-            }
-            if let Err(e) = sub_mat.receipts_are_valid() {
-                error!("invalid receipts: {e}");
-                return Err(ChainError::InvalidReceipts(mcid, h, n));
-            }
-        } else {
-            warn!("not validating sub mat when initialization chain ID: {mcid}");
-        };
+        Self::validate(&mcid, &sub_mat, validate)?;
 
         // NOTE: Now we can create the chain structure
         let c = Self::new(hub, tail_length, confirmations, sub_mat, mcid)?;
@@ -221,15 +207,40 @@ impl Chain {
         }
     }
 
+    fn validate(mcid: &MetadataChainId, sub_mat: &EthSubMat, validate: bool) -> Result<(), ChainError> {
+        if validate {
+            let n = Self::block_num(&sub_mat)?;
+            let h = Self::block_hash(&sub_mat)?;
+            if let Err(e) = sub_mat.block_is_valid(&mcid.to_eth_chain_id()?) {
+                error!("invalid block: {e}");
+                return Err(ChainError::InvalidBlock(*mcid, h, n));
+            }
+
+            if let Err(e) = sub_mat.receipts_are_valid() {
+                error!("invalid receipts: {e}");
+                return Err(ChainError::InvalidReceipts(*mcid, h, n));
+            }
+            Ok(())
+        } else {
+            warn!("not validating sub mat for chain ID: {mcid}");
+            Ok(())
+        }
+    }
+
     fn insert<D: DatabaseInterface>(
         &mut self,
         db_utils: &ChainDbUtils<D>,
         parent_index: ParentIndex,
         sub_mat: EthSubMat,
+        validate: bool,
     ) -> Result<(), ChainError> {
+        let mcid = self.chain_id().clone();
+        // NOTE: First lets validate the sub mat if we're required to
+        Self::validate(&mcid, &sub_mat, validate)?;
+
         let block_data = BlockData::try_from(&sub_mat)?;
 
-        // NOTE: First we update our chain data...
+        // NOTE: Next we update our chain data...
         if parent_index.is_zero() {
             // NOTE: Block can't already exist in db!
             self.chain.push_front(vec![block_data]);
@@ -240,7 +251,7 @@ impl Chain {
                 None => Err(ChainError::FailedToInsert(insertion_index)),
                 Some(existing_block_data) => {
                     if existing_block_data.contains(&block_data) {
-                        Err(ChainError::BlockAlreadyInDb(self.chain_id, *block_data.hash()))
+                        Err(ChainError::BlockAlreadyInDb(mcid, *block_data.hash()))
                     } else {
                         existing_block_data.push(block_data);
                         Ok(())
@@ -274,7 +285,7 @@ impl Chain {
             }
             // NOTE: Now we must remove those saved blocks from the db
             block_data_to_delete.iter().flatten().try_for_each(|data| {
-                let key = DbKey::from(&self.chain_id, *data.hash())?;
+                let key = DbKey::from(&mcid, *data.hash())?;
                 db_utils.db().delete(key.to_vec()).map_err(|e| {
                     error!("{e}");
                     ChainError::DbDelete(format!("{e}"))
