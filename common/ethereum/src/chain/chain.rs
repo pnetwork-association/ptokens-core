@@ -13,9 +13,12 @@ use crate::{
 };
 
 // TODO get canon block receipts
+// TODO get chain state fxn (some json of latest, oldest, canon etc)
+// TODO tests!
 
 #[derive(Debug, Clone, Eq, PartialEq, Constructor, Serialize, Deserialize, Getters)]
 pub struct BlockData {
+    num: u64,
     hash: EthHash,
     parent_hash: EthHash,
 }
@@ -24,7 +27,11 @@ impl TryFrom<&EthSubMat> for BlockData {
     type Error = ChainError;
 
     fn try_from(m: &EthSubMat) -> Result<Self, Self::Error> {
-        Ok(Self::new(Chain::block_hash(m)?, Chain::parent_hash(m)?))
+        Ok(Self::new(
+            Chain::block_num(m)?,
+            Chain::block_hash(m)?,
+            Chain::parent_hash(m)?,
+        ))
     }
 }
 
@@ -209,8 +216,8 @@ impl Chain {
 
     fn validate(mcid: &MetadataChainId, sub_mat: &EthSubMat, validate: bool) -> Result<(), ChainError> {
         if validate {
-            let n = Self::block_num(&sub_mat)?;
-            let h = Self::block_hash(&sub_mat)?;
+            let n = Self::block_num(sub_mat)?;
+            let h = Self::block_hash(sub_mat)?;
             if let Err(e) = sub_mat.block_is_valid(&mcid.to_eth_chain_id()?) {
                 error!("invalid block: {e}");
                 return Err(ChainError::InvalidBlock(*mcid, h, n));
@@ -234,7 +241,7 @@ impl Chain {
         sub_mat: EthSubMat,
         validate: bool,
     ) -> Result<(), ChainError> {
-        let mcid = self.chain_id().clone();
+        let mcid = *self.chain_id();
         // NOTE: First lets validate the sub mat if we're required to
         Self::validate(&mcid, &sub_mat, validate)?;
 
