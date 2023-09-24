@@ -13,12 +13,12 @@ use crate::{
 };
 
 // TODO get canon block receipts
-// TODO get chain state fxn (some json of latest, oldest, canon etc)
+// TODO fxn to walk back to canonical block
 // TODO tests!
 
 #[derive(Debug, Clone, Eq, PartialEq, Constructor, Serialize, Deserialize, Getters)]
 pub struct BlockData {
-    num: u64,
+    number: u64,
     hash: EthHash,
     parent_hash: EthHash,
 }
@@ -85,6 +85,18 @@ impl ParentIndex {
 }
 
 impl Chain {
+    pub fn get_latest_block_data(&self) -> Option<&Vec<BlockData>> {
+        self.chain.get(0)
+    }
+
+    pub fn get_tail_block_data(&self) -> Option<&Vec<BlockData>> {
+        self.chain.back()
+    }
+
+    pub fn get_canon_block_data(&self) -> Option<&Vec<BlockData>> {
+        self.chain.get(*self.confirmations() as usize - 1)
+    }
+
     fn block_num(m: &EthSubMat) -> Result<u64, ChainError> {
         m.get_block_number().map(|n| n.as_u64()).map_err(|e| {
             error!("{e}");
