@@ -12,7 +12,6 @@ use crate::{
     EthSubmissionMaterial as EthSubMat,
 };
 
-// TODO init (call new and save it in the db)
 // TODO get canon block receipts
 // TODO take flag for validation on insert fxn. Only validate if flag is true
 
@@ -99,6 +98,43 @@ impl Chain {
             error!("{e}");
             ChainError::NoHash
         })
+    }
+
+    pub fn init<D: DatabaseInterface>(
+        db_utils: &ChainDbUtils<D>,
+        hub: EthAddress,
+        tail_length: u64,
+        confirmations: u64,
+        sub_mat: EthSubMat,
+        mcid: MetadataChainId,
+        validate: bool,
+    ) -> Result<(), ChainError> {
+        // NOTE: First lets see if this chain has already been initialized
+        if Self::get(db_utils, mcid).is_ok() {
+            return Err(ChainError::AlreadyInitialized(mcid));
+        };
+
+        // NOTE: Now lets validate the block & receipts if we're required to
+        if validate {
+            let n = Self::block_num(&sub_mat)?;
+            let h = Self::block_hash(&sub_mat)?;
+            if let Err(e) = sub_mat.block_is_valid(&mcid.to_eth_chain_id()?) {
+                error!("invalid block: {e}");
+                return Err(ChainError::InvalidBlock(mcid, h, n));
+            }
+            if let Err(e) = sub_mat.receipts_are_valid() {
+                error!("invalid receipts: {e}");
+                return Err(ChainError::InvalidReceipts(mcid, h, n));
+            }
+        } else {
+            warn!("not validating sub mat when initialization chain ID: {mcid}");
+        };
+
+        // NOTE: Now we can create the chain structure
+        let c = Self::new(hub, tail_length, confirmations, sub_mat, mcid)?;
+
+        // NOTE: And finally, save it in the db
+        c.save_in_db(db_utils)
     }
 
     fn new(
@@ -273,7 +309,7 @@ impl Chain {
             })
     }
 
-    fn save<D: DatabaseInterface>(self, db_utils: ChainDbUtils<D>) -> Result<(), ChainError> {
+    fn save_in_db<D: DatabaseInterface>(self, db_utils: &ChainDbUtils<D>) -> Result<(), ChainError> {
         let key = self.db_key()?;
         let value = serde_json::to_vec(&self)?;
         db_utils

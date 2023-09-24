@@ -1,6 +1,6 @@
 use std::fmt;
 
-use common_metadata::MetadataChainId;
+use common_metadata::{MetadataChainId, MetadataChainIdError};
 use derive_more::Constructor;
 use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
@@ -9,6 +9,18 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ChainError {
+    #[error("invalid receipts for block number '{0}', hash '{1}' on chain '{2}'")]
+    InvalidReceipts(MetadataChainId, EthHash, u64),
+
+    #[error("invalid block for block number '{0}', hash '{1}' on chain '{2}'")]
+    InvalidBlock(MetadataChainId, EthHash, u64),
+
+    #[error("{0}")]
+    MetadataChainIdError(#[from] MetadataChainIdError),
+
+    #[error("chain already initialized for id: {0}")]
+    AlreadyInitialized(MetadataChainId),
+
     #[error("chain not initialized for id: {0}")]
     NotInitialized(MetadataChainId),
 
