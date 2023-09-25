@@ -9,6 +9,15 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ChainError {
+    #[error("no canon block candidate found")]
+    NoCanonBlockCandidates,
+
+    #[error("too many canon block candidates found ({0})")]
+    TooManyCanonBlockCandidates(usize),
+
+    #[error("expected but failed to get block data from chain at index {0}")]
+    ExpectedBlockDataAtIndex(usize),
+
     #[error("invalid receipts for block number '{0}', hash '{1}' on chain '{2}'")]
     InvalidReceipts(MetadataChainId, EthHash, u64),
 
@@ -38,6 +47,9 @@ pub enum ChainError {
 
     #[error("failed to delete from db: {0}")]
     DbDelete(String),
+
+    #[error("failed to get from db: {0}")]
+    DbGet(String),
 
     #[error("could not get bytes for chain id: {0}")]
     CouldNotGetChainIdBytes(MetadataChainId),

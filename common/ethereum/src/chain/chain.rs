@@ -16,7 +16,20 @@ use crate::{
 // TODO fxn to walk back to canonical block
 // TODO tests!
 
-#[derive(Debug, Clone, Eq, PartialEq, Constructor, Serialize, Deserialize, Getters)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, Constructor, Serialize, Deserialize, Deref)]
+pub struct BlockDatas(Vec<BlockData>);
+
+impl BlockDatas {
+    fn get_parent_hashes(&self) -> Vec<EthHash> {
+        self.iter().map(|d| d.parent_hash()).cloned().collect()
+    }
+
+    fn empty() -> Self {
+        Self::new(vec![])
+    }
+}
+
+#[derive(Debug, Default, Clone, Eq, PartialEq, Constructor, Serialize, Deserialize, Getters)]
 pub struct BlockData {
     number: u64,
     hash: EthHash,
@@ -61,8 +74,8 @@ pub struct Chain {
     tail_length: u64,
     confirmations: u64,
     linker_hash: EthHash,
-    chain: VecDeque<Vec<BlockData>>, // Bounded vecdeque?
     chain_id: MetadataChainId,
+    chain: VecDeque<Vec<BlockData>>, // TODO use the `BlockDatas` struct above
 }
 
 #[derive(Debug, Clone, Deref, Constructor)]
@@ -363,7 +376,79 @@ impl Chain {
             })
     }
 
-    fn get_canonical_sub_mat() -> Result<Option<EthSubMat>, ChainError> {
-        todo!("walk back the chain confs number of times to get this");
+    fn get_canonical_block_hash(&self) -> Result<Option<EthHash>, ChainError> {
+        debug!("getting canonical block data...");
+
+        let length = self.chain.len();
+        let confs = *self.confirmations() as usize;
+
+        if length < confs {
+            warn!("chain is to short to have a canon block - length: {length}, confirmations: {confs}");
+            return Ok(None);
+        };
+
+        let mut hashes: Vec<EthHash> = vec![];
+        for i in 0..confs {
+            let mut data = self
+                .chain
+                .get(i)
+                .ok_or_else(|| ChainError::ExpectedBlockDataAtIndex(i))?
+                .to_vec();
+
+            if i > 0 {
+                // NOTE We only filter the data by the existing parents _after_ the first iteration,
+                // because on the first step there will never be any
+                data = data
+                    .iter()
+                    .filter(|d| hashes.contains(d.hash()))
+                    .cloned()
+                    .collect::<Vec<BlockData>>();
+            }
+            if i < confs - 1 {
+                // NOTE: IE, any except the _last_ iteration. Here we get all the parent hashes,
+                // then sort and deduplicate that list.
+                hashes = data.iter().map(|d| d.parent_hash()).cloned().collect();
+                hashes.sort_unstable();
+                hashes.dedup();
+            } else {
+                // NOTE: The last iteration. So here instead we get the list of _block_ hashes, not
+                // parent hashes. These are our candidates for the canon block. Hopefully at this
+                // point there is only one!
+                hashes = data.iter().map(|d| d.hash()).cloned().collect();
+            }
+        }
+
+        if hashes.is_empty() {
+            // NOTE We've already checked if the chain is too short, so this is a legit error
+            Err(ChainError::NoCanonBlockCandidates)
+        } else if hashes.len() > 1 {
+            // NOTE: This _can_ happen, but if so it means we've encountered a fork longer than our
+            // set confirmations which is a problem needed external help (IE a discussion on what
+            // to increase the number of confirmations to, or a discussion as to which fork to see
+            // as canonical etc)
+            Err(ChainError::TooManyCanonBlockCandidates(hashes.len()))
+        } else {
+            Ok(Some(hashes[0]))
+        }
+    }
+
+    fn get_canonical_sub_mat<D: DatabaseInterface>(
+        &self,
+        db_utils: &ChainDbUtils<D>,
+    ) -> Result<Option<EthSubMat>, ChainError> {
+        if let Ok(Some(hash)) = self.get_canonical_block_hash() {
+            let key = DbKey::from(self.chain_id(), hash)?;
+            let sub_mat = db_utils
+                .db()
+                .get(key.to_vec(), MIN_DATA_SENSITIVITY_LEVEL)
+                .and_then(|ref bs| EthSubMat::from_bytes(bs))
+                .map_err(|e| {
+                    error!("{e}");
+                    ChainError::DbGet(format!("{e}"))
+                })?;
+            Ok(Some(sub_mat))
+        } else {
+            Ok(None)
+        }
     }
 }
