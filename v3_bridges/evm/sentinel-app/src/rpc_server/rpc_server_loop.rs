@@ -56,7 +56,6 @@ pub(crate) enum RpcCall {
     Ping(RpcId),
     Unknown(RpcId, String),
     GetUserOps(RpcId, WebSocketTx, CoreCxnStatus),
-    GetCoreState(RpcId, WebSocketTx, CoreCxnStatus),
     GetUserOpList(RpcId, WebSocketTx, CoreCxnStatus),
     Get(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     Put(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
@@ -66,6 +65,7 @@ pub(crate) enum RpcCall {
     RemoveUserOp(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
+    GetCoreState(RpcId, Box<SentinelConfig>, WebSocketTx, CoreCxnStatus),
     BroadcasterStartStop(RpcId, BroadcastChannelTx, CoreCxnStatus, bool),
     GetCancellableUserOps(RpcId, Box<SentinelConfig>, WebSocketTx, CoreCxnStatus),
     Init(
@@ -139,8 +139,10 @@ impl RpcCall {
             "startSyncer" => Self::StartSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
             "startBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, true),
             "stopBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, false),
-            "getCoreState" | "getEnclaveState" | "state" => Self::GetCoreState(r.id, websocket_tx, core_cxn),
             "cancel" | "cancelUserOp" => Self::CancelUserOps(r.id, broadcaster_tx.clone(), core_cxn),
+            "getCoreState" | "getEnclaveState" | "state" => {
+                Self::GetCoreState(r.id, Box::new(config), websocket_tx, core_cxn)
+            },
             "getSyncState" => Self::GetSyncState(
                 r.id,
                 Box::new(config),
@@ -318,8 +320,8 @@ impl RpcCall {
                     .await,
                 )
             },
-            Self::GetCoreState(id, websocket_tx, core_cxn) => {
-                Self::handle_ws_result(id, Self::handle_get_core_state(websocket_tx, core_cxn).await)
+            Self::GetCoreState(id, config, websocket_tx, core_cxn) => {
+                Self::handle_ws_result(id, Self::handle_get_core_state(*config, websocket_tx, core_cxn).await)
             },
             Self::GetUserOps(id, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_user_ops(websocket_tx, core_cxn).await)

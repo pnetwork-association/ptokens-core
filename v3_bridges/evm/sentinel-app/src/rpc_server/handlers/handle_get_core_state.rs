@@ -1,4 +1,4 @@
-use common_sentinel::{SentinelError, WebSocketMessages, WebSocketMessagesEncodable};
+use common_sentinel::{ConfigT, SentinelConfig, SentinelError, WebSocketMessages, WebSocketMessagesEncodable};
 use tokio::time::{sleep, Duration};
 
 use crate::rpc_server::{
@@ -8,11 +8,14 @@ use crate::rpc_server::{
 
 impl RpcCall {
     pub(crate) async fn handle_get_core_state(
+        config: SentinelConfig,
         websocket_tx: WebSocketTx,
         core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
         Self::check_core_is_connected(core_cxn)?;
-        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetCoreState);
+
+        let mcids = vec![config.host().metadata_chain_id(), config.native().metadata_chain_id()];
+        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetCoreState(mcids));
         websocket_tx.send(msg).await?;
 
         tokio::select! {

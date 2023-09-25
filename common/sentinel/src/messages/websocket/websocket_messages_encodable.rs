@@ -2,6 +2,7 @@ use std::{fmt, str::FromStr};
 
 use base64::{engine::general_purpose, Engine};
 use serde::{Deserialize, Serialize};
+use common_metadata::MetadataChainId;
 use serde_json::Value as Json;
 
 use super::WebSocketMessagesEncodableDbOps;
@@ -19,13 +20,13 @@ use crate::{
 pub enum WebSocketMessagesEncodable {
     Null,
     GetUserOps,
-    GetCoreState,
     GetUserOpList,
     Success(Json),
     GetLatestBlockNumbers,
     GetCancellableUserOps(u64),
     RemoveUserOp(UserOpUniqueId),
     Error(WebSocketMessagesError),
+    GetCoreState(Vec<MetadataChainId>),
     DbOps(WebSocketMessagesEncodableDbOps),
     Submit(Box<WebSocketMessagesSubmitArgs>),
     Initialize(Box<WebSocketMessagesInitArgs>),
@@ -69,8 +70,8 @@ impl fmt::Display for WebSocketMessagesEncodable {
             Self::GetUserOps => "GetUserOps".to_string(),
             Self::Initialize(_) => "Initialize".to_string(),
             Self::ResetChain(_) => "ResetChain".to_string(),
-            Self::GetCoreState => "GetCoreState".to_string(),
             Self::GetUserOpList => "GetUserOpList".to_string(),
+            Self::GetCoreState(..) => "GetCoreState".to_string(),
             Self::RemoveUserOp(_) => "RemoveUserOp".to_string(),
             Self::GetLatestBlockNumbers => "GetLatestBlockNumbers".to_string(),
             Self::GetCancellableUserOps(_) => "GetCancellableUserOps".to_string(),
@@ -146,9 +147,9 @@ mod tests {
 
     #[test]
     fn websocket_messages_encodable_should_make_serde_roundtrip() {
-        let m = WebSocketMessagesEncodable::GetCoreState;
+        let m = WebSocketMessagesEncodable::GetLatestBlockNumbers;
         let s: String = m.clone().try_into().unwrap();
-        let expected_s = "IkdldENvcmVTdGF0ZSI";
+        let expected_s = "IkdldExhdGVzdEJsb2NrTnVtYmVycyI";
         assert_eq!(s, expected_s);
         let r = WebSocketMessagesEncodable::try_from(s).unwrap();
         assert_eq!(r, m);
