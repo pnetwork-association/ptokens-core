@@ -1,3 +1,4 @@
+#![allow(unused)] // FIXME rm once it's in and working and we know we won't need the unused fxns
 use std::collections::VecDeque;
 
 use common::{crypto_utils::keccak_hash_bytes, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
@@ -11,10 +12,6 @@ use crate::{
     chain::{ChainDbUtils, ChainError, NoParentError},
     EthSubmissionMaterial as EthSubMat,
 };
-
-// TODO get canon block receipts
-// TODO fxn to walk back to canonical block
-// TODO tests!
 
 #[derive(Debug, Default, Clone, Eq, PartialEq, Constructor, Serialize, Deserialize, Deref)]
 pub struct BlockDatas(Vec<BlockData>);
@@ -131,6 +128,8 @@ impl Chain {
         })
     }
 
+    // TODO factor out the pruning and teh saving of the block since it's used in the insert fxn
+    // too.
     pub fn init<D: DatabaseInterface>(
         db_utils: &ChainDbUtils<D>,
         hub: EthAddress,
@@ -140,6 +139,8 @@ impl Chain {
         mcid: MetadataChainId,
         validate: bool,
     ) -> Result<(), ChainError> {
+        debug!("initializing chain for mcid: {mcid}");
+
         // NOTE: First lets see if this chain has already been initialized
         if Self::get(db_utils, mcid).is_ok() {
             return Err(ChainError::AlreadyInitialized(mcid));
@@ -149,7 +150,21 @@ impl Chain {
         Self::validate(&mcid, &sub_mat, validate)?;
 
         // NOTE: Now we can create the chain structure
-        let c = Self::new(hub, tail_length, confirmations, sub_mat, mcid)?;
+        let c = Self::new(hub, tail_length, confirmations, sub_mat.clone(), mcid)?;
+
+        // NOTE: Now we can prune the sub mat's receipts...
+        let pruned_sub_mat = sub_mat.remove_receipts_if_no_logs_from_addresses(&[hub]);
+
+        // NOTE: Now we save the block itself in the db...
+        let sub_mat_bytes = serde_json::to_vec(&pruned_sub_mat)?;
+        let db_key = c.sub_mat_to_db_key(&pruned_sub_mat)?;
+        db_utils
+            .db()
+            .put(db_key.to_vec(), sub_mat_bytes, MIN_DATA_SENSITIVITY_LEVEL)
+            .map_err(|e| {
+                error!("{e}");
+                ChainError::DbInsert(format!("{e}"))
+            })?;
 
         // NOTE: And finally, save it in the db
         c.save_in_db(db_utils)
@@ -186,7 +201,7 @@ impl Chain {
         let submat_block_num = Self::block_num(sub_mat)?;
         let oldest_block_num = self.offset - self.chain_len();
         let latest_block_num = self.offset;
-        let block_data: BlockData = sub_mat.try_into()?;
+        let parent_hash = Self::parent_hash(sub_mat)?;
         let cid = self.chain_id;
         let msg = format!(
             "cid: {}, submitted block num: {}, latest block num: {}, oldest block num: {}",
@@ -232,7 +247,7 @@ impl Chain {
             ChainError::NoParent(no_parent_error.clone())
         })?;
 
-        if !potential_parents.contains(&block_data) {
+        if !potential_parents.iter().any(|bd| bd.hash() == &parent_hash) {
             Err(ChainError::NoParent(no_parent_error))
         } else {
             Ok(parent_index)
@@ -243,14 +258,19 @@ impl Chain {
         if validate {
             let n = Self::block_num(sub_mat)?;
             let h = Self::block_hash(sub_mat)?;
+            let cid = mcid.to_eth_chain_id()?;
+            debug!("validating block {n} & receipts for chain id {cid}...");
             if let Err(e) = sub_mat.block_is_valid(&mcid.to_eth_chain_id()?) {
                 error!("invalid block: {e}");
                 return Err(ChainError::InvalidBlock(*mcid, h, n));
             }
 
-            if let Err(e) = sub_mat.receipts_are_valid() {
-                error!("invalid receipts: {e}");
-                return Err(ChainError::InvalidReceipts(*mcid, h, n));
+            // NOTE Receipts may have bene prefiltered outside of the TEE
+            if !sub_mat.receipts.is_empty() {
+                if let Err(e) = sub_mat.receipts_are_valid() {
+                    error!("invalid receipts: {e}");
+                    return Err(ChainError::InvalidReceipts(*mcid, h, n));
+                }
             }
             Ok(())
         } else {
@@ -259,13 +279,51 @@ impl Chain {
         }
     }
 
-    fn insert<D: DatabaseInterface>(
+    fn get_block<D: DatabaseInterface>(
+        &self,
+        db_utils: &ChainDbUtils<D>,
+        requested: u64,
+    ) -> Result<Vec<EthSubMat>, ChainError> {
+        let oldest = self.offset() - self.chain_len();
+        let latest = *self.offset();
+
+        if requested > latest || requested < oldest {
+            return Err(ChainError::BlockNumNotInChain(requested, oldest, latest));
+        }
+
+        let idx = (latest - requested) as usize;
+        let block_data = self
+            .chain
+            .get(idx)
+            .ok_or_else(|| ChainError::ExpectedBlockDataAtIndex(idx))?;
+        let db_keys = block_data
+            .iter()
+            .map(|d| DbKey::from(self.chain_id(), *d.hash()))
+            .collect::<Result<Vec<DbKey>, ChainError>>()?;
+
+        let mut r: Vec<EthSubMat> = vec![];
+        for key in db_keys {
+            let bytes = db_utils
+                .db()
+                .get(key.to_vec(), MIN_DATA_SENSITIVITY_LEVEL)
+                .map_err(|e| {
+                    error!("{e}");
+                    ChainError::DbGet(format!("{e}"))
+                })?;
+            let sub_mat = serde_json::from_slice::<EthSubMat>(&bytes)?;
+            r.push(sub_mat);
+        }
+        Ok(r)
+    }
+
+    pub fn insert<D: DatabaseInterface>(
         &mut self,
         db_utils: &ChainDbUtils<D>,
-        parent_index: ParentIndex,
         sub_mat: EthSubMat,
         validate: bool,
     ) -> Result<(), ChainError> {
+        let parent_index = self.check_for_parent(&sub_mat)?;
+
         let mcid = *self.chain_id();
         // NOTE: First lets validate the sub mat if we're required to
         Self::validate(&mcid, &sub_mat, validate)?;
@@ -276,6 +334,7 @@ impl Chain {
         if parent_index.is_zero() {
             // NOTE: Block can't already exist in db!
             self.chain.push_front(vec![block_data]);
+            self.offset += 1;
             Ok(())
         } else {
             let insertion_index = parent_index.as_usize() - 1;
@@ -344,8 +403,9 @@ impl Chain {
     }
 
     fn db_key_from_chain_id(mcid: &MetadataChainId) -> Result<DbKey, ChainError> {
+        // NOTE: We store the chain under a hash of it's chain ID as bytes.
         mcid.to_bytes()
-            .map(|bs| DbKey(EthHash::from_slice(&bs[..])))
+            .map(|bs| DbKey(keccak_hash_bytes(&bs[..])))
             .map_err(|e| {
                 error!("{e}");
                 ChainError::CouldNotGetChainIdBytes(*mcid)
@@ -364,14 +424,14 @@ impl Chain {
             })
     }
 
-    fn get<D: DatabaseInterface>(db_utils: &ChainDbUtils<D>, mcid: MetadataChainId) -> Result<Self, ChainError> {
+    pub fn get<D: DatabaseInterface>(db_utils: &ChainDbUtils<D>, mcid: MetadataChainId) -> Result<Self, ChainError> {
         let key = Self::db_key_from_chain_id(&mcid)?;
         db_utils
             .db()
             .get(key.to_vec(), MIN_DATA_SENSITIVITY_LEVEL)
             .and_then(|bs| Ok(serde_json::from_slice(&bs)?))
             .map_err(|e| {
-                error!("error getting chain for chain id '{mcid}': {e}");
+                warn!("error getting chain for chain id '{mcid}': {e}");
                 ChainError::NotInitialized(mcid)
             })
     }
@@ -432,7 +492,7 @@ impl Chain {
         }
     }
 
-    fn get_canonical_sub_mat<D: DatabaseInterface>(
+    pub fn get_canonical_sub_mat<D: DatabaseInterface>(
         &self,
         db_utils: &ChainDbUtils<D>,
     ) -> Result<Option<EthSubMat>, ChainError> {
@@ -441,7 +501,7 @@ impl Chain {
             let sub_mat = db_utils
                 .db()
                 .get(key.to_vec(), MIN_DATA_SENSITIVITY_LEVEL)
-                .and_then(|ref bs| EthSubMat::from_bytes(bs))
+                .and_then(|bytes| Ok(serde_json::from_slice::<EthSubMat>(&bytes)?))
                 .map_err(|e| {
                     error!("{e}");
                     ChainError::DbGet(format!("{e}"))
@@ -449,6 +509,243 @@ impl Chain {
             Ok(Some(sub_mat))
         } else {
             Ok(None)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use common::test_utils::get_test_database;
+
+    use super::*;
+    use crate::{chain::ChainState, test_utils::get_sequential_eth_blocks_and_receipts};
+
+    #[test]
+    fn should_init_core_correctly() {
+        let sub_mat = get_sequential_eth_blocks_and_receipts()[0].clone();
+        let mcid = MetadataChainId::EthereumMainnet;
+        let validate = true;
+        let hub = EthAddress::zero();
+        let db = get_test_database();
+        let db_utils = ChainDbUtils::new(&db);
+        let confirmations = 3;
+        let tail_length = 2;
+
+        Chain::init(&db_utils, hub, tail_length, confirmations, sub_mat, mcid, validate).unwrap();
+    }
+
+    #[test]
+    fn should_get_not_initted_error() {
+        let db = get_test_database();
+        let db_utils = ChainDbUtils::new(&db);
+        let mcid = MetadataChainId::EthereumMainnet;
+        match Chain::get(&db_utils, mcid) {
+            Ok(_) => panic!("should not have succeeded"),
+            Err(ChainError::NotInitialized(id)) => assert_eq!(id, mcid),
+            Err(e) => panic!("wrong error received {e}"),
+        }
+    }
+
+    #[test]
+    fn should_get_already_initted_error() {
+        let sub_mat = get_sequential_eth_blocks_and_receipts()[0].clone();
+        let mcid = MetadataChainId::EthereumMainnet;
+        let validate = true;
+        let hub = EthAddress::zero();
+        let db = get_test_database();
+        let db_utils = ChainDbUtils::new(&db);
+        let confirmations = 3;
+        let tail_length = 2;
+
+        Chain::init(
+            &db_utils,
+            hub,
+            tail_length,
+            confirmations,
+            sub_mat.clone(),
+            mcid,
+            validate,
+        )
+        .unwrap();
+
+        match Chain::init(&db_utils, hub, tail_length, confirmations, sub_mat, mcid, validate) {
+            Ok(_) => panic!("should not have succeeded"),
+            Err(ChainError::AlreadyInitialized(id)) => assert_eq!(id, mcid),
+            Err(e) => panic!("wrong error received {e}"),
+        }
+    }
+
+    #[test]
+    fn should_manage_chain_correctly() {
+        use simple_logger; // FIXME rm
+        simple_logger::init_with_level(log::Level::Debug).unwrap();
+
+        let sub_mats = get_sequential_eth_blocks_and_receipts();
+        let mcid = MetadataChainId::EthereumMainnet;
+        let validate = true;
+        let sub_mat = sub_mats[0].clone();
+        let hub = EthAddress::zero();
+        let db = get_test_database();
+        let db_utils = ChainDbUtils::new(&db);
+        let confirmations = 3;
+        let tail_length = 2;
+
+        Chain::init(&db_utils, hub, tail_length, confirmations, sub_mat, mcid, validate).unwrap();
+
+        let mut chain = Chain::get(&db_utils, mcid).unwrap();
+        assert_eq!(chain.chain_len(), 1);
+        assert!(matches!(chain.get_canonical_sub_mat(&db_utils), Ok(None)));
+        assert_eq!(
+            chain.get_tail_block_data().unwrap()[0].number,
+            sub_mats[0].get_block_number().unwrap().as_u64()
+        );
+
+        chain.insert(&db_utils, sub_mats[1].clone(), validate).unwrap();
+        assert_eq!(chain.chain_len(), 2);
+        assert!(matches!(chain.get_canonical_sub_mat(&db_utils), Ok(None)));
+        assert_eq!(
+            chain.get_tail_block_data().unwrap()[0].number,
+            sub_mats[0].get_block_number().unwrap().as_u64()
+        );
+
+        chain.insert(&db_utils, sub_mats[2].clone(), validate).unwrap();
+        assert_eq!(chain.chain_len(), 3);
+        assert_eq!(
+            chain.get_tail_block_data().unwrap()[0].number,
+            sub_mats[0].get_block_number().unwrap().as_u64()
+        );
+        assert_eq!(
+            chain
+                .get_canonical_sub_mat(&db_utils)
+                .unwrap()
+                .unwrap()
+                .get_block_number()
+                .unwrap(),
+            sub_mats[0].get_block_number().unwrap()
+        );
+
+        chain.insert(&db_utils, sub_mats[3].clone(), validate).unwrap();
+        assert_eq!(chain.chain_len(), 4);
+        assert_eq!(
+            chain.get_tail_block_data().unwrap()[0].number,
+            sub_mats[0].get_block_number().unwrap().as_u64()
+        );
+        assert_eq!(
+            chain
+                .get_canonical_sub_mat(&db_utils)
+                .unwrap()
+                .unwrap()
+                .get_block_number()
+                .unwrap(),
+            sub_mats[1].get_block_number().unwrap()
+        );
+
+        chain.insert(&db_utils, sub_mats[4].clone(), validate).unwrap();
+        assert_eq!(chain.chain_len(), 5);
+        assert_eq!(
+            chain.get_tail_block_data().unwrap()[0].number,
+            sub_mats[0].get_block_number().unwrap().as_u64()
+        );
+        assert_eq!(
+            chain
+                .get_canonical_sub_mat(&db_utils)
+                .unwrap()
+                .unwrap()
+                .get_block_number()
+                .unwrap(),
+            sub_mats[2].get_block_number().unwrap()
+        );
+
+        chain.insert(&db_utils, sub_mats[5].clone(), validate).unwrap();
+        assert_eq!(chain.chain_len(), 5);
+        assert_eq!(
+            chain.get_tail_block_data().unwrap()[0].number,
+            sub_mats[1].get_block_number().unwrap().as_u64()
+        );
+        assert_eq!(
+            chain
+                .get_canonical_sub_mat(&db_utils)
+                .unwrap()
+                .unwrap()
+                .get_block_number()
+                .unwrap(),
+            sub_mats[3].get_block_number().unwrap()
+        );
+
+        chain.insert(&db_utils, sub_mats[6].clone(), validate).unwrap();
+        assert_eq!(chain.chain_len(), 5);
+        assert_eq!(
+            chain.get_tail_block_data().unwrap()[0].number,
+            sub_mats[2].get_block_number().unwrap().as_u64()
+        );
+        assert_eq!(
+            chain
+                .get_canonical_sub_mat(&db_utils)
+                .unwrap()
+                .unwrap()
+                .get_block_number()
+                .unwrap(),
+            sub_mats[4].get_block_number().unwrap()
+        );
+
+        // NOTE: Test submitting a block that's too far ahead
+        match chain.insert(&db_utils, sub_mats[10].clone(), validate) {
+            Ok(_) => panic!("should not have succeeded"),
+            Err(ChainError::NoParent(e)) => {
+                assert_eq!(e.cid(), &mcid);
+                assert_eq!(e.block_num(), &8065760);
+                assert!(e.message().contains("too far ahead"));
+            },
+            Err(e) => panic!("wrong error received {e}"),
+        };
+
+        // NOTE: Test submitting a block that's too far behind
+        match chain.insert(&db_utils, sub_mats[0].clone(), validate) {
+            Ok(_) => panic!("should not have succeeded"),
+            Err(ChainError::NoParent(e)) => {
+                assert_eq!(e.cid(), &mcid);
+                assert_eq!(e.block_num(), &8065750);
+                assert!(e.message().contains("too far behind"));
+            },
+            Err(e) => panic!("wrong error received {e}"),
+        };
+
+        // NOTE: Test submitting a block that's already extant
+        match chain.insert(&db_utils, sub_mats[4].clone(), validate) {
+            Ok(_) => panic!("should not have succeeded"),
+            Err(ChainError::BlockAlreadyInDb(id, hash)) => {
+                let expected_hash = Chain::block_hash(&sub_mats[4]).unwrap();
+                assert_eq!(id, mcid);
+                assert_eq!(hash, expected_hash);
+            },
+            Err(e) => panic!("wrong error received {e}"),
+        };
+
+        // NOTE: assert that all the blocks in the chain exist in the db, and they they've been
+        // pruned of receipts (Note we clone the chain, so we don't drain our _actual_ chain!)
+        let block_datas = chain.chain.clone().drain(0..).flatten().collect::<Vec<BlockData>>();
+        let block_nums = block_datas.iter().map(|d| *d.number()).collect::<Vec<u64>>();
+        for block_num in block_nums {
+            let sub_mats = chain.get_block(&db_utils, block_num).unwrap();
+            assert_eq!(sub_mats.len(), 1); // NOTE There should be no forks here.
+            assert!(sub_mats[0].get_receipts().is_empty());
+        }
+
+        // NOTE: Now assert that blocks that re no longer in our chain were deleted.
+        let expected_deleted_block_hashes = vec![
+            Chain::block_hash(&sub_mats[0]).unwrap(),
+            Chain::block_hash(&sub_mats[1]).unwrap(),
+        ];
+        let expected_deleted_db_keys = expected_deleted_block_hashes
+            .iter()
+            .map(|h| DbKey::from(&mcid, *h).unwrap())
+            .collect::<Vec<DbKey>>();
+        for key in expected_deleted_db_keys {
+            match db.get(key.to_vec(), MIN_DATA_SENSITIVITY_LEVEL) {
+                Ok(_) => panic!("should not have succeeded"),
+                Err(common::AppError::Custom(e)) => assert_eq!(&e, "Cannot find item in database!"),
+                Err(e) => panic!("wrong error received: {e}"),
+            }
         }
     }
 }

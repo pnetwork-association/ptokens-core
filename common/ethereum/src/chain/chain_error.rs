@@ -1,6 +1,7 @@
 use std::fmt;
 
 use common_metadata::{MetadataChainId, MetadataChainIdError};
+use derive_getters::Getters;
 use derive_more::Constructor;
 use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
@@ -9,6 +10,9 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ChainError {
+    #[error("block num {0} not in chain (oldest: {1}, latest {2})")]
+    BlockNumNotInChain(u64, u64, u64),
+
     #[error("no canon block candidate found")]
     NoCanonBlockCandidates,
 
@@ -73,7 +77,7 @@ pub enum ChainError {
     NoBlockData(u64),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Constructor)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Constructor, Getters)]
 pub struct NoParentError {
     block_num: u64,
     message: String,
