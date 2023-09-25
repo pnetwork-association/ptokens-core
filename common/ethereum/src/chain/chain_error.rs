@@ -10,6 +10,12 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ChainError {
+    #[error("cannot reset chain, got mcid: {got}, expected mcid: {expected}")]
+    CannotReset {
+        got: MetadataChainId,
+        expected: MetadataChainId,
+    },
+
     #[error("block num {0} not in chain (oldest: {1}, latest {2})")]
     BlockNumNotInChain(u64, u64, u64),
 

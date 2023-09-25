@@ -95,6 +95,10 @@ impl ParentIndex {
 }
 
 impl Chain {
+    pub fn mcid(&self) -> MetadataChainId {
+        self.chain_id
+    }
+
     pub fn get_latest_block_data(&self) -> Option<&Vec<BlockData>> {
         self.chain.get(0)
     }
@@ -387,7 +391,8 @@ impl Chain {
 
         // TODO update the linker hash <- is this meaningless though? What if there are forked blocks there?
 
-        Ok(())
+        // NOTE: And finally, save it in the db
+        self.save_in_db(db_utils)
     }
 
     fn sub_mat_to_db_key(&self, sub_mat: &EthSubMat) -> Result<DbKey, ChainError> {
@@ -412,9 +417,9 @@ impl Chain {
             })
     }
 
-    fn save_in_db<D: DatabaseInterface>(self, db_utils: &ChainDbUtils<D>) -> Result<(), ChainError> {
+    fn save_in_db<D: DatabaseInterface>(&self, db_utils: &ChainDbUtils<D>) -> Result<(), ChainError> {
         let key = self.db_key()?;
-        let value = serde_json::to_vec(&self)?;
+        let value = serde_json::to_vec(self)?;
         db_utils
             .db()
             .put(key.to_vec(), value, MIN_DATA_SENSITIVITY_LEVEL)
@@ -422,6 +427,54 @@ impl Chain {
                 error!("{e}");
                 ChainError::DbInsert(format!("{e}"))
             })
+    }
+
+    pub fn reset<D: DatabaseInterface>(
+        db_utils: &ChainDbUtils<D>,
+        sub_mat: EthSubMat,
+        mcid: MetadataChainId,
+        validate: bool,
+    ) -> Result<(), ChainError> {
+        debug!("resetting chain...");
+        let n = Self::block_num(&sub_mat)?;
+        let mut chain = Self::get(db_utils, mcid)?;
+        let chain_mcid = chain.mcid();
+        if chain_mcid != mcid {
+            return Err(ChainError::CannotReset {
+                got: mcid,
+                expected: chain_mcid,
+            });
+        };
+
+        let block_datas = chain.chain.clone().drain(0..).flatten().collect::<Vec<BlockData>>();
+        let db_keys = block_datas
+            .iter()
+            .map(|d| DbKey::from(&mcid, *d.hash()))
+            .collect::<Result<Vec<DbKey>, ChainError>>()?;
+        debug!("deleting blocks from db...");
+        for key in db_keys.iter() {
+            db_utils.db().delete(key.to_vec()).map_err(|e| {
+                error!("{e}");
+                ChainError::DbDelete(format!("{e}"))
+            })?;
+        }
+
+        let reset_block_data = BlockData::try_from(&sub_mat)?;
+
+        let key = chain.sub_mat_to_db_key(&sub_mat)?;
+        let pruned_sub_mat = sub_mat.remove_receipts_if_no_logs_from_addresses(&[chain.hub]);
+        let value = serde_json::to_vec(&pruned_sub_mat)?;
+        db_utils
+            .db()
+            .put(key.to_vec(), value, MIN_DATA_SENSITIVITY_LEVEL)
+            .map_err(|e| {
+                error!("{e}");
+                ChainError::DbInsert(format!("{e}"))
+            })?;
+
+        chain.offset = n;
+        chain.chain = VecDeque::from([vec![reset_block_data]]);
+        chain.save_in_db(db_utils)
     }
 
     pub fn get<D: DatabaseInterface>(db_utils: &ChainDbUtils<D>, mcid: MetadataChainId) -> Result<Self, ChainError> {
@@ -600,6 +653,7 @@ mod tests {
             sub_mats[0].get_block_number().unwrap().as_u64()
         );
 
+        chain = Chain::get(&db_utils, mcid).unwrap();
         chain.insert(&db_utils, sub_mats[1].clone(), validate).unwrap();
         assert_eq!(chain.chain_len(), 2);
         assert!(matches!(chain.get_canonical_sub_mat(&db_utils), Ok(None)));
@@ -608,6 +662,7 @@ mod tests {
             sub_mats[0].get_block_number().unwrap().as_u64()
         );
 
+        chain = Chain::get(&db_utils, mcid).unwrap();
         chain.insert(&db_utils, sub_mats[2].clone(), validate).unwrap();
         assert_eq!(chain.chain_len(), 3);
         assert_eq!(
@@ -624,6 +679,7 @@ mod tests {
             sub_mats[0].get_block_number().unwrap()
         );
 
+        chain = Chain::get(&db_utils, mcid).unwrap();
         chain.insert(&db_utils, sub_mats[3].clone(), validate).unwrap();
         assert_eq!(chain.chain_len(), 4);
         assert_eq!(
@@ -640,6 +696,7 @@ mod tests {
             sub_mats[1].get_block_number().unwrap()
         );
 
+        chain = Chain::get(&db_utils, mcid).unwrap();
         chain.insert(&db_utils, sub_mats[4].clone(), validate).unwrap();
         assert_eq!(chain.chain_len(), 5);
         assert_eq!(
@@ -656,6 +713,7 @@ mod tests {
             sub_mats[2].get_block_number().unwrap()
         );
 
+        chain = Chain::get(&db_utils, mcid).unwrap();
         chain.insert(&db_utils, sub_mats[5].clone(), validate).unwrap();
         assert_eq!(chain.chain_len(), 5);
         assert_eq!(
@@ -672,6 +730,7 @@ mod tests {
             sub_mats[3].get_block_number().unwrap()
         );
 
+        chain = Chain::get(&db_utils, mcid).unwrap();
         chain.insert(&db_utils, sub_mats[6].clone(), validate).unwrap();
         assert_eq!(chain.chain_len(), 5);
         assert_eq!(
@@ -689,6 +748,7 @@ mod tests {
         );
 
         // NOTE: Test submitting a block that's too far ahead
+        chain = Chain::get(&db_utils, mcid).unwrap();
         match chain.insert(&db_utils, sub_mats[10].clone(), validate) {
             Ok(_) => panic!("should not have succeeded"),
             Err(ChainError::NoParent(e)) => {
@@ -747,5 +807,16 @@ mod tests {
                 Err(e) => panic!("wrong error received: {e}"),
             }
         }
+
+        // NOTE: Test a chain reset
+        Chain::reset(&db_utils, sub_mats[0].clone(), mcid, true).unwrap();
+        chain = Chain::get(&db_utils, mcid).unwrap();
+        assert_eq!(chain.offset, Chain::block_num(&sub_mats[0]).unwrap());
+        assert_eq!(chain.chain_len(), 1);
+        assert_eq!(
+            chain.get_tail_block_data().unwrap()[0].number,
+            sub_mats[0].get_block_number().unwrap().as_u64()
+        );
+        assert!(matches!(chain.get_canonical_sub_mat(&db_utils), Ok(None)));
     }
 }
