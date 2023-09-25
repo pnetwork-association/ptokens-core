@@ -1,5 +1,6 @@
-use common::{AppError as CommonError, BlockAlreadyInDbError, BridgeSide, NoParentError};
+use common::{AppError as CommonError, BlockAlreadyInDbError, NoParentError};
 use common_chain_ids::EthChainId;
+use common_metadata::MetadataChainId;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -7,6 +8,12 @@ use crate::SentinelError;
 
 #[derive(Error, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesError {
+    #[error("wrong field of enum - got: {got}, expected {expected}")]
+    WrongField { got: String, expected: String },
+
+    #[error("could not parse metadata chain id from string: {0}")]
+    ParseMetadataChainId(String),
+
     #[error("strongbox panicked - check the logs for more info")]
     Panicked,
 
@@ -41,8 +48,8 @@ pub enum WebSocketMessagesError {
     #[error("timed out - strongbox took longer than {0}ms to respond")]
     Timedout(u64),
 
-    #[error("no {side} block found in {struct_name}")]
-    NoBlock { side: BridgeSide, struct_name: String },
+    #[error("no block found in {struct_name} for chain: {mcid}")]
+    NoBlock { mcid: MetadataChainId, struct_name: String },
 
     #[error("common error: {0}")]
     CommonError(String),

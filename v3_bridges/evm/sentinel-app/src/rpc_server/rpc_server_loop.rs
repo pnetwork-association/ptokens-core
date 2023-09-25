@@ -67,8 +67,16 @@ pub(crate) enum RpcCall {
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     BroadcasterStartStop(RpcId, BroadcastChannelTx, CoreCxnStatus, bool),
-    Init(RpcId, EthRpcTx, EthRpcTx, WebSocketTx, RpcParams, CoreCxnStatus),
     GetCancellableUserOps(RpcId, Box<SentinelConfig>, WebSocketTx, CoreCxnStatus),
+    Init(
+        RpcId,
+        Box<SentinelConfig>,
+        EthRpcTx,
+        EthRpcTx,
+        WebSocketTx,
+        RpcParams,
+        CoreCxnStatus,
+    ),
     GetSyncState(
         RpcId,
         Box<SentinelConfig>,
@@ -164,6 +172,7 @@ impl RpcCall {
             ),
             "init" => Self::Init(
                 r.id,
+                Box::new(config),
                 host_eth_rpc_tx,
                 native_eth_rpc_tx,
                 websocket_tx,
@@ -295,10 +304,18 @@ impl RpcCall {
                 )
             },
             Self::Ping(id) => Ok(warp::reply::json(&create_json_rpc_response(id, "pong"))),
-            Self::Init(id, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params, core_cxn) => {
+            Self::Init(id, config, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params, core_cxn) => {
                 Self::handle_ws_result(
                     id,
-                    Self::handle_init(websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, params, core_cxn).await,
+                    Self::handle_init(
+                        *config,
+                        websocket_tx,
+                        host_eth_rpc_tx,
+                        native_eth_rpc_tx,
+                        params,
+                        core_cxn,
+                    )
+                    .await,
                 )
             },
             Self::GetCoreState(id, websocket_tx, core_cxn) => {

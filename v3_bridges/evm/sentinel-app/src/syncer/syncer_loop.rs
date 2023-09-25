@@ -173,6 +173,8 @@ pub async fn syncer_loop(
     disable: bool,
     broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
 ) -> Result<(), SentinelError> {
+    batch.check_endpoint().await?;
+
     let side = batch.side();
     let chain_id = config.chain_id(&side);
     let name = format!("{side} syncer");

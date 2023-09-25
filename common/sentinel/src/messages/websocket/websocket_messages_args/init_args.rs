@@ -1,25 +1,22 @@
 use std::str::FromStr;
 
-use common::BridgeSide;
-use common_chain_ids::EthChainId;
-use common_eth::EthSubmissionMaterial;
+use common_eth::{convert_hex_to_eth_address, EthSubmissionMaterial};
+use common_metadata::MetadataChainId;
 use derive_getters::Getters;
+use ethereum_types::Address as EthAddress;
 use serde::{Deserialize, Serialize};
 
 use crate::WebSocketMessagesError;
 
-pub type Confirmations = u64;
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Getters)]
 pub struct WebSocketMessagesInitArgs {
-    native_validate: bool,
-    native_chain_id: EthChainId,
-    native_confirmations: Confirmations,
-    native_block: Option<EthSubmissionMaterial>,
-    host_validate: bool,
-    host_chain_id: EthChainId,
-    host_confirmations: Confirmations,
-    host_block: Option<EthSubmissionMaterial>,
+    validate: bool,
+    hub: EthAddress,
+    tail_length: u64,
+    confirmations: u64,
+    mcid: MetadataChainId,
+    #[getter(skip)]
+    sub_mat: Option<EthSubmissionMaterial>,
 }
 
 impl WebSocketMessagesInitArgs {
@@ -27,29 +24,15 @@ impl WebSocketMessagesInitArgs {
         "WebSocketMessagesInitArgs".into()
     }
 
-    pub fn add_host_block(&mut self, m: EthSubmissionMaterial) {
-        self.host_block = Some(m);
+    pub fn add_sub_mat(&mut self, m: EthSubmissionMaterial) {
+        self.sub_mat = Some(m);
     }
 
-    pub fn add_native_block(&mut self, m: EthSubmissionMaterial) {
-        self.native_block = Some(m);
-    }
-
-    pub fn to_host_sub_mat(&self) -> Result<EthSubmissionMaterial, WebSocketMessagesError> {
-        match self.host_block {
+    pub fn sub_mat(&self) -> Result<EthSubmissionMaterial, WebSocketMessagesError> {
+        match self.sub_mat {
             Some(ref b) => Ok(b.clone()),
             None => Err(WebSocketMessagesError::NoBlock {
-                side: BridgeSide::Host,
-                struct_name: self.name(),
-            }),
-        }
-    }
-
-    pub fn to_native_sub_mat(&self) -> Result<EthSubmissionMaterial, WebSocketMessagesError> {
-        match self.native_block {
-            Some(ref b) => Ok(b.clone()),
-            None => Err(WebSocketMessagesError::NoBlock {
-                side: BridgeSide::Native,
+                mcid: self.mcid,
                 struct_name: self.name(),
             }),
         }
@@ -65,7 +48,7 @@ impl TryFrom<Vec<String>> for WebSocketMessagesInitArgs {
             return Err(WebSocketMessagesError::CannotCreate(args));
         };
 
-        let expected_num_args = 6;
+        let expected_num_args = 5;
         if args.len() != expected_num_args {
             return Err(WebSocketMessagesError::NotEnoughArgs {
                 got: args.len(),
@@ -73,23 +56,29 @@ impl TryFrom<Vec<String>> for WebSocketMessagesInitArgs {
                 args,
             });
         }
+        let tail_length_arg = args[2].clone();
+        let tail_length = tail_length_arg
+            .parse::<u64>()
+            .map_err(|_| WebSocketMessagesError::ParseInt(tail_length_arg))?;
+
+        let confirmations_arg = args[3].clone();
+        let confirmations = confirmations_arg
+            .parse::<u64>()
+            .map_err(|_| WebSocketMessagesError::ParseInt(confirmations_arg))?;
+
+        let mcid_arg = args[4].clone();
+        let mcid = MetadataChainId::from_str(&mcid_arg).map_err(|e| {
+            error!("{e}");
+            WebSocketMessagesError::ParseMetadataChainId(mcid_arg)
+        })?;
 
         Ok(Self {
-            native_validate: matches!(args[0].as_ref(), "true"),
-            native_chain_id: EthChainId::from_str(&args[1])
-                .map_err(|_| WebSocketMessagesError::UnrecognizedEthChainId(args[3].clone()))?,
-            native_confirmations: args[2]
-                .parse::<Confirmations>()
-                .map_err(|_| WebSocketMessagesError::ParseInt(args[4].clone()))?,
-            native_block: None,
-
-            host_validate: matches!(args[3].as_ref(), "true"),
-            host_chain_id: EthChainId::from_str(&args[4])
-                .map_err(|_| WebSocketMessagesError::UnrecognizedEthChainId(args[5].clone()))?,
-            host_confirmations: args[5]
-                .parse::<Confirmations>()
-                .map_err(|_| WebSocketMessagesError::ParseInt(args[7].clone()))?,
-            host_block: None,
+            validate: matches!(args[0].as_ref(), "true"),
+            hub: convert_hex_to_eth_address(&args[1])?,
+            tail_length,
+            confirmations,
+            mcid,
+            sub_mat: None,
         })
     }
 }
@@ -100,7 +89,14 @@ mod tests {
 
     #[test]
     fn should_get_init_message_from_string_of_args() {
-        let args = vec!["init", "true", "EthereumMainnet", "10", "true", "BscMainnet", "100"];
+        let args = vec![
+            "init",
+            "true",
+            "0x4838B106FCe9647Bdf1E7877BF73cE8B0BAD5f97",
+            "50",
+            "10",
+            "EthereumMainnet",
+        ];
         let r = WebSocketMessagesEncodable::try_from(args);
         assert!(r.is_ok());
     }

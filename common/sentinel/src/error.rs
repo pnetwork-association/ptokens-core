@@ -1,5 +1,6 @@
 use common::AppError as CommonError;
 use common_chain_ids::EthChainId;
+use common_metadata::MetadataChainIdError;
 use thiserror::Error;
 
 use crate::{BroadcastChannelMessages, BroadcasterMessages, DbKey, EthRpcMessages, SyncerMessages, WebSocketMessages};
@@ -12,6 +13,15 @@ impl From<SentinelError> for CommonError {
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("chain error: {0}")]
+    ChainError(#[from] common_eth::ChainError),
+
+    #[error("{0}")]
+    MetadataChainId(#[from] MetadataChainIdError),
+
+    #[error("chain id not in config: {0}")]
+    ChainIdNotInConfig(EthChainId),
+
     #[error("rustc hex error: {0}")]
     RustCHex(#[from] rustc_hex::FromHexError),
 
