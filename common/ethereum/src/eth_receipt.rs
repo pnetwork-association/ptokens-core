@@ -266,11 +266,11 @@ impl EthReceipt {
     pub fn rlp_encode(&self) -> Result<Bytes> {
         match self.get_receipt_type().unwrap_or(EthReceiptType::Legacy) {
             EthReceiptType::Legacy => {
-                debug!("RLP encoding LEGACY receipt...");
+                trace!("RLP encoding LEGACY receipt...");
                 self.rlp_encode_legacy()
             },
             receipt_type => {
-                debug!("RLP encoding NON LEGACY receipt type: {}", receipt_type);
+                trace!("RLP encoding NON LEGACY receipt type: {}", receipt_type);
                 self.encode_non_legacy(&receipt_type)
             },
         }
@@ -331,8 +331,8 @@ impl EthReceipt {
     }
 
     pub fn get_logs_from_addresses_with_topics(&self, addresses: &[EthAddress], topics: &[EthHash]) -> EthLogs {
-        debug!("Getting logs from addresses: {:?}", addresses);
-        debug!("Getting logs with topics: {:?}", topics);
+        debug!("getting logs from addresses: {:?}", addresses);
+        debug!("getting logs with topics: {:?}", topics);
         EthLogs::new(
             topics
                 .iter()
