@@ -3,13 +3,15 @@ use std::{result::Result, time::SystemTime};
 use common::BridgeSide;
 use common_chain_ids::EthChainId;
 use common_eth::{EthSubmissionMaterial, EthSubmissionMaterials};
+use common_metadata::MetadataChainId;
+use derive_getters::Getters;
 use ethereum_types::{Address as EthAddress, U256};
 use jsonrpsee::ws_client::WsClient;
 use serde_json::Value as Json;
 
 use crate::{endpoints::Endpoints, Bpm, ConfigT, ProcessorOutput, SentinelConfig, SentinelError};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Getters)]
 pub struct Batch {
     bpm: Bpm,
     confs: u64,
@@ -19,6 +21,7 @@ pub struct Batch {
     sleep_duration: u64,
     batch_duration: u64,
     endpoints: Endpoints,
+    mcid: MetadataChainId,
     pnetwork_hub: EthAddress,
     batching_is_disabled: bool,
     single_submissions_flag: bool,
@@ -39,6 +42,7 @@ impl Default for Batch {
             batching_is_disabled: false,
             single_submissions_flag: false,
             endpoints: Endpoints::default(),
+            mcid: MetadataChainId::default(),
             pnetwork_hub: EthAddress::default(),
             batch: EthSubmissionMaterials::default(),
             last_submitted_timestamp: SystemTime::now(),
@@ -57,14 +61,6 @@ impl Batch {
 
     pub fn get_confs(&self) -> u64 {
         self.confs
-    }
-
-    pub fn batch_size(&self) -> u64 {
-        self.batch_size
-    }
-
-    pub fn side(&self) -> BridgeSide {
-        self.side
     }
 
     pub fn increment_block_num(&mut self) {
@@ -121,10 +117,6 @@ impl Batch {
         self.sleep_duration
     }
 
-    pub fn endpoints(&self) -> Endpoints {
-        self.endpoints.clone()
-    }
-
     pub fn new_from_config(side: BridgeSide, config: &SentinelConfig) -> Result<Self, SentinelError> {
         let is_native = side.is_native();
         info!(
@@ -133,6 +125,7 @@ impl Batch {
         );
         let res = Self {
             side,
+            mcid: MetadataChainId::from(&config.chain_id(&side)),
             sleep_duration: if is_native {
                 config.native().get_sleep_duration()
             } else {
