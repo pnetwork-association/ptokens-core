@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
 use common::BridgeSide;
-use common_chain_ids::EthChainId;
 use common_eth::EthSubmissionMaterial;
+use common_metadata::MetadataChainId;
 use derive_getters::{Dissolve, Getters};
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +11,8 @@ use crate::WebSocketMessagesError;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Getters, Dissolve)]
 pub struct WebSocketMessagesResetChainArgs {
     confs: u64,
-    chain_id: EthChainId,
+    validate: bool,
+    mcid: MetadataChainId,
     use_latest_block: bool,
     block_num: Option<u64>,
     side: Option<BridgeSide>,
@@ -39,7 +40,7 @@ impl TryFrom<Vec<String>> for WebSocketMessagesResetChainArgs {
             return Err(WebSocketMessagesError::CannotCreate(args));
         };
 
-        let expected_num_args = 3;
+        let expected_num_args = 4;
         if args.len() != expected_num_args {
             return Err(WebSocketMessagesError::NotEnoughArgs {
                 got: args.len(),
@@ -50,7 +51,7 @@ impl TryFrom<Vec<String>> for WebSocketMessagesResetChainArgs {
 
         let mut arg = args[0].clone();
 
-        let chain_id = EthChainId::from_str(&arg).map_err(|_| WebSocketMessagesError::UnrecognizedEthChainId(arg))?;
+        let mcid = MetadataChainId::from_str(&arg).map_err(|_| WebSocketMessagesError::UnrecognizedChainId(arg))?;
 
         arg = args[1].clone();
         let use_latest_block = matches!(arg.to_lowercase().as_ref(), "latest");
@@ -65,16 +66,19 @@ impl TryFrom<Vec<String>> for WebSocketMessagesResetChainArgs {
         arg = args[2].clone();
         let confs = arg.parse::<u64>().map_err(|_| WebSocketMessagesError::ParseInt(arg))?;
 
+        let validate = matches!(args[3].as_ref(), "true");
+
         let block = None;
         let side = None;
 
         Ok(Self {
-            chain_id,
+            mcid,
             use_latest_block,
             block_num,
             block,
             side,
             confs,
+            validate,
         })
     }
 }

@@ -39,11 +39,11 @@ pub enum WebSocketMessagesError {
     #[error("could not parse u64 from {0}")]
     ParseInt(String),
 
-    #[error("unrecognized chain id {0}")]
-    UnrecognizedEthChainId(String),
+    #[error("cannot parse metadata chain id from: '{0}'")]
+    UnrecognizedChainId(String),
 
     #[error("unsupported chain id {0}")]
-    Unsupported(EthChainId),
+    Unsupported(MetadataChainId),
 
     #[error("timed out - strongbox took longer than {0}ms to respond")]
     Timedout(u64),

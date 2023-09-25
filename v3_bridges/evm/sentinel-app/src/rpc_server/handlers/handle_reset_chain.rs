@@ -1,4 +1,5 @@
 use common::BridgeSide;
+use common_metadata::MetadataChainId;
 use common_sentinel::{
     EthRpcMessages,
     SentinelConfig,
@@ -27,13 +28,14 @@ impl RpcCall {
         Self::check_core_is_connected(core_cxn)?;
         let mut args = WebSocketMessagesResetChainArgs::try_from(Self::create_args("reset", params))?;
 
-        let side = if args.chain_id() == &config.chain_id(&BridgeSide::Host) {
+        let mcid = *args.mcid();
+        let side = if mcid == MetadataChainId::from(&config.chain_id(&BridgeSide::Host)) {
             BridgeSide::Host
-        } else if args.chain_id() == &config.chain_id(&BridgeSide::Native) {
+        } else if mcid == MetadataChainId::from(&config.chain_id(&BridgeSide::Native)) {
             BridgeSide::Native
         } else {
             return Ok(WebSocketMessagesEncodable::Error(WebSocketMessagesError::Unsupported(
-                args.chain_id().clone(),
+                mcid,
             )));
         };
 
@@ -49,10 +51,7 @@ impl RpcCall {
             responder.await??
         };
 
-        debug!(
-            "getting sub mat for block num {block_num} on side {side} for cid {}",
-            args.chain_id()
-        );
+        debug!("getting sub mat for block num {block_num} on side {side} for cid {mcid}");
 
         let (eth_rpc_msg, responder) = EthRpcMessages::get_sub_mat_msg(side, block_num);
         if side.is_host() {

@@ -111,7 +111,7 @@ impl Chain {
         self.chain.get(*self.confirmations() as usize - 1)
     }
 
-    fn block_num(m: &EthSubMat) -> Result<u64, ChainError> {
+    pub fn block_num(m: &EthSubMat) -> Result<u64, ChainError> {
         m.get_block_number().map(|n| n.as_u64()).map_err(|e| {
             error!("{e}");
             ChainError::NoBlockNumber
@@ -434,6 +434,7 @@ impl Chain {
         sub_mat: EthSubMat,
         mcid: MetadataChainId,
         validate: bool,
+        confirmations: u64,
     ) -> Result<(), ChainError> {
         debug!("resetting chain...");
         let n = Self::block_num(&sub_mat)?;
@@ -473,6 +474,7 @@ impl Chain {
             })?;
 
         chain.offset = n;
+        chain.confirmations = confirmations;
         chain.chain = VecDeque::from([vec![reset_block_data]]);
         chain.save_in_db(db_utils)
     }
@@ -809,7 +811,8 @@ mod tests {
         }
 
         // NOTE: Test a chain reset
-        Chain::reset(&db_utils, sub_mats[0].clone(), mcid, true).unwrap();
+        let new_confs = 6;
+        Chain::reset(&db_utils, sub_mats[0].clone(), mcid, true, new_confs).unwrap();
         chain = Chain::get(&db_utils, mcid).unwrap();
         assert_eq!(chain.offset, Chain::block_num(&sub_mats[0]).unwrap());
         assert_eq!(chain.chain_len(), 1);
@@ -818,5 +821,6 @@ mod tests {
             sub_mats[0].get_block_number().unwrap().as_u64()
         );
         assert!(matches!(chain.get_canonical_sub_mat(&db_utils), Ok(None)));
+        assert_eq!(*chain.confirmations(), new_confs);
     }
 }

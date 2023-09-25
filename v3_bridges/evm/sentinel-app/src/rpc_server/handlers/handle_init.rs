@@ -30,16 +30,18 @@ impl RpcCall {
         let mut args = WebSocketMessagesInitArgs::try_from(params)?;
         // NOTE: Alas we're still stuck with host and native here so we need to figure out which
         // syncer to call.
-        let eth_chain_id_from_args = args.mcid().to_eth_chain_id()?;
+        let mcid = *args.mcid();
+        let eth_chain_id_from_args = mcid.to_eth_chain_id()?;
 
         let h_eth_chain_id_from_config = config.host().chain_id();
         let n_eth_chain_id_from_config = config.native().chain_id();
+
         let use_native = if eth_chain_id_from_args == n_eth_chain_id_from_config {
             Result::<bool, SentinelError>::Ok(true)
         } else if eth_chain_id_from_args == h_eth_chain_id_from_config {
             Result::<bool, SentinelError>::Ok(false)
         } else {
-            Err(WebSocketMessagesError::Unsupported(eth_chain_id_from_args).into())
+            Err(WebSocketMessagesError::Unsupported(mcid).into())
         }?;
 
         // NOTE: Now we can get the latest block number for the correct chain from the ETH RPC
