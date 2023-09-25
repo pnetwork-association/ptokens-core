@@ -3,6 +3,7 @@ use std::{result::Result, str::FromStr};
 use common::BridgeSide;
 use common_chain_ids::EthChainId;
 use common_eth::convert_hex_to_eth_address;
+use common_metadata::MetadataChainId;
 use ethereum_types::Address as EthAddress;
 use serde::Deserialize;
 
@@ -87,5 +88,9 @@ impl ConfigT for NativeConfig {
 
     fn chain_id(&self) -> EthChainId {
         self.eth_chain_id.clone()
+    }
+
+    fn metadata_chain_id(&self) -> MetadataChainId {
+        MetadataChainId::from(&self.chain_id())
     }
 }

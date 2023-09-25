@@ -1,5 +1,6 @@
 use common::BridgeSide;
 use common_chain_ids::EthChainId;
+use common_metadata::MetadataChainId;
 use ethereum_types::Address as EthAddress;
 
 pub trait ConfigT {
@@ -9,4 +10,5 @@ pub trait ConfigT {
     fn chain_id(&self) -> EthChainId;
     fn gas_price(&self) -> Option<u64>;
     fn pnetwork_hub(&self) -> EthAddress;
+    fn metadata_chain_id(&self) -> MetadataChainId;
 }
