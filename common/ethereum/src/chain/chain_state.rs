@@ -1,11 +1,12 @@
 use std::fmt;
 
+use common::DatabaseInterface;
 use common_metadata::MetadataChainId;
 use ethereum_types::{Address as EthAddress, H256 as EthHash};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 
-use super::{Chain, ChainError};
+use super::{Chain, ChainDbUtils, ChainError};
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -19,6 +20,16 @@ pub struct ChainState {
     tail_block_hash: EthHash,
     canon_block_num: u64,
     canon_block_hash: EthHash,
+}
+
+impl ChainState {
+    pub fn new<D: DatabaseInterface>(
+        chain_db_utils: &ChainDbUtils<D>,
+        mcid: &MetadataChainId,
+    ) -> Result<Self, ChainError> {
+        let c = Chain::get(chain_db_utils, *mcid)?;
+        ChainState::try_from(&c)
+    }
 }
 
 impl From<&ChainState> for Json {
