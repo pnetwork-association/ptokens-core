@@ -46,7 +46,7 @@ pub fn process_single<D: DatabaseInterface>(
         return Ok(UserOps::empty());
     }
 
-    let canonical_sub_mat = maybe_canon_block.expect("this will not fail due to above check");
+    let canonical_sub_mat = maybe_canon_block.expect("this not to fail due to above check");
     if canonical_sub_mat.receipts.is_empty() {
         debug!("{mcid} canon block had no receipts to process");
         if use_db_tx {

@@ -1,6 +1,6 @@
 use std::result::Result;
 
-use common_chain_ids::EthChainId;
+use common_metadata::MetadataChainId;
 use common_sentinel::{
     Batch,
     BroadcastChannelMessages,
@@ -139,7 +139,7 @@ async fn main_loop(
 }
 
 async fn broadcast_channel_loop(
-    chain_id: EthChainId,
+    mcid: MetadataChainId,
     mut broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
 ) -> Result<SyncerBroadcastChannelMessages, SentinelError> {
     // NOTE: This loops continuously listening to the broadcasting channel, and only returns if we
@@ -147,14 +147,14 @@ async fn broadcast_channel_loop(
     // tokios::select, so then the main_loop can continue doing it's work.
     'broadcast_channel_loop: loop {
         match broadcast_channel_rx.recv().await {
-            Ok(BroadcastChannelMessages::Syncer(cid, msg)) => {
+            Ok(BroadcastChannelMessages::Syncer(msg_mcid, msg)) => {
                 // NOTE: We have a syncer message...
-                if cid == chain_id {
+                if mcid == msg_mcid {
                     // ...and it's for this syncer so we return it
                     break 'broadcast_channel_loop Ok(msg);
                 } else {
                     // ...but it's not for this syncer so we go back to listening on the receiver
-                    debug!("syncer message: '{msg}' for cid: '{cid}' ignored");
+                    debug!("syncer message: '{msg}' for mcid: '{mcid}' ignored");
                     continue 'broadcast_channel_loop;
                 }
             },
@@ -170,26 +170,21 @@ pub async fn syncer_loop(
     config: SentinelConfig,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     websocket_tx: MpscTx<WebSocketMessages>,
-    disable: bool,
     broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
 ) -> Result<(), SentinelError> {
     batch.check_endpoint().await?;
 
-    let side = batch.side();
-    let chain_id = config.chain_id(side);
-    let name = format!("{side} syncer");
-    if disable {
-        warn!("{name} disabled!")
-    } else {
-        info!("starting {name}...")
-    };
+    let mcid = *batch.mcid();
+    let name = format!("{mcid} syncer");
+
     let mut core_is_connected = false;
-    let mut syncer_is_enabled = !disable;
-    warn!("{name} not syncing yet due to no core connection");
+    let mut syncer_is_enabled = false;
+
+    warn!("{name} not syncing yet due to no core connection and being disabled");
 
     'syncer_loop: loop {
         tokio::select! {
-            r = broadcast_channel_loop(chain_id.clone(), broadcast_channel_tx.subscribe()) => {
+            r = broadcast_channel_loop(mcid, broadcast_channel_tx.subscribe()) => {
                 match r {
                     Ok(msg) => {
                         let note = format!("(core is currently {}connected)", if core_is_connected { "" } else { "not "});
@@ -241,7 +236,7 @@ pub async fn syncer_loop(
                 }
             },
             _ = tokio::signal::ctrl_c() => {
-                warn!("{side} syncer shutting down...");
+                warn!("{name} shutting down...");
                 break 'syncer_loop Err(SentinelError::SigInt(name))
             },
             else => {

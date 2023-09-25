@@ -29,8 +29,6 @@ const MAX_CHANNEL_CAPACITY: usize = 1337;
 
 pub async fn start_sentinel(
     config: &SentinelConfig,
-    disable_native_syncer: bool,
-    disable_host_syncer: bool,
     disable_broadcaster: bool,
     disable_rpc_server: bool,
     disable_ws_server: bool,
@@ -54,7 +52,6 @@ pub async fn start_sentinel(
         config.clone(),
         native_eth_rpc_tx.clone(),
         websocket_tx.clone(),
-        disable_native_syncer,
         broadcast_channel_tx.clone(),
     ));
     let host_syncer_thread = tokio::spawn(syncer_loop(
@@ -62,7 +59,6 @@ pub async fn start_sentinel(
         config.clone(),
         host_eth_rpc_tx.clone(),
         websocket_tx.clone(),
-        disable_host_syncer,
         broadcast_channel_tx.clone(),
     ));
 

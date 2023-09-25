@@ -12,7 +12,7 @@ use axum::{
     TypedHeader,
 };
 use common::BridgeSide;
-use common_chain_ids::EthChainId;
+use common_metadata::MetadataChainId;
 use common_sentinel::{
     BroadcastChannelMessages,
     RpcServerBroadcastChannelMessages,
@@ -39,7 +39,7 @@ async fn handle_socket(
     who: SocketAddr,
     websocket_rx: Arc<Mutex<WebSocketRx>>,
     broadcast_channel_tx: BroadcastChannelTx,
-    cids: Vec<EthChainId>,
+    mcids: Vec<MetadataChainId>,
 ) -> Result<(), SentinelError> {
     if socket.send(Message::Ping(vec![1, 3, 3, 7])).await.is_ok() {
         debug!("pinged {}...", who);
@@ -72,10 +72,10 @@ async fn handle_socket(
     // NOTE: Trying the lock here limits us to one active connection.
     let mut rx = websocket_rx.try_lock()?;
 
-    for cid in cids.iter().cloned() {
+    for mcid in mcids.iter().cloned() {
         // NOTE: Tell the various components that a core is connected.
         broadcast_channel_tx.send(BroadcastChannelMessages::Syncer(
-            cid,
+            mcid,
             SyncerBroadcastChannelMessages::CoreConnected,
         ))?;
         broadcast_channel_tx.send(BroadcastChannelMessages::RpcServer(
@@ -144,10 +144,10 @@ async fn handle_socket(
         }
     }
 
-    for cid in cids {
+    for mcid in mcids {
         // NOTE: Tell the various components that a core is no longer connected.
         broadcast_channel_tx.send(BroadcastChannelMessages::Syncer(
-            cid,
+            mcid,
             SyncerBroadcastChannelMessages::CoreDisconnected,
         ))?;
         broadcast_channel_tx.send(BroadcastChannelMessages::RpcServer(
@@ -161,15 +161,15 @@ async fn handle_socket(
 
 #[derive(Clone)]
 struct AppState {
-    cids: Vec<EthChainId>,
+    mcids: Vec<MetadataChainId>,
     websocket_rx: Arc<Mutex<WebSocketRx>>,
     broadcast_channel_tx: BroadcastChannelTx,
 }
 
 impl AppState {
-    fn new(websocket_rx: WebSocketRx, broadcast_channel_tx: BroadcastChannelTx, cids: Vec<EthChainId>) -> Self {
+    fn new(websocket_rx: WebSocketRx, broadcast_channel_tx: BroadcastChannelTx, mcids: Vec<MetadataChainId>) -> Self {
         Self {
-            cids,
+            mcids,
             broadcast_channel_tx,
             websocket_rx: Arc::new(Mutex::new(websocket_rx)),
         }
@@ -189,7 +189,15 @@ async fn ws_handler(
     };
     debug!("`{user_agent}` at {addr} connected.");
     ws.on_upgrade(move |socket| async move {
-        match handle_socket(socket, addr, state.websocket_rx, state.broadcast_channel_tx, state.cids).await {
+        match handle_socket(
+            socket,
+            addr,
+            state.websocket_rx,
+            state.broadcast_channel_tx,
+            state.mcids,
+        )
+        .await
+        {
             // FIXME what to return from here?
             Ok(_) => (),
             Err(e) => {
@@ -210,8 +218,8 @@ async fn start_ws_server(
         .fallback_service(ServeDir::new(assets_dir).append_index_html_on_directories(true))
         .route("/ws", get(ws_handler))
         .with_state(AppState::new(websocket_rx, broadcast_channel_tx, vec![
-            config.chain_id(&BridgeSide::Native),
-            config.chain_id(&BridgeSide::Host),
+            MetadataChainId::from(&config.chain_id(&BridgeSide::Native)),
+            MetadataChainId::from(&config.chain_id(&BridgeSide::Host)),
         ]));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000)); // FIXME make configurable

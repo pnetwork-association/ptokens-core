@@ -26,16 +26,8 @@ pub struct Cli {
     config_path: Option<String>,
 
     /// Disable the ws server
-    #[arg(short = 'v', long)]
-    disable_ws_server: bool,
-
-    /// Disable the native syncer
-    #[arg(short = 'w', long)]
-    disable_native_syncer: bool,
-
-    /// Disable the host syncer
     #[arg(short = 'x', long)]
-    disable_host_syncer: bool,
+    disable_ws_server: bool,
 
     /// Disable the broadcaster
     #[arg(short = 'y', long)]
@@ -67,8 +59,6 @@ async fn start() -> Result<String, SentinelError> {
 
     let r = start_sentinel::start_sentinel(
         &config,
-        cli_args.disable_native_syncer,
-        cli_args.disable_host_syncer,
         cli_args.disable_broadcaster,
         cli_args.disable_rpc_server,
         cli_args.disable_ws_server,

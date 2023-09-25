@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use common_chain_ids::EthChainId;
+use common_metadata::MetadataChainId;
 use common_sentinel::{BroadcastChannelMessages, SentinelError, SyncerBroadcastChannelMessages};
 use serde_json::{json, Value as Json};
 
@@ -19,15 +19,15 @@ impl RpcCall {
         debug!("handling stop syncer rpc call...");
         Self::check_core_is_connected(core_cxn)?;
         let checked_params = Self::check_params(params, 1)?;
-        let cid = EthChainId::from_str(&checked_params[0])?;
+        let mcid = MetadataChainId::from_str(&checked_params[0])?;
         let syncer_msg = if stop {
             SyncerBroadcastChannelMessages::Stop
         } else {
             SyncerBroadcastChannelMessages::Start
         };
         let m = if stop { "stop" } else { "start" };
-        let json = json!({"status": format!("{m} message sent to {cid} syncer")});
-        let broadcast_channel_msg = BroadcastChannelMessages::Syncer(cid, syncer_msg);
+        let json = json!({"status": format!("{m} message sent to {mcid} syncer")});
+        let broadcast_channel_msg = BroadcastChannelMessages::Syncer(mcid, syncer_msg);
         broadcast_channel_tx.send(broadcast_channel_msg)?;
         Ok(json)
     }
