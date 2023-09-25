@@ -15,7 +15,7 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum MetadataChainIdError {
     #[error("cannot convert `MetadataChainId`: `{0}` to `{1}`")]
-    CannotConvert(MetadataChainId, String),
+    CannotConvertTo(MetadataChainId, String),
 }
 
 use crate::MetadataProtocolId;
@@ -107,6 +107,26 @@ impl FromStr for MetadataChainId {
     }
 }
 
+impl From<&EthChainId> for MetadataChainId {
+    fn from(ecid: &EthChainId) -> Self {
+        match ecid {
+            EthChainId::Goerli => Self::EthereumGoerli,
+            EthChainId::Sepolia => Self::EthereumSepolia,
+            EthChainId::Mainnet => Self::EthereumMainnet,
+            EthChainId::Rinkeby => Self::EthereumRinkeby,
+            EthChainId::Ropsten => Self::EthereumRopsten,
+            EthChainId::BscMainnet => Self::BscMainnet,
+            EthChainId::XDaiMainnet => Self::XDaiMainnet,
+            EthChainId::InterimChain => Self::InterimChain,
+            EthChainId::FantomMainnet => Self::FantomMainnet,
+            EthChainId::PolygonMainnet => Self::PolygonMainnet,
+            EthChainId::ArbitrumMainnet => Self::ArbitrumMainnet,
+            EthChainId::LuxochainMainnet => Self::LuxochainMainnet,
+            EthChainId::Unknown(..) => Self::EthUnknown,
+        }
+    }
+}
+
 impl MetadataChainId {
     pub fn to_protocol_id(self) -> MetadataProtocolId {
         match self {
@@ -153,7 +173,7 @@ impl MetadataChainId {
             Self::PolygonMainnet => Ok(EthChainId::PolygonMainnet),
             // NOTE: Important -> this catch all arm means that any NEW evm based metadata chain
             // ids will fall into this arm, unless they're explicitly added above.
-            other => Err(MetadataChainIdError::CannotConvert(*other, "EthChainId".into())),
+            other => Err(MetadataChainIdError::CannotConvertTo(*other, "EthChainId".into())),
         }
     }
 
