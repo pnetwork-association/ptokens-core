@@ -1,4 +1,4 @@
-use common_chain_ids::EthChainId;
+use common_metadata::MetadataChainId;
 use derive_more::{Constructor, Deref};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
@@ -9,11 +9,11 @@ use crate::{SentinelError, WebSocketMessagesEncodable};
 pub struct LatestBlockNumbers(Vec<LatestBlockNumber>);
 
 #[derive(Clone, Debug, Deref, Constructor, Serialize, Deserialize)]
-pub struct LatestBlockNumber((EthChainId, u64));
+pub struct LatestBlockNumber((MetadataChainId, u64));
 
 impl LatestBlockNumber {
-    pub fn eth_chain_id(&self) -> &EthChainId {
-        &self.0 .0
+    pub fn mcid(&self) -> MetadataChainId {
+        self.0 .0
     }
 
     pub fn latest_block_number(&self) -> u64 {
@@ -22,16 +22,16 @@ impl LatestBlockNumber {
 }
 
 impl LatestBlockNumbers {
-    pub fn get_for(&self, needle: &EthChainId) -> Result<u64, SentinelError> {
+    pub fn get_for(&self, needle: &MetadataChainId) -> Result<u64, SentinelError> {
         let r = self.iter().fold(None, |mut res, structure| {
-            if structure.eth_chain_id() == needle {
+            if structure.mcid() == *needle {
                 res = Some(structure.latest_block_number());
             }
             res
         });
         match r {
             Some(n) => Ok(n),
-            _ => Err(SentinelError::NoLatestBlockNumber(needle.clone())),
+            _ => Err(SentinelError::NoLatestBlockNumber(*needle)),
         }
     }
 }

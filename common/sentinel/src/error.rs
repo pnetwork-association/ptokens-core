@@ -1,6 +1,6 @@
 use common::AppError as CommonError;
 use common_chain_ids::EthChainId;
-use common_metadata::MetadataChainIdError;
+use common_metadata::{MetadataChainId, MetadataChainIdError};
 use thiserror::Error;
 
 use crate::{BroadcastChannelMessages, BroadcasterMessages, DbKey, EthRpcMessages, SyncerMessages, WebSocketMessages};
@@ -32,7 +32,7 @@ pub enum SentinelError {
     JavaExceptionOccurred,
 
     #[error("no latest block number for chain ID: {0}")]
-    NoLatestBlockNumber(EthChainId),
+    NoLatestBlockNumber(MetadataChainId),
 
     #[error("timed out whilst {0}")]
     Timedout(String),

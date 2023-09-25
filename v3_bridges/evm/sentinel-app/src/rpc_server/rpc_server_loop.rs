@@ -61,10 +61,10 @@ pub(crate) enum RpcCall {
     Put(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     CancelUserOps(RpcId, BroadcasterTx, CoreCxnStatus),
     Delete(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
-    LatestBlockNumbers(RpcId, WebSocketTx, CoreCxnStatus),
     RemoveUserOp(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
+    LatestBlockNumbers(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     GetCoreState(RpcId, Box<SentinelConfig>, WebSocketTx, CoreCxnStatus),
     BroadcasterStartStop(RpcId, BroadcastChannelTx, CoreCxnStatus, bool),
     GetCancellableUserOps(RpcId, Box<SentinelConfig>, WebSocketTx, CoreCxnStatus),
@@ -135,11 +135,11 @@ impl RpcCall {
             "delete" => Self::Delete(r.id, websocket_tx, r.params.clone(), core_cxn),
             "removeUserOp" => Self::RemoveUserOp(r.id, websocket_tx, r.params.clone(), core_cxn),
             "stopSyncer" => Self::StopSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
-            "latestBlockNumbers" | "latest" => Self::LatestBlockNumbers(r.id, websocket_tx, core_cxn),
+            "cancel" | "cancelUserOp" => Self::CancelUserOps(r.id, broadcaster_tx.clone(), core_cxn),
             "startSyncer" => Self::StartSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
             "startBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, true),
             "stopBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, false),
-            "cancel" | "cancelUserOp" => Self::CancelUserOps(r.id, broadcaster_tx.clone(), core_cxn),
+            "latestBlockNumbers" | "latest" => Self::LatestBlockNumbers(r.id, r.params.clone(), websocket_tx, core_cxn),
             "getCoreState" | "getEnclaveState" | "state" => {
                 Self::GetCoreState(r.id, Box::new(config), websocket_tx, core_cxn)
             },
@@ -288,9 +288,10 @@ impl RpcCall {
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
-            Self::LatestBlockNumbers(id, websocket_tx, core_cxn) => {
-                Self::handle_ws_result(id, Self::handle_get_latest_block_numbers(websocket_tx, core_cxn).await)
-            },
+            Self::LatestBlockNumbers(id, params, websocket_tx, core_cxn) => Self::handle_ws_result(
+                id,
+                Self::handle_get_latest_block_numbers(websocket_tx, params, core_cxn).await,
+            ),
             Self::SubmitBlock(id, config, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params, core_cxn) => {
                 Self::handle_ws_result(
                     id,

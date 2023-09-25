@@ -28,7 +28,7 @@ async fn main_loop(
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     websocket_tx: MpscTx<WebSocketMessages>,
 ) -> Result<(), SentinelError> {
-    let side = batch.side();
+    let side = *batch.side();
     let chain_id = config.chain_id(&side);
     let validate = config.is_validating(&side);
     let pnetwork_hub = config.pnetwork_hub(&side);
@@ -37,7 +37,7 @@ async fn main_loop(
 
     let latest_block_numbers = 'latest_block_getter_loop: loop {
         // NOTE: Get the core's latest block numbers for this chain
-        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetLatestBlockNumbers);
+        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetLatestBlockNumbers(vec![*batch.mcid()]));
         websocket_tx.send(msg).await?;
 
         let websocket_response = tokio::select! {
@@ -60,7 +60,7 @@ async fn main_loop(
     };
 
     // NOTE: Set block number to start syncing from in the batch
-    batch.set_block_num(latest_block_numbers.get_for(&chain_id)? + 1);
+    batch.set_block_num(latest_block_numbers.get_for(batch.mcid())? + 1);
 
     'main_loop: loop {
         let (msg, rx) = EthRpcMessages::get_sub_mat_msg(side, batch.get_block_num());
@@ -176,7 +176,7 @@ pub async fn syncer_loop(
     batch.check_endpoint().await?;
 
     let side = batch.side();
-    let chain_id = config.chain_id(&side);
+    let chain_id = config.chain_id(side);
     let name = format!("{side} syncer");
     if disable {
         warn!("{name} disabled!")

@@ -1,20 +1,22 @@
 use common::BridgeSide;
 use common_chain_ids::EthChainId;
+use common_metadata::MetadataChainId;
 use common_sentinel::{
     ConfigT,
     EthRpcMessages,
     LatestBlockNumbers,
     SentinelConfig,
     SentinelError,
+    WebSocketMessages,
     WebSocketMessagesEncodable,
-    WebSocketMessagesError,
 };
 use derive_more::{Constructor, Deref};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use tokio::time::{sleep, Duration};
 
 use crate::rpc_server::{
-    constants::{EthRpcTx, WebSocketTx},
+    constants::{EthRpcTx, WebSocketTx, STRONGBOX_TIMEOUT_MS},
     RpcCall,
 };
 
@@ -26,16 +28,31 @@ impl RpcCall {
         native_eth_rpc_tx: EthRpcTx,
         core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        // NOTE: The following will chekc core state for us...
-        let latest_block_numbers = match Self::handle_get_latest_block_numbers(websocket_tx, core_cxn).await {
-            Ok(WebSocketMessagesEncodable::Success(j)) => Ok(serde_json::from_value::<LatestBlockNumbers>(j)?),
-            r => Err(WebSocketMessagesError::UnexpectedResponse(format!("{r:?}"))),
-        }?;
+        Self::check_core_is_connected(core_cxn)?;
 
+        // FIXME eventually this will have to work with one or more chains
         let h_cid = config.host().chain_id();
         let n_cid = config.native().chain_id();
-        let h_core_latest_block_num = latest_block_numbers.get_for(&h_cid)?;
-        let n_core_latest_block_num = latest_block_numbers.get_for(&n_cid)?;
+        let h_mcid = MetadataChainId::from(&h_cid);
+        let n_mcid = MetadataChainId::from(&n_cid);
+
+        let mcids = vec![h_mcid, n_mcid];
+
+        // NOTE: The following will check core state for us...
+        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetLatestBlockNumbers(mcids));
+        websocket_tx.send(msg).await?;
+
+        let core_latest_block_numbers = LatestBlockNumbers::try_from(tokio::select! {
+            response = rx => response?,
+            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+                let m = "getting latest block numbers";
+                error!("timed out whilst {m}");
+                Err(SentinelError::Timedout(m.into()))
+            }
+        }?)?;
+
+        let h_core_latest_block_num = core_latest_block_numbers.get_for(&h_mcid)?;
+        let n_core_latest_block_num = core_latest_block_numbers.get_for(&n_mcid)?;
 
         let (h_msg, h_rx) = EthRpcMessages::get_latest_block_num_msg(BridgeSide::Host);
         let (n_msg, n_rx) = EthRpcMessages::get_latest_block_num_msg(BridgeSide::Native);

@@ -34,8 +34,10 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
         WebSocketMessagesEncodable::Submit(args) => super::handlers::submit_blocks(*args.clone(), state),
         WebSocketMessagesEncodable::ResetChain(args) => super::handlers::reset_chain(*args.clone(), state),
         WebSocketMessagesEncodable::RemoveUserOp(uid) => super::handlers::remove_user_op(uid.clone(), state),
-        WebSocketMessagesEncodable::GetLatestBlockNumbers => super::handlers::get_latest_block_numbers(state),
         WebSocketMessagesEncodable::GetCoreState(mcids) => super::handlers::get_core_state(mcids.clone(), state),
+        WebSocketMessagesEncodable::GetLatestBlockNumbers(mcids) => {
+            super::handlers::get_latest_block_numbers(mcids.clone(), state)
+        },
         WebSocketMessagesEncodable::GetUserOpCancellationSiganture(user_op) => {
             super::handlers::get_user_op_cancellation_signature(*user_op.clone(), state)
         },

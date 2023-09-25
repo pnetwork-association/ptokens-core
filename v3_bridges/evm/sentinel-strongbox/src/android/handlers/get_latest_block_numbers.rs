@@ -1,24 +1,28 @@
-use common_eth::{EthDbUtilsExt, HostDbUtils, NativeDbUtils};
+use common_eth::{Chain, ChainDbUtils, ChainError};
+use common_metadata::MetadataChainId;
 use common_sentinel::{LatestBlockNumber, LatestBlockNumbers, SentinelError, WebSocketMessagesEncodable};
 use serde_json::json;
 
 use crate::android::State;
 
-pub fn get_latest_block_numbers(state: State) -> Result<State, SentinelError> {
-    let h_db_utils = HostDbUtils::new(state.db());
-    let n_db_utils = NativeDbUtils::new(state.db());
+pub fn get_latest_block_numbers(mcids: Vec<MetadataChainId>, state: State) -> Result<State, SentinelError> {
+    let chain_db_utils = ChainDbUtils::new(state.db());
 
-    let r = LatestBlockNumbers::new(vec![
-        LatestBlockNumber::new((
-            h_db_utils.get_eth_chain_id_from_db()?,
-            h_db_utils.get_latest_eth_block_number()? as u64,
-        )),
-        LatestBlockNumber::new((
-            n_db_utils.get_eth_chain_id_from_db()?,
-            n_db_utils.get_latest_eth_block_number()? as u64,
-        )),
-    ]);
+    let chains = mcids
+        .iter()
+        .map(|mcid| Chain::get(&chain_db_utils, *mcid))
+        .collect::<Result<Vec<Chain>, ChainError>>()?;
 
-    let r = WebSocketMessagesEncodable::Success(json!(r));
+    let latest_block_nums = chains.iter().map(|chain| *chain.offset()).collect::<Vec<u64>>();
+
+    let nums = LatestBlockNumbers::new(
+        latest_block_nums
+            .iter()
+            .enumerate()
+            .map(|(i, n)| LatestBlockNumber::new((mcids[i], *n)))
+            .collect::<Vec<LatestBlockNumber>>(),
+    );
+
+    let r = WebSocketMessagesEncodable::Success(json!(nums));
     Ok(state.add_response(r))
 }

@@ -1,8 +1,8 @@
 use std::{fmt, str::FromStr};
 
 use base64::{engine::general_purpose, Engine};
-use serde::{Deserialize, Serialize};
 use common_metadata::MetadataChainId;
+use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 
 use super::WebSocketMessagesEncodableDbOps;
@@ -22,7 +22,6 @@ pub enum WebSocketMessagesEncodable {
     GetUserOps,
     GetUserOpList,
     Success(Json),
-    GetLatestBlockNumbers,
     GetCancellableUserOps(u64),
     RemoveUserOp(UserOpUniqueId),
     Error(WebSocketMessagesError),
@@ -30,6 +29,7 @@ pub enum WebSocketMessagesEncodable {
     DbOps(WebSocketMessagesEncodableDbOps),
     Submit(Box<WebSocketMessagesSubmitArgs>),
     Initialize(Box<WebSocketMessagesInitArgs>),
+    GetLatestBlockNumbers(Vec<MetadataChainId>),
     GetUserOpCancellationSiganture(Box<UserOp>),
     ResetChain(Box<WebSocketMessagesResetChainArgs>),
 }
@@ -73,8 +73,8 @@ impl fmt::Display for WebSocketMessagesEncodable {
             Self::GetUserOpList => "GetUserOpList".to_string(),
             Self::GetCoreState(..) => "GetCoreState".to_string(),
             Self::RemoveUserOp(_) => "RemoveUserOp".to_string(),
-            Self::GetLatestBlockNumbers => "GetLatestBlockNumbers".to_string(),
             Self::GetCancellableUserOps(_) => "GetCancellableUserOps".to_string(),
+            Self::GetLatestBlockNumbers(..) => "GetLatestBlockNumbers".to_string(),
             Self::GetUserOpCancellationSiganture(..) => "GetUserOpCancellationSiganture".to_string(),
         };
         write!(f, "{prefix}{s}")
