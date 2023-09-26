@@ -14,6 +14,7 @@ pub struct ChainState {
     pnetwork_hub: EthAddress,
     confirmations: u64,
     chain_id: MetadataChainId,
+    tail_length: u64,
     latest_block_num: u64,
     latest_block_hash: EthHash,
     tail_block_num: u64,
@@ -61,6 +62,7 @@ impl TryFrom<&Chain> for ChainState {
     fn try_from(c: &Chain) -> Result<ChainState, Self::Error> {
         let pnetwork_hub = *c.hub();
         let chain_id = *c.chain_id();
+        let tail_length = *c.tail_length();
         let confirmations = *c.confirmations();
 
         let maybe_latest_block_data = c.get_latest_block_data();
@@ -88,6 +90,7 @@ impl TryFrom<&Chain> for ChainState {
             pnetwork_hub,
             confirmations,
             chain_id,
+            tail_length,
             latest_block_num,
             latest_block_hash,
             tail_block_num,
