@@ -15,6 +15,7 @@ use common::BridgeSide;
 use common_metadata::MetadataChainId;
 use common_sentinel::{
     BroadcastChannelMessages,
+    BroadcasterBroadcastChannelMessages,
     RpcServerBroadcastChannelMessages,
     SentinelConfig,
     SentinelError,
@@ -80,6 +81,9 @@ async fn handle_socket(
         ))?;
         broadcast_channel_tx.send(BroadcastChannelMessages::RpcServer(
             RpcServerBroadcastChannelMessages::CoreConnected,
+        ))?;
+        broadcast_channel_tx.send(BroadcastChannelMessages::Broadcaster(
+            BroadcasterBroadcastChannelMessages::CoreConnected,
         ))?;
     }
 
@@ -152,6 +156,9 @@ async fn handle_socket(
         ))?;
         broadcast_channel_tx.send(BroadcastChannelMessages::RpcServer(
             RpcServerBroadcastChannelMessages::CoreDisconnected,
+        ))?;
+        broadcast_channel_tx.send(BroadcastChannelMessages::Broadcaster(
+            BroadcasterBroadcastChannelMessages::CoreDisconnected,
         ))?;
     }
 
