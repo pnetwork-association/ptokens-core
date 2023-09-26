@@ -1,3 +1,4 @@
+use common_eth::ChainError;
 use common_metadata::MetadataChainId;
 use common_sentinel::{
     process_batch,
@@ -5,6 +6,7 @@ use common_sentinel::{
     ProtocolId,
     SentinelError,
     WebSocketMessagesEncodable,
+    WebSocketMessagesError,
     WebSocketMessagesSubmitArgs,
 };
 use serde_json::json;
@@ -15,7 +17,7 @@ pub fn submit_blocks(args: WebSocketMessagesSubmitArgs, state: State) -> Result<
     let ecid = args.eth_chain_id().clone();
     let mcid = MetadataChainId::from(&ecid);
 
-    let output = process_batch(
+    let result = process_batch(
         state.db(),
         args.pnetwork_hub(),
         args.sub_mat_batch(),
@@ -25,7 +27,18 @@ pub fn submit_blocks(args: WebSocketMessagesSubmitArgs, state: State) -> Result<
         *args.reprocess(),
         *args.dry_run(),
         mcid,
-    )?;
+    );
 
-    Ok(state.add_response(WebSocketMessagesEncodable::Success(json!(output))))
+    let response = match result {
+        Ok(output) => WebSocketMessagesEncodable::Success(json!(output)),
+        Err(SentinelError::ChainError(ChainError::NoParent(e))) => {
+            WebSocketMessagesEncodable::Error(WebSocketMessagesError::NoParent(e))
+        },
+        Err(SentinelError::ChainError(ChainError::BlockAlreadyInDb { num, mcid, hash })) => {
+            WebSocketMessagesEncodable::Error(WebSocketMessagesError::BlockAlreadyInDb { num, mcid, hash })
+        },
+        Err(e) => WebSocketMessagesEncodable::Error(e.into()),
+    };
+
+    Ok(state.add_response(response))
 }

@@ -1,12 +1,14 @@
-use common::{AppError as CommonError, BlockAlreadyInDbError, NoParentError};
+use common::{AppError as CommonError};
 use common_chain_ids::EthChainId;
 use common_metadata::MetadataChainId;
+use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use common_eth::{ChainError, NoParentError};
 
 use crate::SentinelError;
 
-#[derive(Error, Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Error, Debug, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesError {
     #[error("insufficient mcids to get cancellable user ops - got {got}, expected {expected}")]
     InsufficientMcids { got: usize, expected: usize },
@@ -72,14 +74,17 @@ pub enum WebSocketMessagesError {
     #[error("{0}")]
     NoParent(NoParentError),
 
-    #[error("{0}")]
-    BlockAlreadyInDb(BlockAlreadyInDbError),
+    #[error("block {num} with hash {hash} already in db for chain id {mcid}")]
+    BlockAlreadyInDb { num: u64, hash: EthHash, mcid: MetadataChainId },
 
     #[error("unexpected websocket response {0}")]
     UnexpectedResponse(String),
 
     #[error("expected Some(..) arg name {arg_name} in location {location}, but got None")]
     NoneError { arg_name: String, location: String },
+
+    #[error("{0}")]
+    ChainError(ChainError),
 }
 
 impl From<CommonError> for WebSocketMessagesError {
@@ -90,10 +95,16 @@ impl From<CommonError> for WebSocketMessagesError {
 
 impl From<SentinelError> for WebSocketMessagesError {
     fn from(e: SentinelError) -> Self {
+        Self::SentinelError(format!("{e}"))
+    }
+}
+
+impl From<ChainError> for WebSocketMessagesError {
+    fn from(e: ChainError) -> Self {
         match e {
-            SentinelError::NoParent(e) => Self::NoParent(e),
-            SentinelError::BlockAlreadyInDb(e) => Self::BlockAlreadyInDb(e),
-            err => Self::SentinelError(format!("{err}")),
+            ChainError::NoParent(e) => Self::NoParent(e),
+            ChainError::BlockAlreadyInDb { num, mcid, hash } => Self::BlockAlreadyInDb { num, mcid, hash },
+            _ => Self::ChainError(e),
         }
     }
 }

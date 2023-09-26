@@ -18,10 +18,12 @@ impl TryFrom<Vec<String>> for WebSocketMessagesGetCancellableUserOpArgs {
     type Error = WebSocketMessagesError;
 
     fn try_from(args: Vec<String>) -> Result<Self, WebSocketMessagesError> {
-        // NOTE: Example: ["EthereumMainnet", "latest", "10", "false"]
+        // NOTE: We require two chains to check for cancellable user ops.
 
-        if args.is_empty() {
-            return Err(WebSocketMessagesError::CannotCreate(args));
+        let n = 2;
+        let l = args.len();
+        if l < n {
+            return Err(WebSocketMessagesError::InsufficientMcids { got: l, expected: n });
         };
 
         let arg = args[0].clone();

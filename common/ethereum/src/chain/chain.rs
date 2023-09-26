@@ -301,7 +301,7 @@ impl Chain {
         let block_data = self
             .chain
             .get(idx)
-            .ok_or_else(|| ChainError::ExpectedBlockDataAtIndex(idx))?;
+            .ok_or(ChainError::ExpectedBlockDataAtIndex(idx))?;
         let db_keys = block_data
             .iter()
             .map(|d| DbKey::from(self.chain_id(), *d.hash()))
@@ -349,7 +349,7 @@ impl Chain {
                 None => Err(ChainError::FailedToInsert(insertion_index)),
                 Some(existing_block_data) => {
                     if existing_block_data.contains(&block_data) {
-                        Err(ChainError::BlockAlreadyInDb(mcid, *block_data.hash()))
+                        Err(ChainError::BlockAlreadyInDb { mcid, hash: *block_data.hash(), num: *block_data.number() })
                     } else {
                         existing_block_data.push(block_data);
                         Ok(())
@@ -378,7 +378,7 @@ impl Chain {
             let excess_length = self.chain_len() - total_allowable_length;
             let mut block_data_to_delete: Vec<Vec<BlockData>> = vec![];
             for _ in 0..excess_length {
-                let data = self.chain.pop_back().ok_or_else(|| ChainError::ExpectedABlock)?;
+                let data = self.chain.pop_back().ok_or(ChainError::ExpectedABlock)?;
                 block_data_to_delete.push(data);
             }
             // NOTE: Now we must remove those saved blocks from the db
@@ -511,7 +511,7 @@ impl Chain {
             let mut data = self
                 .chain
                 .get(i)
-                .ok_or_else(|| ChainError::ExpectedBlockDataAtIndex(i))?
+                .ok_or(ChainError::ExpectedBlockDataAtIndex(i))?
                 .to_vec();
 
             if i > 0 {

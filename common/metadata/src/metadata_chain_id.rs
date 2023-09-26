@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use strum_macros::EnumIter;
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Eq, PartialEq, Error, Clone, Serialize, Deserialize)]
 pub enum MetadataChainIdError {
     #[error("cannot convert `MetadataChainId`: `{0}` to `{1}`")]
     CannotConvertTo(MetadataChainId, String),

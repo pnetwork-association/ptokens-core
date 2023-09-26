@@ -99,18 +99,17 @@ async fn main_loop(
                         batch.increment_block_num();
                     },
                     Ok(WebSocketMessagesEncodable::Error(WebSocketMessagesError::NoParent(e))) => {
-                        let n = e.block_num;
+                        let n = e.block_num();
                         warn!("{log_prefix} returned no parent err for {n}!");
                         batch.drain();
                         batch.set_block_num(n - 1);
                         batch.set_single_submissions_flag();
                         continue 'main_loop;
                     },
-                    Ok(WebSocketMessagesEncodable::Error(WebSocketMessagesError::BlockAlreadyInDb(e))) => {
-                        let n = e.block_num;
-                        warn!("{log_prefix} block {n} already in the db!");
+                    Ok(WebSocketMessagesEncodable::Error(WebSocketMessagesError::BlockAlreadyInDb { num, .. })) => {
+                        warn!("{log_prefix} block {num} already in the db!");
                         batch.drain();
-                        batch.set_block_num(n + 1);
+                        batch.set_block_num(num + 1);
                         batch.set_single_submissions_flag();
                         continue 'main_loop;
                     },

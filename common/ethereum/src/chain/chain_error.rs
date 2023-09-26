@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Eq, PartialEq, Error, Clone, Serialize, Deserialize)]
 pub enum ChainError {
     #[error("cannot reset chain, got mcid: {got}, expected mcid: {expected}")]
     CannotReset {
@@ -47,10 +47,10 @@ pub enum ChainError {
     ExpectedABlock,
 
     #[error("serde json (in chain) error: {0}")]
-    SerdeJson(#[from] serde_json::Error),
+    SerdeJson(String),
 
-    #[error("block already in db with hash: {1} for chain id: {0}")]
-    BlockAlreadyInDb(MetadataChainId, EthHash),
+    #[error("block {num} already in db with hash: {hash} for chain id: {mcid}")]
+    BlockAlreadyInDb { num: u64, mcid: MetadataChainId, hash: EthHash },
 
     #[error("failed to insert into db: {0}")]
     DbInsert(String),
@@ -83,7 +83,7 @@ pub enum ChainError {
     NoBlockData(u64),
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Constructor, Getters)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Constructor, Getters)]
 pub struct NoParentError {
     block_num: u64,
     message: String,
@@ -93,5 +93,11 @@ pub struct NoParentError {
 impl fmt::Display for NoParentError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", json!(self))
+    }
+}
+
+impl From<serde_json::Error> for ChainError {
+    fn from(e: serde_json::Error) -> ChainError {
+        ChainError::SerdeJson(format!("{e}"))
     }
 }
