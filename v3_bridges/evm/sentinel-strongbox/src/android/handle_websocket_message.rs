@@ -59,8 +59,8 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
         WebSocketMessagesEncodable::DbOps(WebSocketMessagesEncodableDbOps::Delete(k)) => {
             super::handlers::delete(k.clone(), state)
         },
-        WebSocketMessagesEncodable::GetCancellableUserOps(max_delta) => {
-            super::handlers::get_cancellable_user_ops(*max_delta, state)
+        WebSocketMessagesEncodable::GetCancellableUserOps(args) => {
+            super::handlers::get_cancellable_user_ops(*args.clone(), state)
         },
         WebSocketMessagesEncodable::DbOps(WebSocketMessagesEncodableDbOps::Put(k, v)) => {
             super::handlers::put(k.clone(), v.clone(), state)
