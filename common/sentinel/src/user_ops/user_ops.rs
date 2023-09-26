@@ -5,7 +5,6 @@ use common_eth::EthSubmissionMaterial;
 use derive_more::{Constructor, Deref};
 use ethereum_types::{Address as EthAddress, U256};
 use serde::{Deserialize, Serialize};
-use serde_json::Value as Json;
 
 use super::{
     UserOp,
@@ -16,7 +15,7 @@ use super::{
     EXECUTED_USER_OP_TOPIC,
     WITNESSED_USER_OP_TOPIC,
 };
-use crate::{get_utc_timestamp, SentinelError, WebSocketMessagesEncodable};
+use crate::{get_utc_timestamp, SentinelError, WebSocketMessagesEncodable, WebSocketMessagesError};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Deref, Serialize, Deserialize)]
 pub struct UserOps(Vec<UserOp>);
@@ -158,7 +157,13 @@ impl TryFrom<WebSocketMessagesEncodable> for UserOps {
     type Error = SentinelError;
 
     fn try_from(m: WebSocketMessagesEncodable) -> Result<Self, Self::Error> {
-        let j = Json::try_from(m)?;
-        Ok(serde_json::from_value(j)?)
+        match m {
+            WebSocketMessagesEncodable::Success(json) => Ok(serde_json::from_value(json)?),
+            other => Err(WebSocketMessagesError::CannotConvert {
+                from: format!("{other}"),
+                to: "UserOps".to_string(),
+            }
+            .into()),
+        }
     }
 }

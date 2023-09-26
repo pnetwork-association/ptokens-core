@@ -112,6 +112,28 @@ async fn cancel_user_ops(
     native_broadcaster_pk: &EthPrivateKey,
     host_broadcaster_pk: &EthPrivateKey,
 ) -> Result<(), SentinelError> {
+    info!("handling user op cancellation request...");
+
+    let max_delta = config.core().max_cancellable_time_delta();
+    let encodable_msg = WebSocketMessagesEncodable::GetCancellableUserOps(*max_delta);
+    let (msg, rx) = WebSocketMessages::new(encodable_msg);
+    websocket_tx.send(msg).await?;
+    let cancellable_user_ops_response = tokio::select! {
+        response = rx => response?,
+        _ = sleep(Duration::from_secs(*config.core().timeout())) => {
+            let m = "getting cancellable user ops";
+            error!("timed out whilst {m}");
+            Err(SentinelError::Timedout(m.into()))
+        }
+    }?;
+    warn!("get cancellable use ops response: {cancellable_user_ops_response:?}");
+    let cancellable_user_ops = UserOps::try_from(cancellable_user_ops_response)?;
+
+    if cancellable_user_ops.is_empty() {
+        debug!("no user ops to cancel");
+        return Ok(())
+    }
+
     let host_address = host_broadcaster_pk.to_address();
     let native_address = native_broadcaster_pk.to_address();
 
@@ -136,19 +158,6 @@ async fn cancel_user_ops(
     let mut host_balance = host_balance_rx.await??;
     eth_rpc_tx.send(host_balance_msg).await?;
     let mut native_balance = native_balance_rx.await??;
-
-    let max_delta = config.core().max_cancellable_time_delta();
-    let encodable_msg = WebSocketMessagesEncodable::GetCancellableUserOps(*max_delta);
-    let (msg, rx) = WebSocketMessages::new(encodable_msg);
-    websocket_tx.send(msg).await?;
-    let cancellable_user_ops = UserOps::try_from(tokio::select! {
-        response = rx => response?,
-        _ = sleep(Duration::from_secs(*config.core().timeout())) => {
-            let m = "getting cancellable user ops";
-            error!("timed out whilst {m}");
-            Err(SentinelError::Timedout(m.into()))
-        }
-    }?)?;
 
     let err_msg = "error cancelling user op ";
 
@@ -231,7 +240,7 @@ async fn broadcast_channel_loop(
     }
 }
 
-const CANCELLABLE_OPS_CHECK_FREQUENCY: u64 = 120; // FIXME make configurable! Make updatable whilst running too!
+const CANCELLABLE_OPS_CHECK_FREQUENCY: u64 = 10; // FIXME make configurable! Make updatable whilst running too!
 
 async fn cancellation_loop(frequency: u64, broadcaster_tx: MpscTx<BroadcasterMessages>) -> Result<(), SentinelError> {
     // NOTE: This loop runs to send messages to the broadcaster at a configruable frequency to tell
@@ -321,7 +330,7 @@ pub async fn broadcaster_loop(
                         &host_broadcaster_pk,
                     ).await {
                         Ok(_) => {
-                            info!("finished sending user op cancellation txs");
+                            info!("finished handling user op cancellation request");
                         }
                         Err(e) => {
                             error!("{e}");

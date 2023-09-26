@@ -23,8 +23,7 @@ pub fn get_cancellable_user_ops(max_delta: u64, state: State) -> Result<State, S
     )?;
     debug!("cancellable ops: {cancellable_ops}");
 
-    let j = json!({ "cancellable_ops": cancellable_ops });
-    let r = WebSocketMessagesEncodable::Success(j);
+    let r = WebSocketMessagesEncodable::Success(json!(cancellable_ops));
 
     Ok(state.add_response(r))
 }
