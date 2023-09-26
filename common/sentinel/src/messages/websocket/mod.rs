@@ -8,6 +8,7 @@ mod websocket_messages_utils;
 pub use self::{
     websocket_messages::WebSocketMessages,
     websocket_messages_args::{
+        WebSocketMessagesGetCancellableUserOpArgs,
         WebSocketMessagesInitArgs,
         WebSocketMessagesResetChainArgs,
         WebSocketMessagesSubmitArgs,

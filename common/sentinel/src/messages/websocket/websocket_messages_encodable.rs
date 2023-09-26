@@ -11,6 +11,7 @@ use crate::{
     UserOp,
     UserOpUniqueId,
     WebSocketMessagesError,
+    WebSocketMessagesGetCancellableUserOpArgs,
     WebSocketMessagesInitArgs,
     WebSocketMessagesResetChainArgs,
     WebSocketMessagesSubmitArgs,
@@ -22,7 +23,6 @@ pub enum WebSocketMessagesEncodable {
     GetUserOps,
     GetUserOpList,
     Success(Json),
-    GetCancellableUserOps(u64),
     RemoveUserOp(UserOpUniqueId),
     Error(WebSocketMessagesError),
     GetCoreState(Vec<MetadataChainId>),
@@ -32,6 +32,7 @@ pub enum WebSocketMessagesEncodable {
     GetLatestBlockNumbers(Vec<MetadataChainId>),
     GetUserOpCancellationSiganture(Box<UserOp>),
     ResetChain(Box<WebSocketMessagesResetChainArgs>),
+    GetCancellableUserOps(Box<WebSocketMessagesGetCancellableUserOpArgs>),
 }
 
 impl TryFrom<WebSocketMessagesEncodable> for Json {
@@ -117,6 +118,9 @@ impl TryFrom<Vec<String>> for WebSocketMessagesEncodable {
             "init" | "initialize" => Ok(Self::Initialize(Box::new(WebSocketMessagesInitArgs::try_from(
                 args[1..].to_vec(),
             )?))),
+            "getCancellableUserOps" => Ok(Self::GetCancellableUserOps(Box::new(
+                WebSocketMessagesGetCancellableUserOpArgs::try_from(args[1..].to_vec())?,
+            ))),
             "reset" | "resetChain" => Ok(Self::ResetChain(Box::new(WebSocketMessagesResetChainArgs::try_from(
                 args[1..].to_vec(),
             )?))),
