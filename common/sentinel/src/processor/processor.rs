@@ -13,7 +13,7 @@ pub fn process_single<D: DatabaseInterface>(
     sub_mat: EthSubmissionMaterial,
     pnetwork_hub: &EthAddress,
     validate: bool,
-    use_db_tx: bool,
+    _use_db_tx: bool,
     dry_run: bool,
     side: BridgeSide,
     network_id: &Bytes4,
@@ -21,10 +21,14 @@ pub fn process_single<D: DatabaseInterface>(
     chain: &mut Chain,
 ) -> Result<UserOps, SentinelError> {
     let mcid = *chain.chain_id();
+    // FIXE All db tx stuff currently comment out due to the below msg
+    /* // FIXME These are handled in the strongbox core, and this breaks that. Think of a way to
+     * get dry run capabilities back
     if use_db_tx {
         debug!("Starting db tx in {mcid} processor!");
         db.start_transaction()?;
     }
+    */
 
     let chain_db_utils = ChainDbUtils::new(db);
     let n = sub_mat.get_block_number()?;
@@ -40,18 +44,22 @@ pub fn process_single<D: DatabaseInterface>(
     let maybe_canon_block = chain.get_canonical_sub_mat(&chain_db_utils)?;
     if maybe_canon_block.is_none() {
         warn!("there is no canonical block on chain {mcid} yet");
+        /*
         if use_db_tx {
             db.end_transaction()?;
         };
+        */
         return Ok(UserOps::empty());
     }
 
     let canonical_sub_mat = maybe_canon_block.expect("this not to fail due to above check");
     if canonical_sub_mat.receipts.is_empty() {
         debug!("{mcid} canon block had no receipts to process");
+        /*
         if use_db_tx {
             db.end_transaction()?;
         };
+        */
         return Ok(UserOps::empty());
     }
 
@@ -62,10 +70,12 @@ pub fn process_single<D: DatabaseInterface>(
     let mut user_op_list = UserOpList::get(&sentinel_db_utils);
     user_op_list.process_ops(ops.clone(), &sentinel_db_utils)?;
 
+    /*
     if use_db_tx {
         debug!("ending db tx in {mcid} processor!");
         db.end_transaction()?;
     }
+    */
     debug!("finished processing {mcid} block {n}");
 
     Ok(ops)
