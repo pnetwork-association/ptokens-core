@@ -6,6 +6,7 @@ use common_sentinel::{
     BroadcastChannelMessages,
     BroadcasterBroadcastChannelMessages,
     BroadcasterMessages,
+    ConfigT,
     Env,
     EthRpcMessages,
     SentinelConfig,
@@ -16,6 +17,7 @@ use common_sentinel::{
     UserOps,
     WebSocketMessages,
     WebSocketMessagesEncodable,
+    WebSocketMessagesGetCancellableUserOpArgs,
 };
 use ethereum_types::{H256 as EthHash, U256};
 use tokio::{
@@ -115,7 +117,11 @@ async fn cancel_user_ops(
     info!("handling user op cancellation request...");
 
     let max_delta = config.core().max_cancellable_time_delta();
-    let encodable_msg = WebSocketMessagesEncodable::GetCancellableUserOps(*max_delta);
+    let args = WebSocketMessagesGetCancellableUserOpArgs::new(*max_delta, vec![
+        config.native().metadata_chain_id(),
+        config.host().metadata_chain_id(),
+    ]);
+    let encodable_msg = WebSocketMessagesEncodable::GetCancellableUserOps(Box::new(args));
     let (msg, rx) = WebSocketMessages::new(encodable_msg);
     websocket_tx.send(msg).await?;
 
@@ -130,7 +136,7 @@ async fn cancel_user_ops(
 
     if cancellable_user_ops.is_empty() {
         debug!("no user ops to cancel");
-        return Ok(())
+        return Ok(());
     }
 
     let host_address = host_broadcaster_pk.to_address();

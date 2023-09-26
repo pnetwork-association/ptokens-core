@@ -67,7 +67,7 @@ pub(crate) enum RpcCall {
     LatestBlockNumbers(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     GetCoreState(RpcId, Box<SentinelConfig>, WebSocketTx, CoreCxnStatus),
     BroadcasterStartStop(RpcId, BroadcastChannelTx, CoreCxnStatus, bool),
-    GetCancellableUserOps(RpcId, Box<SentinelConfig>, WebSocketTx, CoreCxnStatus),
+    GetCancellableUserOps(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     Init(
         RpcId,
         Box<SentinelConfig>,
@@ -163,7 +163,7 @@ impl RpcCall {
                 core_cxn,
             ),
             "getCancellableUserOps" | "getCancellable" => {
-                Self::GetCancellableUserOps(r.id, Box::new(config), websocket_tx, core_cxn)
+                Self::GetCancellableUserOps(r.id, r.params.clone(), websocket_tx, core_cxn)
             },
             "reset" | "resetChain" => Self::ResetChain(
                 r.id,
@@ -332,9 +332,9 @@ impl RpcCall {
             Self::GetUserOpList(id, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_user_op_list(websocket_tx, core_cxn).await)
             },
-            Self::GetCancellableUserOps(id, config, websocket_tx, core_cxn) => Self::handle_ws_result(
+            Self::GetCancellableUserOps(id, params, websocket_tx, core_cxn) => Self::handle_ws_result(
                 id,
-                Self::handle_get_cancellable_user_ops(config, websocket_tx, core_cxn).await,
+                Self::handle_get_cancellable_user_ops(websocket_tx, params, core_cxn).await,
             ),
             Self::RemoveUserOp(id, websocket_tx, params, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_remove_user_op(websocket_tx, params, core_cxn).await)
