@@ -138,7 +138,7 @@ async fn cancel_user_ops(
     }?)?;
 
     if cancellable_user_ops.is_empty() {
-        debug!("no user ops to cancel");
+        warn!("no user ops to cancel");
         return Ok(());
     }
 

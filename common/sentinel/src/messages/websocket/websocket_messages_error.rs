@@ -1,15 +1,18 @@
-use common::{AppError as CommonError};
+use common::AppError as CommonError;
 use common_chain_ids::EthChainId;
+use common_eth::{ChainError, NoParentError};
 use common_metadata::MetadataChainId;
 use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use common_eth::{ChainError, NoParentError};
 
 use crate::SentinelError;
 
 #[derive(Clone, Error, Debug, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesError {
+    #[error("max delta sanity check failed - got {got}s, but min is {min}s and max is {max}s")]
+    MaxDelta { got: u64, max: u64, min: u64 },
+
     #[error("insufficient mcids to get cancellable user ops - got {got}, expected {expected}")]
     InsufficientMcids { got: usize, expected: usize },
 
@@ -75,7 +78,11 @@ pub enum WebSocketMessagesError {
     NoParent(NoParentError),
 
     #[error("block {num} with hash {hash} already in db for chain id {mcid}")]
-    BlockAlreadyInDb { num: u64, hash: EthHash, mcid: MetadataChainId },
+    BlockAlreadyInDb {
+        num: u64,
+        hash: EthHash,
+        mcid: MetadataChainId,
+    },
 
     #[error("unexpected websocket response {0}")]
     UnexpectedResponse(String),
