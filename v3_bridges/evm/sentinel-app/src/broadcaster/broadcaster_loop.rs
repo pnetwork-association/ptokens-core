@@ -40,6 +40,7 @@ async fn cancel_user_op(
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     websocket_tx: MpscTx<WebSocketMessages>,
 ) -> Result<EthHash, SentinelError> {
+    // NOTE: First we check we can afford the tx
     op.check_affordability(balance, gas_limit, gas_price)?;
 
     let side = op.destination_side();
@@ -340,6 +341,22 @@ pub async fn broadcaster_loop(
                         Ok(_) => {
                             info!("finished handling user op cancellation request");
                         }
+                        Err(SentinelError::UserOp(boxed_user_op_error)) => match *boxed_user_op_error {
+                            UserOpError::InsufficientBalance { have, need } => {
+                                error!("!!! WARNING !!!");
+                                error!("!!! WARNING !!!");
+                                error!("!!! WARNING !!!");
+                                warn!(">>> insufficient balance to cancel a user op - have: {have}, need: {need} <<<");
+                                error!("!!! WARNING !!!");
+                                error!("!!! WARNING !!!");
+                                error!("!!! WARNING !!!");
+                                continue 'broadcaster_loop
+                            },
+                            e => {
+                                error!("unhandled user op error: {e}");
+                                break 'broadcaster_loop Err(e.into())
+                            }
+                        },
                         Err(e) => {
                             error!("{e}");
                         }
