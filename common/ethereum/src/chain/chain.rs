@@ -1,5 +1,5 @@
 #![allow(unused)] // FIXME rm once it's in and working and we know we won't need the unused fxns
-use std::collections::VecDeque;
+use std::{collections::VecDeque, time::Duration};
 
 use common::{crypto_utils::keccak_hash_bytes, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
 use common_metadata::MetadataChainId;
@@ -73,6 +73,7 @@ pub struct Chain {
     linker_hash: EthHash,
     chain_id: MetadataChainId,
     chain: VecDeque<Vec<BlockData>>, // TODO use the `BlockDatas` struct above
+    latest_block_timestamp: Duration,
 }
 
 #[derive(Debug, Clone, Deref, Constructor)]
@@ -189,6 +190,7 @@ impl Chain {
             tail_length,
             confirmations,
             linker_hash: EthHash::zero(),
+            latest_block_timestamp: sub_mat.get_timestamp(),
             chain: VecDeque::from([vec![BlockData::try_from(&sub_mat)?]]),
         })
     }
@@ -336,9 +338,10 @@ impl Chain {
 
         // NOTE: Next we update our chain data...
         if parent_index.is_zero() {
-            // NOTE: Block can't already exist in db!
-            self.chain.push_front(vec![block_data]);
+            // NOTE: This is our new latest block...
             self.offset += 1;
+            self.chain.push_front(vec![block_data]);
+            self.latest_block_timestamp = sub_mat.get_timestamp();
             Ok(())
         } else {
             let insertion_index = parent_index.as_usize() - 1;
@@ -475,6 +478,7 @@ impl Chain {
 
         chain.offset = n;
         chain.confirmations = confirmations;
+        chain.latest_block_timestamp = pruned_sub_mat.get_timestamp();
         chain.chain = VecDeque::from([vec![reset_block_data]]);
         chain.save_in_db(db_utils)
     }
@@ -648,6 +652,7 @@ mod tests {
         Chain::init(&db_utils, hub, tail_length, confirmations, sub_mat, mcid, validate).unwrap();
 
         let mut chain = Chain::get(&db_utils, mcid).unwrap();
+        assert_eq!(chain.latest_block_timestamp(), &sub_mats[0].get_timestamp());
         assert_eq!(chain.chain_len(), 1);
         assert!(matches!(chain.get_canonical_sub_mat(&db_utils), Ok(None)));
         assert_eq!(
@@ -657,6 +662,7 @@ mod tests {
 
         chain = Chain::get(&db_utils, mcid).unwrap();
         chain.insert(&db_utils, sub_mats[1].clone(), validate).unwrap();
+        assert_eq!(chain.latest_block_timestamp(), &sub_mats[1].get_timestamp());
         assert_eq!(chain.chain_len(), 2);
         assert!(matches!(chain.get_canonical_sub_mat(&db_utils), Ok(None)));
         assert_eq!(
@@ -666,6 +672,7 @@ mod tests {
 
         chain = Chain::get(&db_utils, mcid).unwrap();
         chain.insert(&db_utils, sub_mats[2].clone(), validate).unwrap();
+        assert_eq!(chain.latest_block_timestamp(), &sub_mats[2].get_timestamp());
         assert_eq!(chain.chain_len(), 3);
         assert_eq!(
             chain.get_tail_block_data().unwrap()[0].number,
@@ -683,6 +690,7 @@ mod tests {
 
         chain = Chain::get(&db_utils, mcid).unwrap();
         chain.insert(&db_utils, sub_mats[3].clone(), validate).unwrap();
+        assert_eq!(chain.latest_block_timestamp(), &sub_mats[3].get_timestamp());
         assert_eq!(chain.chain_len(), 4);
         assert_eq!(
             chain.get_tail_block_data().unwrap()[0].number,
@@ -700,6 +708,7 @@ mod tests {
 
         chain = Chain::get(&db_utils, mcid).unwrap();
         chain.insert(&db_utils, sub_mats[4].clone(), validate).unwrap();
+        assert_eq!(chain.latest_block_timestamp(), &sub_mats[4].get_timestamp());
         assert_eq!(chain.chain_len(), 5);
         assert_eq!(
             chain.get_tail_block_data().unwrap()[0].number,
@@ -717,6 +726,7 @@ mod tests {
 
         chain = Chain::get(&db_utils, mcid).unwrap();
         chain.insert(&db_utils, sub_mats[5].clone(), validate).unwrap();
+        assert_eq!(chain.latest_block_timestamp(), &sub_mats[5].get_timestamp());
         assert_eq!(chain.chain_len(), 5);
         assert_eq!(
             chain.get_tail_block_data().unwrap()[0].number,
@@ -734,6 +744,7 @@ mod tests {
 
         chain = Chain::get(&db_utils, mcid).unwrap();
         chain.insert(&db_utils, sub_mats[6].clone(), validate).unwrap();
+        assert_eq!(chain.latest_block_timestamp(), &sub_mats[6].get_timestamp());
         assert_eq!(chain.chain_len(), 5);
         assert_eq!(
             chain.get_tail_block_data().unwrap()[0].number,
@@ -760,6 +771,7 @@ mod tests {
             },
             Err(e) => panic!("wrong error received {e}"),
         };
+        assert_eq!(chain.latest_block_timestamp(), &sub_mats[6].get_timestamp());
 
         // NOTE: Test submitting a block that's too far behind
         match chain.insert(&db_utils, sub_mats[0].clone(), validate) {
@@ -771,6 +783,7 @@ mod tests {
             },
             Err(e) => panic!("wrong error received {e}"),
         };
+        assert_eq!(chain.latest_block_timestamp(), &sub_mats[6].get_timestamp());
 
         // NOTE: Test submitting a block that's already extant
         match chain.insert(&db_utils, sub_mats[4].clone(), validate) {
@@ -782,6 +795,7 @@ mod tests {
             },
             Err(e) => panic!("wrong error received {e}"),
         };
+        assert_eq!(chain.latest_block_timestamp(), &sub_mats[6].get_timestamp());
 
         // NOTE: assert that all the blocks in the chain exist in the db, and they they've been
         // pruned of receipts (Note we clone the chain, so we don't drain our _actual_ chain!)
@@ -822,5 +836,6 @@ mod tests {
         );
         assert!(matches!(chain.get_canonical_sub_mat(&db_utils), Ok(None)));
         assert_eq!(*chain.confirmations(), new_confs);
+        assert_eq!(chain.latest_block_timestamp(), &sub_mats[0].get_timestamp());
     }
 }
