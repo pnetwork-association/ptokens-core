@@ -13,7 +13,19 @@ use super::State;
 pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
     info!("handling web socket message...");
 
-    state.db().start_transaction()?; // FIXME check for exceptions
+    match state.db().start_transaction() {
+        Err(e) => {
+            error!("error starting db tx: {e}");
+            state.env().exception_describe().expect("this not to fail");
+            state.env().exception_clear().expect("this not to fail");
+            Err(e)
+        },
+        Ok(_) => {
+            state.env().exception_describe().expect("this not to fail");
+            state.env().exception_clear().expect("this not to fail");
+            Ok(())
+        },
+    }?;
 
     let msg = state.msg();
 
@@ -56,7 +68,19 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
         m => Err(WebSocketMessagesError::Unhandled(m.to_string()).into()),
     }?;
 
-    final_state.db().end_transaction()?; // FIXME check for exceptions
+    match final_state.db().end_transaction() {
+        Err(e) => {
+            error!("error ending db tx: {e}");
+            final_state.env().exception_describe().expect("this not to fail");
+            final_state.env().exception_clear().expect("this not to fail");
+            Err(e)
+        },
+        Ok(_) => {
+            final_state.env().exception_describe().expect("this not to fail");
+            final_state.env().exception_clear().expect("this not to fail");
+            Ok(())
+        },
+    }?;
 
     Ok(final_state)
 }
