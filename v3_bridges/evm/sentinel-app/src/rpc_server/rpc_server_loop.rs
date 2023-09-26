@@ -139,7 +139,9 @@ impl RpcCall {
             "startSyncer" => Self::StartSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
             "startBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, true),
             "stopBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, false),
-            "latestBlockNumbers" | "latest" => Self::LatestBlockNumbers(r.id, r.params.clone(), websocket_tx, core_cxn),
+            "getLatestBlockNumbers" | "getLatestBlockNums" | "latestBlockNumbers" | "latest" => {
+                Self::LatestBlockNumbers(r.id, r.params.clone(), websocket_tx, core_cxn)
+            },
             "getCoreState" | "getEnclaveState" | "state" => {
                 Self::GetCoreState(r.id, Box::new(config), websocket_tx, core_cxn)
             },
