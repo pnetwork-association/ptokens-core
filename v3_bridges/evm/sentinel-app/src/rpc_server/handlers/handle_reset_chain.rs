@@ -26,7 +26,7 @@ impl RpcCall {
         core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
         Self::check_core_is_connected(core_cxn)?;
-        let mut args = WebSocketMessagesResetChainArgs::try_from(Self::create_args("reset", params))?;
+        let mut args = WebSocketMessagesResetChainArgs::try_from(params)?;
 
         let mcid = *args.mcid();
         let side = if mcid == MetadataChainId::from(&config.chain_id(&BridgeSide::Host)) {

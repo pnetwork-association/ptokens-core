@@ -34,7 +34,7 @@ impl TryFrom<Vec<String>> for WebSocketMessagesResetChainArgs {
     type Error = WebSocketMessagesError;
 
     fn try_from(args: Vec<String>) -> Result<Self, WebSocketMessagesError> {
-        // NOTE: Example: ["EthereumMainnet", "latest", "10"]
+        // NOTE: Example: ["EthereumMainnet", "latest", "10", "false"]
 
         if args.is_empty() {
             return Err(WebSocketMessagesError::CannotCreate(args));

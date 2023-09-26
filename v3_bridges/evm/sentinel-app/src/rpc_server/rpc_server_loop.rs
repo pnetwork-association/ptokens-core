@@ -204,8 +204,8 @@ impl RpcCall {
         }
     }
 
-    pub(crate) fn create_args(_cmd: &str, params: RpcParams) -> RpcParams {
-        [vec!["init".to_string()], params].concat()
+    pub(crate) fn create_args(cmd: &str, params: RpcParams) -> RpcParams {
+        [vec![cmd.to_string()], params].concat()
     }
 
     pub(crate) fn check_params(
