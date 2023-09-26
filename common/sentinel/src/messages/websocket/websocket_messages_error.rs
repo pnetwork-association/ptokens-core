@@ -8,6 +8,9 @@ use crate::SentinelError;
 
 #[derive(Error, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesError {
+    #[error("insufficient mcids to get cancellable user ops - got {got}, expected {expected}")]
+    InsufficientMcids { got: usize, expected: usize },
+
     #[error("wrong field of enum - got: {got}, expected {expected}")]
     WrongField { got: String, expected: String },
 

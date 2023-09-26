@@ -118,6 +118,9 @@ async fn cancel_user_ops(
 
     let max_delta = config.core().max_cancellable_time_delta();
     let args = WebSocketMessagesGetCancellableUserOpArgs::new(*max_delta, vec![
+        // NOTE/FIXME For now, the ordering of these is very important since they're _assumed_ to
+        // be in the order of native/host. Eventually we will be able to deal with > 2 chains, at
+        // which point the ordering will stop mattering.
         config.native().metadata_chain_id(),
         config.host().metadata_chain_id(),
     ]);
