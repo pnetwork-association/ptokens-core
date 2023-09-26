@@ -29,7 +29,6 @@ const MAX_CHANNEL_CAPACITY: usize = 1337;
 
 pub async fn start_sentinel(
     config: &SentinelConfig,
-    disable_broadcaster: bool,
     disable_rpc_server: bool,
     disable_ws_server: bool,
 ) -> Result<String, SentinelError> {
@@ -78,7 +77,6 @@ pub async fn start_sentinel(
         broadcaster_rx,
         native_eth_rpc_tx.clone(),
         config.clone(),
-        disable_broadcaster,
         broadcast_channel_tx.clone(),
         websocket_tx.clone(),
         broadcaster_tx.clone(),

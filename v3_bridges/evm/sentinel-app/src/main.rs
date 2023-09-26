@@ -26,12 +26,8 @@ pub struct Cli {
     config_path: Option<String>,
 
     /// Disable the ws server
-    #[arg(short = 'x', long)]
-    disable_ws_server: bool,
-
-    /// Disable the broadcaster
     #[arg(short = 'y', long)]
-    disable_broadcaster: bool,
+    disable_ws_server: bool,
 
     /// Disable the rpc server
     #[arg(short = 'z', long)]
@@ -57,13 +53,7 @@ async fn start() -> Result<String, SentinelError> {
         init_logger(config.log(), cli_args.log_level())?
     };
 
-    let r = start_sentinel::start_sentinel(
-        &config,
-        cli_args.disable_broadcaster,
-        cli_args.disable_rpc_server,
-        cli_args.disable_ws_server,
-    )
-    .await;
+    let r = start_sentinel::start_sentinel(&config, cli_args.disable_rpc_server, cli_args.disable_ws_server).await;
 
     r.map_err(|e| SentinelError::Json(json!({"jsonrpc": "2.0", "error": e.to_string()})))
 }

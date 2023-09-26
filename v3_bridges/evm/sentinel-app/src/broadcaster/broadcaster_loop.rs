@@ -238,7 +238,7 @@ async fn cancellation_loop(frequency: u64, broadcaster_tx: MpscTx<BroadcasterMes
     // it to try and cancel any cancellable user ops. It should never return, except in error.
     'cancellation_loop: loop {
         sleep(Duration::from_secs(frequency)).await;
-        warn!("{frequency}s has elapeed - sending message to cancel any cancellable user ops");
+        warn!("{frequency}s has elapsed - sending message to cancel any cancellable user ops");
         match broadcaster_tx.send(BroadcasterMessages::CancelUserOps).await {
             Ok(_) => continue 'cancellation_loop,
             Err(e) => break 'cancellation_loop Err(e.into()),
@@ -250,17 +250,15 @@ pub async fn broadcaster_loop(
     mut rx: MpscRx<BroadcasterMessages>,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     config: SentinelConfig,
-    disable: bool,
     broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
     websocket_tx: MpscTx<WebSocketMessages>,
     broadcaster_tx: MpscTx<BroadcasterMessages>,
 ) -> Result<(), SentinelError> {
     let name = "broadcaster";
-    if disable {
-        warn!("{name} disabled!")
-    };
-    let mut broadcaster_is_enabled = !disable;
+
     let mut core_is_connected = false;
+    let mut broadcaster_is_enabled = false;
+
     warn!("{name} not active yet due to no core connection");
 
     Env::init()?;
