@@ -118,16 +118,15 @@ async fn cancel_user_ops(
     let encodable_msg = WebSocketMessagesEncodable::GetCancellableUserOps(*max_delta);
     let (msg, rx) = WebSocketMessages::new(encodable_msg);
     websocket_tx.send(msg).await?;
-    let cancellable_user_ops_response = tokio::select! {
+
+    let cancellable_user_ops = UserOps::try_from(tokio::select! {
         response = rx => response?,
         _ = sleep(Duration::from_secs(*config.core().timeout())) => {
             let m = "getting cancellable user ops";
             error!("timed out whilst {m}");
             Err(SentinelError::Timedout(m.into()))
         }
-    }?;
-    warn!("get cancellable use ops response: {cancellable_user_ops_response:?}");
-    let cancellable_user_ops = UserOps::try_from(cancellable_user_ops_response)?;
+    }?)?;
 
     if cancellable_user_ops.is_empty() {
         debug!("no user ops to cancel");
@@ -240,7 +239,7 @@ async fn broadcast_channel_loop(
     }
 }
 
-const CANCELLABLE_OPS_CHECK_FREQUENCY: u64 = 10; // FIXME make configurable! Make updatable whilst running too!
+const CANCELLABLE_OPS_CHECK_FREQUENCY: u64 = 120; // FIXME make configurable! Make updatable whilst running too!
 
 async fn cancellation_loop(frequency: u64, broadcaster_tx: MpscTx<BroadcasterMessages>) -> Result<(), SentinelError> {
     // NOTE: This loop runs to send messages to the broadcaster at a configruable frequency to tell
