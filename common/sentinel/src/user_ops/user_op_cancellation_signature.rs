@@ -1,3 +1,5 @@
+use std::fmt;
+
 use common_eth::{EthSignature, ETH_SIGNATURE_NUM_BYTES};
 use derive_getters::{Dissolve, Getters};
 use derive_more::{Constructor, Deref};
@@ -29,11 +31,25 @@ impl CancellationSignature {
     }
 }
 
+impl fmt::Display for CancellationSignature {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "0x{}", hex::encode(&self.0))
+    }
+}
+
 #[derive(Clone, Debug, Constructor, Serialize, Deserialize, Getters, Dissolve)]
 pub struct UserOpCancellationSignature {
     signer: EthAddress,
     uid: UserOpUniqueId,
     sig: CancellationSignature,
+}
+
+impl fmt::Display for UserOpCancellationSignature {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "   sig: 0x{}", self.sig)?;
+        write!(f, "   uid: 0x{}", self.uid)?;
+        write!(f, "signer: 0x{}", hex::encode(self.signer.as_bytes()))
+    }
 }
 
 impl TryFrom<WebSocketMessagesEncodable> for UserOpCancellationSignature {

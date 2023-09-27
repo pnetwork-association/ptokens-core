@@ -43,11 +43,16 @@ impl UserOp {
         let user_op_tuple_token = self.to_eth_abi_token()?;
         // FIXME Need to generate actual proof
         let proof = EthAbiToken::Array(vec![EthAbiToken::FixedBytes([0u8; 32].to_vec())]);
+        let sig = EthAbiToken::Bytes(cancellation_sig.sig().to_vec());
+        debug!("cancellation tx sig: {sig:?}");
+        debug!("cancellation tx proof: {proof:?}");
+
         let r = encode_fxn_call(CANCEL_FXN_ABI, "protocolSentinelCancelOperation", &[
             user_op_tuple_token,
             proof,
-            EthAbiToken::Bytes(cancellation_sig.sig().to_vec()),
+            sig,
         ])?;
+
         Ok(r)
     }
 
@@ -67,6 +72,13 @@ impl UserOp {
         } else {
             let value = 0;
             let data = self.encode_cancellation_fxn_data(cancellation_sig)?;
+            debug!("nonce: {nonce}");
+            debug!("gas_price: {gas_price}");
+            debug!("gas_limit: {gas_limit}");
+            debug!("pnetwork_hub: {pnetwork_hub}");
+            debug!("chain_id: {chain_id}");
+            debug!("tx signer: {}", broadcaster_pk.to_address());
+            debug!("cancellation sig: {}", cancellation_sig.clone().to_string());
             Ok(
                 EthTransaction::new_unsigned(data, nonce, value, *pnetwork_hub, chain_id, gas_limit, gas_price)
                     .sign(broadcaster_pk)?,

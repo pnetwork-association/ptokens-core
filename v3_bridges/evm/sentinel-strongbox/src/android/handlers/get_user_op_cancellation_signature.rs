@@ -1,7 +1,6 @@
 use common_eth::{Chain, ChainDbUtils};
 use common_sentinel::{
     SentinelError,
-    UserOp,
     WebSocketMessagesCancelUserOpArgs,
     WebSocketMessagesEncodable,
     WebSocketMessagesError,
