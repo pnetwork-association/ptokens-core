@@ -10,6 +10,9 @@ use thiserror::Error;
 
 #[derive(Debug, Eq, PartialEq, Error, Clone, Serialize, Deserialize)]
 pub enum ChainError {
+    #[error("could not get private key db key for chain: {0}")]
+    CouldNotGetPrivateKeyDbKey(MetadataChainId),
+
     #[error("cannot reset chain, got mcid: {got}, expected mcid: {expected}")]
     CannotReset {
         got: MetadataChainId,

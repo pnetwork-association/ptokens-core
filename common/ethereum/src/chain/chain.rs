@@ -1,7 +1,7 @@
 #![allow(unused)] // FIXME rm once it's in and working and we know we won't need the unused fxns
 use std::{collections::VecDeque, time::Duration};
 
-use common::{crypto_utils::keccak_hash_bytes, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
+use common::{crypto_utils::keccak_hash_bytes, get_prefixed_db_key, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
 use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use derive_more::{Constructor, Deref};
@@ -96,6 +96,18 @@ impl ParentIndex {
 }
 
 impl Chain {
+    fn pk_db_key(&self) -> Result<DbKey, ChainError> {
+        // NOTE: We keep the pk under a double hash of the mcid
+        // The chain structure itself is kept under a single hash of the mcid
+        let mcid = self.mcid();
+        mcid.to_bytes()
+            .map(|bs| DbKey(keccak_hash_bytes(keccak_hash_bytes(&bs[..]).as_bytes())))
+            .map_err(|e| {
+                error!("{e}");
+                ChainError::CouldNotGetPrivateKeyDbKey(mcid)
+            })
+    }
+
     pub fn mcid(&self) -> MetadataChainId {
         self.chain_id
     }
