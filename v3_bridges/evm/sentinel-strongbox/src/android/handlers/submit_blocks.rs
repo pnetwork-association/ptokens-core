@@ -23,7 +23,7 @@ pub fn submit_blocks(args: WebSocketMessagesSubmitArgs, state: State) -> Result<
         args.sub_mat_batch(),
         *args.validate(),
         *args.side(),
-        &NetworkId::new(ecid, ProtocolId::Ethereum).to_bytes_4()?,
+        &NetworkId::new(ecid.to_u64(), ProtocolId::Ethereum).to_bytes_4()?, // FIXME
         *args.reprocess(),
         *args.dry_run(),
         mcid,
