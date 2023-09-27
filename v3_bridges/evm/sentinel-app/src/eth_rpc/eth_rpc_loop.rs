@@ -29,6 +29,8 @@ use tokio::{
 // TODO DRY out the repeat code below, though it's not trivial due to having to replace the mutable websocket clients
 // upon endpoint rotation.
 
+// FIXME Take mcid in etc here not BridgeSide
+
 const ENDPOINT_ROTATION_SLEEP_TIME: u64 = 2000;
 
 pub async fn eth_rpc_loop(

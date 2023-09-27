@@ -53,7 +53,7 @@ async fn main_loop(
             Ok(x) => break 'latest_block_getter_loop x,
             Err(e) => {
                 const SLEEP_TIME: u64 = 10_000; // FIXME make configurable
-                warn!("error when getting latest block numbers in {side} syncer: {e}, retrying in {SLEEP_TIME}ms...");
+                warn!("error when getting latest block numbers in {log_prefix}: {e}, retrying in {SLEEP_TIME}ms...");
                 sleep(Duration::from_millis(SLEEP_TIME)).await;
                 continue 'latest_block_getter_loop;
             },
