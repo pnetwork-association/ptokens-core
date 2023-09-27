@@ -1,7 +1,6 @@
 use std::result::Result;
 
 use common_sentinel::{
-    check_init,
     SentinelError,
     WebSocketMessagesEncodable,
     WebSocketMessagesEncodableDbOps,
@@ -28,15 +27,6 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
     }?;
 
     let msg = state.msg();
-
-    match &msg {
-        WebSocketMessagesEncodable::Initialize(_) => {
-            warn!("skipping init check");
-            // NOTE: We skip the init check if we actually trying to initialize a core.
-            Ok(())
-        },
-        _ => check_init(state.db()),
-    }?;
 
     info!("handling websocket msg: '{msg}'...");
     let final_state = match msg {
