@@ -65,9 +65,9 @@ pub(crate) enum RpcCall {
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     LatestBlockNumbers(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
-    GetCoreState(RpcId, Box<SentinelConfig>, WebSocketTx, CoreCxnStatus),
     BroadcasterStartStop(RpcId, BroadcastChannelTx, CoreCxnStatus, bool),
     GetCancellableUserOps(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
+    GetCoreState(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     Init(
         RpcId,
         Box<SentinelConfig>,
@@ -143,7 +143,7 @@ impl RpcCall {
                 Self::LatestBlockNumbers(r.id, r.params.clone(), websocket_tx, core_cxn)
             },
             "getCoreState" | "getEnclaveState" | "state" => {
-                Self::GetCoreState(r.id, Box::new(config), websocket_tx, core_cxn)
+                Self::GetCoreState(r.id, r.params.clone(), websocket_tx, core_cxn)
             },
             "getSyncState" => Self::GetSyncState(
                 r.id,
@@ -323,8 +323,8 @@ impl RpcCall {
                     .await,
                 )
             },
-            Self::GetCoreState(id, config, websocket_tx, core_cxn) => {
-                Self::handle_ws_result(id, Self::handle_get_core_state(*config, websocket_tx, core_cxn).await)
+            Self::GetCoreState(id, params, websocket_tx, core_cxn) => {
+                Self::handle_ws_result(id, Self::handle_get_core_state(params, websocket_tx, core_cxn).await)
             },
             Self::GetUserOps(id, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_user_ops(websocket_tx, core_cxn).await)

@@ -1,20 +1,37 @@
-use common_sentinel::{ConfigT, SentinelConfig, SentinelError, WebSocketMessages, WebSocketMessagesEncodable};
+use std::str::FromStr;
+
+use common_metadata::MetadataChainId;
+use common_sentinel::{SentinelError, WebSocketMessages, WebSocketMessagesEncodable, WebSocketMessagesError};
 use tokio::time::{sleep, Duration};
 
 use crate::rpc_server::{
-    constants::{WebSocketTx, STRONGBOX_TIMEOUT_MS},
+    constants::{RpcParams, WebSocketTx, STRONGBOX_TIMEOUT_MS},
     RpcCall,
 };
 
 impl RpcCall {
     pub(crate) async fn handle_get_core_state(
-        config: SentinelConfig,
+        params: RpcParams,
         websocket_tx: WebSocketTx,
         core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
         Self::check_core_is_connected(core_cxn)?;
 
-        let mcids = vec![config.native().metadata_chain_id(), config.host().metadata_chain_id()];
+        let n = 1;
+        let l = params.len();
+        if l < n {
+            return Err(WebSocketMessagesError::NotEnoughArgs {
+                got: l,
+                expected: n,
+                args: params,
+            }
+            .into());
+        }
+
+        let mcids = params
+            .iter()
+            .map(|s| MetadataChainId::from_str(s).map_err(|_| WebSocketMessagesError::ParseMetadataChainId(s.into())))
+            .collect::<Result<Vec<MetadataChainId>, WebSocketMessagesError>>()?;
         let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetCoreState(mcids));
         websocket_tx.send(msg).await?;
 

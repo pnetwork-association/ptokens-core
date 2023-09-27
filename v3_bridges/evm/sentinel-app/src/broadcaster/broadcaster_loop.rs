@@ -3,7 +3,6 @@ use std::result::Result;
 use common::BridgeSide;
 use common_eth::EthPrivateKey;
 use common_sentinel::{
-    WebSocketMessagesCancelUserOpArgs,
     BroadcastChannelMessages,
     BroadcasterBroadcastChannelMessages,
     BroadcasterMessages,
@@ -17,6 +16,7 @@ use common_sentinel::{
     UserOpError,
     UserOps,
     WebSocketMessages,
+    WebSocketMessagesCancelUserOpArgs,
     WebSocketMessagesEncodable,
     WebSocketMessagesGetCancellableUserOpArgs,
 };
@@ -59,7 +59,7 @@ async fn cancel_user_op(
 
     let mcids = vec![config.native().mcid(), config.host().mcid()];
     let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetUserOpCancellationSiganture(Box::new(
-        WebSocketMessagesCancelUserOpArgs::new(mcids, op.clone())
+        WebSocketMessagesCancelUserOpArgs::new(mcids, op.clone()),
     )));
     websocket_tx.send(msg).await?;
 
