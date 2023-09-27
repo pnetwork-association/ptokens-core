@@ -14,7 +14,7 @@ impl RpcCall {
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
         Self::check_core_is_connected(core_cxn)?;
 
-        let mcids = vec![config.host().metadata_chain_id(), config.native().metadata_chain_id()];
+        let mcids = vec![config.native().metadata_chain_id(), config.host().metadata_chain_id()];
         let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetCoreState(mcids));
         websocket_tx.send(msg).await?;
 

@@ -54,6 +54,8 @@ impl UserOpList {
                     let uid = op.uid_hex()?;
                     let time = op.enqueued_timestamp()?;
 
+                    // FIXME check for underflow!
+
                     let is_cancellable = match side {
                         // NOTE: Note that for host cancellations we need to ensure the _native_
                         // chain is in sync (within the allowable delta) and vice versa. This is so
