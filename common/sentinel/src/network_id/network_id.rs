@@ -37,6 +37,14 @@ impl fmt::Display for Bytes4 {
         write!(f, "0x{}", hex::encode(self.0))
     }
 }
+impl fmt::Display for NetworkId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.to_bytes_4() {
+            Ok(b4) => write!(f, "{}", b4),
+            _ => write!(f, "error converting netowrk id to bytes"),
+        }
+    }
+}
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct NetworkId {
@@ -94,6 +102,14 @@ impl TryFrom<MetadataChainId> for NetworkId {
     type Error = MetadataChainIdError;
 
     fn try_from(m: MetadataChainId) -> Result<NetworkId, Self::Error> {
+        NetworkId::try_from(&m)
+    }
+}
+
+impl TryFrom<&MetadataChainId> for NetworkId {
+    type Error = MetadataChainIdError;
+
+    fn try_from(m: &MetadataChainId) -> Result<NetworkId, Self::Error> {
         match m {
             MetadataChainId::EthUnknown => Ok(NetworkId::new(EthChainId::Unknown(0).to_u64(), ProtocolId::Ethereum)),
             MetadataChainId::BscMainnet => Ok(NetworkId::new(EthChainId::BscMainnet.to_u64(), ProtocolId::Ethereum)),
@@ -121,7 +137,7 @@ impl TryFrom<MetadataChainId> for NetworkId {
                 EthChainId::LuxochainMainnet.to_u64(),
                 ProtocolId::Ethereum,
             )),
-            mcid => Err(Self::Error::CannotConvertTo(mcid, "NetworkId".to_string())),
+            mcid => Err(Self::Error::CannotConvertTo(*mcid, "NetworkId".to_string())),
         }
     }
 }

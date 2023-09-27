@@ -13,6 +13,9 @@ impl From<SentinelError> for CommonError {
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("{0}")]
+    SentinelStatusError(#[from] crate::status::SentinelStatusError),
+
     #[error("chain error: {0}")]
     ChainError(#[from] common_eth::ChainError),
 
