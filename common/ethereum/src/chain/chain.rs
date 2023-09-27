@@ -1,7 +1,13 @@
 #![allow(unused)] // FIXME rm once it's in and working and we know we won't need the unused fxns
 use std::{collections::VecDeque, time::Duration};
 
-use common::{crypto_utils::keccak_hash_bytes, get_prefixed_db_key, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
+use common::{
+    crypto_utils::keccak_hash_bytes,
+    get_prefixed_db_key,
+    DatabaseInterface,
+    MAX_DATA_SENSITIVITY_LEVEL,
+    MIN_DATA_SENSITIVITY_LEVEL,
+};
 use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use derive_more::{Constructor, Deref};
@@ -10,8 +16,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     chain::{ChainDbUtils, ChainError, NoParentError},
+    EthPrivateKey,
     EthSubmissionMaterial as EthSubMat,
 };
+
+// TODO impl from for app errors where ones we care about get mapped, otherwise just stringified
 
 #[derive(Debug, Default, Clone, Eq, PartialEq, Constructor, Serialize, Deserialize, Deref)]
 pub struct ChainBlockDatas(Vec<ChainBlockData>);
@@ -96,10 +105,9 @@ impl ParentIndex {
 }
 
 impl Chain {
-    fn pk_db_key(&self) -> Result<DbKey, ChainError> {
+    fn get_pk_db_key(mcid: MetadataChainId) -> Result<DbKey, ChainError> {
         // NOTE: We keep the pk under a double hash of the mcid
         // The chain structure itself is kept under a single hash of the mcid
-        let mcid = self.mcid();
         mcid.to_bytes()
             .map(|bs| DbKey(keccak_hash_bytes(keccak_hash_bytes(&bs[..]).as_bytes())))
             .map_err(|e| {
@@ -122,6 +130,25 @@ impl Chain {
 
     pub fn get_canon_block_data(&self) -> Option<&Vec<ChainBlockData>> {
         self.chain.get(*self.confirmations() as usize - 1)
+    }
+
+    pub fn get_pk<D: DatabaseInterface>(&self, db_utils: &ChainDbUtils<D>) -> Result<EthPrivateKey, ChainError> {
+        let mcid = self.mcid();
+        db_utils
+            .db()
+            .get(Self::get_pk_db_key(mcid)?.to_vec(), MAX_DATA_SENSITIVITY_LEVEL)
+            .and_then(|ref bs| EthPrivateKey::from_slice(bs))
+            .map_err(|e| {
+                error!("{e}");
+                ChainError::DbInsert(format!("{e}"))
+            })
+    }
+
+    pub fn get_signing_address<D: DatabaseInterface>(
+        &self,
+        db_utils: &ChainDbUtils<D>,
+    ) -> Result<EthAddress, ChainError> {
+        self.get_pk(db_utils).map(|pk| pk.to_address())
     }
 
     pub fn block_num(m: &EthSubMat) -> Result<u64, ChainError> {
@@ -157,11 +184,22 @@ impl Chain {
         validate: bool,
     ) -> Result<(), ChainError> {
         debug!("initializing chain for mcid: {mcid}");
-
         // NOTE: First lets see if this chain has already been initialized
         if Self::get(db_utils, mcid).is_ok() {
             return Err(ChainError::AlreadyInitialized(mcid));
         };
+
+        // NOTE: Let's generate and save a private key for using on this core
+        let pk = EthPrivateKey::generate_random().map_err(|e| {
+            error!("{e}");
+            ChainError::CannotCreatePk(mcid)
+        })?;
+        let pk_db_key = Self::get_pk_db_key(mcid)?.to_vec();
+
+        pk.write_to_database(db_utils.db(), &pk_db_key[..]).map_err(|e| {
+            error!("{e}");
+            ChainError::CouldNotSavePkInDb(mcid)
+        })?;
 
         // NOTE: Now lets validate the block & receipts if we're required to
         Self::validate(&mcid, &sub_mat, validate)?;
