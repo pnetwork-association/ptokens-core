@@ -7,7 +7,8 @@ pub fn get_sample_sub_mat_n(n: usize) -> EthSubmissionMaterial {
     let suffix = match n {
         1 => "bsc-block-31915441-with-user-send-event.json",
         2 => "goerli-block-9734264-with-protocol-queue-event.json",
-        _ => "bsc-block-31966799-with-user-send-event.json",
+        3 => "bsc-block-31966799-with-user-send-event.json",
+        _ => "polygon-block-48041305-with-enqueu-user-op-event.json",
     };
     let prefix = "src/user_ops/test_utils/";
     let path = format!("{prefix}{suffix}");
@@ -32,4 +33,8 @@ pub fn get_sample_submission_material_with_user_send_2() -> EthSubmissionMateria
 
 pub fn get_sample_log_with_protocol_queue() -> EthLog {
     get_sample_submission_material_with_protocol_queue().receipts[3].logs[0].clone()
+}
+
+pub fn get_sub_mat_with_enqueued_user_op() -> EthSubmissionMaterial {
+    get_sample_sub_mat_n(4)
 }
