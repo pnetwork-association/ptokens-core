@@ -13,6 +13,7 @@ use super::{Chain, ChainDbUtils, ChainError};
 pub struct ChainState {
     pnetwork_hub: EthAddress,
     confirmations: u64,
+    signing_address: EthAddress,
     chain_id: MetadataChainId,
     tail_length: u64,
     latest_block_num: u64,
@@ -30,41 +31,12 @@ impl ChainState {
         mcid: &MetadataChainId,
     ) -> Result<Self, ChainError> {
         let c = Chain::get(chain_db_utils, *mcid)?;
-        ChainState::try_from(&c)
-    }
-}
 
-impl From<&ChainState> for Json {
-    fn from(c: &ChainState) -> Json {
-        json!(c)
-    }
-}
-
-impl TryFrom<&ChainState> for Vec<u8> {
-    type Error = ChainError;
-
-    fn try_from(c: &ChainState) -> Result<Vec<u8>, Self::Error> {
-        Ok(serde_json::to_vec(c)?)
-    }
-}
-
-impl fmt::Display for ChainState {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match serde_json::to_string_pretty(self) {
-            Ok(s) => write!(f, "{s}"),
-            Err(e) => write!(f, "Error convert `ChainState` to pretty json string: {e}",),
-        }
-    }
-}
-
-impl TryFrom<&Chain> for ChainState {
-    type Error = ChainError;
-
-    fn try_from(c: &Chain) -> Result<ChainState, Self::Error> {
         let pnetwork_hub = *c.hub();
         let chain_id = *c.chain_id();
         let tail_length = *c.tail_length();
         let confirmations = *c.confirmations();
+        let signing_address = c.get_signing_address(chain_db_utils)?;
 
         let maybe_latest_block_data = c.get_latest_block_data();
         // NOTE: We can't really know which of the block data is canonical at this point".
@@ -92,6 +64,7 @@ impl TryFrom<&Chain> for ChainState {
             latest_block_timestamp,
             pnetwork_hub,
             confirmations,
+            signing_address,
             chain_id,
             tail_length,
             latest_block_num,
@@ -103,5 +76,28 @@ impl TryFrom<&Chain> for ChainState {
         };
 
         Ok(r)
+    }
+}
+
+impl From<&ChainState> for Json {
+    fn from(c: &ChainState) -> Json {
+        json!(c)
+    }
+}
+
+impl TryFrom<&ChainState> for Vec<u8> {
+    type Error = ChainError;
+
+    fn try_from(c: &ChainState) -> Result<Vec<u8>, Self::Error> {
+        Ok(serde_json::to_vec(c)?)
+    }
+}
+
+impl fmt::Display for ChainState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match serde_json::to_string_pretty(self) {
+            Ok(s) => write!(f, "{s}"),
+            Err(e) => write!(f, "Error convert `ChainState` to pretty json string: {e}",),
+        }
     }
 }
