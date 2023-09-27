@@ -21,7 +21,7 @@ impl RpcCall {
         Self::check_core_is_connected(core_cxn)?;
 
         if params.is_empty() {
-            return Err(SentinelError::Custom("please provide 1 or more chain ids".to_string()).into());
+            return Err(SentinelError::Custom("please provide 1 or more chain ids".to_string()));
         }
 
         let mcids = params

@@ -10,6 +10,9 @@ use crate::SentinelError;
 
 #[derive(Clone, Error, Debug, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesError {
+    #[error("need more than {num_args} args")]
+    NeedMoreArgs { num_args: usize },
+
     #[error("max delta sanity check failed - got {got}s, but min is {min}s and max is {max}s")]
     MaxDelta { got: u64, max: u64, min: u64 },
 

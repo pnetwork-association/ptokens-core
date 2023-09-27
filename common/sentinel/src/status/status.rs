@@ -48,6 +48,12 @@ pub struct SyncStatus {
     latest_block_timestamp: u64,
 }
 
+impl From<Chain> for SyncStatus {
+    fn from(c: Chain) -> Self {
+        SyncStatus::from(&c)
+    }
+}
+
 impl From<&Chain> for SyncStatus {
     fn from(c: &Chain) -> Self {
         // NOTE: Due to forks, there's always the possibility of > 1 block at any point in the chain
@@ -83,7 +89,7 @@ pub struct SentinelStatus {
 }
 
 impl SentinelStatus {
-    fn init(signer: EthAddress, git_commit_hash: String, chains: Vec<&Chain>) -> Result<Self, SentinelError> {
+    fn init(signer: EthAddress, git_commit_hash: String, chains: Vec<Chain>) -> Result<Self, SentinelError> {
         let signature = None;
         let timestamp = get_utc_timestamp()?;
         let actor_type = "sentinel".to_string();
@@ -128,7 +134,7 @@ impl SentinelStatus {
         }
     }
 
-    pub fn new(pk: &EthPrivateKey, chains: Vec<&Chain>) -> Result<Self, SentinelError> {
+    pub fn new(pk: &EthPrivateKey, chains: Vec<Chain>) -> Result<Self, SentinelError> {
         let git_commit_hash =
             env::var("GIT_HASH").unwrap_or("`GIT_HASH` env variable was not set at build time".to_string());
         let signer = pk.to_address();

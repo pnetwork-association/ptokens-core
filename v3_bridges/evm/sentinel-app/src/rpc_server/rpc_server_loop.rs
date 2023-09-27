@@ -62,13 +62,14 @@ pub(crate) enum RpcCall {
     CancelUserOps(RpcId, BroadcasterTx, CoreCxnStatus),
     Delete(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetUserOp(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
+    GetStatus(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     RemoveUserOp(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
+    GetCoreState(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     LatestBlockNumbers(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     BroadcasterStartStop(RpcId, BroadcastChannelTx, CoreCxnStatus, bool),
     GetCancellableUserOps(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
-    GetCoreState(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     Init(
         RpcId,
         Box<SentinelConfig>,
@@ -138,6 +139,7 @@ impl RpcCall {
             "removeUserOp" => Self::RemoveUserOp(r.id, websocket_tx, r.params.clone(), core_cxn),
             "stopSyncer" => Self::StopSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
             "cancel" | "cancelUserOp" => Self::CancelUserOps(r.id, broadcaster_tx.clone(), core_cxn),
+            "getStatus" | "status" => Self::GetStatus(r.id, websocket_tx, r.params.clone(), core_cxn),
             "startSyncer" => Self::StartSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
             "startBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, true),
             "stopBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, false),
@@ -235,6 +237,9 @@ impl RpcCall {
             },
             Self::Get(id, websocket_tx, params, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get(websocket_tx, params, core_cxn).await)
+            },
+            Self::GetStatus(id, websocket_tx, params, core_cxn) => {
+                Self::handle_ws_result(id, Self::handle_get_status(websocket_tx, params, core_cxn).await)
             },
             Self::CancelUserOps(id, broadcaster_tx, core_cxn) => {
                 let result = Self::handle_cancel_user_ops(broadcaster_tx, core_cxn).await;
