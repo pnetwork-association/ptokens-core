@@ -13,8 +13,6 @@ use serde_json::{json, Value as JsonValue};
 
 use crate::{EthBlock, EthBlockJson, EthReceipt, EthReceiptJson, EthReceipts, EthState};
 
-const NANO_SECONDS: u32 = 0;
-
 #[derive(Clone, Debug, PartialEq, Eq, Default, Deref, DerefMut, Constructor, Deserialize, Serialize)]
 pub struct EthSubmissionMaterials(Vec<EthSubmissionMaterial>);
 
@@ -130,13 +128,15 @@ impl EthSubmissionMaterial {
     }
 
     pub fn get_timestamp(&self) -> Duration {
-        match self.timestamp {
-            Some(t) => Duration::new(t.as_u64(), NANO_SECONDS),
-            None => {
-                warn!("no timestamp in submission material, defaulting to zero");
-                Duration::new(0, NANO_SECONDS)
-            },
-        }
+        let seconds = if let Some(ref b) = self.block {
+            b.get_timestamp().as_u64()
+        } else if let Some(t) = self.timestamp {
+            t.as_u64()
+        } else {
+            warn!("no timestamp in submission material, defaulting to zero");
+            0
+        };
+        Duration::from_secs(seconds)
     }
 
     pub fn add_block(mut self, block: EthBlock) -> Result<Self> {
@@ -737,7 +737,7 @@ mod tests {
     fn should_get_timestamp_from_submission_material() {
         let sub_mat = get_sample_eth_submission_material();
         let result = sub_mat.get_timestamp();
-        let expected_result = Duration::new(1567871882, NANO_SECONDS);
+        let expected_result = Duration::from_secs(1567871882);
         assert_eq!(result, expected_result)
     }
 
@@ -747,7 +747,7 @@ mod tests {
         sub_mat.block = None;
         assert_eq!(sub_mat.block, None);
         let result = sub_mat.get_timestamp();
-        let expected_result = Duration::new(1567871882, NANO_SECONDS);
+        let expected_result = Duration::from_secs(1567871882);
         assert_eq!(result, expected_result)
     }
 }

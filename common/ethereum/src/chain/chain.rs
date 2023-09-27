@@ -847,10 +847,12 @@ mod tests {
         // NOTE: Test submitting a block that's already extant
         match chain.insert(&db_utils, sub_mats[4].clone(), validate) {
             Ok(_) => panic!("should not have succeeded"),
-            Err(ChainError::BlockAlreadyInDb(id, hash)) => {
+            Err(ChainError::BlockAlreadyInDb { num, hash, mcid: metadata_chain_id }) => {
                 let expected_hash = Chain::block_hash(&sub_mats[4]).unwrap();
-                assert_eq!(id, mcid);
+                let expected_num = Chain::block_num(&sub_mats[4]).unwrap();
+                assert_eq!(mcid, metadata_chain_id);
                 assert_eq!(hash, expected_hash);
+                assert_eq!(num, expected_num);
             },
             Err(e) => panic!("wrong error received {e}"),
         };
