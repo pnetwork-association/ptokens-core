@@ -6,7 +6,7 @@ use derive_getters::Getters;
 use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 
-use crate::{SentinelError, NetworkId};
+use crate::{NetworkId, SentinelError};
 
 /* Reference:
 {
@@ -68,8 +68,6 @@ impl Status {
     }
 }
 */
-
-
 
 /*
 impl Status {

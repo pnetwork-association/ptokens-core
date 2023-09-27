@@ -140,7 +140,7 @@ impl Chain {
             .and_then(|ref bs| EthPrivateKey::from_slice(bs))
             .map_err(|e| {
                 error!("{e}");
-                ChainError::DbInsert(format!("{e}"))
+                ChainError::DbGet("EthPrivateKey".to_string())
             })
     }
 
@@ -189,7 +189,7 @@ impl Chain {
             return Err(ChainError::AlreadyInitialized(mcid));
         };
 
-        // NOTE: Let's generate and save a private key for using on this core
+        // NOTE: Let's generate and save a pDbInsertrivate key for using on this core
         let pk = EthPrivateKey::generate_random().map_err(|e| {
             error!("{e}");
             ChainError::CannotCreatePk(mcid)

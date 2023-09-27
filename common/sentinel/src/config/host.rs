@@ -93,4 +93,8 @@ impl ConfigT for HostConfig {
     fn metadata_chain_id(&self) -> MetadataChainId {
         MetadataChainId::from(&self.chain_id())
     }
+
+    fn mcid(&self) -> MetadataChainId {
+        self.metadata_chain_id()
+    }
 }

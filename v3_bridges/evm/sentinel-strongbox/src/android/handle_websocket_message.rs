@@ -40,8 +40,8 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
         WebSocketMessagesEncodable::GetLatestBlockNumbers(mcids) => {
             super::handlers::get_latest_block_numbers(mcids.clone(), state)
         },
-        WebSocketMessagesEncodable::GetUserOpCancellationSiganture(user_op) => {
-            super::handlers::get_user_op_cancellation_signature(*user_op.clone(), state)
+        WebSocketMessagesEncodable::GetUserOpCancellationSiganture(args) => {
+            super::handlers::get_user_op_cancellation_signature(*args.clone(), state)
         },
         WebSocketMessagesEncodable::DbOps(WebSocketMessagesEncodableDbOps::Get(k)) => {
             super::handlers::get(k.clone(), state)

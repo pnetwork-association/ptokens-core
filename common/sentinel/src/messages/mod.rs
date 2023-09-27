@@ -18,6 +18,7 @@ pub use self::{
     syncer::SyncerMessages,
     websocket::{
         WebSocketMessages,
+        WebSocketMessagesCancelUserOpArgs,
         WebSocketMessagesEncodable,
         WebSocketMessagesEncodableDbOps,
         WebSocketMessagesError,

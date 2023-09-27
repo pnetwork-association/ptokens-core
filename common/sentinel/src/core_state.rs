@@ -22,9 +22,7 @@ impl CoreState {
             .collect::<Result<Vec<ChainState>, ChainError>>()
             .map_err(SentinelError::ChainError)?;
 
-        Ok(Self {
-            chain_state,
-        })
+        Ok(Self { chain_state })
     }
 }
 

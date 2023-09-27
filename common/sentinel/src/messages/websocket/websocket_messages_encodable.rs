@@ -8,8 +8,8 @@ use serde_json::Value as Json;
 use super::WebSocketMessagesEncodableDbOps;
 use crate::{
     SentinelError,
-    UserOp,
     UserOpUniqueId,
+    WebSocketMessagesCancelUserOpArgs,
     WebSocketMessagesError,
     WebSocketMessagesGetCancellableUserOpArgs,
     WebSocketMessagesInitArgs,
@@ -30,9 +30,9 @@ pub enum WebSocketMessagesEncodable {
     Submit(Box<WebSocketMessagesSubmitArgs>),
     Initialize(Box<WebSocketMessagesInitArgs>),
     GetLatestBlockNumbers(Vec<MetadataChainId>),
-    GetUserOpCancellationSiganture(Box<UserOp>),
     ResetChain(Box<WebSocketMessagesResetChainArgs>),
     GetCancellableUserOps(Box<WebSocketMessagesGetCancellableUserOpArgs>),
+    GetUserOpCancellationSiganture(Box<WebSocketMessagesCancelUserOpArgs>),
 }
 
 impl TryFrom<WebSocketMessagesEncodable> for Json {

@@ -68,6 +68,7 @@ pub use self::{
         SyncerBroadcastChannelMessages,
         SyncerMessages,
         WebSocketMessages,
+        WebSocketMessagesCancelUserOpArgs,
         WebSocketMessagesEncodable,
         WebSocketMessagesEncodableDbOps,
         WebSocketMessagesError,
