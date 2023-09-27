@@ -1,6 +1,5 @@
 mod batching;
 mod bpm;
-mod check_init;
 mod config;
 mod constants;
 mod core_state;
@@ -18,6 +17,7 @@ mod network_id;
 mod processor;
 mod processor_output;
 mod side;
+mod status;
 mod test_utils;
 mod user_ops;
 mod utils;
@@ -25,7 +25,6 @@ mod utils;
 pub use self::{
     batching::Batch,
     bpm::{Bpm, BpmInfo, Bpms},
-    check_init::check_init,
     config::{
         ConfigT,
         HostConfig,
