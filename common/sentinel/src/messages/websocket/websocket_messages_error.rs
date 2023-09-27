@@ -13,7 +13,7 @@ pub enum WebSocketMessagesError {
     #[error("max delta sanity check failed - got {got}s, but min is {min}s and max is {max}s")]
     MaxDelta { got: u64, max: u64, min: u64 },
 
-    #[error("insufficient mcids to get cancellable user ops - got {got}, expected {expected}")]
+    #[error("insufficient mcids  - got {got}, expected {expected}")]
     InsufficientMcids { got: usize, expected: usize },
 
     #[error("wrong field of enum - got: {got}, expected {expected}")]
@@ -92,6 +92,9 @@ pub enum WebSocketMessagesError {
 
     #[error("{0}")]
     ChainError(ChainError),
+
+    #[error("{0}")]
+    Custom(String),
 }
 
 impl From<CommonError> for WebSocketMessagesError {

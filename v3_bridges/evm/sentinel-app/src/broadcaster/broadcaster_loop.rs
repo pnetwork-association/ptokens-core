@@ -33,7 +33,7 @@ use tokio::{
 async fn cancel_user_op(
     op: UserOp,
     nonce: u64,
-    balance: U256,
+    //balance: U256, // FIXME Make this optional. Race the getter. If it's none skip the balance check
     gas_price: u64,
     gas_limit: usize,
     config: &SentinelConfig,
@@ -41,13 +41,15 @@ async fn cancel_user_op(
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     websocket_tx: MpscTx<WebSocketMessages>,
 ) -> Result<EthHash, SentinelError> {
+    // FIXME re-instate the balance checks
     // NOTE: First we check we can afford the tx
-    op.check_affordability(balance, gas_limit, gas_price)?;
+    //op.check_affordability(balance, gas_limit, gas_price)?;
 
     let side = op.destination_side();
     let pnetwork_hub = config.pnetwork_hub(&side);
     debug!("cancelling user op on side: {side} nonce: {nonce} gas price: {gas_price}");
 
+    /*
     let (msg, rx) = EthRpcMessages::get_user_op_state_msg(side, op.clone(), pnetwork_hub);
     eth_rpc_tx.send(msg).await?;
     let user_op_smart_contract_state = rx.await??;
@@ -56,12 +58,15 @@ async fn cancel_user_op(
     if !user_op_smart_contract_state.is_cancellable() {
         return Err(UserOpError::CannotCancel(Box::new(op)).into());
     }
+    */
 
     let mcids = vec![config.native().mcid(), config.host().mcid()];
     let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetUserOpCancellationSiganture(Box::new(
-        WebSocketMessagesCancelUserOpArgs::new(mcids, op.clone()),
+        WebSocketMessagesCancelUserOpArgs::new(mcids.clone(), op.clone()),
     )));
     websocket_tx.send(msg).await?;
+
+    warn!("here are the mcids: {mcids:?}"); // FIXME rm
 
     let cancellation_sig = UserOpCancellationSignature::try_from(tokio::select! {
         response = rx => response?,
@@ -71,6 +76,8 @@ async fn cancel_user_op(
             Err(SentinelError::Timedout(m.into()))
         }
     }?)?;
+
+    warn!("cancellation signature: {mcids:?}"); // FIXME rm
 
     let signed_tx = op.get_cancellation_tx(
         nonce,
@@ -162,6 +169,7 @@ async fn cancel_user_ops(
     let host_gas_limit = config.gas_limit(&BridgeSide::Host);
     let native_gas_limit = config.gas_limit(&BridgeSide::Native);
 
+    /*
     let (host_balance_msg, host_balance_rx) = EthRpcMessages::get_eth_balance_msg(BridgeSide::Host, host_address);
     let (native_balance_msg, native_balance_rx) =
         EthRpcMessages::get_eth_balance_msg(BridgeSide::Native, native_address);
@@ -169,6 +177,7 @@ async fn cancel_user_ops(
     let mut host_balance = host_balance_rx.await??;
     eth_rpc_tx.send(host_balance_msg).await?;
     let mut native_balance = native_balance_rx.await??;
+    */
 
     let err_msg = "error cancelling user op ";
 
@@ -179,7 +188,7 @@ async fn cancel_user_ops(
                 match cancel_user_op(
                     op.clone(),
                     native_nonce,
-                    native_balance,
+                    //native_balance,
                     native_gas_price,
                     native_gas_limit,
                     config,
@@ -200,14 +209,14 @@ async fn cancel_user_ops(
                     },
                 }
                 native_nonce += 1;
-                native_balance -= UserOp::get_tx_cost(native_gas_limit, native_gas_price);
+                //native_balance -= UserOp::get_tx_cost(native_gas_limit, native_gas_price);
             },
             BridgeSide::Host => {
                 let uid = op.uid()?;
                 match cancel_user_op(
                     op.clone(),
                     host_nonce,
-                    host_balance,
+                    //host_balance,
                     host_gas_price,
                     host_gas_limit,
                     config,
@@ -228,7 +237,7 @@ async fn cancel_user_ops(
                     },
                 }
                 host_nonce += 1;
-                host_balance -= UserOp::get_tx_cost(host_gas_limit, host_gas_price);
+                //host_balance -= UserOp::get_tx_cost(host_gas_limit, host_gas_price);
             },
         }
     }

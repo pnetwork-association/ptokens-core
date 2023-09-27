@@ -29,10 +29,11 @@ async fn main_loop(
     websocket_tx: MpscTx<WebSocketMessages>,
 ) -> Result<(), SentinelError> {
     let side = *batch.side();
+    let mcid = *batch.mcid();
     let chain_id = config.chain_id(&side);
+    let log_prefix = format!("{mcid} syncer");
     let validate = config.is_validating(&side);
     let pnetwork_hub = config.pnetwork_hub(&side);
-    let log_prefix = format!("{} syncer", side);
     let sleep_duration = batch.get_sleep_duration();
 
     let latest_block_numbers = 'latest_block_getter_loop: loop {

@@ -11,6 +11,7 @@ use crate::{
     get_utc_timestamp,
     SentinelDbUtils,
     SentinelError,
+    UserOpUniqueId,
 };
 
 #[derive(Clone, Copy, Debug, Default, Eq, Serialize, Deserialize, Constructor)]
@@ -205,6 +206,19 @@ impl UserOpList {
             .collect::<Result<Vec<UserOp>, SentinelError>>()?;
         Ok(UserOps::new(ops))
     }
+
+    pub fn user_op<D: DatabaseInterface>(
+        uid: &UserOpUniqueId,
+        db_utils: &SentinelDbUtils<D>,
+    ) -> Result<UserOp, SentinelError> {
+        let list = Self::get(db_utils);
+        let h: EthHash = **uid;
+        if list.includes(&h) {
+            Ok(UserOp::get_from_db(db_utils, &h.into())?)
+        } else {
+            Err(UserOpError::NoUserOp(h).into())
+        }
+    }
 }
 
 #[cfg(test)]
@@ -215,7 +229,7 @@ mod tests {
     use crate::SentinelDbUtils;
 
     #[test]
-    fn should_out_and_get_user_op_list_in_db() {
+    fn should_put_and_get_user_op_list_in_db() {
         let db = get_test_database();
         let db_utils = SentinelDbUtils::new(&db);
         let mut user_op = UserOp::default();

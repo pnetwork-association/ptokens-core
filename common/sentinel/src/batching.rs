@@ -213,10 +213,10 @@ impl Batch {
 
     pub fn is_ready_to_submit(&self) -> bool {
         if self.is_empty() {
-            info!("{} batch not ready to submit because it's empty", self.side());
+            info!("{} batch not ready to submit because it's empty", self.mcid());
             return false;
         } else if self.single_submissions_flag {
-            info!("{} batch set to single submission so it's ready to submit", self.side());
+            info!("{} batch set to single submission so it's ready to submit", self.mcid());
             return true;
         }
 
@@ -225,7 +225,7 @@ impl Batch {
         if size >= size_limit {
             info!(
                 "{} batch has sufficient blocks to submit! (blocks: {size}, limit: {size_limit})",
-                self.side()
+                self.mcid()
             );
             return true;
         }
@@ -233,7 +233,7 @@ impl Batch {
         let time_limit = self.batch_duration;
         let time = self.get_seconds_since_last_submission();
         if time >= time_limit {
-            info!("{} batch ready to submit because enough time has elapsed", self.side());
+            info!("{} batch ready to submit because enough time has elapsed", self.mcid());
             return true;
         }
 
@@ -241,7 +241,7 @@ impl Batch {
         let pct_time = (time as f64 / time_limit as f64) * 100_f64;
         info!(
             "{} batch not ready to submit yet! ({size} blocks, {pct_full:.2}% full, {pct_time:.2}% time)",
-            self.side()
+            self.mcid()
         );
         false
     }
@@ -251,11 +251,11 @@ impl Batch {
         if num_blocks_in_batch < 2 {
             info!(
                 "no need to check {} batch chaining - it contains too few blocks to matter!",
-                self.side()
+                self.mcid()
             );
             Ok(self)
         } else {
-            info!("checking {} batch is chained correctly...", self.side());
+            info!("checking {} batch is chained correctly...", self.mcid());
             let mut i = num_blocks_in_batch - 1;
             while i > 0 {
                 if self.batch[i].get_parent_hash()? != self.batch[i - 1].get_block_hash()? {
@@ -268,7 +268,7 @@ impl Batch {
                 }
                 i -= 1;
             }
-            info!("{} batch is chained correctly", self.side());
+            info!("{} batch is chained correctly", self.mcid());
             Ok(self)
         }
     }

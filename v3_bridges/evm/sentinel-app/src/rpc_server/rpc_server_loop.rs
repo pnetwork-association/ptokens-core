@@ -61,6 +61,7 @@ pub(crate) enum RpcCall {
     Put(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     CancelUserOps(RpcId, BroadcasterTx, CoreCxnStatus),
     Delete(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
+    GetUserOp(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     RemoveUserOp(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
@@ -133,6 +134,7 @@ impl RpcCall {
             "put" => Self::Put(r.id, websocket_tx, r.params.clone(), core_cxn),
             "getUserOpList" => Self::GetUserOpList(r.id, websocket_tx, core_cxn),
             "delete" => Self::Delete(r.id, websocket_tx, r.params.clone(), core_cxn),
+            "getUserOp" => Self::GetUserOp(r.id, r.params.clone(), websocket_tx, core_cxn),
             "removeUserOp" => Self::RemoveUserOp(r.id, websocket_tx, r.params.clone(), core_cxn),
             "stopSyncer" => Self::StopSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
             "cancel" | "cancelUserOp" => Self::CancelUserOps(r.id, broadcaster_tx.clone(), core_cxn),
@@ -328,6 +330,9 @@ impl RpcCall {
             },
             Self::GetUserOps(id, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_user_ops(websocket_tx, core_cxn).await)
+            },
+            Self::GetUserOp(id, params, websocket_tx, core_cxn) => {
+                Self::handle_ws_result(id, Self::handle_get_user_op(params, websocket_tx, core_cxn).await)
             },
             Self::GetUserOpList(id, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_user_op_list(websocket_tx, core_cxn).await)
