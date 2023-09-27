@@ -496,7 +496,7 @@ mod tests {
             ..Default::default()
         };
         let expected_result = BridgeSide::Native;
-        let result = batch.side();
+        let result = *batch.side();
         assert_eq!(result, expected_result);
     }
 
@@ -507,7 +507,7 @@ mod tests {
             ..Default::default()
         };
         let expected_result = BridgeSide::Host;
-        let result = batch.side();
+        let result = *batch.side();
         assert_eq!(result, expected_result);
     }
 }

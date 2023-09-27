@@ -16,7 +16,7 @@ pub fn get_arbitrum_protocol_queue_user_op() -> UserOp {
     let side = BridgeSide::Host;
     let protocol_id = ProtocolId::Ethereum;
     let origin_chain_id = EthChainId::XDaiMainnet;
-    let origin_network_id = NetworkId::new(origin_chain_id, protocol_id)
+    let origin_network_id = NetworkId::new(origin_chain_id.to_u64(), protocol_id)
         .to_bytes_4()
         .unwrap()
         .to_vec();

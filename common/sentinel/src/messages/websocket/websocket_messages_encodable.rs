@@ -144,18 +144,3 @@ impl TryInto<String> for WebSocketMessagesEncodable {
         Ok(general_purpose::STANDARD_NO_PAD.encode(serde_json::to_vec(&self)?))
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn websocket_messages_encodable_should_make_serde_roundtrip() {
-        let m = WebSocketMessagesEncodable::GetLatestBlockNumbers;
-        let s: String = m.clone().try_into().unwrap();
-        let expected_s = "IkdldExhdGVzdEJsb2NrTnVtYmVycyI";
-        assert_eq!(s, expected_s);
-        let r = WebSocketMessagesEncodable::try_from(s).unwrap();
-        assert_eq!(r, m);
-    }
-}

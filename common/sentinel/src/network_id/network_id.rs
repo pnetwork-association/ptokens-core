@@ -136,7 +136,7 @@ mod tests {
     fn should_get_network_id_as_bytes_4_correctly() {
         let protocol_id = ProtocolId::Ethereum;
         let chain_id = EthChainId::XDaiMainnet;
-        let network_id = NetworkId::new(chain_id, protocol_id);
+        let network_id = NetworkId::new(chain_id.to_u64(), protocol_id);
         let result = network_id.to_bytes_4().unwrap();
         let expected_result = Bytes4([212, 27, 28, 91]);
         assert_eq!(result, expected_result);
