@@ -26,7 +26,7 @@ pub enum ChainError {
     TooManyCanonBlockCandidates(usize),
 
     #[error("expected but failed to get block data from chain at index {0}")]
-    ExpectedBlockDataAtIndex(usize),
+    ExpectedChainBlockDataAtIndex(usize),
 
     #[error("invalid receipts for block number '{0}', hash '{1}' on chain '{2}'")]
     InvalidReceipts(MetadataChainId, EthHash, u64),
@@ -50,7 +50,11 @@ pub enum ChainError {
     SerdeJson(String),
 
     #[error("block {num} already in db with hash: {hash} for chain id: {mcid}")]
-    BlockAlreadyInDb { num: u64, mcid: MetadataChainId, hash: EthHash },
+    BlockAlreadyInDb {
+        num: u64,
+        mcid: MetadataChainId,
+        hash: EthHash,
+    },
 
     #[error("failed to insert into db: {0}")]
     DbInsert(String),
@@ -79,8 +83,8 @@ pub enum ChainError {
     #[error("{0}")]
     NoParent(NoParentError),
 
-    #[error("no block data in chain vecdeque @ index: {0}")]
-    NoBlockData(u64),
+    #[error("no chain block data in chain vecdeque @ index: {0}")]
+    NoChainBlockData(u64),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Constructor, Getters)]

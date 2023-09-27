@@ -14,9 +14,9 @@ use crate::{
 };
 
 #[derive(Debug, Default, Clone, Eq, PartialEq, Constructor, Serialize, Deserialize, Deref)]
-pub struct BlockDatas(Vec<BlockData>);
+pub struct ChainBlockDatas(Vec<ChainBlockData>);
 
-impl BlockDatas {
+impl ChainBlockDatas {
     fn get_parent_hashes(&self) -> Vec<EthHash> {
         self.iter().map(|d| d.parent_hash()).cloned().collect()
     }
@@ -27,13 +27,13 @@ impl BlockDatas {
 }
 
 #[derive(Debug, Default, Clone, Eq, PartialEq, Constructor, Serialize, Deserialize, Getters)]
-pub struct BlockData {
+pub struct ChainBlockData {
     number: u64,
     hash: EthHash,
     parent_hash: EthHash,
 }
 
-impl TryFrom<&EthSubMat> for BlockData {
+impl TryFrom<&EthSubMat> for ChainBlockData {
     type Error = ChainError;
 
     fn try_from(m: &EthSubMat) -> Result<Self, Self::Error> {
@@ -72,7 +72,7 @@ pub struct Chain {
     confirmations: u64,
     linker_hash: EthHash,
     chain_id: MetadataChainId,
-    chain: VecDeque<Vec<BlockData>>, // TODO use the `BlockDatas` struct above
+    chain: VecDeque<Vec<ChainBlockData>>, // TODO use the `ChainBlockDatas` struct above
     latest_block_timestamp: Duration,
 }
 
@@ -100,15 +100,15 @@ impl Chain {
         self.chain_id
     }
 
-    pub fn get_latest_block_data(&self) -> Option<&Vec<BlockData>> {
+    pub fn get_latest_block_data(&self) -> Option<&Vec<ChainBlockData>> {
         self.chain.get(0)
     }
 
-    pub fn get_tail_block_data(&self) -> Option<&Vec<BlockData>> {
+    pub fn get_tail_block_data(&self) -> Option<&Vec<ChainBlockData>> {
         self.chain.back()
     }
 
-    pub fn get_canon_block_data(&self) -> Option<&Vec<BlockData>> {
+    pub fn get_canon_block_data(&self) -> Option<&Vec<ChainBlockData>> {
         self.chain.get(*self.confirmations() as usize - 1)
     }
 
@@ -191,11 +191,11 @@ impl Chain {
             confirmations,
             linker_hash: EthHash::zero(),
             latest_block_timestamp: sub_mat.get_timestamp(),
-            chain: VecDeque::from([vec![BlockData::try_from(&sub_mat)?]]),
+            chain: VecDeque::from([vec![ChainBlockData::try_from(&sub_mat)?]]),
         })
     }
 
-    fn latest_block_num(&self) -> u64 {
+    pub fn latest_block_num(&self) -> u64 {
         self.offset
     }
 
@@ -301,7 +301,7 @@ impl Chain {
         let block_data = self
             .chain
             .get(idx)
-            .ok_or(ChainError::ExpectedBlockDataAtIndex(idx))?;
+            .ok_or(ChainError::ExpectedChainBlockDataAtIndex(idx))?;
         let db_keys = block_data
             .iter()
             .map(|d| DbKey::from(self.chain_id(), *d.hash()))
@@ -334,7 +334,7 @@ impl Chain {
         // NOTE: First lets validate the sub mat if we're required to
         Self::validate(&mcid, &sub_mat, validate)?;
 
-        let block_data = BlockData::try_from(&sub_mat)?;
+        let block_data = ChainBlockData::try_from(&sub_mat)?;
 
         // NOTE: Next we update our chain data...
         if parent_index.is_zero() {
@@ -349,7 +349,11 @@ impl Chain {
                 None => Err(ChainError::FailedToInsert(insertion_index)),
                 Some(existing_block_data) => {
                     if existing_block_data.contains(&block_data) {
-                        Err(ChainError::BlockAlreadyInDb { mcid, hash: *block_data.hash(), num: *block_data.number() })
+                        Err(ChainError::BlockAlreadyInDb {
+                            mcid,
+                            hash: *block_data.hash(),
+                            num: *block_data.number(),
+                        })
                     } else {
                         existing_block_data.push(block_data);
                         Ok(())
@@ -376,7 +380,7 @@ impl Chain {
         let total_allowable_length = self.confirmations + self.tail_length;
         if self.chain_len() > total_allowable_length {
             let excess_length = self.chain_len() - total_allowable_length;
-            let mut block_data_to_delete: Vec<Vec<BlockData>> = vec![];
+            let mut block_data_to_delete: Vec<Vec<ChainBlockData>> = vec![];
             for _ in 0..excess_length {
                 let data = self.chain.pop_back().ok_or(ChainError::ExpectedABlock)?;
                 block_data_to_delete.push(data);
@@ -450,7 +454,12 @@ impl Chain {
             });
         };
 
-        let block_datas = chain.chain.clone().drain(0..).flatten().collect::<Vec<BlockData>>();
+        let block_datas = chain
+            .chain
+            .clone()
+            .drain(0..)
+            .flatten()
+            .collect::<Vec<ChainBlockData>>();
         let db_keys = block_datas
             .iter()
             .map(|d| DbKey::from(&mcid, *d.hash()))
@@ -463,7 +472,7 @@ impl Chain {
             })?;
         }
 
-        let reset_block_data = BlockData::try_from(&sub_mat)?;
+        let reset_block_data = ChainBlockData::try_from(&sub_mat)?;
 
         let key = chain.sub_mat_to_db_key(&sub_mat)?;
         let pruned_sub_mat = sub_mat.remove_receipts_if_no_logs_from_addresses(&[chain.hub]);
@@ -511,7 +520,7 @@ impl Chain {
             let mut data = self
                 .chain
                 .get(i)
-                .ok_or(ChainError::ExpectedBlockDataAtIndex(i))?
+                .ok_or(ChainError::ExpectedChainBlockDataAtIndex(i))?
                 .to_vec();
 
             if i > 0 {
@@ -521,7 +530,7 @@ impl Chain {
                     .iter()
                     .filter(|d| hashes.contains(d.hash()))
                     .cloned()
-                    .collect::<Vec<BlockData>>();
+                    .collect::<Vec<ChainBlockData>>();
             }
             if i < confs - 1 {
                 // NOTE: IE, any except the _last_ iteration. Here we get all the parent hashes,
@@ -799,7 +808,12 @@ mod tests {
 
         // NOTE: assert that all the blocks in the chain exist in the db, and they they've been
         // pruned of receipts (Note we clone the chain, so we don't drain our _actual_ chain!)
-        let block_datas = chain.chain.clone().drain(0..).flatten().collect::<Vec<BlockData>>();
+        let block_datas = chain
+            .chain
+            .clone()
+            .drain(0..)
+            .flatten()
+            .collect::<Vec<ChainBlockData>>();
         let block_nums = block_datas.iter().map(|d| *d.number()).collect::<Vec<u64>>();
         for block_num in block_nums {
             let sub_mats = chain.get_block(&db_utils, block_num).unwrap();

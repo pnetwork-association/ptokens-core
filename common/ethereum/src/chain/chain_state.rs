@@ -21,6 +21,7 @@ pub struct ChainState {
     tail_block_hash: EthHash,
     canon_block_num: u64,
     canon_block_hash: EthHash,
+    latest_block_timestamp: u64,
 }
 
 impl ChainState {
@@ -86,7 +87,9 @@ impl TryFrom<&Chain> for ChainState {
             .map(|d| *d[0].hash())
             .unwrap_or_else(EthHash::zero);
 
+        let latest_block_timestamp = c.latest_block_timestamp().as_secs();
         let r = ChainState {
+            latest_block_timestamp,
             pnetwork_hub,
             confirmations,
             chain_id,
