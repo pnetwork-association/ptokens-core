@@ -4065,6 +4065,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "rbtag"
+version = "0.4.0"
+source = "git+https://github.com/LivingInSyn/rbtag.git?rev=feee7c0#feee7c07bcec2085d1e1bcb37da955ca8a933ba2"
+dependencies = [
+ "rbtag_derive",
+]
+
+[[package]]
+name = "rbtag_derive"
+version = "0.4.0"
+source = "git+https://github.com/LivingInSyn/rbtag.git?rev=feee7c0#feee7c07bcec2085d1e1bcb37da955ca8a933ba2"
+dependencies = [
+ "proc-macro2 0.4.30",
+ "quote 0.6.13",
+ "syn 0.15.44",
+]
+
+[[package]]
 name = "rdrand"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4682,6 +4700,7 @@ dependencies = [
  "metadata",
  "mongodb",
  "paste",
+ "rbtag",
  "reqwest",
  "rustc-hex",
  "serde",

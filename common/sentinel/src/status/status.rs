@@ -1,12 +1,9 @@
-use std::{collections::HashMap, env};
+use std::collections::HashMap;
 
 use common_eth::{Chain, ChainBlockData, EthPrivateKey, EthSignature, EthSigningCapabilities};
 use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use ethereum_types::{Address as EthAddress, H256 as EthHash};
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
-
 /* JSON Reference:
 {
   actorType: 'guardian',
@@ -23,6 +20,12 @@ use thiserror::Error;
   signature: '0xd55c83bbf7b8b43c2356885806d07e8e65f6096724e253f8794b82df5f8d266a26c8643074ccaed09e1c5f1f73231e1dbed28f289785b1004738c65e2f9b61951c'
 }
  */
+use rbtag::{BuildDateTime, BuildInfo};
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
+#[derive(BuildDateTime, BuildInfo)]
+struct GitCommitHashStruct;
 
 #[derive(Debug, Error)]
 pub enum SentinelStatusError {
@@ -135,8 +138,7 @@ impl SentinelStatus {
     }
 
     pub fn new(pk: &EthPrivateKey, chains: Vec<Chain>) -> Result<Self, SentinelError> {
-        let git_commit_hash =
-            env::var("GIT_HASH").unwrap_or("`GIT_HASH` env variable was not set at build time".to_string());
+        let git_commit_hash = GitCommitHashStruct {}.get_build_commit_long().to_string();
         let signer = pk.to_address();
         let mut status = Self::init(signer, git_commit_hash, chains)?;
         let sig = status.sign(pk)?;
