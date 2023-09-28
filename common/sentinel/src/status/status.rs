@@ -132,7 +132,7 @@ impl SentinelStatus {
             // NOTE ethers js is used in other components, which internally stringifies a json and
             // signs those utf8 bytes. (With the eth signature prefix, which the signing fxn adds
             // for us)
-            pk.sign_eth_prefixed_msg_bytes(serde_json::to_string(self)?.as_bytes())
+            pk.sign_eth_prefixed_msg_bytes(&serde_json::to_vec(self)?)
                 .map_err(|e| SentinelStatusError::SigningError(format!("{e}")))
         }
     }

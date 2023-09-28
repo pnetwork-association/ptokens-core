@@ -18,7 +18,7 @@ fn sign_message_with_no_eth_prefix<D: DatabaseInterface, E: EthDbUtilsExt<D>>(
 ) -> Result<String> {
     db_utils
         .get_eth_private_key_from_db()
-        .and_then(|key| key.sign_message_bytes(message.as_bytes()))
+        .and_then(|key| key.hash_and_sign_msg(message.as_bytes()))
         .map(|signature| encode_eth_signed_message_as_json(message, &signature).to_string())
 }
 
@@ -28,7 +28,7 @@ fn sign_message_with_eth_prefix<D: DatabaseInterface, E: EthDbUtilsExt<D>>(
 ) -> Result<String> {
     db_utils
         .get_eth_private_key_from_db()
-        .and_then(|key| key.sign_eth_prefixed_msg_bytes(message.as_bytes()))
+        .and_then(|key| key.hash_and_sign_msg_with_eth_prefix(message.as_bytes()))
         .map(|signature| encode_eth_signed_message_as_json(message, &signature).to_string())
 }
 
@@ -39,7 +39,7 @@ fn sign_hex_message_with_eth_prefix<D: DatabaseInterface, E: EthDbUtilsExt<D>>(
     let bytes = decode_hex_with_err_msg(message, "Message to sign is NOT valid hex!")?;
     db_utils
         .get_eth_private_key_from_db()
-        .and_then(|key| key.sign_eth_prefixed_msg_bytes(&bytes))
+        .and_then(|key| key.hash_and_sign_msg_with_eth_prefix(&bytes))
         .map(|signature| encode_eth_signed_message_as_json(message, &signature).to_string())
 }
 
@@ -212,7 +212,7 @@ mod tests {
         let message = "0x5A0b54D5dc17e0AadC383d2db43B0a0D3E029c4c";
         let expected_result = json!({
             "message": "0x5A0b54D5dc17e0AadC383d2db43B0a0D3E029c4c",
-            "signature": "0xe83b6dcc17d0c7f35b4e807b4e4f8b3fde9602767f2229b72ba17bedaeb2960f52fc878d40aeddbaf9ee4d3ac4a1264218df14da2c5914be01190c91a53a41a51b"
+            "signature": "0xfd1c8dce0d75ee249e612dc4be61774bfab906447f34300c715baab979d8ed5c7d2f209193055ed5243ca187163450279746feda5aaa9966184e731e68d7e70f1b"
         }).to_string();
         let result = sign_ascii_msg_with_prefix(&db, message, is_for_eth).unwrap();
         assert_eq!(result, expected_result, "✘ Message signature is invalid!")
@@ -255,7 +255,7 @@ mod tests {
         let result = sign_hex_msg_with_prefix(&db, hex_to_sign, is_for_eth).unwrap();
         let expected_result = json!({
             "message":"0xc0ffee",
-            "signature":"0xb2ba6c72332f321a100d4a686f4ecc7d5fc13707b62b292ef36270981e4276d70dc177553bf719ab4bbec181ab7b5fe530437a149d9a9dec449f2aa42b7c1add1c"}).to_string();
+            "signature":"0x23593235b38bed5249f727bd12493628d2ef907c28134650459dc0713cb6ed853ae408db7df527b34ac71142d03ccbd41f4d8e08f18c315887b4e5cdb7294d481c"}).to_string();
         assert_eq!(result, expected_result);
     }
 
@@ -285,7 +285,7 @@ mod tests {
         let message = "Arbitrary message";
         let expected_result = json!({
             "message": "Arbitrary message",
-            "signature": "0xf40c49d9f01f687d5510b4a55cc99d70b541ff850ac7e4ed949b3b47615990430f2230a58c2b233f6067bad376243efe8081f26981c30b9d61011ba05c8e86e41c"
+            "signature": "0x4e8fc473b281ad03f8a98429de6205abaafc48731ccf6c6fe9b1f8d918a2e3de69bb2e1e5e479440796ac305f4112900707f633c69d12954fa712d195cfceae41c"
         }).to_string();
         let result = sign_ascii_msg_with_prefix(&db, message, is_for_eth).unwrap();
         assert_eq!(result, expected_result, "✘ Message signature is invalid!")

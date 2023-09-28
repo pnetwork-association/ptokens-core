@@ -16,7 +16,6 @@ use secp256k1::{
 };
 
 use crate::{
-    eth_constants::{ETH_MESSAGE_PREFIX, PREFIXED_MESSAGE_HASH_LEN},
     eth_crypto::{eth_public_key::EthPublicKey, eth_signature::EthSignature},
     eth_traits::EthSigningCapabilities,
 };
@@ -92,20 +91,17 @@ impl EthSigningCapabilities for EthPrivateKey {
         self.sign_hash(hash).map(EthSignature::set_recovery_param)
     }
 
-    fn sign_message_bytes(&self, message: &[Byte]) -> Result<EthSignature> {
+    fn hash_and_sign_msg(&self, message: &[Byte]) -> Result<EthSignature> {
         self.sign_hash(keccak_hash_bytes(message))
     }
 
-    fn sign_eth_prefixed_msg_bytes(&self, message: &[Byte]) -> Result<EthSignature> {
-        let message_hash = keccak_hash_bytes(message);
-        let message_bytes = [
-            ETH_MESSAGE_PREFIX,
-            PREFIXED_MESSAGE_HASH_LEN.as_ref(),
-            message_hash.as_bytes(),
-        ]
-        .concat();
-        self.sign_message_bytes(&message_bytes)
-            .map(EthSignature::set_recovery_param)
+    fn hash_and_sign_msg_with_eth_prefix(&self, message: &[Byte]) -> Result<EthSignature> {
+        let eth_msg_prefix = b"\x19Ethereum Signed Message:\n";
+
+        // NOTE: See here: https://github.com/ethers-io/ethers.js/blob/77fcc7fdab9a7123f67bbc8c4d1c013ee2f6edca/src.ts/hash/message.ts#L37
+        let msg = [eth_msg_prefix, format!("{}", message.len()).as_bytes(), message].concat();
+
+        self.hash_and_sign_msg(&msg).map(EthSignature::set_recovery_param)
     }
 }
 
@@ -144,10 +140,10 @@ mod tests {
     }
 
     #[test]
-    fn should_sign_message_bytes() {
+    fn should_hash_and_sign_msg() {
         let key = get_sample_eth_private_key();
         let message_bytes = vec![0xc0, 0xff, 0xee];
-        if let Err(e) = key.sign_message_bytes(&message_bytes) {
+        if let Err(e) = key.hash_and_sign_msg(&message_bytes) {
             panic!("Error signing message bytes: {}", e);
         }
     }
@@ -163,36 +159,24 @@ mod tests {
     }
 
     #[test]
-    fn should_sign_eth_prefixed_msg_bytes() {
+    fn should_hash_and_sign_msg_with_eth_prefix() {
         let key = get_sample_eth_private_key();
         let message = "Arbitrary message";
-        if let Err(e) = key.sign_eth_prefixed_msg_bytes(message.as_bytes()) {
+        if let Err(e) = key.hash_and_sign_msg_with_eth_prefix(message.as_bytes()) {
             panic!("Error signing eth prefixed message bytes: {}", e);
         }
     }
 
     #[test]
-    fn should_sign_eth_prefixed_msg_bytes_recoverable_with_solidity() {
-        let eth_private_key = EthPrivateKey::from_slice(&[
-            132, 23, 52, 203, 67, 154, 240, 53, 117, 195, 124, 41, 179, 50, 97, 159, 61, 169, 234, 47, 186, 237, 88,
-            161, 200, 177, 24, 142, 207, 242, 168, 221,
-        ])
-        .unwrap();
-        let message_bytes = vec![
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 83, 194, 4, 141, 173, 79, 207, 171, 68, 195, 239, 61, 22, 232, 130,
-            181, 23, 141, 244, 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 5, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0,
-        ];
-
-        let expected_result = "9bc417b0f16a9d9f5d216d8bceb74da26cf2ab1fd4f98db4ca86d9ef54f2580671f22b8801d7cdb63bf2036d91d5a620de08fb8f07d7368052ed1f6307b0f7271b";
-        let result = hex::encode(
-            eth_private_key
-                .sign_eth_prefixed_msg_bytes(&message_bytes)
-                .unwrap()
-                .to_vec(),
-        );
-
+    fn should_hash_and_sign_msg_with_eth_prefix_recoverable_with_solidity() {
+        let eth_private_key =
+            EthPrivateKey::from_str("841734cb439af03575c37c29b332619f3da9ea2fbaed58a1c8b1188ecff2a8dd").unwrap();
+        let msg = hex::decode("00000000000000000000000053c2048dad4fcfab44c3ef3d16e882b5178df42b00000000000000000000000000000000000000000000000000000000000005390000000000000000000000000000000000000000000000000000000000000000").unwrap();
+        let expected_result = "6c7739aefe46a4bbef64ea98ff3719204b2e23b0b45f7b213642b1ec13b3021f47a5b6c3f5f1b8dd60c37014eb1403f85bf2c586529927674800609fe5582d261c";
+        let result = eth_private_key
+            .hash_and_sign_msg_with_eth_prefix(&msg)
+            .unwrap()
+            .to_string();
         assert_eq!(expected_result, result);
     }
 

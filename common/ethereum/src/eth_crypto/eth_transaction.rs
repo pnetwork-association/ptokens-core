@@ -125,7 +125,7 @@ impl EthTransaction {
     }
 
     pub fn sign<T: EthSigningCapabilities>(self, pk: &T) -> Result<Self> {
-        pk.sign_message_bytes(&self.serialize_bytes())
+        pk.hash_and_sign_msg(&self.serialize_bytes())
             .map(|sig| self.add_signature_to_transaction(sig))
     }
 
