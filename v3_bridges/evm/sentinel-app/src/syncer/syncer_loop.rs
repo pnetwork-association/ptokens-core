@@ -144,7 +144,7 @@ async fn broadcast_channel_loop(
 ) -> Result<SyncerBroadcastChannelMessages, SentinelError> {
     // NOTE: This loops continuously listening to the broadcasting channel, and only returns if we
     // receive a pertinent message. This way, other messages won't cause early returns in the main
-    // tokios::select, so then the main_loop can continue doing it's work.
+    // tokios::select, so then the main_loop can continue doing its work.
     'broadcast_channel_loop: loop {
         match broadcast_channel_rx.recv().await {
             Ok(BroadcastChannelMessages::Syncer(msg_mcid, msg)) => {

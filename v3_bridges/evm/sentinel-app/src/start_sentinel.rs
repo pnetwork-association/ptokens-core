@@ -8,6 +8,7 @@ use common_sentinel::{
     EthRpcMessages,
     SentinelConfig,
     SentinelError,
+    StatusMessages,
     WebSocketMessages,
 };
 use serde_json::json;
@@ -21,6 +22,7 @@ use crate::{
     broadcaster::broadcaster_loop,
     eth_rpc::eth_rpc_loop,
     rpc_server::rpc_server_loop,
+    status::status_loop,
     syncer::syncer_loop,
     ws_server::ws_server_loop,
 };
@@ -32,6 +34,8 @@ pub async fn start_sentinel(
     disable_rpc_server: bool,
     disable_ws_server: bool,
 ) -> Result<String, SentinelError> {
+    let (status_tx, status_rx): (MpscTx<StatusMessages>, MpscRx<StatusMessages>) = mpsc::channel(MAX_CHANNEL_CAPACITY);
+
     let (broadcast_channel_tx, _) = broadcast::channel(MAX_CHANNEL_CAPACITY);
 
     let (websocket_tx, websocket_rx): (MpscTx<WebSocketMessages>, MpscRx<WebSocketMessages>) =
@@ -45,6 +49,14 @@ pub async fn start_sentinel(
 
     let (broadcaster_tx, broadcaster_rx): (MpscTx<BroadcasterMessages>, MpscRx<BroadcasterMessages>) =
         mpsc::channel(MAX_CHANNEL_CAPACITY);
+
+    let status_thread = tokio::spawn(status_loop(
+        config.clone(),
+        status_rx,
+        status_tx.clone(),
+        broadcast_channel_tx.clone(),
+        websocket_tx.clone(),
+    ));
 
     let native_syncer_thread = tokio::spawn(syncer_loop(
         Batch::new_from_config(BridgeSide::Native, config)?,
@@ -106,8 +118,9 @@ pub async fn start_sentinel(
         flatten_join_handle(host_eth_rpc_thread),
         flatten_join_handle(broadcaster_thread),
         flatten_join_handle(ws_server_thread),
+        flatten_join_handle(status_thread),
     ) {
-        Ok((r1, r2, r3, r4, r5, r6, r7)) => Ok(json!({
+        Ok((r1, r2, r3, r4, r5, r6, r7, r8)) => Ok(json!({
             "jsonrpc": "2.0",
             "result": {
                 "native_syncer_thread": r1,
@@ -117,6 +130,7 @@ pub async fn start_sentinel(
                 "host_eth_rpc_thread": r5,
                 "broadcaster_thread": r6,
                 "ws_server_thread": r7,
+                "status_thread": r8,
             },
         })
         .to_string()),
