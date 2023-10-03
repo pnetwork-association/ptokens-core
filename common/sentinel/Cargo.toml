@@ -30,7 +30,6 @@ anyhow = { workspace = true }
 dotenv = { workspace = true }
 base64 = { workspace = true }
 futures = { workspace = true }
-mongodb = { workspace = true }
 reqwest = { workspace = true }
 headers = { workspace = true }
 rustc-hex = { workspace = true }
