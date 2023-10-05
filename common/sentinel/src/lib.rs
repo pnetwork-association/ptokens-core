@@ -10,6 +10,7 @@ mod error;
 mod eth_rpc_calls;
 mod flatten_join_handle;
 mod get_rpc_client;
+mod ipfs;
 mod latest_block_numbers;
 mod logging;
 mod messages;
@@ -56,6 +57,7 @@ pub use self::{
     },
     flatten_join_handle::flatten_join_handle,
     get_rpc_client::get_rpc_client,
+    ipfs::{check_daemon_is_running, IpfsError},
     latest_block_numbers::{LatestBlockNumber, LatestBlockNumbers},
     logging::{init_logger, LogLevel},
     messages::{

@@ -14,6 +14,9 @@ impl From<SentinelError> for CommonError {
 #[derive(Error, Debug)]
 pub enum SentinelError {
     #[error("{0}")]
+    Ipfs(#[from] crate::IpfsError),
+
+    #[error("{0}")]
     SentinelStatusError(#[from] crate::status::SentinelStatusError),
 
     #[error("chain error: {0}")]
