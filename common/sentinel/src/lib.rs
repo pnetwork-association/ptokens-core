@@ -57,7 +57,7 @@ pub use self::{
     },
     flatten_join_handle::flatten_join_handle,
     get_rpc_client::get_rpc_client,
-    ipfs::{check_daemon_is_running, IpfsError},
+    ipfs::{check_ipfs_daemon_is_running, publish_status, IpfsError},
     latest_block_numbers::{LatestBlockNumber, LatestBlockNumbers},
     logging::{init_logger, LogLevel},
     messages::{

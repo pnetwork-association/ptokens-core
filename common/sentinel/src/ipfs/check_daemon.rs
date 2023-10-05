@@ -22,16 +22,16 @@ impl FromStr for IpfsIdOutput {
     }
 }
 
-pub fn check_daemon_is_running(ipfs_bin_path: &str) -> Result<(), IpfsError> {
+pub fn check_ipfs_daemon_is_running(ipfs_bin_path: &str) -> Result<(), IpfsError> {
     let output = Command::new(ipfs_bin_path).arg("id").output()?;
 
     if !output.status.success() {
         return Err(IpfsError::CmdFailed(from_utf8(&output.stderr)?.into()));
     }
 
-    let output = IpfsIdOutput::from_str(from_utf8(&output.stdout)?)?;
+    let parsed_output = IpfsIdOutput::from_str(from_utf8(&output.stdout)?)?;
 
-    if output.addresses.is_none() && output.protocols.is_none() {
+    if parsed_output.addresses.is_none() && parsed_output.protocols.is_none() {
         return Err(IpfsError::DaemonNotRunning);
     }
 
