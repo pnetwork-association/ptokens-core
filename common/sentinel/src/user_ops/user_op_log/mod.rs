@@ -1,4 +1,3 @@
-#[allow(clippy::module_inception)]
 mod user_op_log;
 mod user_op_protocol_log;
 mod user_op_user_send_log;

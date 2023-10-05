@@ -12,7 +12,6 @@ mod user_op_log;
 mod user_op_smart_contract_state;
 mod user_op_state;
 mod user_op_uid;
-#[allow(clippy::module_inception)]
 mod user_ops;
 
 pub use self::{

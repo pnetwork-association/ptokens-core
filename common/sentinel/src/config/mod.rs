@@ -1,5 +1,4 @@
 mod batching;
-#[allow(clippy::module_inception)]
 mod config;
 mod core;
 mod error;

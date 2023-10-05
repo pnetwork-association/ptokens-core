@@ -1,4 +1,3 @@
-#[allow(clippy::module_inception)]
 mod processor;
 mod reset_chain;
 

@@ -1,5 +1,4 @@
 mod check_endpoint;
-#[allow(clippy::module_inception)]
 mod endpoints;
 mod error;
 

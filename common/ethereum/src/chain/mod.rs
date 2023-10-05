@@ -1,4 +1,3 @@
-#[allow(clippy::module_inception)]
 mod chain;
 mod chain_db_utils;
 mod chain_error;
