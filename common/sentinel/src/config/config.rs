@@ -2,6 +2,7 @@ use std::result::Result;
 
 use common::BridgeSide;
 use common_chain_ids::EthChainId;
+use derive_getters::Getters;
 use ethereum_types::Address as EthAddress;
 use log::Level as LogLevel;
 use serde::Deserialize;
@@ -13,6 +14,7 @@ use crate::{
         ConfigT,
         HostConfig,
         HostToml,
+        IpfsConfig,
         LogConfig,
         LogToml,
         NativeConfig,
@@ -28,6 +30,7 @@ use crate::{
 struct SentinelConfigToml {
     log: LogToml,
     host: HostToml,
+    ipfs: IpfsConfig,
     native: NativeToml,
     core: SentinelCoreToml,
     batching: BatchingToml,
@@ -42,36 +45,17 @@ impl SentinelConfigToml {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Getters)]
 pub struct SentinelConfig {
     log: LogConfig,
     host: HostConfig,
+    ipfs: IpfsConfig,
     native: NativeConfig,
     core: SentinelCoreConfig,
     batching: BatchingConfig,
 }
 
 impl SentinelConfig {
-    pub fn host(&self) -> &HostConfig {
-        &self.host
-    }
-
-    pub fn native(&self) -> &NativeConfig {
-        &self.native
-    }
-
-    pub fn log(&self) -> &LogConfig {
-        &self.log
-    }
-
-    pub fn core(&self) -> &SentinelCoreConfig {
-        &self.core
-    }
-
-    pub fn batching(&self) -> &BatchingConfig {
-        &self.batching
-    }
-
     pub fn new(path: &str) -> Result<Self, SentinelError> {
         let res = Self::from_toml(&SentinelConfigToml::new(path)?)?;
         debug!("sentinel config {:?}", res);
@@ -80,6 +64,7 @@ impl SentinelConfig {
 
     fn from_toml(toml: &SentinelConfigToml) -> Result<Self, SentinelError> {
         Ok(Self {
+            ipfs: toml.ipfs.clone(),
             log: LogConfig::from_toml(&toml.log)?,
             host: HostConfig::from_toml(&toml.host)?,
             native: NativeConfig::from_toml(&toml.native)?,

@@ -3,6 +3,7 @@ mod config;
 mod core;
 mod error;
 mod host;
+mod ipfs;
 mod log;
 mod native;
 mod traits;
@@ -13,6 +14,7 @@ pub use self::{
     core::{SentinelCoreConfig, SentinelCoreToml},
     error::SentinelConfigError,
     host::{HostConfig, HostToml},
+    ipfs::IpfsConfig,
     log::{LogConfig, LogToml},
     native::{NativeConfig, NativeToml},
     traits::ConfigT,

@@ -29,6 +29,7 @@ pub use self::{
     config::{
         ConfigT,
         HostConfig,
+        IpfsConfig,
         LogConfig,
         LogToml,
         NativeConfig,
