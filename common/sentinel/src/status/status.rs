@@ -12,6 +12,8 @@ use serde::{Deserialize, Serialize, Serializer};
 use serde_json::json;
 use thiserror::Error;
 
+use crate::{get_utc_timestamp, NetworkId, SentinelError, WebSocketMessagesEncodable};
+
 /* JSON Reference:
 {
   actorType: 'guardian',
@@ -48,9 +50,10 @@ pub enum SentinelStatusError {
 
     #[error("invalid publishing frequency {0} - must be between {MIN_STATUS_PUBLISHING_FREQENCY} & {MAX_STATUS_PUBLISHING_FREQENCY}")]
     InvalidPublishingFrequency(u64),
-}
 
-use crate::{get_utc_timestamp, NetworkId, SentinelError};
+    #[error("cannot convert from: '{from}' to: 'SentinelStatus'")]
+    CannotConvert { from: String },
+}
 
 #[derive(Clone, Default, Debug, Eq, PartialEq, Serialize, Deserialize, Getters)]
 #[serde(rename_all = "camelCase")]
@@ -113,6 +116,17 @@ fn ordered_map<S: Serializer, K: Ord + Serialize, V: Serialize>(
 ) -> Result<S::Ok, S::Error> {
     let ordered: BTreeMap<_, _> = value.iter().collect();
     ordered.serialize(serializer)
+}
+
+impl TryFrom<WebSocketMessagesEncodable> for SentinelStatus {
+    type Error = SentinelStatusError;
+
+    fn try_from(m: WebSocketMessagesEncodable) -> Result<Self, Self::Error> {
+        match m {
+            WebSocketMessagesEncodable::Success(json) => Ok(serde_json::from_value(json)?),
+            _ => Err(SentinelStatusError::CannotConvert { from: m.to_string() }),
+        }
+    }
 }
 
 impl SentinelStatus {
