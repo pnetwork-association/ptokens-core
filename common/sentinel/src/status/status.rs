@@ -53,16 +53,33 @@ pub enum SentinelStatusError {
 
     #[error("cannot convert from: '{from}' to: 'SentinelStatus'")]
     CannotConvert { from: String },
+
+    #[error("no mcid in sync status: {0}")]
+    NoMcid(SyncStatus),
 }
 
 #[derive(Clone, Default, Debug, Eq, PartialEq, Serialize, Deserialize, Getters)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncStatus {
-    #[serde(skip_serializing)] // NOTE: This is used to generate the string key of the hashmap
-    mcid: MetadataChainId,
     latest_block_hash: String,
     latest_block_number: u64,
     latest_block_timestamp: u64,
+
+    #[getter(skip)]
+    #[serde(skip_serializing)] // NOTE: This is used to generate the string key of the hashmap
+    mcid: Option<MetadataChainId>,
+}
+
+impl fmt::Display for SyncStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", json!(self))
+    }
+}
+
+impl SyncStatus {
+    fn mcid(&self) -> Result<MetadataChainId, SentinelStatusError> {
+        self.mcid.ok_or_else(|| SentinelStatusError::NoMcid(self.clone()))
+    }
 }
 
 impl From<Chain> for SyncStatus {
@@ -85,7 +102,7 @@ impl From<&Chain> for SyncStatus {
 
         Self {
             latest_block_hash,
-            mcid: *c.chain_id(),
+            mcid: Some(*c.chain_id()),
             latest_block_number: c.latest_block_num(),
             latest_block_timestamp: c.latest_block_timestamp().as_secs(),
         }
@@ -140,7 +157,7 @@ impl SentinelStatus {
         let mut sync_state = HashMap::<String, SyncStatus>::new();
         for chain in chains {
             let sync_status = SyncStatus::from(chain);
-            let key = NetworkId::try_from(sync_status.mcid())?.to_string();
+            let key = NetworkId::try_from(sync_status.mcid()?)?.to_string();
             sync_state.insert(key, sync_status);
         }
 
