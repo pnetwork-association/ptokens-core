@@ -5,6 +5,7 @@ mod rpc_server;
 mod start_sentinel;
 mod status;
 mod syncer;
+mod type_aliases;
 mod ws_server;
 
 #[macro_use]

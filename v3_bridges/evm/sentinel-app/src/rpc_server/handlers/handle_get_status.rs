@@ -4,9 +4,9 @@ use common_metadata::MetadataChainId;
 use common_sentinel::{SentinelError, WebSocketMessages, WebSocketMessagesEncodable, WebSocketMessagesError};
 use tokio::time::{sleep, Duration};
 
-use crate::rpc_server::{
-    constants::{RpcParams, WebSocketTx, STRONGBOX_TIMEOUT_MS},
-    RpcCall,
+use crate::{
+    rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT_MS},
+    type_aliases::WebSocketTx,
 };
 
 impl RpcCall {

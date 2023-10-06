@@ -12,9 +12,9 @@ use common_sentinel::{
 };
 use tokio::time::{sleep, Duration};
 
-use crate::rpc_server::{
-    constants::{EthRpcTx, RpcParams, WebSocketTx, STRONGBOX_TIMEOUT_MS},
-    RpcCall,
+use crate::{
+    rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT_MS},
+    type_aliases::{EthRpcTx, WebSocketTx},
 };
 
 impl RpcCall {

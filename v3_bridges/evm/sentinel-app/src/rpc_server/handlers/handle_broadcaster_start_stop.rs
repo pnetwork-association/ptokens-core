@@ -1,7 +1,7 @@
 use common_sentinel::{BroadcastChannelMessages, BroadcasterBroadcastChannelMessages, SentinelError};
 use serde_json::{json, Value as Json};
 
-use crate::rpc_server::{constants::BroadcastChannelTx, RpcCall};
+use crate::{rpc_server::RpcCall, type_aliases::BroadcastChannelTx};
 
 impl RpcCall {
     pub(crate) async fn handle_broadcaster_start_stop(

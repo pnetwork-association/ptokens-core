@@ -11,9 +11,9 @@ use common_sentinel::{
 };
 use serde_json::json;
 
-use crate::rpc_server::{
-    constants::{EthRpcTx, RpcParams, WebSocketTx},
-    RpcCall,
+use crate::{
+    rpc_server::{RpcCall, RpcParams},
+    type_aliases::{EthRpcTx, WebSocketTx},
 };
 
 impl RpcCall {

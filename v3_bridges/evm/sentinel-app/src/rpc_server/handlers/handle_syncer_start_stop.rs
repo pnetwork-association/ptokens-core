@@ -5,9 +5,9 @@ use common_metadata::MetadataChainId;
 use common_sentinel::{BroadcastChannelMessages, SentinelError, SyncerBroadcastChannelMessages};
 use serde_json::{json, Value as Json};
 
-use crate::rpc_server::{
-    constants::{BroadcastChannelTx, RpcParams},
-    RpcCall,
+use crate::{
+    rpc_server::{RpcCall, RpcParams},
+    type_aliases::BroadcastChannelTx,
 };
 
 impl RpcCall {

@@ -1,7 +1,7 @@
 use common_sentinel::{BroadcasterMessages, SentinelError};
 use serde_json::{json, Value as Json};
 
-use crate::rpc_server::{constants::BroadcasterTx, RpcCall};
+use crate::{rpc_server::RpcCall, type_aliases::BroadcasterTx};
 
 // NOTE: This RPC call will attempt to cancel ALL cancellable user ops.
 impl RpcCall {

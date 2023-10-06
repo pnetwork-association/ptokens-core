@@ -15,9 +15,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tokio::time::{sleep, Duration};
 
-use crate::rpc_server::{
-    constants::{EthRpcTx, WebSocketTx, STRONGBOX_TIMEOUT_MS},
-    RpcCall,
+use crate::{
+    rpc_server::{RpcCall, STRONGBOX_TIMEOUT_MS},
+    type_aliases::{EthRpcTx, WebSocketTx},
 };
 
 impl RpcCall {

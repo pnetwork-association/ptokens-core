@@ -10,14 +10,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 use warp::{reject::Reject, Filter, Rejection};
 
-use crate::rpc_server::constants::{
+use super::type_aliases::{RpcId, RpcParams};
+use crate::type_aliases::{
     BroadcastChannelRx,
     BroadcastChannelTx,
     BroadcasterTx,
     CoreCxnStatus,
     EthRpcTx,
-    RpcId,
-    RpcParams,
+    StatusTx,
     WebSocketTx,
 };
 
@@ -63,13 +63,14 @@ pub(crate) enum RpcCall {
     Delete(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetUserOp(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     GetStatus(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
+    SetStatusPublishingFrequency(RpcId, RpcParams, StatusTx),
     RemoveUserOp(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetCoreState(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     LatestBlockNumbers(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
-    BroadcasterStartStop(RpcId, BroadcastChannelTx, CoreCxnStatus, bool),
     GetCancellableUserOps(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
+    BroadcasterStartStop(RpcId, BroadcastChannelTx, CoreCxnStatus, bool),
     Init(
         RpcId,
         Box<SentinelConfig>,
@@ -126,6 +127,7 @@ impl RpcCall {
         native_eth_rpc_tx: EthRpcTx,
         broadcaster_tx: BroadcasterTx,
         broadcast_channel_tx: BroadcastChannelTx,
+        status_tx: StatusTx,
         core_cxn: bool,
     ) -> Self {
         match r.method.as_ref() {
@@ -143,6 +145,7 @@ impl RpcCall {
             "startSyncer" => Self::StartSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
             "startBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, true),
             "stopBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, false),
+            "setStatusPublishingFrequency" => Self::SetStatusPublishingFrequency(r.id, r.params.clone(), status_tx),
             "getLatestBlockNumbers" | "getLatestBlockNums" | "latestBlockNumbers" | "latest" => {
                 Self::LatestBlockNumbers(r.id, r.params.clone(), websocket_tx, core_cxn)
             },
@@ -229,6 +232,11 @@ impl RpcCall {
 
     async fn handle(self) -> Result<impl warp::Reply, Rejection> {
         match self {
+            Self::SetStatusPublishingFrequency(id, status_tx, params) => {
+                let result = Self::handle_set_status_publishing_frequency(status_tx, params).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
             Self::GetSyncState(id, config, websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, core_cxn) => {
                 Self::handle_ws_result(
                     id,
@@ -380,6 +388,7 @@ async fn start_rpc_server(
     broadcast_channel_tx: BroadcastChannelTx,
     core_cxn: bool,
     broadcaster_tx: BroadcasterTx,
+    status_tx: StatusTx,
 ) -> Result<(), SentinelError> {
     debug!("rpc server listening!");
     let core_cxn_filter = warp::any().map(move || core_cxn);
@@ -387,6 +396,7 @@ async fn start_rpc_server(
     let broadcaster_tx_filter = warp::any().map(move || broadcaster_tx.clone());
     let host_eth_rpc_tx_filter = warp::any().map(move || host_eth_rpc_tx.clone());
     let native_eth_rpc_tx_filter = warp::any().map(move || native_eth_rpc_tx.clone());
+    let status_tx_filter = warp::any().map(move || status_tx.clone());
     let broadcast_channel_tx_filter = warp::any().map(move || broadcast_channel_tx.clone());
 
     let rpc = warp::path("v1")
@@ -401,6 +411,7 @@ async fn start_rpc_server(
         .and(native_eth_rpc_tx_filter.clone())
         .and(broadcaster_tx_filter.clone())
         .and(broadcast_channel_tx_filter.clone())
+        .and(status_tx_filter.clone())
         .and(core_cxn_filter)
         .map(RpcCall::new)
         .and_then(|r: RpcCall| async move { r.handle().await });
@@ -435,6 +446,7 @@ pub async fn rpc_server_loop(
     disable: bool,
     broadcast_channel_tx: BroadcastChannelTx,
     broadcaster_tx: BroadcasterTx,
+    status_tx: StatusTx,
 ) -> Result<(), SentinelError> {
     let rpc_server_is_enabled = !disable;
     let name = "rpc server";
@@ -467,6 +479,7 @@ pub async fn rpc_server_loop(
                 broadcast_channel_tx.clone(),
                 core_connection_status,
                 broadcaster_tx.clone(),
+                status_tx.clone(),
             ), if rpc_server_is_enabled => {
                 if r.is_ok() {
                     warn!("{name} returned, restarting {name} now...");
