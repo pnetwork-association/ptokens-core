@@ -22,7 +22,7 @@ use crate::{
     broadcaster::broadcaster_loop,
     eth_rpc::eth_rpc_loop,
     rpc_server::rpc_server_loop,
-    status::status_loop,
+    status_publisher::status_publisher_loop,
     syncer::syncer_loop,
     ws_server::ws_server_loop,
 };
@@ -50,7 +50,7 @@ pub async fn start_sentinel(
     let (broadcaster_tx, broadcaster_rx): (MpscTx<BroadcasterMessages>, MpscRx<BroadcasterMessages>) =
         mpsc::channel(MAX_CHANNEL_CAPACITY);
 
-    let status_thread = tokio::spawn(status_loop(
+    let status_thread = tokio::spawn(status_publisher_loop(
         config.clone(),
         status_rx,
         status_tx.clone(),

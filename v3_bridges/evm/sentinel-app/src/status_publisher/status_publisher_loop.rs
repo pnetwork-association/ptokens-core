@@ -3,6 +3,7 @@ use std::str::FromStr;
 use common_metadata::MetadataChainId;
 use common_sentinel::{
     check_ipfs_daemon_is_running,
+    publish_status as publish_status_via_ipfs,
     BroadcastChannelMessages,
     SentinelConfig,
     SentinelError,
@@ -21,33 +22,27 @@ use tokio::{
     time::{sleep, Duration},
 };
 
-use crate::type_aliases::WebSocketTx;
+use crate::type_aliases::{CoreCxnStatus, Mcids, WebSocketTx};
 
-async fn publish_status(config: &SentinelConfig, websocket_tx: MpscTx<WebSocketMessages>) -> Result<(), SentinelError> {
-    // [ ] get status from core
-    // [ ] publish it
+async fn publish_status(
+    config: &SentinelConfig,
+    websocket_tx: MpscTx<WebSocketMessages>,
+    core_cxn_status: &CoreCxnStatus,
+    mcids: Mcids,
+) -> Result<(), SentinelError> {
+    let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetStatus(mcids));
+    websocket_tx.send(msg).await?;
 
-    /*
-    let mcids = params
-        .iter()
-        .map(|s| MetadataChainId::from_str(s).map_err(|_| WebSocketMessagesError::ParseMetadataChainId(s.into())))
-        .collect::<Result<Vec<MetadataChainId>, WebSocketMessagesError>>()?;
-        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetStatus(mcids));
-        websocket_tx.send(msg).await?;
-
-        tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "getting status";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
+    let status = SentinelStatus::try_from(tokio::select! {
+        response = rx => response?,
+        _ = sleep(Duration::from_secs(*config.core().timeout())) => {
+            let m = "getting status";
+            error!("timed out whilst {m}");
+            Err(SentinelError::Timedout(m.into()))
         }
-    }
-    */
+    }?)?;
 
-    todo!("this");
-    Ok(())
+    Ok(publish_status_via_ipfs(config.ipfs().ipfs_bin_path(), status)?)
 }
 
 async fn broadcast_channel_loop(
@@ -65,25 +60,29 @@ async fn broadcast_channel_loop(
     }
 }
 
-async fn publish_status_loop(frequency: u64, status_tx: MpscTx<StatusMessages>) -> Result<(), SentinelError> {
+async fn publish_status_loop(
+    frequency: &u64,
+    status_tx: MpscTx<StatusMessages>,
+    core_cxn_status: &CoreCxnStatus,
+) -> Result<(), SentinelError> {
     // NOTE: This loop runs to send messages to the status loop at a configurable frequency to tell
     // it to publish its status. It should never return, except in error.
-
-    todo!("take core cxn so we can only run the fxn to publish the status if the core is connected (below will have to turn into i)");
-
     'publish_status_loop: loop {
-        sleep(Duration::from_secs(frequency)).await;
-        warn!("{frequency}s has elapsed - sending message to cancel any cancellable user ops");
-        /*
-        match broadcaster_tx.send(BroadcasterMessages::CancelUserOps).await {
-            Ok(_) => continue 'publish_status_loop,
-            Err(e) => break 'publish_status_loop Err(e.into()),
+        sleep(Duration::from_secs(*frequency)).await;
+        info!("{frequency}s has elapsed - sending message to publish status...");
+        if *core_cxn_status {
+            match status_tx.send(StatusMessages::SendStatusUpdate).await {
+                Ok(_) => continue 'publish_status_loop,
+                Err(e) => break 'publish_status_loop Err(e.into()),
+            }
+        } else {
+            warn!("core is currently not connected so cannot publish a status update!");
+            continue 'publish_status_loop;
         }
-        */
     }
 }
 
-pub async fn status_loop(
+pub async fn status_publisher_loop(
     config: SentinelConfig,
     mut status_rx: MpscRx<StatusMessages>,
     status_tx: MpscTx<StatusMessages>,
@@ -94,13 +93,14 @@ pub async fn status_loop(
 
     check_ipfs_daemon_is_running(config.ipfs().ipfs_bin_path())?;
 
+    let mcids = config.mcids();
     let mut core_is_connected = false;
     let mut status_is_enabled = false;
     let mut status_update_frequency = *config.ipfs().status_update_frequency();
 
     'status_loop: loop {
         tokio::select! {
-            r = publish_status_loop(status_update_frequency, status_tx.clone()) => {
+            r = publish_status_loop(&status_update_frequency, status_tx.clone(), &core_is_connected) => {
                 match r {
                     Ok(_) => {
                         warn!("publish status loop returned Ok(()) for some reason");
@@ -116,18 +116,14 @@ pub async fn status_loop(
                 continue 'status_loop
             },
             r = status_rx.recv() , if status_is_enabled && core_is_connected => match r {
-                Some(StatusMessages::SendStatusUpdate) => {
-
-
-
-
-                    todo!("this"); // TODO TODO TODO TODO
-
-
-
-
-
-                    continue 'status_loop
+                Some(StatusMessages::SendStatusUpdate) => match publish_status(
+                    &config,
+                    websocket_tx.clone(),
+                    &core_is_connected,
+                    mcids.clone(),
+                ).await {
+                    Ok(_) => continue 'status_loop,
+                    Err(e) => break 'status_loop Err(e)
                 },
                 Some(StatusMessages::SetStatusPublishingFreqency(new_frequency)) => {
                     status_update_frequency = new_frequency;

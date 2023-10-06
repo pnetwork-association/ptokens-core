@@ -1,3 +1,4 @@
+use common_metadata::MetadataChainId;
 use common_sentinel::{
     BroadcastChannelMessages,
     BroadcasterMessages,
@@ -11,6 +12,7 @@ use tokio::sync::{
 };
 
 pub(crate) type CoreCxnStatus = bool;
+pub(crate) type Mcids = Vec<MetadataChainId>;
 pub(crate) type StatusTx = MpscTx<StatusMessages>;
 pub(crate) type EthRpcTx = MpscTx<EthRpcMessages>;
 pub(crate) type WebSocketTx = MpscTx<WebSocketMessages>;
