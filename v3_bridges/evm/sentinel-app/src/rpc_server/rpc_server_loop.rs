@@ -64,6 +64,7 @@ pub(crate) enum RpcCall {
     GetUserOp(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     GetStatus(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     SetStatusPublishingFrequency(RpcId, RpcParams, StatusTx),
+    StatusPublisherStartStop(RpcId, BroadcastChannelTx, bool),
     RemoveUserOp(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetCoreState(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
@@ -146,6 +147,12 @@ impl RpcCall {
             "startBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, true),
             "stopBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, false),
             "setStatusPublishingFrequency" => Self::SetStatusPublishingFrequency(r.id, r.params.clone(), status_tx),
+            "stopStatusPublisher" | "stopPublisher" => {
+                Self::StatusPublisherStartStop(r.id, broadcast_channel_tx.clone(), false)
+            },
+            "startStatusPublisher" | "startPublisher" => {
+                Self::StatusPublisherStartStop(r.id, broadcast_channel_tx.clone(), true)
+            },
             "getLatestBlockNumbers" | "getLatestBlockNums" | "latestBlockNumbers" | "latest" => {
                 Self::LatestBlockNumbers(r.id, r.params.clone(), websocket_tx, core_cxn)
             },
@@ -257,6 +264,12 @@ impl RpcCall {
             Self::BroadcasterStartStop(id, broadcast_channel_tx, core_cxn, start_broadcaster) => {
                 let result =
                     Self::handle_broadcaster_start_stop(broadcast_channel_tx, core_cxn, start_broadcaster).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
+            Self::StatusPublisherStartStop(id, broadcast_channel_tx, start_status_publisher) => {
+                let result =
+                    Self::handle_status_publisher_start_stop(broadcast_channel_tx, start_status_publisher).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },

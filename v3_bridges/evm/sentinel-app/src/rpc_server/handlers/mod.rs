@@ -13,6 +13,7 @@ mod handle_latest_block_numbers;
 mod handle_remove_user_op;
 mod handle_reset_chain;
 mod handle_set_status_publishing_frequency;
+mod handle_status_publisher_start_stop;
 mod handle_submit_block;
 mod handle_sync_state;
 mod handle_syncer_start_stop;

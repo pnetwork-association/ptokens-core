@@ -9,7 +9,7 @@ impl RpcCall {
         core_cxn: bool,
         start: bool,
     ) -> Result<Json, SentinelError> {
-        debug!("handling stop syncer rpc call...");
+        debug!("handling broadcaster start/stop...");
         Self::check_core_is_connected(core_cxn)?;
         let json = json!({"status": format!("{} message sent to broadcaster", if start { "start" } else { "stop" })});
         let m = if start {
