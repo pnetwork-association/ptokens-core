@@ -1,4 +1,4 @@
-use common_sentinel::{BroadcastChannelMessages, SentinelError, StatusBroadcastChannelMessages, StatusMessages};
+use common_sentinel::{BroadcastChannelMessages, SentinelError, StatusPublisherBroadcastChannelMessages, StatusPublisherMessages};
 use serde_json::{json, Value as Json};
 
 use crate::{rpc_server::RpcCall, type_aliases::BroadcastChannelTx};
@@ -12,9 +12,9 @@ impl RpcCall {
         let json = json!({"status": format!("{} message sent to status publisher via broadcast channel", if start { "start" } else { "stop" })});
 
         let m = if start {
-            StatusBroadcastChannelMessages::Start
+            StatusPublisherBroadcastChannelMessages::Start
         } else {
-            StatusBroadcastChannelMessages::Stop
+            StatusPublisherBroadcastChannelMessages::Stop
         };
 
         let msg = BroadcastChannelMessages::Status(m);

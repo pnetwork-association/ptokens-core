@@ -1,12 +1,12 @@
 use std::fmt;
 
 #[derive(Debug, Clone)]
-pub enum StatusMessages {
+pub enum StatusPublisherMessages {
     SendStatusUpdate,
     SetStatusPublishingFreqency(u64),
 }
 
-impl fmt::Display for StatusMessages {
+impl fmt::Display for StatusPublisherMessages {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let prefix = "status broadcast channel message:";
         let s = match self {

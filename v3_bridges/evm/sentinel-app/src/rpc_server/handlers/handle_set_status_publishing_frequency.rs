@@ -4,7 +4,7 @@ use common_metadata::MetadataChainId;
 use common_sentinel::{
     SentinelError,
     SentinelStatusError,
-    StatusMessages,
+    StatusPublisherMessages,
     WebSocketMessages,
     WebSocketMessagesEncodable,
     WebSocketMessagesError,
@@ -31,7 +31,7 @@ impl RpcCall {
         if !(MIN_STATUS_PUBLISHING_FREQENCY..=MAX_STATUS_PUBLISHING_FREQENCY).contains(&frequency) {
             Err(SentinelStatusError::InvalidPublishingFrequency(frequency).into())
         } else {
-            let msg = StatusMessages::SetStatusPublishingFreqency(frequency);
+            let msg = StatusPublisherMessages::SetStatusPublishingFreqency(frequency);
             let _ = status_tx.send(msg).await?;
             Ok(())
         }

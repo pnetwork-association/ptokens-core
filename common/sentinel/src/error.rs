@@ -8,7 +8,7 @@ use crate::{
     BroadcasterMessages,
     DbKey,
     EthRpcMessages,
-    StatusMessages,
+    StatusPublisherMessages,
     SyncerMessages,
     WebSocketMessages,
 };
@@ -169,7 +169,7 @@ pub enum SentinelError {
     WebSocketChannel(Box<tokio::sync::mpsc::error::SendError<WebSocketMessages>>),
 
     #[error("status channel error: {0}")]
-    StatusChannel(Box<tokio::sync::mpsc::error::SendError<StatusMessages>>),
+    StatusChannel(Box<tokio::sync::mpsc::error::SendError<StatusPublisherMessages>>),
 
     #[error("syncer channel error: {0}")]
     SyncerChannel(Box<tokio::sync::broadcast::error::SendError<SyncerMessages>>),
@@ -205,8 +205,8 @@ impl From<tokio::sync::mpsc::error::SendError<WebSocketMessages>> for SentinelEr
     }
 }
 
-impl From<tokio::sync::mpsc::error::SendError<StatusMessages>> for SentinelError {
-    fn from(e: tokio::sync::mpsc::error::SendError<StatusMessages>) -> Self {
+impl From<tokio::sync::mpsc::error::SendError<StatusPublisherMessages>> for SentinelError {
+    fn from(e: tokio::sync::mpsc::error::SendError<StatusPublisherMessages>) -> Self {
         Self::StatusChannel(Box::new(e))
     }
 }

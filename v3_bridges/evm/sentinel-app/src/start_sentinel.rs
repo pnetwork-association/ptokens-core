@@ -8,7 +8,7 @@ use common_sentinel::{
     EthRpcMessages,
     SentinelConfig,
     SentinelError,
-    StatusMessages,
+    StatusPublisherMessages,
     WebSocketMessages,
 };
 use serde_json::json;
@@ -34,7 +34,7 @@ pub async fn start_sentinel(
     disable_rpc_server: bool,
     disable_ws_server: bool,
 ) -> Result<String, SentinelError> {
-    let (status_tx, status_rx): (MpscTx<StatusMessages>, MpscRx<StatusMessages>) = mpsc::channel(MAX_CHANNEL_CAPACITY);
+    let (status_tx, status_rx): (MpscTx<StatusPublisherMessages>, MpscRx<StatusPublisherMessages>) = mpsc::channel(MAX_CHANNEL_CAPACITY);
 
     let (broadcast_channel_tx, _) = broadcast::channel(MAX_CHANNEL_CAPACITY);
 

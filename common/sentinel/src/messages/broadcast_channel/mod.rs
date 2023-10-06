@@ -1,13 +1,13 @@
 mod broadcaster;
 mod rpc_server;
-mod status;
+mod status_publisher;
 mod syncer;
 
 use common_metadata::MetadataChainId;
 
 #[derive(Debug, Clone)]
 pub enum BroadcastChannelMessages {
-    Status(StatusBroadcastChannelMessages),
+    Status(StatusPublisherBroadcastChannelMessages),
     RpcServer(RpcServerBroadcastChannelMessages),
     Broadcaster(BroadcasterBroadcastChannelMessages),
     Syncer(MetadataChainId, SyncerBroadcastChannelMessages),
@@ -16,6 +16,6 @@ pub enum BroadcastChannelMessages {
 pub use self::{
     broadcaster::BroadcasterBroadcastChannelMessages,
     rpc_server::RpcServerBroadcastChannelMessages,
-    status::StatusBroadcastChannelMessages,
+    status_publisher::StatusPublisherBroadcastChannelMessages,
     syncer::SyncerBroadcastChannelMessages,
 };

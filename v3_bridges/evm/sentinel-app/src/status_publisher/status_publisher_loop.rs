@@ -8,8 +8,8 @@ use common_sentinel::{
     SentinelConfig,
     SentinelError,
     SentinelStatus,
-    StatusBroadcastChannelMessages,
-    StatusMessages,
+    StatusPublisherBroadcastChannelMessages,
+    StatusPublisherMessages,
     WebSocketMessages,
     WebSocketMessagesEncodable,
     WebSocketMessagesError,
@@ -47,7 +47,7 @@ async fn publish_status(
 
 async fn broadcast_channel_loop(
     mut broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
-) -> Result<StatusBroadcastChannelMessages, SentinelError> {
+) -> Result<StatusPublisherBroadcastChannelMessages, SentinelError> {
     // NOTE: This loops continuously listening to the broadcasting channel, and only returns if we
     // receive a pertinent message. This way, other messages won't cause early returns in the main
     // tokios::select, so that the main_loop can continue doing its work.
@@ -62,7 +62,7 @@ async fn broadcast_channel_loop(
 
 async fn publish_status_loop(
     frequency: &u64,
-    status_tx: MpscTx<StatusMessages>,
+    status_tx: MpscTx<StatusPublisherMessages>,
     core_cxn_status: &CoreCxnStatus,
 ) -> Result<(), SentinelError> {
     // NOTE: This loop runs to send messages to the status loop at a configurable frequency to tell
@@ -71,7 +71,7 @@ async fn publish_status_loop(
         sleep(Duration::from_secs(*frequency)).await;
         info!("{frequency}s has elapsed - sending message to publish status...");
         if *core_cxn_status {
-            match status_tx.send(StatusMessages::SendStatusUpdate).await {
+            match status_tx.send(StatusPublisherMessages::SendStatusUpdate).await {
                 Ok(_) => continue 'publish_status_loop,
                 Err(e) => break 'publish_status_loop Err(e.into()),
             }
@@ -84,8 +84,8 @@ async fn publish_status_loop(
 
 pub async fn status_publisher_loop(
     config: SentinelConfig,
-    mut status_rx: MpscRx<StatusMessages>,
-    status_tx: MpscTx<StatusMessages>,
+    mut status_rx: MpscRx<StatusPublisherMessages>,
+    status_tx: MpscTx<StatusPublisherMessages>,
     broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
     websocket_tx: MpscTx<WebSocketMessages>,
 ) -> Result<(), SentinelError> {
@@ -116,7 +116,7 @@ pub async fn status_publisher_loop(
                 continue 'status_loop
             },
             r = status_rx.recv() , if status_is_enabled && core_is_connected => match r {
-                Some(StatusMessages::SendStatusUpdate) => match publish_status(
+                Some(StatusPublisherMessages::SendStatusUpdate) => match publish_status(
                     &config,
                     websocket_tx.clone(),
                     &core_is_connected,
@@ -125,7 +125,7 @@ pub async fn status_publisher_loop(
                     Ok(_) => continue 'status_loop,
                     Err(e) => break 'status_loop Err(e)
                 },
-                Some(StatusMessages::SetStatusPublishingFreqency(new_frequency)) => {
+                Some(StatusPublisherMessages::SetStatusPublishingFreqency(new_frequency)) => {
                     status_update_frequency = new_frequency;
                     info!("updated publishing frequency to {new_frequency}");
                     continue 'status_loop
@@ -142,22 +142,22 @@ pub async fn status_publisher_loop(
                     Ok(msg) => {
                         let note = format!("(core is currently {}connected)", if core_is_connected { "" } else { "not "});
                         match msg {
-                            StatusBroadcastChannelMessages::Stop => {
+                            StatusPublisherBroadcastChannelMessages::Stop => {
                                 warn!("msg received to stop the {name} {note}");
                                 status_is_enabled = false;
                                 continue 'status_loop
                             },
-                            StatusBroadcastChannelMessages::Start => {
+                            StatusPublisherBroadcastChannelMessages::Start => {
                                 warn!("msg received to start the {name} {note}");
                                 status_is_enabled = true;
                                 continue 'status_loop
                             },
-                            StatusBroadcastChannelMessages::CoreConnected => {
+                            StatusPublisherBroadcastChannelMessages::CoreConnected => {
                                 warn!("core connected message received in {name} {note}");
                                 core_is_connected = true;
                                 continue 'status_loop
                             },
-                            StatusBroadcastChannelMessages::CoreDisconnected => {
+                            StatusPublisherBroadcastChannelMessages::CoreDisconnected => {
                                 warn!("core disconnected message received in {name} {note}");
                                 core_is_connected = false;
                                 continue 'status_loop
