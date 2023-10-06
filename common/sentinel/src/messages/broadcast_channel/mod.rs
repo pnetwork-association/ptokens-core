@@ -7,7 +7,7 @@ use common_metadata::MetadataChainId;
 
 #[derive(Debug, Clone)]
 pub enum BroadcastChannelMessages {
-    Status(StatusPublisherBroadcastChannelMessages),
+    StatusPublisher(StatusPublisherBroadcastChannelMessages),
     RpcServer(RpcServerBroadcastChannelMessages),
     Broadcaster(BroadcasterBroadcastChannelMessages),
     Syncer(MetadataChainId, SyncerBroadcastChannelMessages),

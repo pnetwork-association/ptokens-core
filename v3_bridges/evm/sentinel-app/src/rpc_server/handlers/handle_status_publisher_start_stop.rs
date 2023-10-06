@@ -22,7 +22,7 @@ impl RpcCall {
             StatusPublisherBroadcastChannelMessages::Stop
         };
 
-        let msg = BroadcastChannelMessages::Status(m);
+        let msg = BroadcastChannelMessages::StatusPublisher(m);
 
         // NOTE: We use the broadcast channel rather than the specific status publisher channel because the
         // loop handling broadcaster channel messages runs regardless of whether the module is turned on or off.

@@ -19,6 +19,7 @@ use common_sentinel::{
     RpcServerBroadcastChannelMessages,
     SentinelConfig,
     SentinelError,
+    StatusPublisherBroadcastChannelMessages,
     SyncerBroadcastChannelMessages,
     WebSocketMessages,
     WebSocketMessagesEncodable,
@@ -31,9 +32,7 @@ use tokio::{
 };
 use tower_http::services::ServeDir;
 
-// TODO have somewhere hold all these aliases
-type WebSocketRx = MpscRx<WebSocketMessages>;
-type BroadcastChannelTx = MpMcTx<BroadcastChannelMessages>;
+use crate::type_aliases::{BroadcastChannelTx, WebSocketRx};
 
 async fn handle_socket(
     mut socket: WebSocket,
@@ -73,6 +72,8 @@ async fn handle_socket(
     // NOTE: Trying the lock here limits us to one active connection.
     let mut rx = websocket_rx.try_lock()?;
 
+    // FIXME Need a better way/single location for all the services that need to know about this
+    // core cxn status
     for mcid in mcids.iter().cloned() {
         // NOTE: Tell the various components that a core is connected.
         broadcast_channel_tx.send(BroadcastChannelMessages::Syncer(
@@ -84,6 +85,9 @@ async fn handle_socket(
         ))?;
         broadcast_channel_tx.send(BroadcastChannelMessages::Broadcaster(
             BroadcasterBroadcastChannelMessages::CoreConnected,
+        ))?;
+        broadcast_channel_tx.send(BroadcastChannelMessages::StatusPublisher(
+            StatusPublisherBroadcastChannelMessages::CoreConnected,
         ))?;
     }
 
@@ -159,6 +163,9 @@ async fn handle_socket(
         ))?;
         broadcast_channel_tx.send(BroadcastChannelMessages::Broadcaster(
             BroadcasterBroadcastChannelMessages::CoreDisconnected,
+        ))?;
+        broadcast_channel_tx.send(BroadcastChannelMessages::StatusPublisher(
+            StatusPublisherBroadcastChannelMessages::CoreDisconnected,
         ))?;
     }
 

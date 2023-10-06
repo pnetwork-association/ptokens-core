@@ -53,7 +53,7 @@ async fn broadcast_channel_loop(
     // tokios::select, so that the main_loop can continue doing its work.
     'broadcast_channel_loop: loop {
         match broadcast_channel_rx.recv().await {
-            Ok(BroadcastChannelMessages::Status(msg)) => break 'broadcast_channel_loop Ok(msg),
+            Ok(BroadcastChannelMessages::StatusPublisher(msg)) => break 'broadcast_channel_loop Ok(msg),
             Ok(_) => continue 'broadcast_channel_loop, // NOTE: The message wasn't for us
             Err(e) => break 'broadcast_channel_loop Err(e.into()),
         }
