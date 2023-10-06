@@ -2,9 +2,11 @@ use std::str::FromStr;
 
 use common_metadata::MetadataChainId;
 use common_sentinel::{
+    call_core,
     check_ipfs_daemon_is_running,
     publish_status as publish_status_via_ipfs,
     BroadcastChannelMessages,
+    Responder,
     SentinelConfig,
     SentinelError,
     SentinelStatus,
@@ -28,19 +30,17 @@ async fn publish_status(
     config: &SentinelConfig,
     websocket_tx: MpscTx<WebSocketMessages>,
     core_cxn_status: &CoreCxnStatus,
+    core_timeout: &u64,
     mcids: Mcids,
 ) -> Result<(), SentinelError> {
-    let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetStatus(mcids));
-    websocket_tx.send(msg).await?;
+    let core_result = call_core(
+        *core_timeout,
+        websocket_tx.clone(),
+        WebSocketMessagesEncodable::GetStatus(mcids),
+    )
+    .await?;
 
-    let status = SentinelStatus::try_from(tokio::select! {
-        response = rx => response?,
-        _ = sleep(Duration::from_secs(*config.core().timeout())) => {
-            let m = "getting status";
-            error!("timed out whilst {m}");
-            Err(SentinelError::Timedout(m.into()))
-        }
-    }?)?;
+    let status = SentinelStatus::try_from(core_result)?;
 
     Ok(publish_status_via_ipfs(config.ipfs().ipfs_bin_path(), status)?)
 }
@@ -96,6 +96,7 @@ pub async fn status_publisher_loop(
     let mcids = config.mcids();
     let mut core_is_connected = false;
     let mut status_is_enabled = false;
+    let mut core_timeout = *config.core().timeout(); // TODO Make updateable via rpc call
     let mut status_update_frequency = *config.ipfs().status_update_frequency();
 
     'status_loop: loop {
@@ -120,6 +121,7 @@ pub async fn status_publisher_loop(
                     &config,
                     websocket_tx.clone(),
                     &core_is_connected,
+                    &core_timeout,
                     mcids.clone(),
                 ).await {
                     Ok(_) => continue 'status_loop,
