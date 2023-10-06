@@ -42,6 +42,10 @@ async fn publish_status(
 
     let status = SentinelStatus::try_from(core_result)?;
 
+    // FIXME error handling here. EG what if the ipfs node hasn't got `--enable-pubsub-experiment`
+    // enabled?? We should just got back to sleep on this loop and report the error so the user can
+    // sort out their daemon.
+
     Ok(publish_status_via_ipfs(config.ipfs().ipfs_bin_path(), status)?)
 }
 
@@ -64,20 +68,25 @@ async fn publish_status_loop(
     frequency: &u64,
     status_tx: MpscTx<StatusPublisherMessages>,
     core_cxn_status: &CoreCxnStatus,
+    status_publisher_is_enabled: &bool,
 ) -> Result<(), SentinelError> {
     // NOTE: This loop runs to send messages to the status loop at a configurable frequency to tell
     // it to publish its status. It should never return, except in error.
     'publish_status_loop: loop {
+        info!("status publisher sleeping for {frequency}s...");
         sleep(Duration::from_secs(*frequency)).await;
-        info!("{frequency}s has elapsed - sending message to publish status...");
-        if *core_cxn_status {
+        if !core_cxn_status {
+            warn!("core is currently not connected so cannot publish a status update!");
+            continue 'publish_status_loop;
+        } else if !status_publisher_is_enabled {
+            warn!("status publisher currently disabled so will not publish a status update!");
+            continue 'publish_status_loop;
+        } else {
+            info!("{frequency}s has elapsed - sending message to publish status...");
             match status_tx.send(StatusPublisherMessages::SendStatusUpdate).await {
                 Ok(_) => continue 'publish_status_loop,
                 Err(e) => break 'publish_status_loop Err(e.into()),
             }
-        } else {
-            warn!("core is currently not connected so cannot publish a status update!");
-            continue 'publish_status_loop;
         }
     }
 }
@@ -89,19 +98,19 @@ pub async fn status_publisher_loop(
     broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
     websocket_tx: MpscTx<WebSocketMessages>,
 ) -> Result<(), SentinelError> {
-    let name = "status loop";
+    let name = "status publisher loop";
 
     check_ipfs_daemon_is_running(config.ipfs().ipfs_bin_path())?;
 
     let mcids = config.mcids();
     let mut core_is_connected = false;
-    let mut status_is_enabled = false;
+    let mut status_publisher_is_enabled = false;
     let mut core_timeout = *config.core().timeout(); // TODO Make updateable via rpc call
-    let mut status_update_frequency = *config.ipfs().status_update_frequency();
+    let mut status_update_frequency = 20; //*config.ipfs().status_update_frequency();
 
     'status_loop: loop {
         tokio::select! {
-            r = publish_status_loop(&status_update_frequency, status_tx.clone(), &core_is_connected) => {
+            r = publish_status_loop(&status_update_frequency, status_tx.clone(), &core_is_connected, &status_publisher_is_enabled) => {
                 match r {
                     Ok(_) => {
                         warn!("publish status loop returned Ok(()) for some reason");
@@ -116,7 +125,7 @@ pub async fn status_publisher_loop(
                 sleep(Duration::from_secs(sleep_time)).await;
                 continue 'status_loop
             },
-            r = status_rx.recv() , if status_is_enabled && core_is_connected => match r {
+            r = status_rx.recv() => match r {
                 Some(StatusPublisherMessages::SendStatusUpdate) => match publish_status(
                     &config,
                     websocket_tx.clone(),
@@ -145,13 +154,13 @@ pub async fn status_publisher_loop(
                         let note = format!("(core is currently {}connected)", if core_is_connected { "" } else { "not "});
                         match msg {
                             StatusPublisherBroadcastChannelMessages::Stop => {
-                                warn!("msg received to stop the {name} {note}");
-                                status_is_enabled = false;
+                                warn!("msg received to stop the publishing status updates {note}");
+                                status_publisher_is_enabled = false;
                                 continue 'status_loop
                             },
                             StatusPublisherBroadcastChannelMessages::Start => {
-                                warn!("msg received to start the {name} {note}");
-                                status_is_enabled = true;
+                                warn!("msg received to start publishing status updates {note}");
+                                status_publisher_is_enabled = true;
                                 continue 'status_loop
                             },
                             StatusPublisherBroadcastChannelMessages::CoreConnected => {
@@ -173,7 +182,7 @@ pub async fn status_publisher_loop(
                 break 'status_loop Err(SentinelError::SigInt(name.into()))
             },
             else => {
-                warn!("in {name} `else` branch, {name} is currently {}abled", if status_is_enabled { "en" } else { "dis" });
+                warn!("in {name} `else` branch, {name} is currently {}abled", if status_publisher_is_enabled { "en" } else { "dis" });
                 continue 'status_loop
             },
         }

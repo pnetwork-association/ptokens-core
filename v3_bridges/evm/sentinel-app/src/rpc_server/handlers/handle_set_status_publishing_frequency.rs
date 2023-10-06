@@ -11,6 +11,7 @@ use common_sentinel::{
     MAX_STATUS_PUBLISHING_FREQENCY,
     MIN_STATUS_PUBLISHING_FREQENCY,
 };
+use serde_json::{json, Value as Json};
 use tokio::time::{sleep, Duration};
 
 use crate::{
@@ -22,7 +23,7 @@ impl RpcCall {
     pub(crate) async fn handle_set_status_publishing_frequency(
         params: RpcParams,
         status_tx: StatusTx,
-    ) -> Result<(), SentinelError> {
+    ) -> Result<Json, SentinelError> {
         debug!("handling set status publishing frequency rpc call...");
         let checked_params = Self::check_params(params, 1)?;
 
@@ -33,7 +34,7 @@ impl RpcCall {
         } else {
             let msg = StatusPublisherMessages::SetStatusPublishingFreqency(frequency);
             let _ = status_tx.send(msg).await?;
-            Ok(())
+            Ok(json!({"statusPublishingUpdateFrequency": frequency}))
         }
     }
 }
