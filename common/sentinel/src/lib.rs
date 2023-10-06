@@ -1,5 +1,6 @@
 mod batching;
 mod bpm;
+mod call_core;
 mod config;
 mod constants;
 mod core_state;
@@ -26,6 +27,7 @@ mod utils;
 pub use self::{
     batching::Batch,
     bpm::{Bpm, BpmInfo, Bpms},
+    call_core::call_core,
     config::{
         ConfigT,
         HostConfig,
