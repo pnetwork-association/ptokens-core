@@ -86,7 +86,7 @@ pub use self::{
     processor::{process_batch, process_single, reset_chain},
     processor_output::ProcessorOutput,
     side::Side,
-    status::SentinelStatus,
+    status::{SentinelStatus, SentinelStatusError, MAX_STATUS_PUBLISHING_FREQENCY, MIN_STATUS_PUBLISHING_FREQENCY},
     user_ops::{
         UserOp,
         UserOpCancellationSignature,
