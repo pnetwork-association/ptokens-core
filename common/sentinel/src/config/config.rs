@@ -2,6 +2,7 @@ use std::result::Result;
 
 use common::BridgeSide;
 use common_chain_ids::EthChainId;
+use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use ethereum_types::Address as EthAddress;
 use log::Level as LogLevel;
@@ -123,6 +124,10 @@ impl SentinelConfig {
         } else {
             self.host.gas_limit()
         }
+    }
+
+    pub fn mcids(&self) -> Vec<MetadataChainId> {
+        vec![self.native().mcid(), self.host.mcid()]
     }
 }
 
