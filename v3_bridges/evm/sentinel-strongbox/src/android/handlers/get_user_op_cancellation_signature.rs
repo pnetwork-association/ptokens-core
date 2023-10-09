@@ -1,4 +1,4 @@
-use common_eth::{Chain, ChainDbUtils};
+use common_eth::ChainDbUtils;
 use common_sentinel::{
     SentinelError,
     WebSocketMessagesCancelUserOpArgs,
@@ -23,11 +23,8 @@ pub fn get_user_op_cancellation_signature(
         let r = WebSocketMessagesEncodable::Error(WebSocketMessagesError::InsufficientMcids { got: l, expected: n });
         return Ok(state.add_response(r));
     };
-    let side = op.destination_side();
-    let mcid = if side.is_native() { mcids[0] } else { mcids[1] };
     let c_db_utils = ChainDbUtils::new(state.db());
-    let chain = Chain::get(&c_db_utils, mcid)?;
-    let pk = chain.get_pk(&c_db_utils)?;
+    let pk = c_db_utils.get_pk()?;
     let sig = op.get_cancellation_signature(&pk)?;
     let r = WebSocketMessagesEncodable::Success(json!(sig));
     Ok(state.add_response(r))

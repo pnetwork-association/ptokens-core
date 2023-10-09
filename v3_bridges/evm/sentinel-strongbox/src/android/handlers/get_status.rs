@@ -13,9 +13,7 @@ pub fn get_status(mcids: Vec<MetadataChainId>, state: State) -> Result<State, Se
         .map(|mcid| Chain::get(&db_utils, *mcid).map_err(|e| e.into()))
         .collect::<Result<Vec<Chain>, SentinelError>>()?;
 
-    // FIXME Make the below true!
-    // NOTE: All chains point to the same pk
-    let key = chains[0].get_pk(&db_utils)?;
+    let key = db_utils.get_pk()?;
 
     let status = SentinelStatus::new(&key, chains)?;
 
