@@ -11,7 +11,8 @@ pub fn get_registration_signature(a: EthAddress, state: State) -> Result<State, 
     let chain_db_utils = ChainDbUtils::new(state.db());
     let pk = chain_db_utils.get_pk()?;
     let sig = get_reg_sig(&a, &pk)?;
-    let json = json!({ "owner": owner, "signature": format!("0x{sig}") });
+    let signer = format!("0x{}", hex::encode(pk.to_address()));
+    let json = json!({ "signer": signer, "owner": owner, "signature": format!("0x{sig}") });
     let r = WebSocketMessagesEncodable::Success(json);
     Ok(state.add_response(r))
 }
