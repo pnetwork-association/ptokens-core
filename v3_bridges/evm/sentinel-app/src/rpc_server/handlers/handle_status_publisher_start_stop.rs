@@ -1,9 +1,4 @@
-use common_sentinel::{
-    BroadcastChannelMessages,
-    SentinelError,
-    StatusPublisherBroadcastChannelMessages,
-    StatusPublisherMessages,
-};
+use common_sentinel::{BroadcastChannelMessages, SentinelError, StatusPublisherBroadcastChannelMessages};
 use serde_json::{json, Value as Json};
 
 use crate::{rpc_server::RpcCall, type_aliases::BroadcastChannelTx};

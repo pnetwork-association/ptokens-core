@@ -20,7 +20,7 @@ use common_sentinel::{
     WebSocketMessagesEncodable,
     WebSocketMessagesGetCancellableUserOpArgs,
 };
-use ethereum_types::{H256 as EthHash, U256};
+use ethereum_types::H256 as EthHash;
 use tokio::{
     sync::{
         broadcast::{Receiver as MpMcRx, Sender as MpMcTx},

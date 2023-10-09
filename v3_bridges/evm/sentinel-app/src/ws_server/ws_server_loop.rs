@@ -26,10 +26,7 @@ use common_sentinel::{
     WebSocketMessagesError,
 };
 use futures::{stream::StreamExt, SinkExt};
-use tokio::{
-    sync::{broadcast::Sender as MpMcTx, mpsc::Receiver as MpscRx, Mutex},
-    time::sleep,
-};
+use tokio::{sync::Mutex, time::sleep};
 use tower_http::services::ServeDir;
 
 use crate::type_aliases::{BroadcastChannelTx, WebSocketRx};

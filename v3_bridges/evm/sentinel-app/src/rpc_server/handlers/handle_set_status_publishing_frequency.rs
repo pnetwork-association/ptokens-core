@@ -1,18 +1,11 @@
-use std::str::FromStr;
-
-use common_metadata::MetadataChainId;
 use common_sentinel::{
     SentinelError,
     SentinelStatusError,
     StatusPublisherMessages,
-    WebSocketMessages,
-    WebSocketMessagesEncodable,
-    WebSocketMessagesError,
     MAX_STATUS_PUBLISHING_FREQENCY,
     MIN_STATUS_PUBLISHING_FREQENCY,
 };
 use serde_json::{json, Value as Json};
-use tokio::time::{sleep, Duration};
 
 use crate::{
     rpc_server::{RpcCall, RpcParams},

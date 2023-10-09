@@ -1,15 +1,5 @@
-use std::str::FromStr;
-
 use common_eth::convert_hex_to_eth_address;
-use common_metadata::MetadataChainId;
-use common_sentinel::{
-    call_core,
-    SentinelError,
-    WebSocketMessages,
-    WebSocketMessagesEncodable,
-    WebSocketMessagesError,
-};
-use tokio::time::{sleep, Duration};
+use common_sentinel::{call_core, SentinelError, WebSocketMessagesEncodable, WebSocketMessagesError};
 
 use crate::{
     rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT_MS},

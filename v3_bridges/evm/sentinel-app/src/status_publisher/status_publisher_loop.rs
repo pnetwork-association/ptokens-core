@@ -1,26 +1,17 @@
-use std::str::FromStr;
-
-use common_metadata::MetadataChainId;
 use common_sentinel::{
     call_core,
     check_ipfs_daemon_is_running,
     publish_status as publish_status_via_ipfs,
     BroadcastChannelMessages,
-    Responder,
     SentinelConfig,
     SentinelError,
     SentinelStatus,
     StatusPublisherBroadcastChannelMessages,
     StatusPublisherMessages,
-    WebSocketMessages,
     WebSocketMessagesEncodable,
-    WebSocketMessagesError,
 };
 use tokio::{
-    sync::{
-        broadcast::{Receiver as MpMcRx, Sender as MpMcTx},
-        mpsc::{Receiver as MpscRx, Sender as MpscTx},
-    },
+    sync::{broadcast::Receiver as MpMcRx, mpsc::Sender as MpscTx},
     time::{sleep, Duration},
 };
 
@@ -111,7 +102,7 @@ pub async fn status_publisher_loop(
     let mcids = config.mcids();
     let mut core_is_connected = false;
     let mut status_publisher_is_enabled = false;
-    let mut core_timeout = *config.core().timeout(); // TODO Make updateable via rpc call
+    let core_timeout = *config.core().timeout(); // TODO Make updateable via rpc call
     let mut status_update_frequency = 20; //*config.ipfs().status_update_frequency();
 
     'status_loop: loop {
