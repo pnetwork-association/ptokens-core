@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 const IPFS_TOPIC: &str = "pnetwork-v3";
-const IPFS_STATUS_PATH: &str = "./status.json";
+const IPFS_STATUS_PATH: &str = "./.temp.json";
 
 fn write_temp_file(status: &SentinelStatus) -> Result<(), IpfsError> {
     let mut file = File::create(IPFS_STATUS_PATH)?;
