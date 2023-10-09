@@ -17,7 +17,7 @@ use crate::type_aliases::{
     BroadcasterTx,
     CoreCxnStatus,
     EthRpcTx,
-    StatusTx,
+    StatusPublisherTx,
     WebSocketTx,
 };
 
@@ -63,15 +63,16 @@ pub(crate) enum RpcCall {
     Delete(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetUserOp(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     GetStatus(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
-    SetStatusPublishingFrequency(RpcId, RpcParams, StatusTx),
     StatusPublisherStartStop(RpcId, BroadcastChannelTx, bool),
     RemoveUserOp(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetCoreState(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     LatestBlockNumbers(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
+    SetStatusPublishingFrequency(RpcId, RpcParams, StatusPublisherTx),
     GetCancellableUserOps(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     BroadcasterStartStop(RpcId, BroadcastChannelTx, CoreCxnStatus, bool),
+    GetRegistrationSignature(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     Init(
         RpcId,
         Box<SentinelConfig>,
@@ -128,7 +129,7 @@ impl RpcCall {
         native_eth_rpc_tx: EthRpcTx,
         broadcaster_tx: BroadcasterTx,
         broadcast_channel_tx: BroadcastChannelTx,
-        status_tx: StatusTx,
+        status_tx: StatusPublisherTx,
         core_cxn: bool,
     ) -> Self {
         match r.method.as_ref() {
@@ -147,6 +148,9 @@ impl RpcCall {
             "startBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, true),
             "stopBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, false),
             "setStatusPublishingFrequency" => Self::SetStatusPublishingFrequency(r.id, r.params.clone(), status_tx),
+            "getRegistrationSignature" | "getRegSig" => {
+                Self::GetRegistrationSignature(r.id, websocket_tx, r.params.clone(), core_cxn)
+            },
             "stopStatusPublisher" | "stopPublisher" => {
                 Self::StatusPublisherStartStop(r.id, broadcast_channel_tx.clone(), false)
             },
@@ -250,6 +254,10 @@ impl RpcCall {
                     Self::handle_sync_state(*config, websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, core_cxn).await,
                 )
             },
+            Self::GetRegistrationSignature(id, websocket_tx, params, core_cxn) => Self::handle_ws_result(
+                id,
+                Self::handle_get_registration_signature(websocket_tx, params, core_cxn).await,
+            ),
             Self::Get(id, websocket_tx, params, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get(websocket_tx, params, core_cxn).await)
             },
@@ -401,7 +409,7 @@ async fn start_rpc_server(
     broadcast_channel_tx: BroadcastChannelTx,
     core_cxn: bool,
     broadcaster_tx: BroadcasterTx,
-    status_tx: StatusTx,
+    status_tx: StatusPublisherTx,
 ) -> Result<(), SentinelError> {
     debug!("rpc server listening!");
     let core_cxn_filter = warp::any().map(move || core_cxn);
@@ -459,7 +467,7 @@ pub async fn rpc_server_loop(
     disable: bool,
     broadcast_channel_tx: BroadcastChannelTx,
     broadcaster_tx: BroadcasterTx,
-    status_tx: StatusTx,
+    status_tx: StatusPublisherTx,
 ) -> Result<(), SentinelError> {
     let rpc_server_is_enabled = !disable;
     let name = "rpc server";

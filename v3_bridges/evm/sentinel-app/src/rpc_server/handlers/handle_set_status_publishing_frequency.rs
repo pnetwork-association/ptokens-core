@@ -16,13 +16,13 @@ use tokio::time::{sleep, Duration};
 
 use crate::{
     rpc_server::{RpcCall, RpcParams},
-    type_aliases::StatusTx,
+    type_aliases::StatusPublisherTx,
 };
 
 impl RpcCall {
     pub(crate) async fn handle_set_status_publishing_frequency(
         params: RpcParams,
-        status_tx: StatusTx,
+        status_tx: StatusPublisherTx,
     ) -> Result<Json, SentinelError> {
         debug!("handling set status publishing frequency rpc call...");
         let checked_params = Self::check_params(params, 1)?;
@@ -33,7 +33,7 @@ impl RpcCall {
             Err(SentinelStatusError::InvalidPublishingFrequency(frequency).into())
         } else {
             let msg = StatusPublisherMessages::SetStatusPublishingFreqency(frequency);
-            let _ = status_tx.send(msg).await?;
+            status_tx.send(msg).await?;
             Ok(json!({"statusPublishingUpdateFrequency": frequency}))
         }
     }

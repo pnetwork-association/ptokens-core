@@ -24,12 +24,18 @@ use tokio::{
     time::{sleep, Duration},
 };
 
-use crate::type_aliases::{CoreCxnStatus, Mcids, WebSocketTx};
+use crate::type_aliases::{
+    BroadcastChannelTx,
+    CoreCxnStatus,
+    Mcids,
+    StatusPublisherRx,
+    StatusPublisherTx,
+    WebSocketTx,
+};
 
 async fn publish_status(
     config: &SentinelConfig,
-    websocket_tx: MpscTx<WebSocketMessages>,
-    core_cxn_status: &CoreCxnStatus,
+    websocket_tx: WebSocketTx,
     core_timeout: &u64,
     mcids: Mcids,
 ) -> Result<(), SentinelError> {
@@ -93,10 +99,10 @@ async fn publish_status_loop(
 
 pub async fn status_publisher_loop(
     config: SentinelConfig,
-    mut status_rx: MpscRx<StatusPublisherMessages>,
-    status_tx: MpscTx<StatusPublisherMessages>,
-    broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
-    websocket_tx: MpscTx<WebSocketMessages>,
+    mut status_rx: StatusPublisherRx,
+    status_tx: StatusPublisherTx,
+    broadcast_channel_tx: BroadcastChannelTx,
+    websocket_tx: WebSocketTx,
 ) -> Result<(), SentinelError> {
     let name = "status publisher loop";
 
@@ -126,15 +132,21 @@ pub async fn status_publisher_loop(
                 continue 'status_loop
             },
             r = status_rx.recv() => match r {
-                Some(StatusPublisherMessages::SendStatusUpdate) => match publish_status(
-                    &config,
-                    websocket_tx.clone(),
-                    &core_is_connected,
-                    &core_timeout,
-                    mcids.clone(),
-                ).await {
-                    Ok(_) => continue 'status_loop,
-                    Err(e) => break 'status_loop Err(e)
+                Some(StatusPublisherMessages::SendStatusUpdate) => {
+                    if !core_is_connected {
+                        warn!("not publishing status because no core is connected");
+                        continue 'status_loop
+                    } else {
+                        match publish_status(
+                            &config,
+                            websocket_tx.clone(),
+                            &core_timeout,
+                            mcids.clone(),
+                        ).await {
+                            Ok(_) => continue 'status_loop,
+                            Err(e) => break 'status_loop Err(e)
+                        }
+                    }
                 },
                 Some(StatusPublisherMessages::SetStatusPublishingFreqency(new_frequency)) => {
                     status_update_frequency = new_frequency;
