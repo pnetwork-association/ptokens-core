@@ -2,6 +2,7 @@ use std::{fmt, str::FromStr};
 
 use base64::{engine::general_purpose, Engine};
 use common_metadata::MetadataChainId;
+use ethereum_types::Address as EthAddress;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 
@@ -28,6 +29,7 @@ pub enum WebSocketMessagesEncodable {
     Error(WebSocketMessagesError),
     GetStatus(Vec<MetadataChainId>),
     GetCoreState(Vec<MetadataChainId>),
+    GetRegistrationSignature(EthAddress),
     DbOps(WebSocketMessagesEncodableDbOps),
     Submit(Box<WebSocketMessagesSubmitArgs>),
     Initialize(Box<WebSocketMessagesInitArgs>),
@@ -80,6 +82,7 @@ impl fmt::Display for WebSocketMessagesEncodable {
             Self::GetCoreState(..) => "GetCoreState".to_string(),
             Self::GetCancellableUserOps(_) => "GetCancellableUserOps".to_string(),
             Self::GetLatestBlockNumbers(..) => "GetLatestBlockNumbers".to_string(),
+            Self::GetRegistrationSignature(..) => "GetRegistrationSignature".to_string(),
             Self::GetUserOpCancellationSiganture(..) => "GetUserOpCancellationSiganture".to_string(),
         };
         write!(f, "{prefix}{s}")

@@ -235,13 +235,15 @@ mod tests {
         // NOTE: See reference json at top of file
 
         let sync_state_struct = SyncStatus {
-            mcid: MetadataChainId::XDaiMainnet,
+            mcid: Some(MetadataChainId::XDaiMainnet),
             latest_block_hash: "0x81b4c556ffb342d579cb3feadcdfe2440d62c5f7c6300ed1635bca347dd34f39".to_string(),
             latest_block_number: 30031338,
             latest_block_timestamp: 1695029854,
         };
         let mut sync_state = HashMap::<String, SyncStatus>::new();
-        let key = NetworkId::try_from(sync_state_struct.mcid()).unwrap().to_string();
+        let key = NetworkId::try_from(sync_state_struct.mcid().unwrap())
+            .unwrap()
+            .to_string();
         sync_state.insert(key, sync_state_struct);
         let mut software_versions = HashMap::<String, String>::new();
         software_versions.insert("listener".to_string(), "1.0.0".to_string());

@@ -1,10 +1,7 @@
-use std::{process::Command, str::from_utf8};
+use std::{fs::File, io::prelude::*, process::Command, str::from_utf8};
 
 use super::IpfsError;
 use crate::SentinelStatus;
-
-use std::fs::File;
-use std::io::prelude::*;
 
 const IPFS_TOPIC: &str = "pnetwork-v3";
 const IPFS_STATUS_PATH: &str = "./.temp.json";

@@ -18,6 +18,7 @@ mod messages;
 mod network_id;
 mod processor;
 mod processor_output;
+mod registration;
 mod side;
 mod status;
 mod test_utils;
@@ -87,6 +88,7 @@ pub use self::{
     network_id::{Bytes4, NetworkId, ProtocolId},
     processor::{process_batch, process_single, reset_chain},
     processor_output::ProcessorOutput,
+    registration::get_registration_signature,
     side::Side,
     status::{SentinelStatus, SentinelStatusError, MAX_STATUS_PUBLISHING_FREQENCY, MIN_STATUS_PUBLISHING_FREQENCY},
     user_ops::{
