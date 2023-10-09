@@ -105,17 +105,6 @@ impl ParentIndex {
 }
 
 impl Chain {
-    fn get_pk_db_key(mcid: MetadataChainId) -> Result<DbKey, ChainError> {
-        // NOTE: We keep the pk under a double hash of the mcid
-        // The chain structure itself is kept under a single hash of the mcid
-        mcid.to_bytes()
-            .map(|bs| DbKey(keccak_hash_bytes(keccak_hash_bytes(&bs[..]).as_bytes())))
-            .map_err(|e| {
-                error!("{e}");
-                ChainError::CouldNotGetPrivateKeyDbKey(mcid)
-            })
-    }
-
     pub fn mcid(&self) -> MetadataChainId {
         self.chain_id
     }
@@ -130,25 +119,6 @@ impl Chain {
 
     pub fn get_canon_block_data(&self) -> Option<&Vec<ChainBlockData>> {
         self.chain.get(*self.confirmations() as usize - 1)
-    }
-
-    pub fn get_pk<D: DatabaseInterface>(&self, db_utils: &ChainDbUtils<D>) -> Result<EthPrivateKey, ChainError> {
-        let mcid = self.mcid();
-        db_utils
-            .db()
-            .get(Self::get_pk_db_key(mcid)?.to_vec(), MAX_DATA_SENSITIVITY_LEVEL)
-            .and_then(|ref bs| EthPrivateKey::from_slice(bs))
-            .map_err(|e| {
-                error!("{e}");
-                ChainError::DbGet("EthPrivateKey".to_string())
-            })
-    }
-
-    pub fn get_signing_address<D: DatabaseInterface>(
-        &self,
-        db_utils: &ChainDbUtils<D>,
-    ) -> Result<EthAddress, ChainError> {
-        self.get_pk(db_utils).map(|pk| pk.to_address())
     }
 
     pub fn block_num(m: &EthSubMat) -> Result<u64, ChainError> {
@@ -172,7 +142,7 @@ impl Chain {
         })
     }
 
-    // TODO factor out the pruning and teh saving of the block since it's used in the insert fxn
+    // TODO factor out the pruning and the saving of the block since it's used in the insert fxn
     // too.
     pub fn init<D: DatabaseInterface>(
         db_utils: &ChainDbUtils<D>,
@@ -189,17 +159,16 @@ impl Chain {
             return Err(ChainError::AlreadyInitialized(mcid));
         };
 
-        // NOTE: Let's generate and save a pDbInsertrivate key for using on this core
-        let pk = EthPrivateKey::generate_random().map_err(|e| {
-            error!("{e}");
-            ChainError::CannotCreatePk(mcid)
-        })?;
-        let pk_db_key = Self::get_pk_db_key(mcid)?.to_vec();
+        if db_utils.get_pk().is_err() {
+            debug!("no pk exists yet, creating and saving one...");
 
-        pk.write_to_database(db_utils.db(), &pk_db_key[..]).map_err(|e| {
-            error!("{e}");
-            ChainError::CouldNotSavePkInDb(mcid)
-        })?;
+            let pk = EthPrivateKey::generate_random().map_err(|e| {
+                error!("{e}");
+                ChainError::CannotCreatePk(mcid)
+            })?;
+
+            db_utils.put_pk(&pk)?;
+        }
 
         // NOTE: Now lets validate the block & receipts if we're required to
         Self::validate(&mcid, &sub_mat, validate)?;

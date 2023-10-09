@@ -30,6 +30,7 @@ lazy_static = { workspace = true }
 tiny-keccak = { workspace = true }
 derive_more = { workspace = true }
 strum_macros = { workspace = true }
+function_name = { workspace = true }
 keccak-hasher = { workspace = true }
 rust-algorand = { workspace = true }
 derive-getters = { workspace = true }

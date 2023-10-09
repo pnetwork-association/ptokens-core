@@ -36,7 +36,7 @@ impl ChainState {
         let chain_id = *c.chain_id();
         let tail_length = *c.tail_length();
         let confirmations = *c.confirmations();
-        let signing_address = c.get_signing_address(chain_db_utils)?;
+        let signing_address = chain_db_utils.get_signing_address()?;
 
         let maybe_latest_block_data = c.get_latest_block_data();
         // NOTE: We can't really know which of the block data is canonical at this point".

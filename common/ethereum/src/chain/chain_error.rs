@@ -10,8 +10,8 @@ use thiserror::Error;
 
 #[derive(Debug, Eq, PartialEq, Error, Clone, Serialize, Deserialize)]
 pub enum ChainError {
-    #[error("could not save pk in db for chain id: {0}")]
-    CouldNotSavePkInDb(MetadataChainId),
+    #[error("could not put pk in db")]
+    CouldNotPutPkInDb,
 
     #[error("could not create pk for chain id: {0}")]
     CannotCreatePk(MetadataChainId),
