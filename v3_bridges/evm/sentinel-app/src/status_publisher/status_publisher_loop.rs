@@ -66,24 +66,34 @@ async fn publish_status_loop(
     status_tx: MpscTx<StatusPublisherMessages>,
     core_cxn_status: &CoreCxnStatus,
     status_publisher_is_enabled: &bool,
+    ipfs_bin_path: &str,
 ) -> Result<(), SentinelError> {
     // NOTE: This loop runs to send messages to the status loop at a configurable frequency to tell
     // it to publish its status. It should never return, except in error.
     'publish_status_loop: loop {
         info!("status publisher sleeping for {frequency}s...");
         sleep(Duration::from_secs(*frequency)).await;
+
         if !core_cxn_status {
             warn!("core is currently not connected so cannot publish a status update!");
             continue 'publish_status_loop;
-        } else if !status_publisher_is_enabled {
+        }
+
+        if !status_publisher_is_enabled {
             warn!("status publisher currently disabled so will not publish a status update!");
             continue 'publish_status_loop;
-        } else {
-            info!("{frequency}s has elapsed - sending message to publish status...");
-            match status_tx.send(StatusPublisherMessages::SendStatusUpdate).await {
-                Ok(_) => continue 'publish_status_loop,
-                Err(e) => break 'publish_status_loop Err(e.into()),
-            }
+        }
+
+        if let Err(e) = check_ipfs_daemon_is_running(ipfs_bin_path) {
+            error!("ipfs daemon issue, cannot publish a status update, please check your daemon");
+            error!("{e}");
+            continue 'publish_status_loop;
+        }
+
+        info!("{frequency}s has elapsed - sending message to publish status...");
+        match status_tx.send(StatusPublisherMessages::SendStatusUpdate).await {
+            Ok(_) => continue 'publish_status_loop,
+            Err(e) => break 'publish_status_loop Err(e.into()),
         }
     }
 }
@@ -97,7 +107,8 @@ pub async fn status_publisher_loop(
 ) -> Result<(), SentinelError> {
     let name = "status publisher loop";
 
-    check_ipfs_daemon_is_running(config.ipfs().ipfs_bin_path())?;
+    let ipfs_bin_path = config.ipfs().ipfs_bin_path();
+    check_ipfs_daemon_is_running(ipfs_bin_path)?;
 
     let mcids = config.mcids();
     let mut core_is_connected = false;
@@ -107,7 +118,7 @@ pub async fn status_publisher_loop(
 
     'status_loop: loop {
         tokio::select! {
-            r = publish_status_loop(&status_update_frequency, status_tx.clone(), &core_is_connected, &status_publisher_is_enabled) => {
+            r = publish_status_loop(&status_update_frequency, status_tx.clone(), &core_is_connected, &status_publisher_is_enabled, ipfs_bin_path) => {
                 match r {
                     Ok(_) => {
                         warn!("publish status loop returned Ok(()) for some reason");
