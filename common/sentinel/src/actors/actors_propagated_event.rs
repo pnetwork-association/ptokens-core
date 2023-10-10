@@ -135,3 +135,22 @@ impl TryFrom<EthLog> for ActorsPropagatedEvent {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::actors::test_utils::get_sample_actors_propagated_log;
+
+    #[test]
+    fn should_parse_actors_propagated_event_from_log() {
+        let log = get_sample_actors_propagated_log();
+        let result = ActorsPropagatedEvent::try_from(log).unwrap();
+        let expected_epoch = U256::from(26);
+        let expected_num_actors = 6;
+        let expected_actor_address = EthAddress::from_str("0x73659a0f105905121edbf44fb476b97c785688ec").unwrap();
+        assert_eq!(result.epoch, expected_epoch);
+        assert_eq!(result.actor_types.len(), expected_num_actors);
+        assert_eq!(result.actor_addresses.len(), expected_num_actors);
+        assert!(result.actor_addresses.contains(&expected_actor_address));
+    }
+}
