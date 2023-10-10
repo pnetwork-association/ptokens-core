@@ -5,38 +5,12 @@ use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType, Token as Et
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use serde::{Deserialize, Serialize};
 
-use super::ActorsError;
+use super::{ActorType, ActorsError};
 
 lazy_static! {
     pub static ref ACTORS_PROPAGATED_EVENT_TOPIC: EthHash =
         EthHash::from_str("7d394dea630b3e42246f284e4e4b75cff4f959869b3d753639ba8ae6120c67c3")
             .expect("this not to fail");
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-enum ActorType {
-    Governance = 0,
-    Guardian   = 1,
-    Sentinel   = 2,
-}
-
-impl TryFrom<&U256> for ActorType {
-    type Error = ActorsError;
-
-    fn try_from(u: &U256) -> Result<Self, Self::Error> {
-        match u.as_u64() {
-            0 => Ok(Self::Governance),
-            1 => Ok(Self::Guardian),
-            2 => Ok(Self::Sentinel),
-            n => Err(ActorsError::CannotGetActorType(n)),
-        }
-    }
-}
-
-impl Default for ActorType {
-    fn default() -> Self {
-        Self::Governance
-    }
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
