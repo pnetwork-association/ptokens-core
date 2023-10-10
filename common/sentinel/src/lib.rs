@@ -1,3 +1,4 @@
+mod actors;
 mod batching;
 mod bpm;
 mod call_core;
@@ -26,6 +27,7 @@ mod user_ops;
 mod utils;
 
 pub use self::{
+    actors::ActorsError,
     batching::Batch,
     bpm::{Bpm, BpmInfo, Bpms},
     call_core::call_core,
