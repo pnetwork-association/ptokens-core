@@ -5,8 +5,11 @@ use derive_getters::Getters;
 use derive_more::{Constructor, Deref};
 use ethereum_types::Address as EthAddress;
 use rs_merkle::{Hasher, MerkleTree};
+use serde::{Deserialize, Serialize};
+use serde_json::Value as Json;
 
 use super::{ActorType, ActorsError};
+use crate::WebSocketMessagesEncodable;
 
 type Hash = [u8; 32];
 
@@ -54,8 +57,27 @@ impl Hasher for Sha256WithOrderingAlgorithm {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Constructor)]
+#[derive(Debug, Clone, Eq, PartialEq, Constructor, Serialize, Deserialize)]
 pub struct ActorInclusionProof(Vec<Vec<u8>>);
+
+impl TryFrom<Json> for ActorInclusionProof {
+    type Error = ActorsError;
+
+    fn try_from(j: Json) -> Result<Self, Self::Error> {
+        Ok(serde_json::from_value(j)?)
+    }
+}
+
+impl TryFrom<WebSocketMessagesEncodable> for ActorInclusionProof {
+    type Error = ActorsError;
+
+    fn try_from(m: WebSocketMessagesEncodable) -> Result<Self, Self::Error> {
+        match m {
+            WebSocketMessagesEncodable::Success(j) => Self::try_from(j),
+            other => Err(Self::Error::CannotCreateProofFrom(other.to_string())),
+        }
+    }
+}
 
 impl TryFrom<Vec<&str>> for ActorInclusionProof {
     type Error = ActorsError;
@@ -143,6 +165,8 @@ impl Actors {
 mod tests {
     use std::str::FromStr;
 
+    use serde_json::json;
+
     use super::*;
 
     fn get_sample_actors() -> Actors {
@@ -161,6 +185,10 @@ mod tests {
                 EthAddress::from_str("0xe06c8959f4c10fcaa9a7ff0d4c4acdda2610da22").unwrap(),
             ),
         ])
+    }
+
+    fn get_sample_proof() -> ActorInclusionProof {
+        get_sample_actors().inclusion_proof(1).unwrap()
     }
 
     #[test]
@@ -211,5 +239,13 @@ mod tests {
         let proof = actors.inclusion_proof(idx_to_get_proof_of).unwrap();
         let expected_proof = ActorInclusionProof::empty();
         assert_eq!(proof, expected_proof);
+    }
+
+    #[test]
+    fn should_get_inclusion_proof_from_web_socket_message() {
+        let proof = get_sample_proof();
+        let m = WebSocketMessagesEncodable::Success(json!(proof));
+        let r = ActorInclusionProof::try_from(m).unwrap();
+        assert_eq!(r, proof);
     }
 }

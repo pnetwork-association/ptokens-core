@@ -13,8 +13,14 @@ pub enum ActorsError {
     #[error("wrong topic for actors propagated event: {topic}")]
     WrongTopic { topic: EthHash },
 
+    #[error("cannot create actors inlcusion proof from {0}")]
+    CannotCreateProofFrom(String),
+
     #[error("actors propagated event has wrong number of topics - got {got}, expected {expected}")]
     WrongNumberOfTopics { got: usize, expected: usize },
+
+    #[error("actors serde json error: {0}")]
+    SerdeJson(#[from] serde_json::Error),
 
     #[error("found {num_actors} actor addresses but {num_types} actor types")]
     ActorAddressesAndTypesMismatch { num_actors: usize, num_types: usize },
