@@ -29,7 +29,6 @@ use tokio::{
     time::{sleep, Duration},
 };
 
-#[allow(clippy::too_many_arguments)]
 async fn cancel_user_op(
     op: UserOp,
     nonce: u64,

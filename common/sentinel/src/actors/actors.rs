@@ -58,7 +58,7 @@ impl Hasher for Sha256WithOrderingAlgorithm {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Deref, Constructor, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, Default, PartialEq, Deref, Constructor, Serialize, Deserialize)]
 pub struct ActorInclusionProof(Vec<Vec<u8>>);
 
 impl TryFrom<Json> for ActorInclusionProof {
@@ -69,8 +69,8 @@ impl TryFrom<Json> for ActorInclusionProof {
     }
 }
 
-impl From<ActorInclusionProof> for EthAbiToken {
-    fn from(p: ActorInclusionProof) -> Self {
+impl From<&ActorInclusionProof> for EthAbiToken {
+    fn from(p: &ActorInclusionProof) -> Self {
         EthAbiToken::Array(
             p.iter()
                 .map(|v| EthAbiToken::FixedBytes(v.clone()))
@@ -120,7 +120,7 @@ impl ActorInclusionProof {
     }
 
     #[cfg(test)]
-    fn empty() -> Self {
+    pub fn empty() -> Self {
         Self::new(vec![])
     }
 }

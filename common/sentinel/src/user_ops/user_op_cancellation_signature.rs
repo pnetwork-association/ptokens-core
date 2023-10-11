@@ -7,7 +7,7 @@ use ethereum_types::Address as EthAddress;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 
-use crate::{SentinelError, UserOpError, UserOpUniqueId, WebSocketMessagesEncodable};
+use crate::{ActorInclusionProof, SentinelError, UserOpError, UserOpUniqueId, WebSocketMessagesEncodable};
 
 type Bytes = Vec<u8>;
 
@@ -42,13 +42,15 @@ pub struct UserOpCancellationSignature {
     signer: EthAddress,
     uid: UserOpUniqueId,
     sig: CancellationSignature,
+    proof: ActorInclusionProof,
 }
 
 impl fmt::Display for UserOpCancellationSignature {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "   sig: 0x{}", self.sig)?;
         write!(f, "   uid: 0x{}", self.uid)?;
-        write!(f, "signer: 0x{}", hex::encode(self.signer.as_bytes()))
+        write!(f, "signer: 0x{}", hex::encode(self.signer.as_bytes()))?;
+        write!(f, "   proof: {}", self.proof)
     }
 }
 
