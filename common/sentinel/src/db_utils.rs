@@ -98,13 +98,17 @@ impl From<&DbKey> for Bytes {
 
 macro_rules! create_db_keys {
     ($($name:ident),* $(,)?) => {
-        lazy_static! {
-            pub(crate) static ref SENTINEL_DB_KEYS: SentinelDbKeys = SentinelDbKeys::new($($name.clone(),)*);
-            pub(crate) $(static ref $name: DbKey = get_prefixed_db_key(stringify!($name)).into();)*
-        }
-
         paste! {
+            lazy_static! {
+                pub(crate) static ref SENTINEL_DB_KEYS: SentinelDbKeys = SentinelDbKeys::new($($name.clone(),)*);
+                pub(crate) $(static ref $name: DbKey = get_prefixed_db_key(stringify!($name)).into();)*
+            }
+
             impl<'a, D: DatabaseInterface> SentinelDbUtils<'a, D> {
+                fn db(&self) -> &D {
+                    self.0
+                }
+
                 pub fn put<T: DbUtilsT + Serialize>(&self, t: &T, key: &DbKey) -> Result<(), SentinelError> {
                     Ok(self
                         .db()
@@ -139,7 +143,7 @@ macro_rules! create_db_keys {
 
                 $(
                     #[allow(unused)] // NOTE: Not all key getters are used.
-                    fn [< get_ $name:lower _key >]() -> &'a DbKey {
+                    pub fn [< get_ $name:lower _key >]() -> &'a DbKey {
                         &*$name
                     }
                 )*
@@ -154,6 +158,13 @@ macro_rules! create_db_keys {
                 pub fn new($([< $name:lower >]: DbKey,)*) -> Self {
                     Self { $([< $name:lower >]),* }
                 }
+
+                $(
+                    #[allow(unused)] // NOTE: Not all key getters are used.
+                    pub fn [< get_ $name:lower _db_key >]() -> DbKey {
+                        $name.clone()
+                    }
+                )*
 
             }
 
@@ -173,32 +184,6 @@ macro_rules! create_db_keys {
 }
 
 create_db_keys!(USER_OP_LIST, ACTOR_INCLUSION_PROOF);
-
-macro_rules! create_db_stuff {
-    ($($name:ident),* $(,)?) => {
-        lazy_static! {
-            $(
-                static ref $name: DbKey = get_prefixed_db_key(stringify!($name)).into();
-            )*
-        }
-
-        impl<'a, D: DatabaseInterface> SentinelDbUtils<'a, D> {
-            fn db(&self) -> &D {
-                self.0
-            }
-
-            paste! {
-                $(
-                    fn [< get_ $name:lower _key >]() -> Bytes {
-                        $name.to_vec()
-                    }
-                )*
-            }
-        }
-    }
-}
-
-create_db_stuff!();
 
 pub struct SentinelDbUtils<'a, D: DatabaseInterface>(&'a D);
 
