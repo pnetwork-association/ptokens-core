@@ -1,10 +1,12 @@
-use common::crypto_utils::keccak_hash_bytes;
+use std::fmt;
+
+use common::{crypto_utils::keccak_hash_bytes, strip_hex_prefix};
 use derive_getters::Getters;
 use derive_more::{Constructor, Deref};
-use ethereum_types::{Address as EthAddress, H256 as EthHash};
-use rs_merkle::{Hasher, MerkleTree}; //, algorithms::Sha256};
+use ethereum_types::Address as EthAddress;
+use rs_merkle::{Hasher, MerkleTree};
 
-use super::ActorType;
+use super::{ActorType, ActorsError};
 
 type Hash = [u8; 32];
 
@@ -23,7 +25,7 @@ impl Actor {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Sha256WithOrderingAlgorithm {}
 
 impl Hasher for Sha256WithOrderingAlgorithm {
@@ -52,17 +54,74 @@ impl Hasher for Sha256WithOrderingAlgorithm {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Constructor)]
+pub struct ActorInclusionProof(Vec<Vec<u8>>);
+
+impl TryFrom<Vec<&str>> for ActorInclusionProof {
+    type Error = ActorsError;
+
+    fn try_from(v: Vec<&str>) -> Result<Self, Self::Error> {
+        let hash_size = ActorInclusionProof::hash_size();
+        Ok(Self::new(
+            v.iter()
+                .map(|s| {
+                    let bs = hex::decode(strip_hex_prefix(s))?;
+                    if bs.len() != hash_size {
+                        Err(Self::Error::InvalidHashSizeInProof {
+                            got: bs.len(),
+                            expected: hash_size,
+                            element: s.to_string(),
+                        })
+                    } else {
+                        Ok(bs)
+                    }
+                })
+                .collect::<Result<Vec<Vec<u8>>, Self::Error>>()?,
+        ))
+    }
+}
+
+impl ActorInclusionProof {
+    fn hash_size() -> usize {
+        Sha256WithOrderingAlgorithm::hash_size()
+    }
+}
+
+impl fmt::Display for ActorInclusionProof {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let ss = self
+            .0
+            .iter()
+            .map(|h| format!("0x{}", hex::encode(h)))
+            .collect::<Vec<String>>();
+        write!(f, "{ss:?}")
+    }
+}
+
 impl Actors {
     fn to_leaves(&self) -> Vec<Hash> {
         self.iter().map(Actor::to_leaf).collect()
     }
 
-    fn root(&self) -> EthHash {
-        EthHash::from_slice(
-            &MerkleTree::<Sha256WithOrderingAlgorithm>::from_leaves(&self.to_leaves())
-                .root()
-                .unwrap_or_default(),
-        )
+    fn as_merkle_tree(&self) -> MerkleTree<Sha256WithOrderingAlgorithm> {
+        MerkleTree::<Sha256WithOrderingAlgorithm>::from_leaves(&self.to_leaves())
+    }
+
+    #[cfg(test)]
+    fn root(&self) -> Hash {
+        self.as_merkle_tree().root().unwrap_or_default().into()
+    }
+
+    pub fn inclusion_proof(&self, idx: usize) -> ActorInclusionProof {
+        let proof_bytes = self.as_merkle_tree().proof(&[idx]).to_bytes();
+        let num_bytes = proof_bytes.len();
+        let hash_size = Sha256WithOrderingAlgorithm::hash_size();
+        let num_hashes = num_bytes / hash_size;
+        let mut r = vec![];
+        for i in 0..num_hashes {
+            r.push(proof_bytes[i * hash_size..(i + 1) * hash_size].to_vec())
+        }
+        ActorInclusionProof::new(r)
     }
 }
 
@@ -73,6 +132,7 @@ mod tests {
     use super::*;
 
     fn get_sample_actors() -> Actors {
+        // NOTE: See here: https://polygonscan.com/tx/0xdeb8d369543e8f79eb1eee9f1b500cceba179eb92e400f254165c2cc4e40f9f1#eventlog
         Actors::new(vec![
             Actor::new(
                 ActorType::from_str("guardian").unwrap(),
@@ -91,11 +151,21 @@ mod tests {
 
     #[test]
     fn should_get_actors_merkle_root() {
-        // NOTE: See here: https://polygonscan.com/tx/0xdeb8d369543e8f79eb1eee9f1b500cceba179eb92e400f254165c2cc4e40f9f1#eventlog
         let actors = get_sample_actors();
-        let expected_root =
-            EthHash::from_str("1efc2ea8b69f6ef6c9458e6cfea29d6413900925b57fb35deb8b898464811322").unwrap();
-        let root = actors.root();
+        let expected_root = hex::decode("1efc2ea8b69f6ef6c9458e6cfea29d6413900925b57fb35deb8b898464811322").unwrap();
+        let root = actors.root().to_vec();
         assert_eq!(root, expected_root);
+    }
+
+    #[test]
+    fn should_get_actors_inclusion_proof() {
+        let actors = get_sample_actors();
+        let proof = actors.inclusion_proof(1);
+        let expected_proof = ActorInclusionProof::try_from(vec![
+            "0xd2a063cb44962b73a9fb59d4eefa9be1382810cf6bb85c2769875a86c92ea4b5",
+            "0x42a6a3a18f1c558fec27b5ea2b184f0c836be9b14a6b75144e70382ee01d6428",
+        ])
+        .unwrap();
+        assert_eq!(proof, expected_proof);
     }
 }
