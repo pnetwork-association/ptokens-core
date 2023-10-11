@@ -26,7 +26,11 @@ impl UserOp {
         U256::from(gas_limit as u64 * gas_price)
     }
 
-    pub fn get_cancellation_signature(&self, pk: &EthPrivateKey, proof: ActorInclusionProof) -> Result<UserOpCancellationSignature, UserOpError> {
+    pub fn get_cancellation_signature(
+        &self,
+        pk: &EthPrivateKey,
+        proof: ActorInclusionProof,
+    ) -> Result<UserOpCancellationSignature, UserOpError> {
         if self.state().is_cancelled() || self.state().is_executed() {
             Err(UserOpError::CannotCancel(Box::new(self.clone())))
         } else {
