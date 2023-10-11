@@ -4,6 +4,9 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ActorsError {
+    #[error("cannot create inclusion proof for idx {idx}, there are only {num_leaves} leaves")]
+    CannotCreateInclusionProof { idx: usize, num_leaves: usize },
+
     #[error("ethabi error: {0}")]
     EthAbi(#[from] ethabi::Error),
 

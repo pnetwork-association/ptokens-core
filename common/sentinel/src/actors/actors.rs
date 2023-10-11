@@ -85,6 +85,11 @@ impl ActorInclusionProof {
     fn hash_size() -> usize {
         Sha256WithOrderingAlgorithm::hash_size()
     }
+
+    #[cfg(test)]
+    fn empty() -> Self {
+        Self::new(vec![])
+    }
 }
 
 impl fmt::Display for ActorInclusionProof {
@@ -112,7 +117,16 @@ impl Actors {
         self.as_merkle_tree().root().unwrap_or_default().into()
     }
 
-    pub fn inclusion_proof(&self, idx: usize) -> ActorInclusionProof {
+    pub fn inclusion_proof(&self, idx: usize) -> Result<ActorInclusionProof, ActorsError> {
+        let num_leaves = self.to_leaves().len();
+
+        if idx > num_leaves {
+            return Err(ActorsError::CannotCreateInclusionProof {
+                idx,
+                num_leaves: self.to_leaves().len(),
+            });
+        };
+
         let proof_bytes = self.as_merkle_tree().proof(&[idx]).to_bytes();
         let num_bytes = proof_bytes.len();
         let hash_size = Sha256WithOrderingAlgorithm::hash_size();
@@ -121,7 +135,7 @@ impl Actors {
         for i in 0..num_hashes {
             r.push(proof_bytes[i * hash_size..(i + 1) * hash_size].to_vec())
         }
-        ActorInclusionProof::new(r)
+        Ok(ActorInclusionProof::new(r))
     }
 }
 
@@ -160,12 +174,42 @@ mod tests {
     #[test]
     fn should_get_actors_inclusion_proof() {
         let actors = get_sample_actors();
-        let proof = actors.inclusion_proof(1);
+        let proof = actors.inclusion_proof(1).unwrap();
         let expected_proof = ActorInclusionProof::try_from(vec![
             "0xd2a063cb44962b73a9fb59d4eefa9be1382810cf6bb85c2769875a86c92ea4b5",
             "0x42a6a3a18f1c558fec27b5ea2b184f0c836be9b14a6b75144e70382ee01d6428",
         ])
         .unwrap();
+        assert_eq!(proof, expected_proof);
+    }
+
+    #[test]
+    fn should_error_getting_inclusion_proof_if_idx_too_high() {
+        let actors = get_sample_actors();
+        let num_actors = actors.len();
+        let idx_to_get_proof_of = num_actors + 1;
+        match actors.inclusion_proof(idx_to_get_proof_of) {
+            Ok(proof) => panic!("should not have succeeded to getting proof: {proof}"),
+            Err(ActorsError::CannotCreateInclusionProof { idx, num_leaves }) => {
+                assert_eq!(idx, idx_to_get_proof_of);
+                assert_eq!(num_leaves, num_actors);
+            },
+            Err(e) => panic!("wrong error receieved: {e}"),
+        }
+    }
+
+    #[test]
+    fn should_get_proof_for_single_tree_leaf() {
+        let actor = Actor::new(
+            ActorType::from_str("guardian").unwrap(),
+            EthAddress::from_str("0x0ef13b2668dbe1b3edfe9ffb7cbc398363b50f79").unwrap(),
+        );
+        let actors = Actors::new(vec![actor]);
+        let num_actors = actors.len();
+        assert_eq!(num_actors, 1);
+        let idx_to_get_proof_of = 0;
+        let proof = actors.inclusion_proof(idx_to_get_proof_of).unwrap();
+        let expected_proof = ActorInclusionProof::empty();
         assert_eq!(proof, expected_proof);
     }
 }
