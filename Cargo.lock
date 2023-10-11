@@ -4104,6 +4104,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rs_merkle"
+version = "1.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05225752ca6ede4cb1b73aa37ce3904affd042e98f28246f56f438ebfd47a810"
+dependencies = [
+ "sha2 0.10.7",
+]
+
+[[package]]
 name = "rust-algorand"
 version = "1.8.0"
 source = "git+https://github.com/provable-things/rust-algorand#a249201df8c3eb5c1eafa5f5b0cf988bd2d0b817"
@@ -4482,6 +4491,7 @@ dependencies = [
  "paste",
  "rbtag",
  "reqwest",
+ "rs_merkle",
  "rustc-hex",
  "serde",
  "serde_derive",

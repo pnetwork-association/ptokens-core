@@ -21,4 +21,7 @@ pub enum ActorsError {
 
     #[error("cannot get actor type from number: {0}")]
     CannotGetActorType(u64),
+
+    #[error("cannot get actor type from string: '{0}'")]
+    CannotDetermineActorType(String),
 }
