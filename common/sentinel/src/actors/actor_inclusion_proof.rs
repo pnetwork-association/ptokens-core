@@ -1,19 +1,26 @@
 use std::fmt;
 
-use common::{crypto_utils::keccak_hash_bytes, strip_hex_prefix, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
-use derive_more::{Constructor, Deref};
+use common::{crypto_utils::keccak_hash_bytes, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
+use common_metadata::MetadataChainId;
+use derive_getters::Getters;
+use derive_more::Constructor;
 use ethabi::Token as EthAbiToken;
+use ethereum_types::H256 as EthHash;
 use rs_merkle::{Hasher, MerkleTree};
 use serde::{Deserialize, Serialize};
-use serde_json::Value as Json;
+use serde_json::{json, Value as Json};
 
 use super::{type_aliases::Hash, Actors, ActorsError};
 use crate::{db_utils::SentinelDbKeys, DbKey, DbUtilsT, SentinelDbUtils, SentinelError, WebSocketMessagesEncodable};
 
 type Byte = u8;
 
-#[derive(Debug, Clone, Eq, Default, PartialEq, Deref, Constructor, Serialize, Deserialize)]
-pub struct ActorInclusionProof(Vec<Vec<u8>>);
+#[derive(Debug, Clone, Eq, Default, PartialEq, Constructor, Serialize, Deserialize, Getters)]
+pub struct ActorInclusionProof {
+    tx_hash: EthHash,
+    proof: Vec<Vec<u8>>,
+    mcid: MetadataChainId,
+}
 
 impl TryFrom<Json> for ActorInclusionProof {
     type Error = ActorsError;
@@ -26,7 +33,8 @@ impl TryFrom<Json> for ActorInclusionProof {
 impl From<&ActorInclusionProof> for EthAbiToken {
     fn from(p: &ActorInclusionProof) -> Self {
         EthAbiToken::Array(
-            p.iter()
+            p.proof()
+                .iter()
                 .map(|v| EthAbiToken::FixedBytes(v.clone()))
                 .collect::<Vec<EthAbiToken>>(),
         )
@@ -44,27 +52,28 @@ impl TryFrom<WebSocketMessagesEncodable> for ActorInclusionProof {
     }
 }
 
+#[cfg(test)]
 impl TryFrom<Vec<&str>> for ActorInclusionProof {
     type Error = ActorsError;
 
     fn try_from(v: Vec<&str>) -> Result<Self, Self::Error> {
         let hash_size = ActorInclusionProof::hash_size();
-        Ok(Self::new(
-            v.iter()
-                .map(|s| {
-                    let bs = hex::decode(strip_hex_prefix(s))?;
-                    if bs.len() != hash_size {
-                        Err(Self::Error::InvalidHashSizeInProof {
-                            got: bs.len(),
-                            expected: hash_size,
-                            element: s.to_string(),
-                        })
-                    } else {
-                        Ok(bs)
-                    }
-                })
-                .collect::<Result<Vec<Vec<u8>>, Self::Error>>()?,
-        ))
+        let proof = v
+            .iter()
+            .map(|s| {
+                let bs = hex::decode(common::strip_hex_prefix(s))?;
+                if bs.len() != hash_size {
+                    Err(Self::Error::InvalidHashSizeInProof {
+                        got: bs.len(),
+                        expected: hash_size,
+                        element: s.to_string(),
+                    })
+                } else {
+                    Ok(bs)
+                }
+            })
+            .collect::<Result<Vec<Vec<u8>>, Self::Error>>()?;
+        Ok(Self::new(EthHash::default(), proof, MetadataChainId::default()))
     }
 }
 
@@ -95,6 +104,7 @@ impl ActorInclusionProof {
         self.update_in_db(db_utils)
     }
 
+    #[cfg(test)]
     fn hash_size() -> usize {
         Sha256WithOrderingAlgorithm::hash_size()
     }
@@ -106,12 +116,17 @@ impl ActorInclusionProof {
 
 impl fmt::Display for ActorInclusionProof {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let ss = self
-            .0
+        let proof = self
+            .proof()
             .iter()
             .map(|h| format!("0x{}", hex::encode(h)))
             .collect::<Vec<String>>();
-        write!(f, "{ss:?}")
+        let j = json!({
+            "proof": proof,
+            "txHash": format!("0x{}", hex::encode(self.tx_hash())),
+            "chain": self.mcid(),
+        });
+        write!(f, "{j}")
     }
 }
 
@@ -155,6 +170,8 @@ impl Actors {
     }
 
     pub fn inclusion_proof(&self, idx: usize) -> Result<ActorInclusionProof, ActorsError> {
+        // todo!("find idx from actors event"); FIXME FIXME FIXME
+
         let num_leaves = self.to_leaves().len();
 
         if idx > num_leaves {
@@ -168,11 +185,11 @@ impl Actors {
         let num_bytes = proof_bytes.len();
         let hash_size = Sha256WithOrderingAlgorithm::hash_size();
         let num_hashes = num_bytes / hash_size;
-        let mut r = vec![];
+        let mut proof = vec![];
         for i in 0..num_hashes {
-            r.push(proof_bytes[i * hash_size..(i + 1) * hash_size].to_vec())
+            proof.push(proof_bytes[i * hash_size..(i + 1) * hash_size].to_vec())
         }
-        Ok(ActorInclusionProof::new(r))
+        Ok(ActorInclusionProof::new(*self.tx_hash(), proof, *self.mcid()))
     }
 }
 
@@ -185,25 +202,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::{Actor, ActorType};
-
-    fn get_sample_actors() -> Actors {
-        // NOTE: See here: https://polygonscan.com/tx/0xdeb8d369543e8f79eb1eee9f1b500cceba179eb92e400f254165c2cc4e40f9f1#eventlog
-        Actors::new(vec![
-            Actor::new(
-                ActorType::from_str("guardian").unwrap(),
-                EthAddress::from_str("0x0ef13b2668dbe1b3edfe9ffb7cbc398363b50f79").unwrap(),
-            ),
-            Actor::new(
-                ActorType::from_str("guardian").unwrap(),
-                EthAddress::from_str("0xdb30d31ce9a22f36a44993b1079ad2d201e11788").unwrap(),
-            ),
-            Actor::new(
-                ActorType::from_str("sentinel").unwrap(),
-                EthAddress::from_str("0xe06c8959f4c10fcaa9a7ff0d4c4acdda2610da22").unwrap(),
-            ),
-        ])
-    }
+    use crate::{actors::test_utils::get_sample_actors, Actor, ActorType};
 
     fn get_sample_proof() -> ActorInclusionProof {
         get_sample_actors().inclusion_proof(1).unwrap()
@@ -212,7 +211,7 @@ mod tests {
     #[test]
     fn should_get_actors_merkle_root() {
         let actors = get_sample_actors();
-        let expected_root = hex::decode("1efc2ea8b69f6ef6c9458e6cfea29d6413900925b57fb35deb8b898464811322").unwrap();
+        let expected_root = hex::decode("149b03559160c352fa9f9bc309586f5c8d07d54ae29bd91c9706cb450197bd98").unwrap();
         let root = actors.root().to_vec();
         assert_eq!(root, expected_root);
     }
@@ -221,11 +220,17 @@ mod tests {
     fn should_get_actors_inclusion_proof() {
         let actors = get_sample_actors();
         let proof = actors.inclusion_proof(1).unwrap();
-        let expected_proof = ActorInclusionProof::try_from(vec![
-            "0xd2a063cb44962b73a9fb59d4eefa9be1382810cf6bb85c2769875a86c92ea4b5",
-            "0x42a6a3a18f1c558fec27b5ea2b184f0c836be9b14a6b75144e70382ee01d6428",
-        ])
-        .unwrap();
+        let mcid = MetadataChainId::PolygonMainnet;
+        let tx_hash = EthHash::from_str("0xf577503260b8f1c6608d3e50c93895833f783509ae059f1bd0e6f0922720fa67").unwrap();
+        let expected_proof = ActorInclusionProof::new(
+            tx_hash,
+            vec![
+                hex::decode("d2a063cb44962b73a9fb59d4eefa9be1382810cf6bb85c2769875a86c92ea4b5").unwrap(),
+                hex::decode("fec594682ae56dd0b4e447418d170ac775de8a0d49b7f0624a2221daaedb1bb1").unwrap(),
+                hex::decode("056b10a893fe384684692e4ae89d2adac2f7b0a3104be865f1ea2e6e8d549e51").unwrap(),
+            ],
+            mcid,
+        );
         assert_eq!(proof, expected_proof);
     }
 
@@ -250,7 +255,7 @@ mod tests {
             ActorType::from_str("guardian").unwrap(),
             EthAddress::from_str("0x0ef13b2668dbe1b3edfe9ffb7cbc398363b50f79").unwrap(),
         );
-        let actors = Actors::new(vec![actor]);
+        let actors = Actors::default_with_actors(vec![actor]);
         let num_actors = actors.len();
         assert_eq!(num_actors, 1);
         let idx_to_get_proof_of = 0;

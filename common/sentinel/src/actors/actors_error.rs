@@ -1,9 +1,13 @@
+use common_metadata::MetadataChainId;
 use ethabi::Token as EthAbiToken;
 use ethereum_types::H256 as EthHash;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ActorsError {
+    #[error("cannot get actors from sub mat - too many logs from block {block_hash} on {chain}")]
+    TooManyLogs { chain: MetadataChainId, block_hash: String },
+
     #[error("cannot create inclusion proof for idx {idx}, there are only {num_leaves} leaves")]
     CannotCreateInclusionProof { idx: usize, num_leaves: usize },
 

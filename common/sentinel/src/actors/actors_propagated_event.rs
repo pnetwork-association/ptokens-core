@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use common_eth::{EthLog, EthLogExt};
+use derive_getters::Getters;
 use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType, Token as EthAbiToken};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use serde::{Deserialize, Serialize};
@@ -8,13 +9,13 @@ use serde::{Deserialize, Serialize};
 use super::{ActorType, ActorsError};
 
 lazy_static! {
-    pub static ref ACTORS_PROPAGATED_EVENT_TOPIC: EthHash =
+    pub(super) static ref ACTORS_PROPAGATED_EVENT_TOPIC: EthHash =
         EthHash::from_str("7d394dea630b3e42246f284e4e4b75cff4f959869b3d753639ba8ae6120c67c3")
             .expect("this not to fail");
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
-pub struct ActorsPropagatedEvent {
+#[derive(Debug, Default, Clone, Serialize, Deserialize, Getters)]
+pub(super) struct ActorsPropagatedEvent {
     epoch: U256,
     actor_types: Vec<ActorType>,
     actor_addresses: Vec<EthAddress>,
@@ -24,6 +25,14 @@ impl TryFrom<EthLog> for ActorsPropagatedEvent {
     type Error = ActorsError;
 
     fn try_from(log: EthLog) -> Result<Self, Self::Error> {
+        Self::try_from(&log)
+    }
+}
+
+impl TryFrom<&EthLog> for ActorsPropagatedEvent {
+    type Error = ActorsError;
+
+    fn try_from(log: &EthLog) -> Result<Self, Self::Error> {
         let expected_num_topics = 2;
 
         if log.topics.is_empty() {
