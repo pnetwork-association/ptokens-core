@@ -151,9 +151,9 @@ impl Actors {
 
 #[cfg(test)]
 mod tests {
-    use ethereum_types::Address as EthAddress;
     use std::str::FromStr;
 
+    use ethereum_types::Address as EthAddress;
     use serde_json::json;
 
     use super::*;

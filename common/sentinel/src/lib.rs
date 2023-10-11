@@ -27,7 +27,7 @@ mod user_ops;
 mod utils;
 
 pub use self::{
-    actors::{Actor, ActorType, ActorInclusionProof, Actors, ActorsError},
+    actors::{Actor, ActorInclusionProof, ActorType, Actors, ActorsError},
     batching::Batch,
     bpm::{Bpm, BpmInfo, Bpms},
     call_core::call_core,
