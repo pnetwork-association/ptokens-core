@@ -3,6 +3,7 @@ use std::fmt;
 use common::{crypto_utils::keccak_hash_bytes, strip_hex_prefix};
 use derive_getters::Getters;
 use derive_more::{Constructor, Deref};
+use ethabi::Token as EthAbiToken;
 use ethereum_types::Address as EthAddress;
 use rs_merkle::{Hasher, MerkleTree};
 use serde::{Deserialize, Serialize};
@@ -57,7 +58,7 @@ impl Hasher for Sha256WithOrderingAlgorithm {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Constructor, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Deref, Constructor, Serialize, Deserialize)]
 pub struct ActorInclusionProof(Vec<Vec<u8>>);
 
 impl TryFrom<Json> for ActorInclusionProof {
@@ -65,6 +66,16 @@ impl TryFrom<Json> for ActorInclusionProof {
 
     fn try_from(j: Json) -> Result<Self, Self::Error> {
         Ok(serde_json::from_value(j)?)
+    }
+}
+
+impl From<ActorInclusionProof> for EthAbiToken {
+    fn from(p: ActorInclusionProof) -> Self {
+        EthAbiToken::Array(
+            p.iter()
+                .map(|v| EthAbiToken::FixedBytes(v.clone()))
+                .collect::<Vec<EthAbiToken>>(),
+        )
     }
 }
 
