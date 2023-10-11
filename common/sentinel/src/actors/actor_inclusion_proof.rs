@@ -1,6 +1,6 @@
 use std::fmt;
 
-use common::{crypto_utils::keccak_hash_bytes, strip_hex_prefix};
+use common::{crypto_utils::keccak_hash_bytes, strip_hex_prefix, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
 use derive_more::{Constructor, Deref};
 use ethabi::Token as EthAbiToken;
 use rs_merkle::{Hasher, MerkleTree};
@@ -8,7 +8,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 
 use super::{type_aliases::Hash, Actors, ActorsError};
-use crate::WebSocketMessagesEncodable;
+use crate::{db_utils::SentinelDbKeys, DbKey, DbUtilsT, SentinelDbUtils, SentinelError, WebSocketMessagesEncodable};
+
+type Byte = u8;
 
 #[derive(Debug, Clone, Eq, Default, PartialEq, Deref, Constructor, Serialize, Deserialize)]
 pub struct ActorInclusionProof(Vec<Vec<u8>>);
@@ -66,12 +68,37 @@ impl TryFrom<Vec<&str>> for ActorInclusionProof {
     }
 }
 
+impl DbUtilsT for ActorInclusionProof {
+    fn key(&self) -> Result<DbKey, SentinelError> {
+        Ok(SentinelDbKeys::get_actor_inclusion_proof_db_key())
+    }
+
+    fn sensitivity() -> Option<Byte> {
+        MIN_DATA_SENSITIVITY_LEVEL
+    }
+
+    fn from_bytes(bytes: &[Byte]) -> Result<Self, SentinelError> {
+        Ok(serde_json::from_slice(bytes)?)
+    }
+}
+
 impl ActorInclusionProof {
+    pub fn get<D: DatabaseInterface>(db_utils: &SentinelDbUtils<D>) -> Self {
+        if let Ok(p) = Self::get_from_db(db_utils, &SentinelDbKeys::get_actor_inclusion_proof_db_key()) {
+            p
+        } else {
+            Self::empty()
+        }
+    }
+
+    pub fn put<D: DatabaseInterface>(&self, db_utils: &SentinelDbUtils<D>) -> Result<(), SentinelError> {
+        self.update_in_db(db_utils)
+    }
+
     fn hash_size() -> usize {
         Sha256WithOrderingAlgorithm::hash_size()
     }
 
-    #[cfg(test)]
     pub fn empty() -> Self {
         Self::default()
     }
@@ -153,6 +180,7 @@ impl Actors {
 mod tests {
     use std::str::FromStr;
 
+    use common::test_utils::get_test_database;
     use ethereum_types::Address as EthAddress;
     use serde_json::json;
 
@@ -237,5 +265,23 @@ mod tests {
         let m = WebSocketMessagesEncodable::Success(json!(proof));
         let r = ActorInclusionProof::try_from(m).unwrap();
         assert_eq!(r, proof);
+    }
+
+    #[test]
+    fn should_put_and_get_proof_in_db() {
+        let proof = get_sample_proof();
+        let db = get_test_database();
+        let db_utils = SentinelDbUtils::new(&db);
+        proof.put(&db_utils).unwrap();
+        let result = ActorInclusionProof::get(&db_utils);
+        assert_eq!(proof, result);
+    }
+
+    #[test]
+    fn should_get_empty_proof_from_db_if_none_extant() {
+        let db = get_test_database();
+        let db_utils = SentinelDbUtils::new(&db);
+        let result = ActorInclusionProof::get(&db_utils);
+        assert_eq!(result, ActorInclusionProof::empty());
     }
 }
