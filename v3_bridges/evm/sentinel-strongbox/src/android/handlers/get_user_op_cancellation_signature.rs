@@ -1,6 +1,7 @@
 use common_eth::ChainDbUtils;
 use common_sentinel::{
     ActorInclusionProof,
+    SentinelDbUtils,
     SentinelError,
     WebSocketMessagesCancelUserOpArgs,
     WebSocketMessagesEncodable,
@@ -17,7 +18,7 @@ pub fn get_user_op_cancellation_signature(
     let (mcids, op) = args.dissolve();
     warn!("signing cancellation sig for user op {op}");
     // FIXME currently we're still stuck using host and native, so we assume native chain ID & host chain ID are passed
-    // in in that order.
+    // in in _that_ order.
     let l = mcids.len();
     let n = 2;
     if l != n {
@@ -25,9 +26,9 @@ pub fn get_user_op_cancellation_signature(
         return Ok(state.add_response(r));
     };
     let c_db_utils = ChainDbUtils::new(state.db());
+    let s_db_utils = SentinelDbUtils::new(state.db());
     let pk = c_db_utils.get_pk()?;
-    let proof = ActorInclusionProof::default();
-    todo!("get real proof!");
+    let proof = ActorInclusionProof::get(&s_db_utils);
     let sig = op.get_cancellation_signature(&pk, proof)?;
     let r = WebSocketMessagesEncodable::Success(json!(sig));
     Ok(state.add_response(r))
