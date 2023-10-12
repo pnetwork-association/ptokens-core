@@ -34,7 +34,6 @@ async fn main_loop(
     let validate = config.is_validating(&side);
     let pnetwork_hub = config.pnetwork_hub(&side);
     let sleep_duration = batch.get_sleep_duration();
-    let governance_address = config.governance_address(&mcid);
 
     let latest_block_numbers = 'latest_block_getter_loop: loop {
         // NOTE: Get the core's latest block numbers for this chain
@@ -81,7 +80,7 @@ async fn main_loop(
                     mcid,
                     pnetwork_hub,
                     batch.to_submission_material(),
-                    governance_address,
+                    *batch.governance_address(),
                 );
                 let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::ProcessBatch(args));
                 websocket_tx.send(msg).await?;

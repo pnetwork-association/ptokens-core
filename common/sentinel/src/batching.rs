@@ -27,6 +27,8 @@ pub struct Batch {
     single_submissions_flag: bool,
     batch: EthSubmissionMaterials,
     last_submitted_timestamp: SystemTime,
+    governance_address: Option<EthAddress>,
+    receipt_filtering_addresses: Vec<EthAddress>,
 }
 
 impl Default for Batch {
@@ -37,13 +39,15 @@ impl Default for Batch {
             batch_size: 1,
             sleep_duration: 0,
             bpm: Bpm::default(),
-            batch_duration: 300, // NOTE: 5mins
+            batch_duration: 5 * 60, // NOTE: 5mins
+            governance_address: None,
             side: BridgeSide::default(),
             batching_is_disabled: false,
             single_submissions_flag: false,
             endpoints: Endpoints::default(),
             mcid: MetadataChainId::default(),
             pnetwork_hub: EthAddress::default(),
+            receipt_filtering_addresses: vec![],
             batch: EthSubmissionMaterials::default(),
             last_submitted_timestamp: SystemTime::now(),
         }
@@ -118,34 +122,51 @@ impl Batch {
     }
 
     pub fn new_from_config(side: BridgeSide, config: &SentinelConfig) -> Result<Self, SentinelError> {
+        info!("getting {side} batch from config...");
         let is_native = side.is_native();
-        info!(
-            "getting {} batch from config...",
-            if is_native { "native" } else { "host" }
-        );
+
+        let mcid = MetadataChainId::from(&config.chain_id(&side));
+
+        let pnetwork_hub = if is_native {
+            config.native().pnetwork_hub()
+        } else {
+            config.host().pnetwork_hub()
+        };
+
+        let governance_address = config.governance_address(&mcid);
+
+        let receipt_filtering_addresses = if let Some(ref address) = governance_address {
+            vec![*address, pnetwork_hub]
+        } else {
+            vec![pnetwork_hub]
+        };
+
+        let sleep_duration = if is_native {
+            config.native().get_sleep_duration()
+        } else {
+            config.host().get_sleep_duration()
+        };
+
+        let endpoints = if is_native {
+            config.native().endpoints()
+        } else {
+            config.host().endpoints()
+        };
+
         let res = Self {
             side,
-            mcid: MetadataChainId::from(&config.chain_id(&side)),
-            sleep_duration: if is_native {
-                config.native().get_sleep_duration()
-            } else {
-                config.host().get_sleep_duration()
-            },
-            endpoints: if is_native {
-                config.native().endpoints()
-            } else {
-                config.host().endpoints()
-            },
+            mcid,
+            endpoints,
+            pnetwork_hub,
+            sleep_duration,
+            governance_address,
+            receipt_filtering_addresses,
+            bpm: Bpm::new(config.chain_id(&side)),
             batch_size: config.batching().get_batch_size(is_native),
             batch_duration: config.batching().get_batch_duration(is_native),
-            pnetwork_hub: if is_native {
-                config.native().pnetwork_hub()
-            } else {
-                config.host().pnetwork_hub()
-            },
-            bpm: Bpm::new(config.chain_id(&side)),
             ..Default::default()
         };
+
         if res.endpoints.is_empty() {
             Err(SentinelError::Batching(Error::NoEndpoint(is_native)))
         } else {
@@ -175,7 +196,7 @@ impl Batch {
 
     pub fn push(&mut self, sub_mat: EthSubmissionMaterial) {
         self.batch
-            .push(sub_mat.remove_receipts_if_no_logs_from_addresses(&[self.pnetwork_hub]));
+            .push(sub_mat.remove_receipts_if_no_logs_from_addresses(&self.receipt_filtering_addresses));
     }
 
     pub fn get_pnetwork_hub(&self) -> &EthAddress {
