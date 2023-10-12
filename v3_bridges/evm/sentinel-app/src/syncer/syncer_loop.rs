@@ -12,7 +12,7 @@ use common_sentinel::{
     WebSocketMessages,
     WebSocketMessagesEncodable,
     WebSocketMessagesError,
-    WebSocketMessagesSubmitArgs,
+    WebSocketMessagesProcessBatchArgs,
 };
 use tokio::{
     sync::{
@@ -75,7 +75,7 @@ async fn main_loop(
                 }
                 // TODO check if batch is chained correctly!
                 info!("{log_prefix} batch is ready to submit!");
-                let args = WebSocketMessagesSubmitArgs::new_for_syncer(
+                let args = WebSocketMessagesProcessBatchArgs::new_for_syncer(
                     validate,
                     side,
                     mcid,
@@ -83,7 +83,7 @@ async fn main_loop(
                     batch.to_submission_material(),
                     governance_address,
                 );
-                let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::Submit(args));
+                let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::ProcessBatch(args));
                 websocket_tx.send(msg).await?;
 
                 let websocket_response = tokio::select! {

@@ -14,8 +14,8 @@ use crate::{
     WebSocketMessagesError,
     WebSocketMessagesGetCancellableUserOpArgs,
     WebSocketMessagesInitArgs,
+    WebSocketMessagesProcessBatchArgs,
     WebSocketMessagesResetChainArgs,
-    WebSocketMessagesSubmitArgs,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -31,10 +31,10 @@ pub enum WebSocketMessagesEncodable {
     GetCoreState(Vec<MetadataChainId>),
     GetRegistrationSignature(EthAddress),
     DbOps(WebSocketMessagesEncodableDbOps),
-    Submit(Box<WebSocketMessagesSubmitArgs>),
     Initialize(Box<WebSocketMessagesInitArgs>),
     GetLatestBlockNumbers(Vec<MetadataChainId>),
     ResetChain(Box<WebSocketMessagesResetChainArgs>),
+    ProcessBatch(Box<WebSocketMessagesProcessBatchArgs>),
     GetCancellableUserOps(Box<WebSocketMessagesGetCancellableUserOpArgs>),
     GetUserOpCancellationSiganture(Box<WebSocketMessagesCancelUserOpArgs>),
 }
@@ -70,7 +70,6 @@ impl fmt::Display for WebSocketMessagesEncodable {
             Self::Null => "Null".to_string(),
             Self::DbOps(op) => format!("{op}"),
             Self::Error(e) => format!("Error: {e}"),
-            Self::Submit(..) => "Submit".to_string(),
             Self::Success(_) => "Success".to_string(),
             Self::GetUserOps => "GetUserOps".to_string(),
             Self::GetUserOp(_) => "GetUserOp".to_string(),
@@ -80,6 +79,7 @@ impl fmt::Display for WebSocketMessagesEncodable {
             Self::GetUserOpList => "GetUserOpList".to_string(),
             Self::RemoveUserOp(_) => "RemoveUserOp".to_string(),
             Self::GetCoreState(..) => "GetCoreState".to_string(),
+            Self::ProcessBatch(..) => "ProcessBatch".to_string(),
             Self::GetCancellableUserOps(_) => "GetCancellableUserOps".to_string(),
             Self::GetLatestBlockNumbers(..) => "GetLatestBlockNumbers".to_string(),
             Self::GetRegistrationSignature(..) => "GetRegistrationSignature".to_string(),

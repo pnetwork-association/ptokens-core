@@ -90,7 +90,7 @@ pub fn process_batch<D: DatabaseInterface>(
     reprocess: bool,
     dry_run: bool,
     mcid: MetadataChainId,
-    governance_address: Option<EthAddress>
+    governance_address: Option<EthAddress>,
 ) -> Result<ProcessorOutput, SentinelError> {
     info!("Processing {mcid} batch of submission material...");
 

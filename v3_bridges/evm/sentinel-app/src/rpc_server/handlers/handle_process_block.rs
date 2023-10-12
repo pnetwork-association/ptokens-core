@@ -9,7 +9,7 @@ use common_sentinel::{
     SentinelError,
     WebSocketMessages,
     WebSocketMessagesEncodable,
-    WebSocketMessagesSubmitArgs,
+    WebSocketMessagesProcessBatchArgs,
 };
 use tokio::time::{sleep, Duration};
 
@@ -19,7 +19,7 @@ use crate::{
 };
 
 impl RpcCall {
-    pub(crate) async fn handle_submit_block(
+    pub(crate) async fn handle_process_block(
         config: SentinelConfig,
         host_eth_rpc_tx: EthRpcTx,
         native_eth_rpc_tx: EthRpcTx,
@@ -49,7 +49,7 @@ impl RpcCall {
             config.native().mcid()
         };
 
-        let submit_args = WebSocketMessagesSubmitArgs::new(
+        let submit_args = WebSocketMessagesProcessBatchArgs::new(
             dry_run,
             config.is_validating(&side),
             reprocess,
@@ -59,7 +59,7 @@ impl RpcCall {
             EthSubmissionMaterials::new(vec![sub_mat]), // NOTE: The processor always deals with batches of submat
             config.governance_address(&mcid),
         );
-        let encodable_msg = WebSocketMessagesEncodable::Submit(Box::new(submit_args));
+        let encodable_msg = WebSocketMessagesEncodable::ProcessBatch(Box::new(submit_args));
 
         let (websocket_msg, rx) = WebSocketMessages::new(encodable_msg);
         websocket_tx.send(websocket_msg).await?;

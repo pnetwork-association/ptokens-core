@@ -1,23 +1,21 @@
 use common_eth::ChainError;
-use common_metadata::MetadataChainId;
 use common_sentinel::{
-    process_batch,
+    process_batch as process_batch_of_blocks,
     NetworkId,
-    ProtocolId,
     SentinelError,
     WebSocketMessagesEncodable,
     WebSocketMessagesError,
-    WebSocketMessagesSubmitArgs,
+    WebSocketMessagesProcessBatchArgs,
 };
 use serde_json::json;
 
 use crate::android::State;
 
-pub fn submit_blocks(args: WebSocketMessagesSubmitArgs, state: State) -> Result<State, SentinelError> {
+pub fn process_batch(args: WebSocketMessagesProcessBatchArgs, state: State) -> Result<State, SentinelError> {
     let mcid = args.mcid();
     let network_id = NetworkId::try_from(mcid)?;
 
-    let result = process_batch(
+    let result = process_batch_of_blocks(
         state.db(),
         args.pnetwork_hub(),
         args.sub_mat_batch(),

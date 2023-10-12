@@ -7,7 +7,7 @@ use ethereum_types::Address as EthAddress;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Constructor, Serialize, Deserialize, Getters, Dissolve)]
-pub struct WebSocketMessagesSubmitArgs {
+pub struct WebSocketMessagesProcessBatchArgs {
     validate: bool,
     dry_run: bool,
     reprocess: bool,
@@ -18,7 +18,7 @@ pub struct WebSocketMessagesSubmitArgs {
     governance_address: Option<EthAddress>,
 }
 
-impl WebSocketMessagesSubmitArgs {
+impl WebSocketMessagesProcessBatchArgs {
     pub fn new_for_syncer(
         validate: bool,
         side: BridgeSide,

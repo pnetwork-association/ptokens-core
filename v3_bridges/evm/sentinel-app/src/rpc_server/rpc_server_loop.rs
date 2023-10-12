@@ -108,7 +108,7 @@ pub(crate) enum RpcCall {
         RpcParams,
         CoreCxnStatus,
     ),
-    SubmitBlock(
+    ProcessBlock(
         RpcId,
         Box<SentinelConfig>,
         EthRpcTx,
@@ -201,7 +201,7 @@ impl RpcCall {
                 r.params.clone(),
                 core_cxn,
             ),
-            "submitBlock" | "submit" => Self::SubmitBlock(
+            "processBlock" | "process" | "submitBlock" | "submit" => Self::ProcessBlock(
                 r.id,
                 Box::new(config),
                 host_eth_rpc_tx,
@@ -330,10 +330,10 @@ impl RpcCall {
                 id,
                 Self::handle_get_latest_block_numbers(websocket_tx, params, core_cxn).await,
             ),
-            Self::SubmitBlock(id, config, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params, core_cxn) => {
+            Self::ProcessBlock(id, config, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params, core_cxn) => {
                 Self::handle_ws_result(
                     id,
-                    Self::handle_submit_block(
+                    Self::handle_process_block(
                         *config,
                         host_eth_rpc_tx,
                         native_eth_rpc_tx,

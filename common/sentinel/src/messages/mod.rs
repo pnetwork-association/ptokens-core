@@ -27,7 +27,7 @@ pub use self::{
         WebSocketMessagesError,
         WebSocketMessagesGetCancellableUserOpArgs,
         WebSocketMessagesInitArgs,
+        WebSocketMessagesProcessBatchArgs,
         WebSocketMessagesResetChainArgs,
-        WebSocketMessagesSubmitArgs,
     },
 };
