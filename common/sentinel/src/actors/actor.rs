@@ -22,8 +22,14 @@ impl Actor {
 
 impl From<EthAddress> for Actor {
     fn from(a: EthAddress) -> Self {
+        Self::from(&a)
+    }
+}
+
+impl From<&EthAddress> for Actor {
+    fn from(a: &EthAddress) -> Self {
         // NOTE: This is the sentinel code base, hence we can assume the actor type
-        Actor::new(ActorType::Sentinel, a)
+        Actor::new(ActorType::Sentinel, *a)
     }
 }
 

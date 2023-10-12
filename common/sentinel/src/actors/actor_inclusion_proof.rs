@@ -106,7 +106,8 @@ impl ActorInclusionProof {
         }
     }
 
-    pub fn put<D: DatabaseInterface>(&self, db_utils: &SentinelDbUtils<D>) -> Result<(), SentinelError> {
+    pub fn update_in_db<D: DatabaseInterface>(&self, db_utils: &SentinelDbUtils<D>) -> Result<(), SentinelError> {
+        debug!("maybe updating sentinel inclusion proof in db");
         let current = Self::get(db_utils);
         if self.epoch() > current.epoch() {
             self.update_in_db(db_utils)
@@ -181,7 +182,7 @@ impl Actors {
         self.as_merkle_tree().root().unwrap_or_default().into()
     }
 
-    fn inclusion_proof_for_idx(&self, idx: usize) -> Result<ActorInclusionProof, ActorsError> {
+    fn get_inclusion_proof_for_idx(&self, idx: usize) -> Result<ActorInclusionProof, ActorsError> {
         let num_leaves = self.to_leaves().len();
 
         if idx > num_leaves {
@@ -207,9 +208,9 @@ impl Actors {
         ))
     }
 
-    pub fn inclusion_proof_for_actor(&self, actor: &Actor) -> Result<ActorInclusionProof, ActorsError> {
+    pub fn get_inclusion_proof_for_actor(&self, actor: &Actor) -> Result<ActorInclusionProof, ActorsError> {
         if let Some(idx) = self.actor_idx(actor) {
-            self.inclusion_proof_for_idx(idx)
+            self.get_inclusion_proof_for_idx(idx)
         } else {
             Err(ActorsError::CannotCreateProofForActor(actor.clone()))
         }
@@ -228,7 +229,7 @@ mod tests {
     use crate::{actors::test_utils::get_sample_actors, Actor, ActorType};
 
     fn get_sample_proof() -> ActorInclusionProof {
-        get_sample_actors().inclusion_proof_for_idx(1).unwrap()
+        get_sample_actors().get_inclusion_proof_for_idx(1).unwrap()
     }
 
     #[test]
@@ -255,7 +256,7 @@ mod tests {
     #[test]
     fn should_get_actors_inclusion_proof_by_idx() {
         let actors = get_sample_actors();
-        let proof = actors.inclusion_proof_for_idx(1).unwrap();
+        let proof = actors.get_inclusion_proof_for_idx(1).unwrap();
         let expected_proof = get_expected_proof();
         assert_eq!(proof, expected_proof);
     }
@@ -264,7 +265,7 @@ mod tests {
     fn should_get_actors_inclusion_proof_by_actor() {
         let actors = get_sample_actors();
         let actor = actors.actors()[1].clone();
-        let proof = actors.inclusion_proof_for_actor(&actor).unwrap();
+        let proof = actors.get_inclusion_proof_for_actor(&actor).unwrap();
         let expected_proof = get_expected_proof();
         assert_eq!(proof, expected_proof);
     }
@@ -274,7 +275,7 @@ mod tests {
         let actors = get_sample_actors();
         let num_actors = actors.len();
         let idx_to_get_proof_of = num_actors + 1;
-        match actors.inclusion_proof_for_idx(idx_to_get_proof_of) {
+        match actors.get_inclusion_proof_for_idx(idx_to_get_proof_of) {
             Ok(proof) => panic!("should not have succeeded to getting proof: {proof}"),
             Err(ActorsError::CannotCreateInclusionProof { idx, num_leaves }) => {
                 assert_eq!(idx, idx_to_get_proof_of);
@@ -294,7 +295,7 @@ mod tests {
         let num_actors = actors.len();
         assert_eq!(num_actors, 1);
         let idx_to_get_proof_of = 0;
-        let proof = actors.inclusion_proof_for_idx(idx_to_get_proof_of).unwrap();
+        let proof = actors.get_inclusion_proof_for_idx(idx_to_get_proof_of).unwrap();
         let expected_proof = ActorInclusionProof::empty();
         assert_eq!(proof, expected_proof);
     }
@@ -312,7 +313,7 @@ mod tests {
         let proof = get_sample_proof();
         let db = get_test_database();
         let db_utils = SentinelDbUtils::new(&db);
-        proof.put(&db_utils).unwrap();
+        proof.update_in_db(&db_utils).unwrap();
         let result = ActorInclusionProof::get(&db_utils);
         assert_eq!(proof, result);
     }
@@ -330,7 +331,7 @@ mod tests {
         let actor = Actor::new(ActorType::Sentinel, EthAddress::random());
         let actors = get_sample_actors();
         assert!(actors.actor_idx(&actor).is_none());
-        match actors.inclusion_proof_for_actor(&actor) {
+        match actors.get_inclusion_proof_for_actor(&actor) {
             Ok(_) => panic!("should not have succeeded!"),
             Err(ActorsError::CannotCreateProofForActor(a)) => assert_eq!(actor, a),
             Err(e) => panic!("wrong error received {e}"),

@@ -1,13 +1,12 @@
 use std::result::Result;
 
 use common::{BridgeSide, DatabaseInterface};
-use common_eth::{Chain, ChainDbUtils, EthSubmissionMaterial, EthSubmissionMaterials};
-use common_metadata::MetadataChainId;
+use common_eth::{Chain, ChainDbUtils, EthSubmissionMaterial};
 use ethereum_types::Address as EthAddress;
 
-use crate::{Bytes4, ProcessorOutput, SentinelDbUtils, SentinelError, UserOpList, UserOps};
+use crate::{Bytes4, SentinelDbUtils, SentinelError, UserOpList, UserOps};
 
-pub fn process_single<D: DatabaseInterface>(
+pub(super) fn process_single<D: DatabaseInterface>(
     db: &D,
     sub_mat: EthSubmissionMaterial,
     pnetwork_hub: &EthAddress,
@@ -78,48 +77,4 @@ pub fn process_single<D: DatabaseInterface>(
     debug!("finished processing {mcid} block {n}");
 
     Ok(ops)
-}
-
-pub fn process_batch<D: DatabaseInterface>(
-    db: &D,
-    pnetwork_hub: &EthAddress,
-    batch: &EthSubmissionMaterials,
-    validate: bool,
-    side: BridgeSide,
-    network_id: &Bytes4,
-    reprocess: bool,
-    dry_run: bool,
-    mcid: MetadataChainId,
-    governance_address: Option<EthAddress>,
-) -> Result<ProcessorOutput, SentinelError> {
-    info!("Processing {mcid} batch of submission material...");
-
-    let chain_db_utils = ChainDbUtils::new(db);
-    let mut chain = Chain::get(&chain_db_utils, mcid)?;
-
-    let use_db_tx = !dry_run;
-
-    let processed_user_ops = UserOps::from(
-        batch
-            .iter()
-            .map(|sub_mat| {
-                process_single(
-                    db,
-                    sub_mat.clone(),
-                    pnetwork_hub,
-                    validate,
-                    use_db_tx,
-                    dry_run,
-                    side,
-                    network_id,
-                    reprocess,
-                    &mut chain,
-                )
-            })
-            .collect::<Result<Vec<UserOps>, SentinelError>>()?,
-    );
-
-    info!("finished processing {side} submission material");
-    let r = ProcessorOutput::new(side, batch.get_last_block_num()?, processed_user_ops)?;
-    Ok(r)
 }

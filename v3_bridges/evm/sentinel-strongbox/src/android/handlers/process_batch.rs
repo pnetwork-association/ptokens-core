@@ -1,4 +1,4 @@
-use common_eth::ChainError;
+use common_eth::{ChainDbUtils, ChainError};
 use common_sentinel::{
     process_batch as process_batch_of_blocks,
     NetworkId,
@@ -14,6 +14,7 @@ use crate::android::State;
 pub fn process_batch(args: WebSocketMessagesProcessBatchArgs, state: State) -> Result<State, SentinelError> {
     let mcid = args.mcid();
     let network_id = NetworkId::try_from(mcid)?;
+    let sentinel_address = ChainDbUtils::new(state.db()).get_signing_address()?;
 
     let result = process_batch_of_blocks(
         state.db(),
@@ -26,6 +27,7 @@ pub fn process_batch(args: WebSocketMessagesProcessBatchArgs, state: State) -> R
         *args.dry_run(),
         *mcid,
         *args.governance_address(),
+        sentinel_address,
     );
 
     let response = match result {
