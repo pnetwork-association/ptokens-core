@@ -1,6 +1,7 @@
 mod db_ops;
 mod get_cancellable_user_ops;
 mod get_core_state;
+mod get_inclusion_proof;
 mod get_latest_block_numbers;
 mod get_registration_signature;
 mod get_status;
@@ -17,6 +18,7 @@ pub(crate) use self::{
     db_ops::{delete, get, put},
     get_cancellable_user_ops::get_cancellable_user_ops,
     get_core_state::get_core_state,
+    get_inclusion_proof::get_inclusion_proof,
     get_latest_block_numbers::get_latest_block_numbers,
     get_registration_signature::get_registration_signature,
     get_status::get_status,

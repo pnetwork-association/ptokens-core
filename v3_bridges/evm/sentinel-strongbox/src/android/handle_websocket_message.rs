@@ -33,6 +33,7 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
         WebSocketMessagesEncodable::GetUserOps => super::handlers::get_user_ops(state),
         WebSocketMessagesEncodable::GetUserOpList => super::handlers::get_user_op_list(state),
         WebSocketMessagesEncodable::Initialize(args) => super::handlers::init(*args.clone(), state),
+        WebSocketMessagesEncodable::GetInclusionProof => super::handlers::get_inclusion_proof(state),
         WebSocketMessagesEncodable::GetUserOp(uid) => super::handlers::get_user_op(uid.clone(), state),
         WebSocketMessagesEncodable::GetStatus(mcids) => super::handlers::get_status(mcids.clone(), state),
         WebSocketMessagesEncodable::ResetChain(args) => super::handlers::reset_chain(*args.clone(), state),

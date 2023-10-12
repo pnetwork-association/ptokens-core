@@ -3,6 +3,7 @@ mod handle_cancel_user_ops;
 mod handle_db_ops;
 mod handle_get_cancellable_user_ops;
 mod handle_get_core_state;
+mod handle_get_inclusion_proof;
 mod handle_get_registration_signature;
 mod handle_get_status;
 mod handle_get_user_op;
