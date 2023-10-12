@@ -13,6 +13,8 @@ use crate::{
         BatchingConfig,
         BatchingToml,
         ConfigT,
+        GovernanceConfig,
+        GovernanceToml,
         HostConfig,
         HostToml,
         IpfsConfig,
@@ -35,6 +37,7 @@ struct SentinelConfigToml {
     native: NativeToml,
     core: SentinelCoreToml,
     batching: BatchingToml,
+    governance: GovernanceToml,
 }
 
 impl SentinelConfigToml {
@@ -54,6 +57,7 @@ pub struct SentinelConfig {
     native: NativeConfig,
     core: SentinelCoreConfig,
     batching: BatchingConfig,
+    governance: GovernanceConfig,
 }
 
 impl SentinelConfig {
@@ -71,6 +75,7 @@ impl SentinelConfig {
             native: NativeConfig::from_toml(&toml.native)?,
             core: SentinelCoreConfig::from_toml(&toml.core)?,
             batching: BatchingConfig::from_toml(&toml.batching)?,
+            governance: GovernanceConfig::try_from(&toml.governance)?,
         })
     }
 
@@ -128,6 +133,15 @@ impl SentinelConfig {
 
     pub fn mcids(&self) -> Vec<MetadataChainId> {
         vec![self.native().mcid(), self.host.mcid()]
+    }
+
+    pub fn governance_address(&self, mcid: &MetadataChainId) -> Option<EthAddress> {
+        // NOTE: The governance contract lives on one chain only
+        if mcid == self.governance().mcid() {
+            Some(*self.governance().governance_address())
+        } else {
+            None
+        }
     }
 }
 

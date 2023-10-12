@@ -41,3 +41,7 @@ max_log_size = 1_000_000_000 # Maximum size of a single log in bytes. Defalt is 
 [ipfs]
 status_update_frequency = 120 # How often to publish status updates
 ipfs_bin_path = "" # Path to the ipfs binary on your system
+
+[governance]
+mcid = "polygon" # Chain on which the governance contract lives
+address = "0xc508e6af23d3C1FcAbD24Dfab5A5304F65c0042c" # Governance contract address

@@ -2,6 +2,7 @@ mod batching;
 mod config;
 mod core;
 mod error;
+mod governance;
 mod host;
 mod ipfs;
 mod log;
@@ -13,6 +14,7 @@ pub use self::{
     config::SentinelConfig,
     core::{SentinelCoreConfig, SentinelCoreToml},
     error::SentinelConfigError,
+    governance::{GovernanceConfig, GovernanceToml},
     host::{HostConfig, HostToml},
     ipfs::IpfsConfig,
     log::{LogConfig, LogToml},
