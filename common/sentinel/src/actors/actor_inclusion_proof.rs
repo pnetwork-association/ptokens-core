@@ -5,18 +5,19 @@ use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use derive_more::Constructor;
 use ethabi::Token as EthAbiToken;
-use ethereum_types::H256 as EthHash;
+use ethereum_types::{H256 as EthHash, U256};
 use rs_merkle::{Hasher, MerkleTree};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 
-use super::{type_aliases::Hash, Actors, ActorsError};
+use super::{type_aliases::Hash, Actor, Actors, ActorsError};
 use crate::{db_utils::SentinelDbKeys, DbKey, DbUtilsT, SentinelDbUtils, SentinelError, WebSocketMessagesEncodable};
 
 type Byte = u8;
 
 #[derive(Debug, Clone, Eq, Default, PartialEq, Constructor, Serialize, Deserialize, Getters)]
 pub struct ActorInclusionProof {
+    epoch: U256,
     tx_hash: EthHash,
     proof: Vec<Vec<u8>>,
     mcid: MetadataChainId,
@@ -73,7 +74,12 @@ impl TryFrom<Vec<&str>> for ActorInclusionProof {
                 }
             })
             .collect::<Result<Vec<Vec<u8>>, Self::Error>>()?;
-        Ok(Self::new(EthHash::default(), proof, MetadataChainId::default()))
+        Ok(Self::new(
+            U256::default(),
+            EthHash::default(),
+            proof,
+            MetadataChainId::default(),
+        ))
     }
 }
 
@@ -101,7 +107,13 @@ impl ActorInclusionProof {
     }
 
     pub fn put<D: DatabaseInterface>(&self, db_utils: &SentinelDbUtils<D>) -> Result<(), SentinelError> {
-        self.update_in_db(db_utils)
+        let current = Self::get(db_utils);
+        if self.epoch() > current.epoch() {
+            self.update_in_db(db_utils)
+        } else {
+            warn!("not updating actors because the epoch is not greater than the existing one");
+            Ok(())
+        }
     }
 
     #[cfg(test)]
@@ -169,9 +181,7 @@ impl Actors {
         self.as_merkle_tree().root().unwrap_or_default().into()
     }
 
-    pub fn inclusion_proof(&self, idx: usize) -> Result<ActorInclusionProof, ActorsError> {
-        // todo!("find idx from actors event"); FIXME FIXME FIXME
-
+    fn inclusion_proof_for_idx(&self, idx: usize) -> Result<ActorInclusionProof, ActorsError> {
         let num_leaves = self.to_leaves().len();
 
         if idx > num_leaves {
@@ -189,7 +199,16 @@ impl Actors {
         for i in 0..num_hashes {
             proof.push(proof_bytes[i * hash_size..(i + 1) * hash_size].to_vec())
         }
-        Ok(ActorInclusionProof::new(*self.tx_hash(), proof, *self.mcid()))
+        Ok(ActorInclusionProof::new(
+            *self.epoch(),
+            *self.tx_hash(),
+            proof,
+            *self.mcid(),
+        ))
+    }
+
+    fn inclusion_proof_for_actor(&self, actor: &Actor) -> Result<ActorInclusionProof, ActorsError> {
+        todo!("find index then use above to get proof");
     }
 }
 
@@ -205,7 +224,7 @@ mod tests {
     use crate::{actors::test_utils::get_sample_actors, Actor, ActorType};
 
     fn get_sample_proof() -> ActorInclusionProof {
-        get_sample_actors().inclusion_proof(1).unwrap()
+        get_sample_actors().inclusion_proof_for_idx(1).unwrap()
     }
 
     #[test]
@@ -219,10 +238,11 @@ mod tests {
     #[test]
     fn should_get_actors_inclusion_proof() {
         let actors = get_sample_actors();
-        let proof = actors.inclusion_proof(1).unwrap();
+        let proof = actors.inclusion_proof_for_idx(1).unwrap();
         let mcid = MetadataChainId::PolygonMainnet;
         let tx_hash = EthHash::from_str("0xf577503260b8f1c6608d3e50c93895833f783509ae059f1bd0e6f0922720fa67").unwrap();
         let expected_proof = ActorInclusionProof::new(
+            U256::from(26),
             tx_hash,
             vec![
                 hex::decode("d2a063cb44962b73a9fb59d4eefa9be1382810cf6bb85c2769875a86c92ea4b5").unwrap(),
@@ -239,7 +259,7 @@ mod tests {
         let actors = get_sample_actors();
         let num_actors = actors.len();
         let idx_to_get_proof_of = num_actors + 1;
-        match actors.inclusion_proof(idx_to_get_proof_of) {
+        match actors.inclusion_proof_for_idx(idx_to_get_proof_of) {
             Ok(proof) => panic!("should not have succeeded to getting proof: {proof}"),
             Err(ActorsError::CannotCreateInclusionProof { idx, num_leaves }) => {
                 assert_eq!(idx, idx_to_get_proof_of);
@@ -259,7 +279,7 @@ mod tests {
         let num_actors = actors.len();
         assert_eq!(num_actors, 1);
         let idx_to_get_proof_of = 0;
-        let proof = actors.inclusion_proof(idx_to_get_proof_of).unwrap();
+        let proof = actors.inclusion_proof_for_idx(idx_to_get_proof_of).unwrap();
         let expected_proof = ActorInclusionProof::empty();
         assert_eq!(proof, expected_proof);
     }
