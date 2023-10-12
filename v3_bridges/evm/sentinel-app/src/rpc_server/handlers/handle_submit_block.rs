@@ -3,6 +3,7 @@ use std::str::FromStr;
 use common::BridgeSide;
 use common_eth::EthSubmissionMaterials;
 use common_sentinel::{
+    ConfigT,
     EthRpcMessages,
     SentinelConfig,
     SentinelError,
@@ -42,14 +43,21 @@ impl RpcCall {
         let dry_run = matches!(checked_params[2].as_ref(), "true");
         let reprocess = matches!(checked_params[3].as_ref(), "true");
 
+        let mcid = if side.is_host() {
+            config.host().mcid()
+        } else {
+            config.native().mcid()
+        };
+
         let submit_args = WebSocketMessagesSubmitArgs::new(
             dry_run,
             config.is_validating(&side),
             reprocess,
             side,
-            config.chain_id(&side),
+            mcid,
             config.pnetwork_hub(&side),
             EthSubmissionMaterials::new(vec![sub_mat]), // NOTE: The processor always deals with batches of submat
+            config.governance_address(&mcid),
         );
         let encodable_msg = WebSocketMessagesEncodable::Submit(Box::new(submit_args));
 

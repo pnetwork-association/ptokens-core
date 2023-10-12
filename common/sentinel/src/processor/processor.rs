@@ -7,7 +7,6 @@ use ethereum_types::Address as EthAddress;
 
 use crate::{Bytes4, ProcessorOutput, SentinelDbUtils, SentinelError, UserOpList, UserOps};
 
-#[allow(clippy::too_many_arguments)]
 pub fn process_single<D: DatabaseInterface>(
     db: &D,
     sub_mat: EthSubmissionMaterial,
@@ -81,7 +80,6 @@ pub fn process_single<D: DatabaseInterface>(
     Ok(ops)
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn process_batch<D: DatabaseInterface>(
     db: &D,
     pnetwork_hub: &EthAddress,
@@ -92,6 +90,7 @@ pub fn process_batch<D: DatabaseInterface>(
     reprocess: bool,
     dry_run: bool,
     mcid: MetadataChainId,
+    governance_address: Option<EthAddress>
 ) -> Result<ProcessorOutput, SentinelError> {
     info!("Processing {mcid} batch of submission material...");
 

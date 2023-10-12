@@ -30,11 +30,11 @@ async fn main_loop(
 ) -> Result<(), SentinelError> {
     let side = *batch.side();
     let mcid = *batch.mcid();
-    let chain_id = config.chain_id(&side);
     let log_prefix = format!("{mcid} syncer");
     let validate = config.is_validating(&side);
     let pnetwork_hub = config.pnetwork_hub(&side);
     let sleep_duration = batch.get_sleep_duration();
+    let governance_address = config.governance_address(&mcid);
 
     let latest_block_numbers = 'latest_block_getter_loop: loop {
         // NOTE: Get the core's latest block numbers for this chain
@@ -78,9 +78,10 @@ async fn main_loop(
                 let args = WebSocketMessagesSubmitArgs::new_for_syncer(
                     validate,
                     side,
-                    chain_id.clone(),
+                    mcid,
                     pnetwork_hub,
                     batch.to_submission_material(),
+                    governance_address,
                 );
                 let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::Submit(args));
                 websocket_tx.send(msg).await?;
@@ -88,7 +89,7 @@ async fn main_loop(
                 let websocket_response = tokio::select! {
                     response = rx => response?,
                     _ = sleep(Duration::from_millis(*config.core().timeout())) => {
-                        let m = "submitting batch for {side} {chain_id}";
+                        let m = "submitting batch for {side} {mcid}";
                         error!("timed out whilst {m}");
                         Err(SentinelError::Timedout(m.into()))
                     }

@@ -14,8 +14,8 @@ use serde_json::json;
 use crate::android::State;
 
 pub fn submit_blocks(args: WebSocketMessagesSubmitArgs, state: State) -> Result<State, SentinelError> {
-    let ecid = args.eth_chain_id().clone();
-    let mcid = MetadataChainId::from(&ecid);
+    let mcid = args.mcid();
+    let network_id = NetworkId::try_from(mcid)?;
 
     let result = process_batch(
         state.db(),
@@ -23,10 +23,11 @@ pub fn submit_blocks(args: WebSocketMessagesSubmitArgs, state: State) -> Result<
         args.sub_mat_batch(),
         *args.validate(),
         *args.side(),
-        &NetworkId::new(ecid.to_u64(), ProtocolId::Ethereum).to_bytes_4()?, // FIXME
+        &network_id.to_bytes_4()?,
         *args.reprocess(),
         *args.dry_run(),
-        mcid,
+        *mcid,
+        *args.governance_address(),
     );
 
     let response = match result {
