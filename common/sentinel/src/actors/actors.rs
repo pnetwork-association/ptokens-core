@@ -19,6 +19,10 @@ pub struct Actors {
 }
 
 impl Actors {
+    pub fn actor_idx(&self, needle: &Actor) -> Option<usize> {
+        self.actors.iter().position(|actor| actor == needle)
+    }
+
     #[cfg(test)]
     pub fn len(&self) -> usize {
         self.actors.len()

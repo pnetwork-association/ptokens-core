@@ -3,8 +3,13 @@ use ethabi::Token as EthAbiToken;
 use ethereum_types::H256 as EthHash;
 use thiserror::Error;
 
+use super::Actor;
+
 #[derive(Debug, Error)]
 pub enum ActorsError {
+    #[error("cannot create proof actors does not include actor: {0}")]
+    CannotCreateProofForActor(Actor),
+
     #[error("cannot get actors from sub mat - too many logs from block {block_hash} on {chain}")]
     TooManyLogs { chain: MetadataChainId, block_hash: String },
 

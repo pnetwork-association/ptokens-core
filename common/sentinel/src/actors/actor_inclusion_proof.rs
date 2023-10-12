@@ -207,8 +207,12 @@ impl Actors {
         ))
     }
 
-    fn inclusion_proof_for_actor(&self, actor: &Actor) -> Result<ActorInclusionProof, ActorsError> {
-        todo!("find index then use above to get proof");
+    pub fn inclusion_proof_for_actor(&self, actor: &Actor) -> Result<ActorInclusionProof, ActorsError> {
+        if let Some(idx) = self.actor_idx(actor) {
+            self.inclusion_proof_for_idx(idx)
+        } else {
+            Err(ActorsError::CannotCreateProofForActor(actor.clone()))
+        }
     }
 }
 
@@ -235,22 +239,33 @@ mod tests {
         assert_eq!(root, expected_root);
     }
 
-    #[test]
-    fn should_get_actors_inclusion_proof() {
-        let actors = get_sample_actors();
-        let proof = actors.inclusion_proof_for_idx(1).unwrap();
-        let mcid = MetadataChainId::PolygonMainnet;
-        let tx_hash = EthHash::from_str("0xf577503260b8f1c6608d3e50c93895833f783509ae059f1bd0e6f0922720fa67").unwrap();
-        let expected_proof = ActorInclusionProof::new(
+    fn get_expected_proof() -> ActorInclusionProof {
+        ActorInclusionProof::new(
             U256::from(26),
-            tx_hash,
+            EthHash::from_str("0xf577503260b8f1c6608d3e50c93895833f783509ae059f1bd0e6f0922720fa67").unwrap(),
             vec![
                 hex::decode("d2a063cb44962b73a9fb59d4eefa9be1382810cf6bb85c2769875a86c92ea4b5").unwrap(),
                 hex::decode("fec594682ae56dd0b4e447418d170ac775de8a0d49b7f0624a2221daaedb1bb1").unwrap(),
                 hex::decode("056b10a893fe384684692e4ae89d2adac2f7b0a3104be865f1ea2e6e8d549e51").unwrap(),
             ],
-            mcid,
-        );
+            MetadataChainId::PolygonMainnet,
+        )
+    }
+
+    #[test]
+    fn should_get_actors_inclusion_proof_by_idx() {
+        let actors = get_sample_actors();
+        let proof = actors.inclusion_proof_for_idx(1).unwrap();
+        let expected_proof = get_expected_proof();
+        assert_eq!(proof, expected_proof);
+    }
+
+    #[test]
+    fn should_get_actors_inclusion_proof_by_actor() {
+        let actors = get_sample_actors();
+        let actor = actors.actors()[1].clone();
+        let proof = actors.inclusion_proof_for_actor(&actor).unwrap();
+        let expected_proof = get_expected_proof();
         assert_eq!(proof, expected_proof);
     }
 
@@ -308,5 +323,17 @@ mod tests {
         let db_utils = SentinelDbUtils::new(&db);
         let result = ActorInclusionProof::get(&db_utils);
         assert_eq!(result, ActorInclusionProof::empty());
+    }
+
+    #[test]
+    fn should_err_creating_proof_for_actor_not_amongst_actors() {
+        let actor = Actor::new(ActorType::Sentinel, EthAddress::random());
+        let actors = get_sample_actors();
+        assert!(actors.actor_idx(&actor).is_none());
+        match actors.inclusion_proof_for_actor(&actor) {
+            Ok(_) => panic!("should not have succeeded!"),
+            Err(ActorsError::CannotCreateProofForActor(a)) => assert_eq!(actor, a),
+            Err(e) => panic!("wrong error received {e}"),
+        }
     }
 }
