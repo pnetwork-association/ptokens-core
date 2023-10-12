@@ -101,9 +101,9 @@ impl SentinelConfig {
 
     pub fn pnetwork_hub(&self, side: &BridgeSide) -> EthAddress {
         if side.is_native() {
-            self.native.pnetwork_hub()
+            *self.native.pnetwork_hub()
         } else {
-            self.host.pnetwork_hub()
+            *self.host.pnetwork_hub()
         }
     }
 
@@ -117,17 +117,17 @@ impl SentinelConfig {
 
     pub fn gas_price(&self, side: &BridgeSide) -> Option<u64> {
         if side.is_native() {
-            self.native.gas_price()
+            *self.native.gas_price()
         } else {
-            self.host.gas_price()
+            *self.host.gas_price()
         }
     }
 
     pub fn gas_limit(&self, side: &BridgeSide) -> usize {
         if side.is_native() {
-            self.native.gas_limit()
+            *self.native.gas_limit()
         } else {
-            self.host.gas_limit()
+            *self.host.gas_limit()
         }
     }
 

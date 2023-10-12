@@ -13,6 +13,7 @@ gas_limit = 1
 gas_price = 2 # NOTE: If this is omitted, and rpc call will be made to determine the gas price from the node
 batch_size = 500 # Max number of blocks to batch together before submitting to core
 batch_duration = 60 # Max amount of time (in seconds) between batch submissions
+pre_filter_receipts = true # Pre filter receipts in app before submitting to the core
 
 [host]
 eth_chain_id = "42161"
@@ -23,6 +24,7 @@ contract_addresses = [] # Used to prefilter submission material to reduce total 
 validate = false # Used to turn off validation for this side's chain.
 gas_limit = 1
 gas_price = 2 # NOTE: If this is omitted, and rpc call will be made to determine the gas price from the node
+pre_filter_receipts = true # Pre filter receipts in app before submitting to the core
 
 [batching]
 host_batch_size = 500 # Max number of host blocks to batch together before submission

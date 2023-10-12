@@ -4,6 +4,7 @@ use common::BridgeSide;
 use common_chain_ids::EthChainId;
 use common_eth::convert_hex_to_eth_address;
 use common_metadata::MetadataChainId;
+use derive_getters::Getters;
 use ethereum_types::Address as EthAddress;
 use serde::Deserialize;
 
@@ -18,17 +19,20 @@ pub struct HostToml {
     pnetwork_hub: String,
     endpoints: Vec<String>,
     gas_price: Option<u64>,
+    pre_filter_receipts: bool,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Getters)]
 pub struct HostConfig {
     validate: bool,
     gas_limit: usize,
     sleep_duration: u64,
+    #[getter(skip)]
     endpoints: Endpoints,
     gas_price: Option<u64>,
     eth_chain_id: EthChainId,
     pnetwork_hub: EthAddress,
+    pre_filter_receipts: bool,
 }
 
 impl HostConfig {
@@ -39,6 +43,7 @@ impl HostConfig {
             validate: toml.validate,
             gas_price: toml.gas_price,
             gas_limit: toml.gas_limit,
+            pre_filter_receipts: toml.pre_filter_receipts,
             pnetwork_hub: convert_hex_to_eth_address(&toml.pnetwork_hub)?,
             endpoints: Endpoints::new(sleep_duration, BridgeSide::Host, toml.endpoints.clone()),
             eth_chain_id: match EthChainId::from_str(&toml.eth_chain_id) {
@@ -96,5 +101,9 @@ impl ConfigT for HostConfig {
 
     fn mcid(&self) -> MetadataChainId {
         self.metadata_chain_id()
+    }
+
+    fn pre_filter_receipts(&self) -> bool {
+        *self.pre_filter_receipts()
     }
 }

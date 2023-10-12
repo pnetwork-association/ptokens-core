@@ -9,7 +9,7 @@ use ethereum_types::{Address as EthAddress, U256};
 use jsonrpsee::ws_client::WsClient;
 use serde_json::Value as Json;
 
-use crate::{endpoints::Endpoints, Bpm, ConfigT, ProcessorOutput, SentinelConfig, SentinelError};
+use crate::{endpoints::Endpoints, Bpm, ProcessorOutput, SentinelConfig, SentinelError};
 
 #[derive(Debug, Clone, Getters)]
 pub struct Batch {
@@ -23,6 +23,7 @@ pub struct Batch {
     endpoints: Endpoints,
     mcid: MetadataChainId,
     pnetwork_hub: EthAddress,
+    pre_filter_receipts: bool,
     batching_is_disabled: bool,
     single_submissions_flag: bool,
     batch: EthSubmissionMaterials,
@@ -41,6 +42,7 @@ impl Default for Batch {
             bpm: Bpm::default(),
             batch_duration: 5 * 60, // NOTE: 5mins
             governance_address: None,
+            pre_filter_receipts: false,
             side: BridgeSide::default(),
             batching_is_disabled: false,
             single_submissions_flag: false,
@@ -127,10 +129,16 @@ impl Batch {
 
         let mcid = MetadataChainId::from(&config.chain_id(&side));
 
-        let pnetwork_hub = if is_native {
-            config.native().pnetwork_hub()
+        let pre_filter_receipts: bool = if is_native {
+            *config.native().pre_filter_receipts()
         } else {
-            config.host().pnetwork_hub()
+            *config.host().pre_filter_receipts()
+        };
+
+        let pnetwork_hub = if is_native {
+            *config.native().pnetwork_hub()
+        } else {
+            *config.host().pnetwork_hub()
         };
 
         let governance_address = config.governance_address(&mcid);
@@ -160,6 +168,7 @@ impl Batch {
             pnetwork_hub,
             sleep_duration,
             governance_address,
+            pre_filter_receipts,
             receipt_filtering_addresses,
             bpm: Bpm::new(config.chain_id(&side)),
             batch_size: config.batching().get_batch_size(is_native),
@@ -195,8 +204,12 @@ impl Batch {
     }
 
     pub fn push(&mut self, sub_mat: EthSubmissionMaterial) {
-        self.batch
-            .push(sub_mat.remove_receipts_if_no_logs_from_addresses(&self.receipt_filtering_addresses));
+        if self.pre_filter_receipts {
+            self.batch
+                .push(sub_mat.remove_receipts_if_no_logs_from_addresses(&self.receipt_filtering_addresses));
+        } else {
+            self.batch.push(sub_mat)
+        }
     }
 
     pub fn get_pnetwork_hub(&self) -> &EthAddress {
