@@ -34,6 +34,18 @@ pub struct Challenge {
 }
 
 impl Challenge {
+    #[cfg(test)]
+    fn random() -> Self {
+        use rand::Rng;
+        Self::new(
+            U256::from(rand::thread_rng().gen_range(0..100_000_000)),
+            Actor::random(),
+            rand::thread_rng().gen_range(0..100_000_000),
+            MetadataChainId::default(),
+            EthAddress::random(),
+        )
+    }
+
     pub fn sign(&self, pk: &EthPrivateKey) -> Result<EthSignature, ChallengesError> {
         let bs = self.abi_encode()?;
         Ok(pk.hash_and_sign_msg_with_eth_prefix(&bs)?)

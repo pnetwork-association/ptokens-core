@@ -15,6 +15,11 @@ pub struct Actor {
 }
 
 impl Actor {
+    #[cfg(test)]
+    pub(crate) fn random() -> Self {
+        Self::new(ActorType::random(), EthAddress::random())
+    }
+
     pub(super) fn to_leaf(&self) -> Hash {
         keccak_hash_bytes(&[self.actor_address.as_bytes(), self.actor_type.as_bytes()].concat()).into()
     }

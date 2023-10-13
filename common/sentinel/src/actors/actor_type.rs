@@ -13,6 +13,12 @@ pub enum ActorType {
 }
 
 impl ActorType {
+    #[cfg(test)]
+    pub(crate) fn random() -> Self {
+        use rand::Rng;
+        Self::try_from(rand::thread_rng().gen_range(0..3)).unwrap()
+    }
+
     pub fn as_bytes(&self) -> &[u8] {
         match self {
             Self::Governance => &[0],

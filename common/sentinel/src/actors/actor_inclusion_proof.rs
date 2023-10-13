@@ -106,13 +106,13 @@ impl ActorInclusionProof {
         }
     }
 
-    pub fn update_in_db<D: DatabaseInterface>(&self, db_utils: &SentinelDbUtils<D>) -> Result<(), SentinelError> {
+    pub fn update_proof_in_db<D: DatabaseInterface>(&self, db_utils: &SentinelDbUtils<D>) -> Result<(), SentinelError> {
         debug!("maybe updating sentinel inclusion proof in db");
-        let current = Self::get(db_utils);
-        if self.epoch() > current.epoch() {
+        let existing = Self::get(db_utils);
+        if self.epoch() > existing.epoch() {
             self.update_in_db(db_utils)
         } else {
-            warn!("not updating actors because the epoch is not greater than the existing one");
+            warn!("not updating actors inclusion proof because the epoch is not greater than the existing one");
             Ok(())
         }
     }
@@ -313,7 +313,7 @@ mod tests {
         let proof = get_sample_proof();
         let db = get_test_database();
         let db_utils = SentinelDbUtils::new(&db);
-        proof.update_in_db(&db_utils).unwrap();
+        proof.update_proof_in_db(&db_utils).unwrap();
         let result = ActorInclusionProof::get(&db_utils);
         assert_eq!(proof, result);
     }

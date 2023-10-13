@@ -36,7 +36,7 @@ pub(super) fn maybe_handle_actors_propagated_event<D: DatabaseInterface>(
                 // checks that the proof for an epoch later than whatever one is currently stored
                 // [if any] in the db).
                 info!("successfully created sentinel inclusion proof: {proof}");
-                proof.update_in_db(db_utils)?;
+                proof.update_proof_in_db(db_utils)?;
                 Ok(())
             },
         },
