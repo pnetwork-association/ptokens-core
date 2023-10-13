@@ -433,7 +433,8 @@ mod tests {
             ..Default::default()
         };
         let mut batch = Batch {
-            pnetwork_hub: address,
+            pre_filter_receipts: true,
+            receipt_filtering_addresses: vec![address],
             ..Default::default()
         };
         batch.push(sub_mat);
@@ -441,7 +442,7 @@ mod tests {
     }
 
     #[test]
-    fn pushed_block_should_not_have_receipts_if_they_contain_pertinent_logs() {
+    fn pushed_block_should_not_have_receipts_if_they_do_not_contain_pertinent_logs_and_pre_filtering_is_enabled() {
         let address = convert_hex_to_eth_address("0xfEDFe2616EB3661CB8FEd2782F5F0cC91D59DCaC").unwrap();
         let other_address = convert_hex_to_eth_address("0x690b9a9e9aa1c9db991c7721a92d351db4fac990").unwrap();
         let log = EthLog {
@@ -459,11 +460,39 @@ mod tests {
             ..Default::default()
         };
         let mut batch = Batch {
-            pnetwork_hub: other_address,
+            pre_filter_receipts: true,
+            receipt_filtering_addresses: vec![other_address],
             ..Default::default()
         };
         batch.push(sub_mat);
         assert!(batch.batch[0].receipts.is_empty());
+    }
+
+    #[test]
+    fn pushed_block_should_have_receipts_if_they_do_not_contain_pertinent_logs_but_pre_filtering_is_disabled() {
+        let address = convert_hex_to_eth_address("0xfEDFe2616EB3661CB8FEd2782F5F0cC91D59DCaC").unwrap();
+        let other_address = convert_hex_to_eth_address("0x690b9a9e9aa1c9db991c7721a92d351db4fac990").unwrap();
+        let log = EthLog {
+            address,
+            ..Default::default()
+        };
+        let logs = EthLogs::new(vec![log]);
+        let receipt = EthReceipt {
+            logs,
+            ..Default::default()
+        };
+        let receipts = EthReceipts::new(vec![receipt]);
+        let sub_mat = EthSubmissionMaterial {
+            receipts: receipts.clone(),
+            ..Default::default()
+        };
+        let mut batch = Batch {
+            pre_filter_receipts: false,
+            receipt_filtering_addresses: vec![other_address],
+            ..Default::default()
+        };
+        batch.push(sub_mat);
+        assert_eq!(batch.batch[0].receipts, receipts);
     }
 
     #[test]
