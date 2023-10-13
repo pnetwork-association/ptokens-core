@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 
 use super::{type_aliases::Hash, Actor, Actors, ActorsError};
-use crate::{db_utils::SentinelDbKeys, DbKey, DbUtilsT, SentinelDbUtils, SentinelError, WebSocketMessagesEncodable};
+use crate::{DbKey, DbUtilsT, SentinelDbKeys, SentinelDbUtils, SentinelError, WebSocketMessagesEncodable};
 
 type Byte = u8;
 

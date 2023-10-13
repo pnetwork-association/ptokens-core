@@ -22,6 +22,9 @@ impl From<SentinelError> for CommonError {
 #[derive(Error, Debug)]
 pub enum SentinelError {
     #[error("{0}")]
+    Challenges(#[from] crate::ChallengesError),
+
+    #[error("{0}")]
     Actors(#[from] crate::ActorsError),
 
     #[error("{0}")]

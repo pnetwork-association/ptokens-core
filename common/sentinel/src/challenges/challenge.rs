@@ -1,13 +1,14 @@
-use common::crypto_utils::keccak_hash_bytes;
+use common::{crypto_utils::keccak_hash_bytes, MIN_DATA_SENSITIVITY_LEVEL};
 use common_eth::{EthPrivateKey, EthSignature, EthSigningCapabilities};
 use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use derive_more::Constructor;
 use ethabi::{encode as eth_abi_encode, Token as EthAbiToken};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
+use serde::{Deserialize, Serialize};
 
 use super::{ChallengePendingEvent, ChallengesError};
-use crate::{Actor, NetworkId};
+use crate::{Actor, DbKey, DbUtilsT, NetworkId, SentinelError};
 
 /* Reference:
 From: https://github.com/pnetwork-association/pnetwork/blob/14d11b116da6abf70cba11e0fd931686f77f22b5/packages/ptokens-evm-contracts/contracts/interfaces/IPNetworkHub.sol#L47C1-L54C6
@@ -23,7 +24,7 @@ From: https://github.com/pnetwork-association/pnetwork/blob/14d11b116da6abf70cba
 
 // FIXME Do we want/need to track the `ChallengeStatus` in here?
 
-#[derive(Debug, Clone, Eq, PartialEq, Getters, Constructor)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Getters, Constructor)]
 pub struct Challenge {
     nonce: U256,
     actor: Actor,
@@ -70,5 +71,19 @@ impl From<&ChallengePendingEvent> for Challenge {
             challenger_address: *event.challenger_address(),
             actor: Actor::new(*event.actor_type(), *event.actor_address()),
         }
+    }
+}
+
+impl DbUtilsT for Challenge {
+    fn key(&self) -> Result<DbKey, SentinelError> {
+        Ok(self.hash()?.into())
+    }
+
+    fn sensitivity() -> Option<u8> {
+        MIN_DATA_SENSITIVITY_LEVEL
+    }
+
+    fn from_bytes(bytes: &[u8]) -> Result<Self, SentinelError> {
+        Ok(serde_json::from_slice(bytes)?)
     }
 }

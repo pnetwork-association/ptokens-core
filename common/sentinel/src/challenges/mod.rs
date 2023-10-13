@@ -12,6 +12,5 @@ use self::{
     challenge_list_entry::ChallengesListEntry,
     challenge_pending_event::{ChallengePendingEvent, ChallengePendingEvents},
     challenge_status::ChallengeStatus,
-    challenges_error::ChallengesError,
 };
-pub use self::{challenges::Challenges, challenges_list::ChallengesList};
+pub use self::{challenges::Challenges, challenges_error::ChallengesError, challenges_list::ChallengesList};

@@ -183,7 +183,7 @@ macro_rules! create_db_keys {
     }
 }
 
-create_db_keys!(USER_OP_LIST, ACTOR_INCLUSION_PROOF);
+create_db_keys!(USER_OP_LIST, ACTOR_INCLUSION_PROOF, CHALLENGES_LIST);
 
 pub struct SentinelDbUtils<'a, D: DatabaseInterface>(&'a D);
 

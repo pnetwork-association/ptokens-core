@@ -27,12 +27,13 @@ mod test_utils;
 mod user_ops;
 mod utils;
 
+use self::db_utils::SentinelDbKeys;
 pub use self::{
     actors::{Actor, ActorInclusionProof, ActorType, Actors, ActorsError},
     batching::Batch,
     bpm::{Bpm, BpmInfo, Bpms},
     call_core::call_core,
-    challenges::{Challenges, ChallengesList},
+    challenges::{Challenges, ChallengesError, ChallengesList},
     config::{
         ConfigT,
         HostConfig,
