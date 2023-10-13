@@ -6,7 +6,7 @@ use crate::{
 };
 
 impl RpcCall {
-    pub(crate) async fn handle_get_user_op_list(
+    pub(crate) async fn handle_get_challenges_list(
         websocket_tx: WebSocketTx,
         core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
@@ -14,7 +14,7 @@ impl RpcCall {
         call_core(
             STRONGBOX_TIMEOUT_MS,
             websocket_tx.clone(),
-            WebSocketMessagesEncodable::GetUserOpList,
+            WebSocketMessagesEncodable::GetChallengesList,
         )
         .await
     }

@@ -61,6 +61,7 @@ pub(crate) enum RpcCall {
     Put(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     CancelUserOps(RpcId, BroadcasterTx, CoreCxnStatus),
     GetInclusionProof(RpcId, WebSocketTx, CoreCxnStatus),
+    GetChallengesList(RpcId, WebSocketTx, CoreCxnStatus),
     Delete(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetUserOp(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     GetStatus(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
@@ -141,6 +142,7 @@ impl RpcCall {
             "getUserOpList" => Self::GetUserOpList(r.id, websocket_tx, core_cxn),
             "delete" => Self::Delete(r.id, websocket_tx, r.params.clone(), core_cxn),
             "getInclusionProof" => Self::GetInclusionProof(r.id, websocket_tx, core_cxn),
+            "getChallengesList" => Self::GetChallengesList(r.id, websocket_tx, core_cxn),
             "getUserOp" => Self::GetUserOp(r.id, r.params.clone(), websocket_tx, core_cxn),
             "removeUserOp" => Self::RemoveUserOp(r.id, websocket_tx, r.params.clone(), core_cxn),
             "stopSyncer" => Self::StopSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
@@ -372,6 +374,9 @@ impl RpcCall {
             },
             Self::GetUserOpList(id, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_user_op_list(websocket_tx, core_cxn).await)
+            },
+            Self::GetChallengesList(id, websocket_tx, core_cxn) => {
+                Self::handle_ws_result(id, Self::handle_get_challenges_list(websocket_tx, core_cxn).await)
             },
             Self::GetInclusionProof(id, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_inclusion_proof(websocket_tx, core_cxn).await)
