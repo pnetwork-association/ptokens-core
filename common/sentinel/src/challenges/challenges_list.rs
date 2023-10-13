@@ -5,7 +5,7 @@ use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use super::{Challenge, ChallengeStatus, Challenges, ChallengesListEntry};
+use super::{Challenge, ChallengeStatus, Challenges, ChallengesError, ChallengesListEntry};
 use crate::{db_utils::SentinelDbKeys, DbKey, DbUtilsT, SentinelDbUtils, SentinelError};
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
@@ -139,6 +139,21 @@ impl ChallengesList {
                 })
                 .collect::<Result<Vec<Challenge>, SentinelError>>()?,
         ))
+    }
+
+    pub fn get_challenge<D: DatabaseInterface>(
+        &self,
+        db_utils: &SentinelDbUtils<D>,
+        hash: &EthHash,
+    ) -> Result<Challenge, SentinelError> {
+        match self.entry_idx(hash) {
+            None => Err(ChallengesError::NotInList(*hash).into()),
+            Some(_) => Challenge::from_bytes(
+                &db_utils
+                    .db()
+                    .get(hash.as_bytes().to_vec(), MIN_DATA_SENSITIVITY_LEVEL)?,
+            ),
+        }
     }
 }
 

@@ -2,7 +2,7 @@ use std::{fmt, str::FromStr};
 
 use base64::{engine::general_purpose, Engine};
 use common_metadata::MetadataChainId;
-use ethereum_types::Address as EthAddress;
+use ethereum_types::{Address as EthAddress, H256 as EthHash};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 
@@ -26,6 +26,7 @@ pub enum WebSocketMessagesEncodable {
     Success(Json),
     GetChallengesList,
     GetInclusionProof,
+    GetChallenge(EthHash),
     GetUserOp(UserOpUniqueId),
     RemoveUserOp(UserOpUniqueId),
     Error(WebSocketMessagesError),
@@ -82,6 +83,7 @@ impl fmt::Display for WebSocketMessagesEncodable {
             Self::RemoveUserOp(_) => "RemoveUserOp".to_string(),
             Self::GetCoreState(..) => "GetCoreState".to_string(),
             Self::ProcessBatch(..) => "ProcessBatch".to_string(),
+            Self::GetChallenge(..) => "GetChallenge".to_string(),
             Self::GetChallengesList => "GetChallengesList".to_string(),
             Self::GetInclusionProof => "GetInclusionProof".to_string(),
             Self::GetCancellableUserOps(_) => "GetCancellableUserOps".to_string(),

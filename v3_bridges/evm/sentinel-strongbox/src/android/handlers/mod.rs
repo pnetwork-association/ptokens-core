@@ -1,5 +1,6 @@
 mod db_ops;
 mod get_cancellable_user_ops;
+mod get_challenge;
 mod get_challenges_list;
 mod get_core_state;
 mod get_inclusion_proof;
@@ -18,6 +19,7 @@ mod reset_chain;
 pub(crate) use self::{
     db_ops::{delete, get, put},
     get_cancellable_user_ops::get_cancellable_user_ops,
+    get_challenge::get_challenge,
     get_challenges_list::get_challenges_list,
     get_core_state::get_core_state,
     get_inclusion_proof::get_inclusion_proof,

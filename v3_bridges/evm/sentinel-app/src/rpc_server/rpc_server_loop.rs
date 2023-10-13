@@ -67,6 +67,7 @@ pub(crate) enum RpcCall {
     GetStatus(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     StatusPublisherStartStop(RpcId, BroadcastChannelTx, bool),
     RemoveUserOp(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
+    GetChallenge(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetCoreState(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
@@ -145,6 +146,7 @@ impl RpcCall {
             "getChallengesList" => Self::GetChallengesList(r.id, websocket_tx, core_cxn),
             "getUserOp" => Self::GetUserOp(r.id, r.params.clone(), websocket_tx, core_cxn),
             "removeUserOp" => Self::RemoveUserOp(r.id, websocket_tx, r.params.clone(), core_cxn),
+            "getChallenge" => Self::GetChallenge(r.id, websocket_tx, r.params.clone(), core_cxn),
             "stopSyncer" => Self::StopSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
             "cancel" | "cancelUserOp" => Self::CancelUserOps(r.id, broadcaster_tx.clone(), core_cxn),
             "getStatus" | "status" => Self::GetStatus(r.id, websocket_tx, r.params.clone(), core_cxn),
@@ -377,6 +379,9 @@ impl RpcCall {
             },
             Self::GetChallengesList(id, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_challenges_list(websocket_tx, core_cxn).await)
+            },
+            Self::GetChallenge(id, websocket_tx, params, core_cxn) => {
+                Self::handle_ws_result(id, Self::handle_get_challenge(websocket_tx, params, core_cxn).await)
             },
             Self::GetInclusionProof(id, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_inclusion_proof(websocket_tx, core_cxn).await)

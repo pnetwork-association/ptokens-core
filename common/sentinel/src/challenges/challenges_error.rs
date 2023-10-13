@@ -1,8 +1,12 @@
 use ethabi::Token as EthAbiToken;
+use ethereum_types::H256 as EthHash;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ChallengesError {
+    #[error("no challenge with hash {0} in challenges list")]
+    NotInList(EthHash),
+
     #[error("cannot get challenge status from: '{0}'")]
     CannotGetChallengeStatusFrom(String),
 
