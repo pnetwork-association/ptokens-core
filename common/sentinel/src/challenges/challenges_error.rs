@@ -3,6 +3,9 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ChallengesError {
+    #[error("cannot get challenge status from: '{0}'")]
+    CannotGetChallengeStatusFrom(String),
+
     #[error("challenges network id error: {0}")]
     NetworkId(#[from] crate::NetworkIdError),
 
