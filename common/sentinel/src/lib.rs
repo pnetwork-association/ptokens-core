@@ -2,6 +2,7 @@ mod actors;
 mod batching;
 mod bpm;
 mod call_core;
+mod challenges;
 mod config;
 mod constants;
 mod core_state;
