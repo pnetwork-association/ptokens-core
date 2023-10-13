@@ -32,7 +32,7 @@ impl ChallengesList {
     }
 
     pub fn update_challenge_status<D: DatabaseInterface>(
-        mut self,
+        &mut self,
         db_utils: &SentinelDbUtils<D>,
         hash: &EthHash,
         status: ChallengeStatus,
@@ -61,8 +61,8 @@ impl ChallengesList {
         }
     }
 
-    pub fn add_challenge<D: DatabaseInterface>(
-        mut self,
+    fn add_challenge<D: DatabaseInterface>(
+        &mut self,
         db_utils: &SentinelDbUtils<D>,
         challenge: Challenge,
     ) -> Result<(), SentinelError> {
@@ -83,9 +83,20 @@ impl ChallengesList {
         }
     }
 
-    pub fn remove_challenge<D: DatabaseInterface>(
+    pub fn add_challenges<D: DatabaseInterface>(
         mut self,
-        db_utils: SentinelDbUtils<D>,
+        db_utils: &SentinelDbUtils<D>,
+        challenges: Challenges,
+    ) -> Result<(), SentinelError> {
+        challenges
+            .iter()
+            .cloned()
+            .try_for_each(|c| self.add_challenge(db_utils, c))
+    }
+
+    pub fn remove_challenge<D: DatabaseInterface>(
+        &mut self,
+        db_utils: &SentinelDbUtils<D>,
         hash: &EthHash,
     ) -> Result<(), SentinelError> {
         match self.entry_idx(hash) {
@@ -97,10 +108,18 @@ impl ChallengesList {
                 debug!("removing challenge with hash {hash} from list");
                 db_utils.db().delete(hash.as_bytes().to_vec())?; // NOTE: Delete the actual challenge from the db
                 self.0.swap_remove(idx);
-                self.put_in_db(&db_utils)?;
+                self.put_in_db(db_utils)?;
                 Ok(())
             },
         }
+    }
+
+    pub fn remove_challenges<D: DatabaseInterface>(
+        &mut self,
+        db_utils: &SentinelDbUtils<D>,
+        hashes: Vec<EthHash>,
+    ) -> Result<(), SentinelError> {
+        hashes.iter().try_for_each(|h| self.remove_challenge(db_utils, h))
     }
 
     pub fn get_pending_challenges<D: DatabaseInterface>(
