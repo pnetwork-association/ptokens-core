@@ -105,7 +105,7 @@ macro_rules! create_db_keys {
             }
 
             impl<'a, D: DatabaseInterface> SentinelDbUtils<'a, D> {
-                fn db(&self) -> &D {
+                pub(crate) fn db(&self) -> &D {
                     self.0
                 }
 

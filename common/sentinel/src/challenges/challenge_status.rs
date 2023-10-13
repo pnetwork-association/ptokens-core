@@ -4,8 +4,8 @@ use serde::{Deserialize, Serialize};
 
 use super::ChallengesError;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub(super) enum ChallengeStatus {
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+pub enum ChallengeStatus {
     Null              = 0,
     Pending           = 1,
     Solved            = 2,

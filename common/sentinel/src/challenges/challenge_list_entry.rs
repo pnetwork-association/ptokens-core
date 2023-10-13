@@ -11,7 +11,7 @@ use super::{Challenge, ChallengeStatus, ChallengesError};
 #[derive(Clone, Debug, Serialize, Deserialize, Getters, Constructor)]
 pub(super) struct ChallengesListEntry {
     hash: EthHash,
-    status: ChallengeStatus,
+    pub(super) status: ChallengeStatus,
 }
 
 impl TryFrom<Challenge> for ChallengesListEntry {
@@ -19,7 +19,7 @@ impl TryFrom<Challenge> for ChallengesListEntry {
 
     fn try_from(c: Challenge) -> Result<Self, Self::Error> {
         // NOTE: If we're constructing a new list entry from a challenge, we assume that challenge
-        // to be pending.
+        // is pending.
         Ok(Self::new(c.hash()?, ChallengeStatus::Pending))
     }
 }
