@@ -1,7 +1,8 @@
+use common_eth::{EthPrivateKey, EthSignature};
 use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use derive_more::Constructor;
-use ethereum_types::{Address as EthAddress, U256};
+use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 
 use super::ChallengePendingEvent;
 use crate::Actor;
@@ -18,6 +19,8 @@ From: https://github.com/pnetwork-association/pnetwork/blob/14d11b116da6abf70cba
     }
 */
 
+// FIXME Do we want/need to track the `ChallengeStatus` in here?
+
 #[derive(Debug, Clone, Eq, PartialEq, Getters, Constructor)]
 pub struct Challenge {
     nonce: U256,
@@ -25,6 +28,21 @@ pub struct Challenge {
     timestamp: u64,
     mcid: MetadataChainId,
     challenger_address: EthAddress,
+}
+
+impl Challenge {
+    fn sign(&self, pk: &EthPrivateKey) -> EthSignature {
+        todo!("sign a challenge");
+    }
+
+    fn abi_encode(&self) -> Vec<u8> {
+        todo!("abi_encode challenge");
+    }
+
+    pub(super) fn hash(&self) -> EthHash {
+        let encoded = self.abi_encode();
+        todo!("abi encode and hash this")
+    }
 }
 
 impl From<&ChallengePendingEvent> for Challenge {

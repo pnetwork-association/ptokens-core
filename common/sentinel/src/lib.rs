@@ -32,7 +32,7 @@ pub use self::{
     batching::Batch,
     bpm::{Bpm, BpmInfo, Bpms},
     call_core::call_core,
-    challenges::Challenges,
+    challenges::{Challenges, ChallengesList},
     config::{
         ConfigT,
         HostConfig,
