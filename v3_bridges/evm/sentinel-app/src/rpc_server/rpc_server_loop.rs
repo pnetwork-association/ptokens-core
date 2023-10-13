@@ -69,6 +69,7 @@ pub(crate) enum RpcCall {
     RemoveUserOp(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetChallenge(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetCoreState(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
+    RemoveChallenge(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     LatestBlockNumbers(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
@@ -154,6 +155,7 @@ impl RpcCall {
             "startBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, true),
             "stopBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, false),
             "setStatusPublishingFrequency" => Self::SetStatusPublishingFrequency(r.id, r.params.clone(), status_tx),
+            "removeChallenge" | "rmChallenge" => Self::RemoveChallenge(r.id, websocket_tx, r.params.clone(), core_cxn),
             "getRegistrationSignature" | "getRegSig" => {
                 Self::GetRegistrationSignature(r.id, websocket_tx, r.params.clone(), core_cxn)
             },
@@ -382,6 +384,9 @@ impl RpcCall {
             },
             Self::GetChallenge(id, websocket_tx, params, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_challenge(websocket_tx, params, core_cxn).await)
+            },
+            Self::RemoveChallenge(id, websocket_tx, params, core_cxn) => {
+                Self::handle_ws_result(id, Self::handle_remove_challenge(websocket_tx, params, core_cxn).await)
             },
             Self::GetInclusionProof(id, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_inclusion_proof(websocket_tx, core_cxn).await)

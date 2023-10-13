@@ -13,6 +13,7 @@ mod get_user_op_list;
 mod get_user_ops;
 mod init;
 mod process_batch;
+mod remove_challenge;
 mod remove_user_op;
 mod reset_chain;
 
@@ -32,6 +33,7 @@ pub(crate) use self::{
     get_user_ops::get_user_ops,
     init::init,
     process_batch::process_batch,
+    remove_challenge::remove_challenge,
     remove_user_op::remove_user_op,
     reset_chain::reset_chain,
 };

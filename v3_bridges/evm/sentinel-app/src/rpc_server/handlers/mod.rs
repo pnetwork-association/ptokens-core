@@ -15,6 +15,7 @@ mod handle_get_user_ops;
 mod handle_init;
 mod handle_latest_block_numbers;
 mod handle_process_block;
+mod handle_remove_challenge;
 mod handle_remove_user_op;
 mod handle_reset_chain;
 mod handle_set_status_publishing_frequency;
