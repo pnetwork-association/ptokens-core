@@ -3,7 +3,7 @@ use std::{fmt, str::FromStr};
 use common::{Byte, Bytes};
 use common_chain_ids::EthChainId;
 use common_metadata::{MetadataChainId, MetadataChainIdError};
-use derive_more::Deref;
+use derive_more::{Constructor, Deref};
 use ethabi::{encode as ethabi_encode, Token};
 use ethereum_types::U256;
 use serde::{Deserialize, Serialize};
@@ -48,6 +48,10 @@ pub struct NetworkId {
 }
 
 impl NetworkId {
+    pub fn to_hex(&self) -> Result<String, NetworkIdError> {
+        Ok(self.to_bytes_4()?.to_string())
+    }
+
     pub fn new(chain_id: u64, protocol_id: ProtocolId) -> Self {
         Self::new_v1(chain_id, protocol_id)
     }
@@ -143,7 +147,24 @@ impl fmt::Display for NetworkId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.to_bytes_4() {
             Err(e) => write!(f, "error converting netowrk id to bytes: {e}"),
-            Ok(b4) => write!(f, "{}", json!({ "bytes": b4, "chain_info": self })),
+            Ok(b4) => {
+                #[derive(Clone, Debug, Serialize, Deserialize, Constructor)]
+                struct Temp {
+                    bytes: String,
+                    chain_id: u64,
+                    disambiguator: String,
+                    protocol_id: ProtocolId,
+                    version: NetworkIdVersion,
+                }
+                let t = Temp::new(
+                    b4.to_string(),
+                    self.chain_id,
+                    format!("0x{:x}", self.disambiguator),
+                    self.protocol_id,
+                    self.version,
+                );
+                write!(f, "{}", json!(t))
+            },
         }
     }
 }

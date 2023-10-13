@@ -157,7 +157,7 @@ impl SentinelStatus {
         let mut sync_state = HashMap::<String, SyncStatus>::new();
         for chain in chains {
             let sync_status = SyncStatus::from(chain);
-            let key = NetworkId::try_from(sync_status.mcid()?)?.to_string();
+            let key = NetworkId::try_from(sync_status.mcid()?)?.to_hex()?;
             sync_state.insert(key, sync_status);
         }
 
@@ -243,7 +243,8 @@ mod tests {
         let mut sync_state = HashMap::<String, SyncStatus>::new();
         let key = NetworkId::try_from(sync_state_struct.mcid().unwrap())
             .unwrap()
-            .to_string();
+            .to_hex()
+            .unwrap();
         sync_state.insert(key, sync_state_struct);
         let mut software_versions = HashMap::<String, String>::new();
         software_versions.insert("listener".to_string(), "1.0.0".to_string());
