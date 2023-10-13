@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{type_aliases::Hash, ActorType};
 
-#[derive(Clone, Debug, Eq, PartialEq, Constructor, Getters, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Constructor, Getters, Serialize, Deserialize)]
 pub struct Actor {
     actor_type: ActorType,
     actor_address: EthAddress,
@@ -20,7 +20,7 @@ impl Actor {
         Self::new(ActorType::random(), EthAddress::random())
     }
 
-    pub(super) fn to_leaf(&self) -> Hash {
+    pub(super) fn to_leaf(self) -> Hash {
         keccak_hash_bytes(&[self.actor_address.as_bytes(), self.actor_type.as_bytes()].concat()).into()
     }
 }

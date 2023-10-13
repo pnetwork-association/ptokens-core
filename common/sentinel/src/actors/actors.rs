@@ -37,7 +37,7 @@ impl Actors {
     }
 
     pub(super) fn to_leaves(&self) -> Vec<Hash> {
-        self.actors().iter().map(Actor::to_leaf).collect()
+        self.actors().iter().map(|a| a.to_leaf()).collect()
     }
 
     pub fn from_sub_mat(

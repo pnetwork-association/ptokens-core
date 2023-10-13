@@ -24,7 +24,7 @@ From: https://github.com/pnetwork-association/pnetwork/blob/14d11b116da6abf70cba
 
 // FIXME Do we want/need to track the `ChallengeStatus` in here?
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Getters, Constructor)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Getters, Constructor)]
 pub struct Challenge {
     nonce: U256,
     actor: Actor,
@@ -35,7 +35,7 @@ pub struct Challenge {
 
 impl Challenge {
     #[cfg(test)]
-    fn random() -> Self {
+    pub(crate) fn random() -> Self {
         use rand::Rng;
         Self::new(
             U256::from(rand::thread_rng().gen_range(0..100_000_000)),
@@ -51,7 +51,7 @@ impl Challenge {
         Ok(pk.hash_and_sign_msg_with_eth_prefix(&bs)?)
     }
 
-    pub(super) fn to_eth_abi_token(&self) -> Result<EthAbiToken, ChallengesError> {
+    pub(super) fn to_eth_abi_token(self) -> Result<EthAbiToken, ChallengesError> {
         // NOTE: Structs in solidity get encoded in tuples
         let actor_type: u8 = self.actor.actor_type().into();
 

@@ -212,7 +212,7 @@ impl Actors {
         if let Some(idx) = self.actor_idx(actor) {
             self.get_inclusion_proof_for_idx(idx)
         } else {
-            Err(ActorsError::CannotCreateProofForActor(actor.clone()))
+            Err(ActorsError::CannotCreateProofForActor(*actor))
         }
     }
 }
