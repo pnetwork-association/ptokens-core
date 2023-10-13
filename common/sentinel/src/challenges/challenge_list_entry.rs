@@ -6,7 +6,7 @@ use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use super::{ChallengesError, Challenge, ChallengeStatus};
+use super::{Challenge, ChallengeStatus, ChallengesError};
 
 #[derive(Clone, Debug, Serialize, Deserialize, Getters, Constructor)]
 pub(super) struct ChallengesListEntry {

@@ -1,13 +1,13 @@
 use common::crypto_utils::keccak_hash_bytes;
-use common_eth::{EthPrivateKey, EthSignature};
-use ethabi::{encode as eth_abi_encode, Token as EthAbiToken};
+use common_eth::{EthPrivateKey, EthSignature, EthSigningCapabilities};
 use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use derive_more::Constructor;
+use ethabi::{encode as eth_abi_encode, Token as EthAbiToken};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 
-use super::{ChallengesError, ChallengePendingEvent};
-use crate::{NetworkId, Actor};
+use super::{ChallengePendingEvent, ChallengesError};
+use crate::{Actor, NetworkId};
 
 /* Reference:
 From: https://github.com/pnetwork-association/pnetwork/blob/14d11b116da6abf70cba11e0fd931686f77f22b5/packages/ptokens-evm-contracts/contracts/interfaces/IPNetworkHub.sol#L47C1-L54C6
@@ -33,8 +33,9 @@ pub struct Challenge {
 }
 
 impl Challenge {
-    fn sign(&self, pk: &EthPrivateKey) -> EthSignature {
-        todo!("sign a challenge");
+    pub fn sign(&self, pk: &EthPrivateKey) -> Result<EthSignature, ChallengesError> {
+        let bs = self.abi_encode()?;
+        Ok(pk.hash_and_sign_msg_with_eth_prefix(&bs)?)
     }
 
     pub(super) fn to_eth_abi_token(&self) -> Result<EthAbiToken, ChallengesError> {
