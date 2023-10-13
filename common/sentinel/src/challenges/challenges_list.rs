@@ -1,6 +1,5 @@
 use std::fmt;
 
-use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 

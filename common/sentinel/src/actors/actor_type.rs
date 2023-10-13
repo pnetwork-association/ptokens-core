@@ -30,6 +30,16 @@ impl TryFrom<u8> for ActorType {
     }
 }
 
+impl From<&ActorType> for u8 {
+    fn from(t: &ActorType) -> u8 {
+        match t {
+            ActorType::Governance => 0,
+            ActorType::Guardian => 1,
+            ActorType::Sentinel => 2,
+        }
+    }
+}
+
 impl FromStr for ActorType {
     type Err = ActorsError;
 
