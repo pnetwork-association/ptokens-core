@@ -87,7 +87,7 @@ pub use self::{
         WebSocketMessagesProcessBatchArgs,
         WebSocketMessagesResetChainArgs,
     },
-    network_id::{Bytes4, NetworkId, ProtocolId},
+    network_id::{Bytes4, NetworkId, NetworkIdError, ProtocolId},
     processor::{process_batch, reset_chain},
     processor_output::ProcessorOutput,
     registration::get_registration_signature,

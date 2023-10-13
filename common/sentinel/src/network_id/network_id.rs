@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, str::FromStr};
 
 use common::{Byte, Bytes};
 use common_chain_ids::EthChainId;
@@ -7,13 +7,14 @@ use derive_more::Deref;
 use ethabi::{encode as ethabi_encode, Token};
 use ethereum_types::U256;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use sha2::{Digest, Sha256};
 
 use super::{NetworkIdError, NetworkIdVersion, ProtocolId};
 
 const NUM_BYTES: usize = 4;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Deref)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Deref, Serialize, Deserialize)]
 pub struct Bytes4([u8; NUM_BYTES]);
 
 impl TryFrom<Bytes> for Bytes4 {
@@ -37,14 +38,6 @@ impl fmt::Display for Bytes4 {
         write!(f, "0x{}", hex::encode(self.0))
     }
 }
-impl fmt::Display for NetworkId {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.to_bytes_4() {
-            Ok(b4) => write!(f, "{}", b4),
-            _ => write!(f, "error converting netowrk id to bytes"),
-        }
-    }
-}
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct NetworkId {
@@ -57,6 +50,10 @@ pub struct NetworkId {
 impl NetworkId {
     pub fn new(chain_id: u64, protocol_id: ProtocolId) -> Self {
         Self::new_v1(chain_id, protocol_id)
+    }
+
+    pub fn new_v1_for_evm(ecid: EthChainId) -> Self {
+        Self::new_v1(ecid.to_u64(), ProtocolId::Ethereum)
     }
 
     fn new_v1(chain_id: u64, protocol_id: ProtocolId) -> Self {
@@ -90,6 +87,42 @@ impl NetworkId {
     }
 }
 
+impl TryFrom<&Vec<u8>> for NetworkId {
+    type Error = NetworkIdError;
+
+    fn try_from(bs: &Vec<u8>) -> Result<Self, Self::Error> {
+        Self::from_str(&hex::encode(bs))
+    }
+}
+
+impl TryFrom<Vec<u8>> for NetworkId {
+    type Error = NetworkIdError;
+
+    fn try_from(bs: Vec<u8>) -> Result<Self, Self::Error> {
+        Self::from_str(&hex::encode(bs))
+    }
+}
+
+impl TryFrom<&[u8]> for NetworkId {
+    type Error = NetworkIdError;
+
+    fn try_from(bs: &[u8]) -> Result<Self, Self::Error> {
+        Self::from_str(&hex::encode(bs))
+    }
+}
+
+impl FromStr for NetworkId {
+    type Err = NetworkIdError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_ref() {
+            "0xf9b459a1" | "f9b459a1" | "polygon" | "matic" => Ok(Self::new_v1_for_evm(EthChainId::PolygonMainnet)),
+            // TODO others!
+            other => Err(NetworkIdError::InvalidNetworkId(other.to_string())),
+        }
+    }
+}
+
 impl TryInto<Bytes4> for NetworkId {
     type Error = NetworkIdError;
 
@@ -106,38 +139,72 @@ impl TryFrom<MetadataChainId> for NetworkId {
     }
 }
 
+impl fmt::Display for NetworkId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self.to_bytes_4() {
+            Err(e) => write!(f, "error converting netowrk id to bytes: {e}"),
+            Ok(b4) => write!(f, "{}", json!({ "bytes": b4, "chain_info": self })),
+        }
+    }
+}
+
 impl TryFrom<&MetadataChainId> for NetworkId {
     type Error = MetadataChainIdError;
 
     fn try_from(m: &MetadataChainId) -> Result<NetworkId, Self::Error> {
         match m {
-            MetadataChainId::EthUnknown => Ok(NetworkId::new(EthChainId::Unknown(0).to_u64(), ProtocolId::Ethereum)),
-            MetadataChainId::BscMainnet => Ok(NetworkId::new(EthChainId::BscMainnet.to_u64(), ProtocolId::Ethereum)),
-            MetadataChainId::XDaiMainnet => Ok(NetworkId::new(EthChainId::XDaiMainnet.to_u64(), ProtocolId::Ethereum)),
-            MetadataChainId::FantomMainnet => {
-                Ok(NetworkId::new(EthChainId::FantomMainnet.to_u64(), ProtocolId::Ethereum))
-            },
-            MetadataChainId::InterimChain => {
-                Ok(NetworkId::new(EthChainId::InterimChain.to_u64(), ProtocolId::Ethereum))
-            },
-            MetadataChainId::EthereumGoerli => Ok(NetworkId::new(EthChainId::Goerli.to_u64(), ProtocolId::Ethereum)),
-            MetadataChainId::PolygonMainnet => Ok(NetworkId::new(
-                EthChainId::PolygonMainnet.to_u64(),
-                ProtocolId::Ethereum,
-            )),
-            MetadataChainId::EthereumSepolia => Ok(NetworkId::new(EthChainId::Sepolia.to_u64(), ProtocolId::Ethereum)),
-            MetadataChainId::ArbitrumMainnet => Ok(NetworkId::new(
-                EthChainId::ArbitrumMainnet.to_u64(),
-                ProtocolId::Ethereum,
-            )),
-            MetadataChainId::EthereumMainnet => Ok(NetworkId::new(EthChainId::Mainnet.to_u64(), ProtocolId::Ethereum)),
-            MetadataChainId::EthereumRopsten => Ok(NetworkId::new(EthChainId::Ropsten.to_u64(), ProtocolId::Ethereum)),
-            MetadataChainId::EthereumRinkeby => Ok(NetworkId::new(EthChainId::Rinkeby.to_u64(), ProtocolId::Ethereum)),
-            MetadataChainId::LuxochainMainnet => Ok(NetworkId::new(
-                EthChainId::LuxochainMainnet.to_u64(),
-                ProtocolId::Ethereum,
-            )),
+            MetadataChainId::EthUnknown => Ok(NetworkId::new_v1_for_evm(EthChainId::Unknown(0))),
+            MetadataChainId::BscMainnet => Ok(NetworkId::new_v1_for_evm(EthChainId::BscMainnet)),
+            MetadataChainId::EthereumGoerli => Ok(NetworkId::new_v1_for_evm(EthChainId::Goerli)),
+            MetadataChainId::EthereumMainnet => Ok(NetworkId::new_v1_for_evm(EthChainId::Mainnet)),
+            MetadataChainId::EthereumRopsten => Ok(NetworkId::new_v1_for_evm(EthChainId::Ropsten)),
+            MetadataChainId::EthereumRinkeby => Ok(NetworkId::new_v1_for_evm(EthChainId::Rinkeby)),
+            MetadataChainId::EthereumSepolia => Ok(NetworkId::new_v1_for_evm(EthChainId::Sepolia)),
+            MetadataChainId::XDaiMainnet => Ok(NetworkId::new_v1_for_evm(EthChainId::XDaiMainnet)),
+            MetadataChainId::InterimChain => Ok(NetworkId::new_v1_for_evm(EthChainId::InterimChain)),
+            MetadataChainId::FantomMainnet => Ok(NetworkId::new_v1_for_evm(EthChainId::FantomMainnet)),
+            MetadataChainId::PolygonMainnet => Ok(NetworkId::new_v1_for_evm(EthChainId::PolygonMainnet)),
+            MetadataChainId::ArbitrumMainnet => Ok(NetworkId::new_v1_for_evm(EthChainId::ArbitrumMainnet)),
+            MetadataChainId::LuxochainMainnet => Ok(NetworkId::new_v1_for_evm(EthChainId::LuxochainMainnet)),
             mcid => Err(Self::Error::CannotConvertTo(*mcid, "NetworkId".to_string())),
+        }
+    }
+}
+
+impl TryFrom<NetworkId> for MetadataChainId {
+    type Error = NetworkIdError;
+
+    fn try_from(m: NetworkId) -> Result<MetadataChainId, Self::Error> {
+        MetadataChainId::try_from(&m)
+    }
+}
+
+impl TryFrom<&NetworkId> for MetadataChainId {
+    type Error = NetworkIdError;
+
+    fn try_from(m: &NetworkId) -> Result<MetadataChainId, Self::Error> {
+        let err = NetworkIdError::CannotConvert {
+            from: m.clone(),
+            to: "MetadataChainId".to_string(),
+        };
+        if let Ok(ecid) = EthChainId::try_from(m.chain_id) {
+            match ecid {
+                EthChainId::BscMainnet => Ok(MetadataChainId::BscMainnet),
+                EthChainId::Goerli => Ok(MetadataChainId::EthereumGoerli),
+                EthChainId::Mainnet => Ok(MetadataChainId::EthereumMainnet),
+                EthChainId::Ropsten => Ok(MetadataChainId::EthereumRopsten),
+                EthChainId::Rinkeby => Ok(MetadataChainId::EthereumRinkeby),
+                EthChainId::Sepolia => Ok(MetadataChainId::EthereumSepolia),
+                EthChainId::XDaiMainnet => Ok(MetadataChainId::XDaiMainnet),
+                EthChainId::InterimChain => Ok(MetadataChainId::InterimChain),
+                EthChainId::FantomMainnet => Ok(MetadataChainId::FantomMainnet),
+                EthChainId::PolygonMainnet => Ok(MetadataChainId::PolygonMainnet),
+                EthChainId::ArbitrumMainnet => Ok(MetadataChainId::ArbitrumMainnet),
+                EthChainId::LuxochainMainnet => Ok(MetadataChainId::LuxochainMainnet),
+                EthChainId::Unknown(_) => Err(err),
+            }
+        } else {
+            Err(err)
         }
     }
 }
