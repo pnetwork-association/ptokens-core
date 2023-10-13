@@ -8,7 +8,7 @@ use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType, Token as Et
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 
 use super::ChallengesError;
-use crate::{Actor, ActorType, NetworkId};
+use crate::{ActorType, NetworkId};
 
 lazy_static! {
     pub(super) static ref CHALLENGE_PENDING_EVENT_TOPIC: EthHash =
@@ -17,10 +17,13 @@ lazy_static! {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Deref, Constructor)]
-pub struct ChallengePendingEvents(Vec<ChallengePendingEvent>);
+pub(super) struct ChallengePendingEvents(Vec<ChallengePendingEvent>);
 
 impl ChallengePendingEvents {
-    pub fn from_sub_mat(sub_mat: &EthSubmissionMaterial, pnetwork_hub: &EthAddress) -> Result<Self, ChallengesError> {
+    pub(super) fn from_sub_mat(
+        sub_mat: &EthSubmissionMaterial,
+        pnetwork_hub: &EthAddress,
+    ) -> Result<Self, ChallengesError> {
         let logs = sub_mat
             .receipts
             .get_logs_from_address_with_topic(pnetwork_hub, &CHALLENGE_PENDING_EVENT_TOPIC);
@@ -33,7 +36,7 @@ impl ChallengePendingEvents {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Getters, Constructor)]
-pub struct ChallengePendingEvent {
+pub(super) struct ChallengePendingEvent {
     nonce: U256,
     timestamp: u64,
     mcid: MetadataChainId,

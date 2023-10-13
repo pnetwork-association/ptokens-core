@@ -4,9 +4,9 @@ mod challenges;
 mod challenges_error;
 mod test_utils;
 
+pub use self::challenges::Challenges;
 use self::{
     challenge::Challenge,
-    challenge_pending_event::ChallengePendingEvent,
-    challenges::Challenges,
+    challenge_pending_event::{ChallengePendingEvent, ChallengePendingEvents},
     challenges_error::ChallengesError,
 };

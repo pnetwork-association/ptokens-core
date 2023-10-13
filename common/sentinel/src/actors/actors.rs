@@ -71,7 +71,7 @@ impl Actors {
             .actor_types()
             .iter()
             .zip(event.actor_addresses().iter())
-            .map(|(actor_type, actor_address)| Actor::new(actor_type.clone(), *actor_address))
+            .map(|(actor_type, actor_address)| Actor::new(*actor_type, *actor_address))
             .collect::<Vec<Actor>>();
 
         Ok(Some(Self::new(

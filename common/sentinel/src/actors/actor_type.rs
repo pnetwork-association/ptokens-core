@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use super::ActorsError;
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ActorType {
     Governance = 0,
     Guardian   = 1,
