@@ -1,9 +1,16 @@
 use ethabi::Token as EthAbiToken;
-use ethereum_types::H256 as EthHash;
+use ethereum_types::{H256 as EthHash, U256};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ChallengesError {
+    #[error("not enough bytes - got: {got}, expected: {expected} in '{location}'")]
+    NotEnoughBytes {
+        got: usize,
+        expected: String,
+        location: String,
+    },
+
     #[error("no challenge with hash {0} in challenges list")]
     NotInList(EthHash),
 
@@ -36,4 +43,7 @@ pub enum ChallengesError {
 
     #[error("wrong `EthAbiToken` when parsing challenge, got: {got} expected: {expected}")]
     WrongToken { got: EthAbiToken, expected: String },
+
+    #[error("insufficient ETH balance to response to challenge - have: {have} need: {need}")]
+    InsufficientBalance { have: U256, need: U256 },
 }
