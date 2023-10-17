@@ -122,25 +122,8 @@ pub async fn start_sentinel(
         flatten_join_handle(ws_server_thread),
         flatten_join_handle(status_thread),
     ) {
-        Ok((r1, r2, r3, r4, r5, r6, r7, r8)) => Ok(json!({
-            "jsonrpc": "2.0",
-            "result": {
-                "native_syncer_thread": r1,
-                "host_syncer_thread": r2,
-                "rpc_server_thread": r3,
-                "native_eth_rpc_thread": r4,
-                "host_eth_rpc_thread": r5,
-                "broadcaster_thread": r6,
-                "ws_server_thread": r7,
-                "status_thread": r8,
-            },
-        })
-        .to_string()),
-        Err(SentinelError::SigInt(_)) => Ok(json!({
-            "jsonrpc": "2.0",
-            "result": "sigint caught successfully",
-        })
-        .to_string()),
+        Ok(r) => Ok(json!({ "jsonrpc": "2.0", "result": r }).to_string()),
+        Err(SentinelError::SigInt(_)) => Ok(json!({ "jsonrpc": "2.0", "result": "sigint handled" }).to_string()),
         Err(e) => Err(e),
     }
 }
