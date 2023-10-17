@@ -159,6 +159,8 @@ impl Chain {
             return Err(ChainError::AlreadyInitialized(mcid));
         };
 
+        // NOTE: We only generate a pk if one doesn't already exist, since all chains use the same
+        // signing key.
         if db_utils.get_pk().is_err() {
             debug!("no pk exists yet, creating and saving one...");
 

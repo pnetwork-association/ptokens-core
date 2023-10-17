@@ -7,7 +7,7 @@ use ethereum_types::Address as EthAddress;
 
 use crate::{Actor, Actors, SentinelDbUtils, SentinelError};
 
-pub(super) fn maybe_handle_actors_propagated_event<D: DatabaseInterface>(
+pub(super) fn maybe_handle_actors_propagated_events<D: DatabaseInterface>(
     db_utils: &SentinelDbUtils<D>,
     mcid: &MetadataChainId,
     governance_address: &EthAddress,

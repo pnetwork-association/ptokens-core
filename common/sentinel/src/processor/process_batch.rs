@@ -5,7 +5,7 @@ use common_eth::{Chain, ChainDbUtils, EthSubmissionMaterials};
 use common_metadata::MetadataChainId;
 use ethereum_types::Address as EthAddress;
 
-use super::{maybe_handle_actors_propagated_event, process_single};
+use super::{maybe_handle_actors_propagated_events, maybe_handle_challenge_pending_events, process_single};
 use crate::{Bytes4, ProcessorOutput, SentinelDbUtils, SentinelError, UserOps};
 
 pub fn process_batch<D: DatabaseInterface>(
@@ -23,8 +23,10 @@ pub fn process_batch<D: DatabaseInterface>(
 ) -> Result<ProcessorOutput, SentinelError> {
     info!("Processing {mcid} batch of submission material...");
 
-    let chain_db_utils = ChainDbUtils::new(db);
-    let mut chain = Chain::get(&chain_db_utils, mcid)?;
+    let c_db_utils = ChainDbUtils::new(db);
+    let s_db_utils = SentinelDbUtils::new(db);
+
+    let mut chain = Chain::get(&c_db_utils, mcid)?;
 
     let use_db_tx = !dry_run;
 
@@ -34,15 +36,19 @@ pub fn process_batch<D: DatabaseInterface>(
         // This changes this sentinel's `ActorInclusionProof` which is required to successfully
         // cancel a `UserOp`.
         batch.iter().try_for_each(|sub_mat| {
-            maybe_handle_actors_propagated_event(
+            maybe_handle_actors_propagated_events(
                 &SentinelDbUtils::new(db),
                 &mcid,
                 governance_address,
                 &sentinel_address,
                 sub_mat,
             )
-        })?;
-    }
+        })?
+    };
+
+    batch
+        .iter()
+        .try_for_each(|m| maybe_handle_challenge_pending_events(&s_db_utils, pnetwork_hub, m))?;
 
     let processed_user_ops = UserOps::from(
         batch

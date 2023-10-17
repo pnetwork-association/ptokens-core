@@ -93,6 +93,7 @@ impl ChallengesList {
         db_utils: &SentinelDbUtils<D>,
         challenges: Challenges,
     ) -> Result<(), SentinelError> {
+        debug!("adding {} challenges to list...", challenges.len());
         challenges
             .iter()
             .cloned()
