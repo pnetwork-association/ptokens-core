@@ -1,14 +1,13 @@
-use common::{crypto_utils::keccak_hash_bytes, MIN_DATA_SENSITIVITY_LEVEL};
+use common::MIN_DATA_SENSITIVITY_LEVEL;
 use common_eth::{EthPrivateKey, EthSignature, EthSigningCapabilities};
 use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use derive_more::Constructor;
-use ethabi::{encode as eth_abi_encode, Token as EthAbiToken};
-use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
+use ethereum_types::{Address as EthAddress, U256};
 use serde::{Deserialize, Serialize};
 
 use super::{ChallengePendingEvent, ChallengesError};
-use crate::{Actor, DbKey, DbUtilsT, NetworkId, SentinelError};
+use crate::{Actor, DbKey, DbUtilsT, SentinelError};
 
 /* Reference:
 From: https://github.com/pnetwork-association/pnetwork/blob/14d11b116da6abf70cba11e0fd931686f77f22b5/packages/ptokens-evm-contracts/contracts/interfaces/IPNetworkHub.sol#L47C1-L54C6
@@ -49,28 +48,6 @@ impl Challenge {
     pub fn sign(&self, pk: &EthPrivateKey) -> Result<EthSignature, ChallengesError> {
         let bs = self.abi_encode()?;
         Ok(pk.hash_and_sign_msg_with_eth_prefix(&bs)?)
-    }
-
-    pub(super) fn to_eth_abi_token(self) -> Result<EthAbiToken, ChallengesError> {
-        // NOTE: Structs in solidity get encoded in tuples
-        let actor_type: u8 = self.actor.actor_type().into();
-
-        Ok(EthAbiToken::Tuple(vec![
-            EthAbiToken::Uint(self.nonce),
-            EthAbiToken::Address(*self.actor.actor_address()),
-            EthAbiToken::Address(self.challenger_address),
-            EthAbiToken::Uint(U256::from(actor_type)),
-            EthAbiToken::Uint(U256::from(self.timestamp)),
-            EthAbiToken::FixedBytes(NetworkId::try_from(self.mcid)?.to_bytes()),
-        ]))
-    }
-
-    fn abi_encode(&self) -> Result<Vec<u8>, ChallengesError> {
-        Ok(eth_abi_encode(&[self.to_eth_abi_token()?]))
-    }
-
-    pub(super) fn hash(&self) -> Result<EthHash, ChallengesError> {
-        Ok(keccak_hash_bytes(&self.abi_encode()?))
     }
 }
 

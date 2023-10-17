@@ -1,4 +1,5 @@
 mod challenge;
+mod challenge_id;
 mod challenge_list_entry;
 mod challenge_pending_event;
 mod challenge_status;
