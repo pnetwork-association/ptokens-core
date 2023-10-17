@@ -23,7 +23,6 @@ use crate::{
         NativeConfig,
         NativeToml,
         SentinelCoreConfig,
-        SentinelCoreToml,
     },
     Endpoints,
     SentinelError,
@@ -35,8 +34,8 @@ struct SentinelConfigToml {
     host: HostToml,
     ipfs: IpfsConfig,
     native: NativeToml,
-    core: SentinelCoreToml,
     batching: BatchingToml,
+    core: SentinelCoreConfig,
     governance: GovernanceToml,
 }
 
@@ -70,10 +69,10 @@ impl SentinelConfig {
     fn from_toml(toml: &SentinelConfigToml) -> Result<Self, SentinelError> {
         Ok(Self {
             ipfs: toml.ipfs.clone(),
+            core: toml.core.clone(),
             log: LogConfig::from_toml(&toml.log)?,
             host: HostConfig::from_toml(&toml.host)?,
             native: NativeConfig::from_toml(&toml.native)?,
-            core: SentinelCoreConfig::from_toml(&toml.core)?,
             batching: BatchingConfig::from_toml(&toml.batching)?,
             governance: GovernanceConfig::try_from(&toml.governance)?,
         })

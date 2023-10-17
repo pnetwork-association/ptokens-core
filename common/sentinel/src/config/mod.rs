@@ -12,7 +12,7 @@ mod traits;
 pub use self::{
     batching::{BatchingConfig, BatchingToml},
     config::SentinelConfig,
-    core::{SentinelCoreConfig, SentinelCoreToml},
+    core::SentinelCoreConfig,
     error::SentinelConfigError,
     governance::{GovernanceConfig, GovernanceToml},
     host::{HostConfig, HostToml},
