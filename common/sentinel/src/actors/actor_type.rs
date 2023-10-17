@@ -28,6 +28,23 @@ impl ActorType {
     }
 }
 
+impl From<ActorType> for u8 {
+    fn from(val: ActorType) -> Self {
+        match val {
+            ActorType::Governance => 0,
+            ActorType::Guardian => 1,
+            ActorType::Sentinel => 2,
+        }
+    }
+}
+
+impl From<ActorType> for U256 {
+    fn from(val: ActorType) -> Self {
+        let x: u8 = val.into();
+        U256::from(x)
+    }
+}
+
 impl TryFrom<u8> for ActorType {
     type Error = ActorsError;
 
