@@ -3,7 +3,7 @@
 temp*/
 build/
 target/
-*/.temp.json
+**/.temp.json
 *.log
 *sub-mat*.json
 !**/test_utils/*sub-mat*.json
