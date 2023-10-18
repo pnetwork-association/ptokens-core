@@ -14,6 +14,12 @@ pub enum ChallengeStatus {
     Cancelled         = 5,
 }
 
+impl ChallengeStatus {
+    pub(super) fn is_unsolved(&self) -> bool {
+        matches!(self, Self::Pending | Self::Unsolved | Self::PartiallyUnsolved)
+    }
+}
+
 impl Default for ChallengeStatus {
     fn default() -> Self {
         Self::Null

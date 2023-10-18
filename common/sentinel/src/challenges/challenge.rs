@@ -6,8 +6,8 @@ use derive_more::Constructor;
 use ethereum_types::{Address as EthAddress, U256};
 use serde::{Deserialize, Serialize};
 
-use super::{ChallengePendingEvent, ChallengesError};
-use crate::{Actor, DbKey, DbUtilsT, SentinelError};
+use super::{ChallengePendingEvent, ChallengeResponseSignatureInfo, ChallengesError};
+use crate::{Actor, ActorInclusionProof, DbKey, DbUtilsT, SentinelError};
 
 /* Reference:
 From: https://github.com/pnetwork-association/pnetwork/blob/14d11b116da6abf70cba11e0fd931686f77f22b5/packages/ptokens-evm-contracts/contracts/interfaces/IPNetworkHub.sol#L47C1-L54C6
@@ -48,6 +48,17 @@ impl Challenge {
     pub fn sign(&self, pk: &EthPrivateKey) -> Result<EthSignature, ChallengesError> {
         let bs = self.abi_encode()?;
         Ok(pk.hash_and_sign_msg_with_eth_prefix(&bs)?)
+    }
+
+    pub fn get_response_sig_info(
+        &self,
+        proof: ActorInclusionProof,
+        signing_key: &EthPrivateKey,
+    ) -> Result<ChallengeResponseSignatureInfo, ChallengesError> {
+        let id = self.id()?;
+        let sig = self.sign(signing_key)?;
+        let signer = signing_key.to_address();
+        Ok(ChallengeResponseSignatureInfo::new(id, signer, proof, sig.into()))
     }
 }
 

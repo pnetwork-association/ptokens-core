@@ -43,6 +43,9 @@ impl fmt::Display for ChallengeResponseSignature {
     }
 }
 
+#[derive(Clone, Debug, Constructor, Serialize, Deserialize, Deref)]
+pub struct ChallengeResponseSignatureInfos(Vec<ChallengeResponseSignatureInfo>);
+
 #[derive(Clone, Debug, Constructor, Serialize, Deserialize, Getters, Dissolve)]
 pub struct ChallengeResponseSignatureInfo {
     id: EthHash,

@@ -1,13 +1,23 @@
 use std::fmt;
 
 use common::{DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
+use common_eth::EthPrivateKey;
 use derive_more::{Constructor, Deref, DerefMut};
 use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use super::{Challenge, ChallengeStatus, Challenges, ChallengesError, ChallengesListEntry};
-use crate::{db_utils::SentinelDbKeys, DbKey, DbUtilsT, SentinelDbUtils, SentinelError};
+use super::{
+    Challenge,
+    ChallengeAndResponseInfo,
+    ChallengeAndResponseInfos,
+    ChallengeResponseSignatureInfos,
+    ChallengeStatus,
+    Challenges,
+    ChallengesError,
+    ChallengesListEntry,
+};
+use crate::{db_utils::SentinelDbKeys, ActorInclusionProof, DbKey, DbUtilsT, SentinelDbUtils, SentinelError};
 
 #[derive(Debug, Default, Clone, Eq, PartialEq, Serialize, Deserialize, Constructor, Deref, DerefMut)]
 pub struct ChallengesList(Vec<ChallengesListEntry>);
@@ -128,24 +138,6 @@ impl ChallengesList {
         hashes.iter().try_for_each(|h| self.remove_challenge(db_utils, h))
     }
 
-    pub fn get_pending_challenges<D: DatabaseInterface>(
-        &self,
-        db_utils: SentinelDbUtils<D>,
-    ) -> Result<Challenges, SentinelError> {
-        Ok(Challenges::new(
-            self.iter()
-                .filter(|entry| entry.status == ChallengeStatus::Pending)
-                .map(|entry| {
-                    Challenge::from_bytes(
-                        &db_utils
-                            .db()
-                            .get(entry.hash().as_bytes().to_vec(), MIN_DATA_SENSITIVITY_LEVEL)?,
-                    )
-                })
-                .collect::<Result<Vec<Challenge>, SentinelError>>()?,
-        ))
-    }
-
     pub fn get_challenge<D: DatabaseInterface>(
         &self,
         db_utils: &SentinelDbUtils<D>,
@@ -159,6 +151,59 @@ impl ChallengesList {
                     .get(hash.as_bytes().to_vec(), MIN_DATA_SENSITIVITY_LEVEL)?,
             ),
         }
+    }
+
+    fn get_unsolved_challenges<D: DatabaseInterface>(
+        db_utils: &SentinelDbUtils<D>,
+    ) -> Result<Challenges, SentinelError> {
+        let list = Self::get(db_utils);
+
+        let r = list
+            .iter()
+            .filter(|entry| entry.status().is_unsolved())
+            .map(|entry| list.get_challenge(db_utils, entry.hash()))
+            .collect::<Result<Vec<Challenge>, SentinelError>>()?;
+
+        Ok(Challenges::new(r))
+    }
+
+    pub fn get_unsolved_challenges_with_signature_info<D: DatabaseInterface>(
+        db_utils: &SentinelDbUtils<D>,
+        pk: &EthPrivateKey,
+        proof: &ActorInclusionProof,
+    ) -> Result<ChallengeAndResponseInfos, SentinelError> {
+        let unsolved_challenges = Self::get_unsolved_challenges(db_utils)?;
+        let response_infos = ChallengeResponseSignatureInfos::new(
+            unsolved_challenges
+                .iter()
+                .map(|c| c.get_response_sig_info(proof.clone(), pk))
+                .collect::<Result<Vec<_>, ChallengesError>>()?,
+        );
+        Ok(ChallengeAndResponseInfos::new(
+            unsolved_challenges
+                .iter()
+                .zip(response_infos.iter())
+                .map(|(a, b)| ChallengeAndResponseInfo::new(*a, b.clone()))
+                .collect::<Vec<ChallengeAndResponseInfo>>(),
+        ))
+    }
+
+    pub fn update_challenge_status_to_solved<D: DatabaseInterface>(
+        &mut self,
+        db_utils: &SentinelDbUtils<D>,
+        hash: &EthHash,
+    ) -> Result<(), SentinelError> {
+        let status = ChallengeStatus::Solved;
+        self.update_challenge_status(db_utils, hash, status)
+    }
+
+    pub fn update_challenge_statuses_to_solved<D: DatabaseInterface>(
+        &mut self,
+        db_utils: &SentinelDbUtils<D>,
+        ids: Vec<EthHash>,
+    ) -> Result<(), SentinelError> {
+        ids.iter()
+            .try_for_each(|h| self.update_challenge_status_to_solved(db_utils, h))
     }
 }
 
