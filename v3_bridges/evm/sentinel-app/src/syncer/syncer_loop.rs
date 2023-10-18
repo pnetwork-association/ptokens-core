@@ -22,11 +22,15 @@ use tokio::{
     time::{sleep, Duration},
 };
 
+const SLEEP_TIME: u64 = 10; // FIXME make configurable
+
 async fn main_loop(
     mut batch: Batch,
     config: SentinelConfig,
     eth_rpc_tx: MpscTx<EthRpcMessages>,
     websocket_tx: MpscTx<WebSocketMessages>,
+    core_is_connected: &bool,
+    core_time_limit: &u64,
 ) -> Result<(), SentinelError> {
     let side = *batch.side();
     let mcid = *batch.mcid();
@@ -42,7 +46,7 @@ async fn main_loop(
 
         let websocket_response = tokio::select! {
             response = rx => response?,
-            _ = sleep(Duration::from_millis(*config.core().timeout())) => {
+            _ = sleep(Duration::from_secs(*core_time_limit)) => {
                 let m = "getting latest block numbers in {side} syncer";
                 error!("timed out whilst {m}");
                 Err(SentinelError::Timedout(m.into()))
@@ -51,9 +55,8 @@ async fn main_loop(
         match LatestBlockNumbers::try_from(websocket_response) {
             Ok(x) => break 'latest_block_getter_loop x,
             Err(e) => {
-                const SLEEP_TIME: u64 = 10_000; // FIXME make configurable
                 warn!("error when getting latest block numbers in {log_prefix}: {e}, retrying in {SLEEP_TIME}ms...");
-                sleep(Duration::from_millis(SLEEP_TIME)).await;
+                sleep(Duration::from_secs(SLEEP_TIME)).await;
                 continue 'latest_block_getter_loop;
             },
         }
@@ -87,7 +90,7 @@ async fn main_loop(
 
                 let websocket_response = tokio::select! {
                     response = rx => response?,
-                    _ = sleep(Duration::from_millis(*config.core().timeout())) => {
+                    _ = sleep(Duration::from_secs(*core_time_limit)) => {
                         let m = "submitting batch for {side} {mcid}";
                         error!("timed out whilst {m}");
                         Err(SentinelError::Timedout(m.into()))
@@ -130,7 +133,7 @@ async fn main_loop(
             },
             Err(SentinelError::NoBlock(_)) => {
                 info!("{log_prefix} no next block yet - sleeping for {sleep_duration}ms...");
-                sleep(Duration::from_millis(sleep_duration)).await;
+                sleep(Duration::from_secs(SLEEP_TIME)).await;
                 continue 'main_loop;
             },
             Err(e) => break 'main_loop Err(e),
@@ -164,7 +167,6 @@ async fn broadcast_channel_loop(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub async fn syncer_loop(
     batch: Batch,
     config: SentinelConfig,
@@ -179,6 +181,7 @@ pub async fn syncer_loop(
 
     let mut core_is_connected = false;
     let mut syncer_is_enabled = false;
+    let mut core_time_limit = *config.core().timeout();
 
     warn!("{name} not syncing yet due to no core connection and being disabled");
 
@@ -219,6 +222,8 @@ pub async fn syncer_loop(
                 config.clone(),
                 eth_rpc_tx.clone(),
                 websocket_tx.clone(),
+                &core_is_connected,
+                &core_time_limit,
             ), if core_is_connected && syncer_is_enabled => {
                 match r {
                     Ok(_)  => {
