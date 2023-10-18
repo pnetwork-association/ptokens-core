@@ -2,6 +2,7 @@ use common_metadata::MetadataChainId;
 use common_sentinel::{
     BroadcastChannelMessages,
     BroadcasterMessages,
+    ChallengeResponderMessages,
     EthRpcMessages,
     StatusPublisherMessages,
     WebSocketMessages,
@@ -21,3 +22,5 @@ pub(crate) type StatusPublisherTx = MpscTx<StatusPublisherMessages>;
 pub(crate) type StatusPublisherRx = MpscRx<StatusPublisherMessages>;
 pub(crate) type BroadcastChannelTx = MpmcTx<BroadcastChannelMessages>;
 pub(crate) type BroadcastChannelRx = MpmcRx<BroadcastChannelMessages>;
+pub(crate) type ChallengeResponderTx = MpscTx<ChallengeResponderMessages>;
+pub(crate) type ChallengeResponderRx = MpscRx<ChallengeResponderMessages>;

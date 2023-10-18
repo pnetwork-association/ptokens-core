@@ -16,6 +16,7 @@ use common_metadata::MetadataChainId;
 use common_sentinel::{
     BroadcastChannelMessages,
     BroadcasterBroadcastChannelMessages,
+    ChallengeResponderBroadcastChannelMessages,
     RpcServerBroadcastChannelMessages,
     SentinelConfig,
     SentinelError,
@@ -85,6 +86,9 @@ async fn handle_socket(
         ))?;
         broadcast_channel_tx.send(BroadcastChannelMessages::StatusPublisher(
             StatusPublisherBroadcastChannelMessages::CoreConnected,
+        ))?;
+        broadcast_channel_tx.send(BroadcastChannelMessages::ChallengeResponder(
+            ChallengeResponderBroadcastChannelMessages::CoreConnected,
         ))?;
     }
 
@@ -163,6 +167,9 @@ async fn handle_socket(
         ))?;
         broadcast_channel_tx.send(BroadcastChannelMessages::StatusPublisher(
             StatusPublisherBroadcastChannelMessages::CoreDisconnected,
+        ))?;
+        broadcast_channel_tx.send(BroadcastChannelMessages::ChallengeResponder(
+            ChallengeResponderBroadcastChannelMessages::CoreDisconnected,
         ))?;
     }
 

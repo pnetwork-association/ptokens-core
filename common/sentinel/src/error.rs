@@ -6,6 +6,7 @@ use thiserror::Error;
 use crate::{
     BroadcastChannelMessages,
     BroadcasterMessages,
+    ChallengeResponderMessages,
     DbKey,
     EthRpcMessages,
     StatusPublisherMessages,
@@ -177,6 +178,9 @@ pub enum SentinelError {
     #[error("status channel error: {0}")]
     StatusChannel(Box<tokio::sync::mpsc::error::SendError<StatusPublisherMessages>>),
 
+    #[error("challenge responder channel error: {0}")]
+    ChallengeResponderChannel(Box<tokio::sync::mpsc::error::SendError<ChallengeResponderMessages>>),
+
     #[error("syncer channel error: {0}")]
     SyncerChannel(Box<tokio::sync::broadcast::error::SendError<SyncerMessages>>),
 
@@ -214,6 +218,12 @@ impl From<tokio::sync::mpsc::error::SendError<WebSocketMessages>> for SentinelEr
 impl From<tokio::sync::mpsc::error::SendError<StatusPublisherMessages>> for SentinelError {
     fn from(e: tokio::sync::mpsc::error::SendError<StatusPublisherMessages>) -> Self {
         Self::StatusChannel(Box::new(e))
+    }
+}
+
+impl From<tokio::sync::mpsc::error::SendError<ChallengeResponderMessages>> for SentinelError {
+    fn from(e: tokio::sync::mpsc::error::SendError<ChallengeResponderMessages>) -> Self {
+        Self::ChallengeResponderChannel(Box::new(e))
     }
 }
 

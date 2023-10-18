@@ -73,6 +73,8 @@ pub use self::{
         BroadcastChannelMessages,
         BroadcasterBroadcastChannelMessages,
         BroadcasterMessages,
+        ChallengeResponderBroadcastChannelMessages,
+        ChallengeResponderMessages,
         EthRpcMessages,
         Responder,
         RpcServerBroadcastChannelMessages,
