@@ -65,6 +65,7 @@ pub(crate) enum RpcCall {
     Delete(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetUserOp(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     GetStatus(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
+    GetUnsolvedChallenges(RpcId, WebSocketTx, CoreCxnStatus),
     StatusPublisherStartStop(RpcId, BroadcastChannelTx, bool),
     RemoveUserOp(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetChallenge(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
@@ -144,9 +145,9 @@ impl RpcCall {
             "getUserOpList" => Self::GetUserOpList(r.id, websocket_tx, core_cxn),
             "delete" => Self::Delete(r.id, websocket_tx, r.params.clone(), core_cxn),
             "getInclusionProof" => Self::GetInclusionProof(r.id, websocket_tx, core_cxn),
-            "getChallengesList" => Self::GetChallengesList(r.id, websocket_tx, core_cxn),
             "getUserOp" => Self::GetUserOp(r.id, r.params.clone(), websocket_tx, core_cxn),
             "removeUserOp" => Self::RemoveUserOp(r.id, websocket_tx, r.params.clone(), core_cxn),
+            "getChallangeResponses" => Self::GetUnsolvedChallenges(r.id, websocket_tx, core_cxn),
             "getChallenge" => Self::GetChallenge(r.id, websocket_tx, r.params.clone(), core_cxn),
             "stopSyncer" => Self::StopSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
             "cancel" | "cancelUserOp" => Self::CancelUserOps(r.id, broadcaster_tx.clone(), core_cxn),
@@ -154,6 +155,7 @@ impl RpcCall {
             "startSyncer" => Self::StartSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
             "startBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, true),
             "stopBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, false),
+            "getChallengesList" | "getChallengeList" => Self::GetChallengesList(r.id, websocket_tx, core_cxn),
             "setStatusPublishingFrequency" => Self::SetStatusPublishingFrequency(r.id, r.params.clone(), status_tx),
             "removeChallenge" | "rmChallenge" => Self::RemoveChallenge(r.id, websocket_tx, r.params.clone(), core_cxn),
             "getRegistrationSignature" | "getRegSig" => {
@@ -313,6 +315,9 @@ impl RpcCall {
                 let result = Self::handle_syncer_start_stop(broadcast_channel_tx, params, true, core_cxn).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
+            },
+            Self::GetUnsolvedChallenges(id, websocket_tx, core_cxn) => {
+                Self::handle_ws_result(id, Self::handle_get_unsolved_challenges(websocket_tx, core_cxn).await)
             },
             Self::GetUserOpState(id, config, websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, params, core_cxn) => {
                 Self::handle_ws_result(

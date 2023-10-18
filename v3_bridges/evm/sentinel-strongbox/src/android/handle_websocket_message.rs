@@ -2,7 +2,7 @@ use std::result::Result;
 
 use common_sentinel::{
     SentinelError,
-    WebSocketMessagesEncodable,
+    WebSocketMessagesEncodable as MSG,
     WebSocketMessagesEncodableDbOps,
     WebSocketMessagesError,
 };
@@ -30,40 +30,29 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
 
     info!("handling websocket msg: '{msg}'...");
     let final_state = match msg {
-        WebSocketMessagesEncodable::GetUserOps => super::handlers::get_user_ops(state),
-        WebSocketMessagesEncodable::GetUserOpList => super::handlers::get_user_op_list(state),
-        WebSocketMessagesEncodable::Initialize(args) => super::handlers::init(*args.clone(), state),
-        WebSocketMessagesEncodable::GetChallengesList => super::handlers::get_challenges_list(state),
-        WebSocketMessagesEncodable::GetInclusionProof => super::handlers::get_inclusion_proof(state),
-        WebSocketMessagesEncodable::GetChallenge(hash) => super::handlers::get_challenge(*hash, state),
-        WebSocketMessagesEncodable::GetUserOp(uid) => super::handlers::get_user_op(uid.clone(), state),
-        WebSocketMessagesEncodable::GetStatus(mcids) => super::handlers::get_status(mcids.clone(), state),
-        WebSocketMessagesEncodable::ResetChain(args) => super::handlers::reset_chain(*args.clone(), state),
-        WebSocketMessagesEncodable::RemoveChallenge(hash) => super::handlers::remove_challenge(*hash, state),
-        WebSocketMessagesEncodable::RemoveUserOp(uid) => super::handlers::remove_user_op(uid.clone(), state),
-        WebSocketMessagesEncodable::ProcessBatch(args) => super::handlers::process_batch(*args.clone(), state),
-        WebSocketMessagesEncodable::GetCoreState(mcids) => super::handlers::get_core_state(mcids.clone(), state),
-        WebSocketMessagesEncodable::GetRegistrationSignature(owner) => {
-            super::handlers::get_registration_signature(*owner, state)
-        },
-        WebSocketMessagesEncodable::GetLatestBlockNumbers(mcids) => {
-            super::handlers::get_latest_block_numbers(mcids.clone(), state)
-        },
-        WebSocketMessagesEncodable::GetUserOpCancellationSiganture(args) => {
+        MSG::GetUserOps => super::handlers::get_user_ops(state),
+        MSG::GetUserOpList => super::handlers::get_user_op_list(state),
+        MSG::Initialize(args) => super::handlers::init(*args.clone(), state),
+        MSG::GetChallengesList => super::handlers::get_challenges_list(state),
+        MSG::GetInclusionProof => super::handlers::get_inclusion_proof(state),
+        MSG::GetChallenge(hash) => super::handlers::get_challenge(*hash, state),
+        MSG::GetUserOp(uid) => super::handlers::get_user_op(uid.clone(), state),
+        MSG::GetStatus(mcids) => super::handlers::get_status(mcids.clone(), state),
+        MSG::ResetChain(args) => super::handlers::reset_chain(*args.clone(), state),
+        MSG::GetUnsolvedChallenges => super::handlers::get_unsolved_challenges(state),
+        MSG::RemoveChallenge(hash) => super::handlers::remove_challenge(*hash, state),
+        MSG::RemoveUserOp(uid) => super::handlers::remove_user_op(uid.clone(), state),
+        MSG::ProcessBatch(args) => super::handlers::process_batch(*args.clone(), state),
+        MSG::GetCoreState(mcids) => super::handlers::get_core_state(mcids.clone(), state),
+        MSG::GetRegistrationSignature(owner) => super::handlers::get_registration_signature(*owner, state),
+        MSG::GetLatestBlockNumbers(mcids) => super::handlers::get_latest_block_numbers(mcids.clone(), state),
+        MSG::GetUserOpCancellationSiganture(args) => {
             super::handlers::get_user_op_cancellation_signature(*args.clone(), state)
         },
-        WebSocketMessagesEncodable::DbOps(WebSocketMessagesEncodableDbOps::Get(k)) => {
-            super::handlers::get(k.clone(), state)
-        },
-        WebSocketMessagesEncodable::DbOps(WebSocketMessagesEncodableDbOps::Delete(k)) => {
-            super::handlers::delete(k.clone(), state)
-        },
-        WebSocketMessagesEncodable::GetCancellableUserOps(args) => {
-            super::handlers::get_cancellable_user_ops(*args.clone(), state)
-        },
-        WebSocketMessagesEncodable::DbOps(WebSocketMessagesEncodableDbOps::Put(k, v)) => {
-            super::handlers::put(k.clone(), v.clone(), state)
-        },
+        MSG::DbOps(WebSocketMessagesEncodableDbOps::Get(k)) => super::handlers::get(k.clone(), state),
+        MSG::DbOps(WebSocketMessagesEncodableDbOps::Delete(k)) => super::handlers::delete(k.clone(), state),
+        MSG::GetCancellableUserOps(args) => super::handlers::get_cancellable_user_ops(*args.clone(), state),
+        MSG::DbOps(WebSocketMessagesEncodableDbOps::Put(k, v)) => super::handlers::put(k.clone(), v.clone(), state),
         m => Err(WebSocketMessagesError::Unhandled(m.to_string()).into()),
     }?;
 

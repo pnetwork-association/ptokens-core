@@ -17,7 +17,8 @@ impl RpcCall {
         stop: bool,
         core_cxn: bool,
     ) -> Result<Json, SentinelError> {
-        debug!("handling stop syncer rpc call...");
+        let m = if stop { "stop" } else { "start" };
+        debug!("handling {m} syncer rpc call...");
         Self::check_core_is_connected(core_cxn)?;
 
         if params.is_empty() {
@@ -28,7 +29,6 @@ impl RpcCall {
             .iter()
             .map(|s| MetadataChainId::from_str(s))
             .collect::<Result<Vec<MetadataChainId>, AppError>>()?;
-        let m = if stop { "stop" } else { "start" };
         let jsons = mcids
             .iter()
             .map(|mcid| json!({"status": format!("{m} message sent to {mcid} syncer")}))

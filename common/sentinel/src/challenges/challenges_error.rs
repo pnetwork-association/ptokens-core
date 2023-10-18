@@ -11,6 +11,12 @@ pub enum ChallengesError {
         location: String,
     },
 
+    #[error("challenges serde json error: {0}")]
+    SerdeJson(#[from] serde_json::Error),
+
+    #[error("challenges WebSocketMessages error: {0}")]
+    WebSocketMessages(#[from] crate::WebSocketMessagesError),
+
     #[error("no challenge with hash {0} in challenges list")]
     NotInList(EthHash),
 

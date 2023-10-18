@@ -7,6 +7,7 @@ mod get_inclusion_proof;
 mod get_latest_block_numbers;
 mod get_registration_signature;
 mod get_status;
+mod get_unsolved_challenges;
 mod get_user_op;
 mod get_user_op_cancellation_signature;
 mod get_user_op_list;
@@ -27,6 +28,7 @@ pub(crate) use self::{
     get_latest_block_numbers::get_latest_block_numbers,
     get_registration_signature::get_registration_signature,
     get_status::get_status,
+    get_unsolved_challenges::get_unsolved_challenges,
     get_user_op::get_user_op,
     get_user_op_cancellation_signature::get_user_op_cancellation_signature,
     get_user_op_list::get_user_op_list,
