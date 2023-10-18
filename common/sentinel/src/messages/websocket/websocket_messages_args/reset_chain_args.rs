@@ -4,6 +4,7 @@ use common::BridgeSide;
 use common_eth::EthSubmissionMaterial;
 use common_metadata::MetadataChainId;
 use derive_getters::{Dissolve, Getters};
+use ethereum_types::Address as EthAddress;
 use serde::{Deserialize, Serialize};
 
 use crate::WebSocketMessagesError;
@@ -15,6 +16,7 @@ pub struct WebSocketMessagesResetChainArgs {
     mcid: MetadataChainId,
     use_latest_block: bool,
     block_num: Option<u64>,
+    hub: Option<EthAddress>,
     side: Option<BridgeSide>,
     block: Option<EthSubmissionMaterial>,
 }
@@ -41,7 +43,7 @@ impl TryFrom<Vec<String>> for WebSocketMessagesResetChainArgs {
         };
 
         let expected_num_args = 4;
-        if args.len() != expected_num_args {
+        if args.len() < expected_num_args {
             return Err(WebSocketMessagesError::NotEnoughArgs {
                 got: args.len(),
                 expected: expected_num_args,
@@ -71,14 +73,21 @@ impl TryFrom<Vec<String>> for WebSocketMessagesResetChainArgs {
         let block = None;
         let side = None;
 
+        let hub = if args.len() > expected_num_args {
+            EthAddress::from_str(&args[4]).ok()
+        } else {
+            None
+        };
+
         Ok(Self {
             mcid,
-            use_latest_block,
-            block_num,
-            block,
+            hub,
             side,
+            block,
             confs,
             validate,
+            block_num,
+            use_latest_block,
         })
     }
 }
