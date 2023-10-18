@@ -34,6 +34,7 @@ pub enum WebSocketMessagesEncodable {
     Error(WebSocketMessagesError),
     GetStatus(Vec<MetadataChainId>),
     GetCoreState(Vec<MetadataChainId>),
+    SetChallengesToSolved(Vec<EthHash>),
     GetRegistrationSignature(EthAddress),
     DbOps(WebSocketMessagesEncodableDbOps),
     Initialize(Box<WebSocketMessagesInitArgs>),
@@ -92,6 +93,7 @@ impl fmt::Display for WebSocketMessagesEncodable {
             Self::GetUnsolvedChallenges => "GetUnsolvedChallenges".to_string(),
             Self::GetCancellableUserOps(_) => "GetCancellableUserOps".to_string(),
             Self::GetLatestBlockNumbers(..) => "GetLatestBlockNumbers".to_string(),
+            Self::SetChallengesToSolved(..) => "SetChallengesToSolved".to_string(),
             Self::GetRegistrationSignature(..) => "GetRegistrationSignature".to_string(),
             Self::GetUserOpCancellationSiganture(..) => "GetUserOpCancellationSiganture".to_string(),
         };

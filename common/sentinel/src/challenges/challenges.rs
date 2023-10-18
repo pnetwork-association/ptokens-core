@@ -1,10 +1,11 @@
 use common_eth::EthSubmissionMaterial;
 use derive_more::{Constructor, Deref};
 use ethereum_types::Address as EthAddress;
+use serde::{Deserialize, Serialize};
 
 use super::{Challenge, ChallengePendingEvents, ChallengesError};
 
-#[derive(Debug, Clone, Eq, PartialEq, Constructor, Deref)]
+#[derive(Debug, Clone, Eq, PartialEq, Constructor, Deref, Serialize, Deserialize)]
 pub struct Challenges(Vec<Challenge>);
 
 impl Challenges {

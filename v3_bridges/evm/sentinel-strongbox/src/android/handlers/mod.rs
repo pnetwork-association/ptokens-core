@@ -17,6 +17,7 @@ mod process_batch;
 mod remove_challenge;
 mod remove_user_op;
 mod reset_chain;
+mod set_challenges_to_solved;
 
 pub(crate) use self::{
     db_ops::{delete, get, put},
@@ -38,4 +39,5 @@ pub(crate) use self::{
     remove_challenge::remove_challenge,
     remove_user_op::remove_user_op,
     reset_chain::reset_chain,
+    set_challenges_to_solved::set_challenges_to_solved,
 };
