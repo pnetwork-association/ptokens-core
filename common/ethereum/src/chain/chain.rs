@@ -463,6 +463,7 @@ impl Chain {
         mcid: MetadataChainId,
         validate: bool,
         confirmations: u64,
+        hub: Option<EthAddress>,
     ) -> Result<(), ChainError> {
         debug!("resetting chain...");
         let n = Self::block_num(&sub_mat)?;
@@ -510,6 +511,9 @@ impl Chain {
         chain.confirmations = confirmations;
         chain.latest_block_timestamp = pruned_sub_mat.get_timestamp();
         chain.chain = VecDeque::from([vec![reset_block_data]]);
+        if let Some(a) = hub {
+            chain.hub = a;
+        }
         chain.save_in_db(db_utils)
     }
 
@@ -867,9 +871,11 @@ mod tests {
 
         // NOTE: Test a chain reset
         let new_confs = 6;
-        Chain::reset(&db_utils, sub_mats[0].clone(), mcid, true, new_confs).unwrap();
+        let new_hub = EthAddress::random();
+        Chain::reset(&db_utils, sub_mats[0].clone(), mcid, true, new_confs, Some(new_hub)).unwrap();
         chain = Chain::get(&db_utils, mcid).unwrap();
         assert_eq!(chain.offset, Chain::block_num(&sub_mats[0]).unwrap());
+        assert_eq!(chain.hub, new_hub);
         assert_eq!(chain.chain_len(), 1);
         assert_eq!(
             chain.get_tail_block_data().unwrap()[0].number,
