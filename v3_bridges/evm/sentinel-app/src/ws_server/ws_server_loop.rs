@@ -15,13 +15,13 @@ use common::BridgeSide;
 use common_metadata::MetadataChainId;
 use common_sentinel::{
     BroadcastChannelMessages,
-    BroadcasterBroadcastChannelMessages,
     ChallengeResponderBroadcastChannelMessages,
     RpcServerBroadcastChannelMessages,
     SentinelConfig,
     SentinelError,
     StatusPublisherBroadcastChannelMessages,
     SyncerBroadcastChannelMessages,
+    UserOpCancellerBroadcastChannelMessages,
     WebSocketMessages,
     WebSocketMessagesEncodable,
     WebSocketMessagesError,
@@ -81,8 +81,8 @@ async fn handle_socket(
         broadcast_channel_tx.send(BroadcastChannelMessages::RpcServer(
             RpcServerBroadcastChannelMessages::CoreConnected,
         ))?;
-        broadcast_channel_tx.send(BroadcastChannelMessages::Broadcaster(
-            BroadcasterBroadcastChannelMessages::CoreConnected,
+        broadcast_channel_tx.send(BroadcastChannelMessages::UserOpCanceller(
+            UserOpCancellerBroadcastChannelMessages::CoreConnected,
         ))?;
         broadcast_channel_tx.send(BroadcastChannelMessages::StatusPublisher(
             StatusPublisherBroadcastChannelMessages::CoreConnected,
@@ -162,8 +162,8 @@ async fn handle_socket(
         broadcast_channel_tx.send(BroadcastChannelMessages::RpcServer(
             RpcServerBroadcastChannelMessages::CoreDisconnected,
         ))?;
-        broadcast_channel_tx.send(BroadcastChannelMessages::Broadcaster(
-            BroadcasterBroadcastChannelMessages::CoreDisconnected,
+        broadcast_channel_tx.send(BroadcastChannelMessages::UserOpCanceller(
+            UserOpCancellerBroadcastChannelMessages::CoreDisconnected,
         ))?;
         broadcast_channel_tx.send(BroadcastChannelMessages::StatusPublisher(
             StatusPublisherBroadcastChannelMessages::CoreDisconnected,

@@ -99,6 +99,7 @@ pub async fn challenge_responder_loop(
 
     'challenge_response_loop: loop {
         tokio::select! {
+            /*
             r = respond_to_challenges_loop(
                     &challenge_response_frequency,
                     challenge_responder_tx.clone(),
@@ -119,6 +120,7 @@ pub async fn challenge_responder_loop(
                 sleep(Duration::from_secs(sleep_time)).await;
                 continue 'challenge_response_loop
             },
+            */
             r = challenge_responder_rx.recv() => match r {
                 Some(ChallengeResponderMessages::RespondToChallenges) => {
                     if !core_is_connected {

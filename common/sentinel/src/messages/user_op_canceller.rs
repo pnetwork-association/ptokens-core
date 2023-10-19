@@ -1,4 +1,4 @@
 #[derive(Debug)]
-pub enum BroadcasterMessages {
+pub enum UserOpCancellerMessages {
     CancelUserOps,
 }

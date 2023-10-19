@@ -1,11 +1,15 @@
 use common::crypto_utils::keccak_hash_bytes;
 use common_eth::{EthPrivateKey, EthSignature, EthSigningCapabilities};
-use ethereum_types::{U256, Address as EthAddress};
-use ethabi::{Token as EthAbiToken, encode as eth_abi_encode};
+use ethabi::{encode as eth_abi_encode, Token as EthAbiToken};
+use ethereum_types::{Address as EthAddress, U256};
 
 use crate::SentinelError;
 
-pub fn get_registration_signature(owner: &EthAddress, nonce: u64, pk: &EthPrivateKey) -> Result<EthSignature, SentinelError> {
+pub fn get_registration_signature(
+    owner: &EthAddress,
+    nonce: u64,
+    pk: &EthPrivateKey,
+) -> Result<EthSignature, SentinelError> {
     debug!("getting registration signature over address {owner}...");
     let bs = eth_abi_encode(&[EthAbiToken::Address(*owner), EthAbiToken::Uint(U256::from(nonce))]);
     Ok(pk.hash_and_sign_msg_with_eth_prefix(keccak_hash_bytes(&bs).as_bytes())?)

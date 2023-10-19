@@ -4,12 +4,12 @@ use common::BridgeSide;
 use common_sentinel::{
     flatten_join_handle,
     Batch,
-    BroadcasterMessages,
     ChallengeResponderMessages,
     EthRpcMessages,
     SentinelConfig,
     SentinelError,
     StatusPublisherMessages,
+    UserOpCancellerMessages,
     WebSocketMessages,
 };
 use serde_json::json;
@@ -20,12 +20,12 @@ use tokio::sync::{
 };
 
 use crate::{
-    broadcaster::broadcaster_loop,
     challenge_responder::challenge_responder_loop,
     eth_rpc::eth_rpc_loop,
     rpc_server::rpc_server_loop,
     status_publisher::status_publisher_loop,
     syncer::syncer_loop,
+    user_op_canceller::user_op_canceller_loop,
     ws_server::ws_server_loop,
 };
 
@@ -55,8 +55,10 @@ pub async fn start_sentinel(
     let (host_eth_rpc_tx, host_eth_rpc_rx): (MpscTx<EthRpcMessages>, MpscRx<EthRpcMessages>) =
         mpsc::channel(MAX_CHANNEL_CAPACITY);
 
-    let (broadcaster_tx, broadcaster_rx): (MpscTx<BroadcasterMessages>, MpscRx<BroadcasterMessages>) =
-        mpsc::channel(MAX_CHANNEL_CAPACITY);
+    let (user_op_canceller_tx, user_op_canceller_rx): (
+        MpscTx<UserOpCancellerMessages>,
+        MpscRx<UserOpCancellerMessages>,
+    ) = mpsc::channel(MAX_CHANNEL_CAPACITY);
 
     let status_thread = tokio::spawn(status_publisher_loop(
         config.clone(),
@@ -104,13 +106,13 @@ pub async fn start_sentinel(
         broadcast_channel_tx.subscribe(),
     ));
 
-    let broadcaster_thread = tokio::spawn(broadcaster_loop(
-        broadcaster_rx,
+    let user_op_canceller_thread = tokio::spawn(user_op_canceller_loop(
+        user_op_canceller_rx,
         native_eth_rpc_tx.clone(),
         config.clone(),
         broadcast_channel_tx.clone(),
         websocket_tx.clone(),
-        broadcaster_tx.clone(),
+        user_op_canceller_tx.clone(),
     ));
 
     let rpc_server_thread = tokio::spawn(rpc_server_loop(
@@ -120,7 +122,7 @@ pub async fn start_sentinel(
         config.clone(),
         disable_rpc_server,
         broadcast_channel_tx.clone(),
-        broadcaster_tx.clone(),
+        user_op_canceller_tx.clone(),
         status_tx.clone(),
     ));
 
@@ -136,10 +138,10 @@ pub async fn start_sentinel(
         flatten_join_handle(ws_server_thread),
         flatten_join_handle(rpc_server_thread),
         flatten_join_handle(host_syncer_thread),
-        flatten_join_handle(broadcaster_thread),
         flatten_join_handle(host_eth_rpc_thread),
         flatten_join_handle(native_syncer_thread),
         flatten_join_handle(native_eth_rpc_thread),
+        flatten_join_handle(user_op_canceller_thread),
         flatten_join_handle(challenge_responder_thread),
     ) {
         Ok(r) => Ok(json!({ "jsonrpc": "2.0", "result": r }).to_string()),

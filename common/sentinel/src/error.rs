@@ -5,12 +5,12 @@ use thiserror::Error;
 
 use crate::{
     BroadcastChannelMessages,
-    BroadcasterMessages,
     ChallengeResponderMessages,
     DbKey,
     EthRpcMessages,
     StatusPublisherMessages,
     SyncerMessages,
+    UserOpCancellerMessages,
     WebSocketMessages,
 };
 
@@ -184,8 +184,8 @@ pub enum SentinelError {
     #[error("syncer channel error: {0}")]
     SyncerChannel(Box<tokio::sync::broadcast::error::SendError<SyncerMessages>>),
 
-    #[error("broadcaster channel error: {0}")]
-    BroadcasterChannel(Box<tokio::sync::mpsc::error::SendError<BroadcasterMessages>>),
+    #[error("user op canceller channel error: {0}")]
+    UserOpCancellerChannel(Box<tokio::sync::mpsc::error::SendError<UserOpCancellerMessages>>),
 
     #[error("broadcast messages channel error: {0}")]
     BroadcastChannelMessages(Box<tokio::sync::broadcast::error::SendError<BroadcastChannelMessages>>),
@@ -197,9 +197,9 @@ impl From<tokio::sync::broadcast::error::SendError<SyncerMessages>> for Sentinel
     }
 }
 
-impl From<tokio::sync::mpsc::error::SendError<BroadcasterMessages>> for SentinelError {
-    fn from(e: tokio::sync::mpsc::error::SendError<BroadcasterMessages>) -> Self {
-        Self::BroadcasterChannel(Box::new(e))
+impl From<tokio::sync::mpsc::error::SendError<UserOpCancellerMessages>> for SentinelError {
+    fn from(e: tokio::sync::mpsc::error::SendError<UserOpCancellerMessages>) -> Self {
+        Self::UserOpCancellerChannel(Box::new(e))
     }
 }
 

@@ -4,8 +4,6 @@ use common::BridgeSide;
 use common_eth::EthPrivateKey;
 use common_sentinel::{
     BroadcastChannelMessages,
-    BroadcasterBroadcastChannelMessages,
-    BroadcasterMessages,
     ConfigT,
     Env,
     EthRpcMessages,
@@ -13,6 +11,8 @@ use common_sentinel::{
     SentinelError,
     UserOp,
     UserOpCancellationSignature,
+    UserOpCancellerBroadcastChannelMessages,
+    UserOpCancellerMessages,
     UserOpError,
     UserOps,
     WebSocketMessages,
@@ -21,12 +21,15 @@ use common_sentinel::{
     WebSocketMessagesGetCancellableUserOpArgs,
 };
 use ethereum_types::H256 as EthHash;
-use tokio::{
-    sync::{
-        broadcast::{Receiver as MpMcRx, Sender as MpMcTx},
-        mpsc::{Receiver as MpscRx, Sender as MpscTx},
-    },
-    time::{sleep, Duration},
+use tokio::time::{sleep, Duration};
+
+use crate::type_aliases::{
+    BroadcastChannelRx,
+    BroadcastChannelTx,
+    EthRpcTx,
+    UserOpCancellerRx,
+    UserOpCancellerTx,
+    WebSocketTx,
 };
 
 async fn cancel_user_op(
@@ -37,8 +40,8 @@ async fn cancel_user_op(
     gas_limit: usize,
     config: &SentinelConfig,
     broadcaster_pk: &EthPrivateKey,
-    eth_rpc_tx: MpscTx<EthRpcMessages>,
-    websocket_tx: MpscTx<WebSocketMessages>,
+    eth_rpc_tx: EthRpcTx,
+    websocket_tx: WebSocketTx,
 ) -> Result<EthHash, SentinelError> {
     // FIXME re-instate the balance checks
     // NOTE: First we check we can afford the tx
@@ -98,11 +101,7 @@ async fn cancel_user_op(
     Ok(tx_hash)
 }
 
-async fn get_gas_price(
-    config: &SentinelConfig,
-    side: BridgeSide,
-    eth_rpc_tx: MpscTx<EthRpcMessages>,
-) -> Result<u64, SentinelError> {
+async fn get_gas_price(config: &SentinelConfig, side: BridgeSide, eth_rpc_tx: EthRpcTx) -> Result<u64, SentinelError> {
     let p = if let Some(p) = config.gas_price(&side) {
         debug!("using {side} gas price from config: {p}");
         p
@@ -118,8 +117,8 @@ async fn get_gas_price(
 
 async fn cancel_user_ops(
     config: &SentinelConfig,
-    websocket_tx: MpscTx<WebSocketMessages>,
-    eth_rpc_tx: MpscTx<EthRpcMessages>,
+    websocket_tx: WebSocketTx,
+    eth_rpc_tx: EthRpcTx,
     native_broadcaster_pk: &EthPrivateKey,
     host_broadcaster_pk: &EthPrivateKey,
 ) -> Result<(), SentinelError> {
@@ -245,47 +244,46 @@ async fn cancel_user_ops(
 }
 
 async fn broadcast_channel_loop(
-    mut broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
-) -> Result<BroadcasterBroadcastChannelMessages, SentinelError> {
+    mut broadcast_channel_rx: BroadcastChannelRx,
+) -> Result<UserOpCancellerBroadcastChannelMessages, SentinelError> {
     // NOTE: This loops continuously listening to the broadcasting channel, and only returns if we
     // receive a pertinent message. This way, other messages won't cause early returns in the main
     // tokios::select, so then the main_loop can continue doing its work.
     'broadcast_channel_loop: loop {
         match broadcast_channel_rx.recv().await {
-            Ok(BroadcastChannelMessages::Broadcaster(msg)) => break 'broadcast_channel_loop Ok(msg),
+            Ok(BroadcastChannelMessages::UserOpCanceller(msg)) => break 'broadcast_channel_loop Ok(msg),
             Ok(_) => continue 'broadcast_channel_loop, // NOTE: The message wasn't for us
             Err(e) => break 'broadcast_channel_loop Err(e.into()),
         }
     }
 }
 
-const CANCELLABLE_OPS_CHECK_FREQUENCY: u64 = 120; // FIXME make configurable! Make updatable whilst running too!
-
-async fn cancellation_loop(frequency: u64, broadcaster_tx: MpscTx<BroadcasterMessages>) -> Result<(), SentinelError> {
-    // NOTE: This loop runs to send messages to the broadcaster at a configruable frequency to tell
+async fn cancellation_loop(frequency: &u64, user_op_canceller_tx: UserOpCancellerTx) -> Result<(), SentinelError> {
+    // NOTE: This loop runs to send messages to the canceller loop at a configruable frequency to tell
     // it to try and cancel any cancellable user ops. It should never return, except in error.
     'cancellation_loop: loop {
-        sleep(Duration::from_secs(frequency)).await;
+        sleep(Duration::from_secs(*frequency)).await;
         warn!("{frequency}s has elapsed - sending message to cancel any cancellable user ops");
-        match broadcaster_tx.send(BroadcasterMessages::CancelUserOps).await {
+        match user_op_canceller_tx.send(UserOpCancellerMessages::CancelUserOps).await {
             Ok(_) => continue 'cancellation_loop,
             Err(e) => break 'cancellation_loop Err(e.into()),
         }
     }
 }
 
-pub async fn broadcaster_loop(
-    mut rx: MpscRx<BroadcasterMessages>,
-    eth_rpc_tx: MpscTx<EthRpcMessages>,
+pub async fn user_op_canceller_loop(
+    mut user_op_canceller_rx: UserOpCancellerRx,
+    eth_rpc_tx: EthRpcTx,
     config: SentinelConfig,
-    broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
-    websocket_tx: MpscTx<WebSocketMessages>,
-    broadcaster_tx: MpscTx<BroadcasterMessages>,
+    broadcast_channel_tx: BroadcastChannelTx,
+    websocket_tx: WebSocketTx,
+    user_op_canceller_tx: UserOpCancellerTx,
 ) -> Result<(), SentinelError> {
-    let name = "broadcaster";
+    let name = "user op canceller";
 
+    let mut frequency = 120; // FIXME make configurable! Make updatable whilst running too!
+    let mut is_enabled = false;
     let mut core_is_connected = false;
-    let mut broadcaster_is_enabled = false;
 
     warn!("{name} not active yet due to no core connection");
 
@@ -293,54 +291,57 @@ pub async fn broadcaster_loop(
     let host_broadcaster_pk = Env::get_host_broadcaster_private_key()?;
     let native_broadcaster_pk = Env::get_native_broadcaster_private_key()?;
 
-    'broadcaster_loop: loop {
+    'user_op_canceller_loop: loop {
         tokio::select! {
-            r = cancellation_loop(CANCELLABLE_OPS_CHECK_FREQUENCY, broadcaster_tx.clone()), if (broadcaster_is_enabled && core_is_connected) => {
+            r = cancellation_loop(
+                &frequency,
+                user_op_canceller_tx.clone(),
+            ), if (is_enabled && core_is_connected) => {
                 let sleep_time = 30;
                 match r {
                     Ok(_) => {
-                        warn!("broadcaster cancellation loop returned Ok(()) for some reason");
+                        warn!("user op canceller cancellation loop returned Ok(()) for some reason");
                     },
                     Err(e) => {
-                        error!("broadcaster cancellation loop error: {e}");
+                        error!("user op canceller cancellation loop error: {e}");
                     }
                 }
                 warn!("sleeping for {sleep_time}s and restarting broadcaster loop");
                 sleep(Duration::from_secs(sleep_time)).await;
-                continue 'broadcaster_loop
+                continue 'user_op_canceller_loop
             },
             r = broadcast_channel_loop(broadcast_channel_tx.subscribe()) => {
                 match r {
                     Ok(msg) => {
                         let note = format!("(core is currently {}connected)", if core_is_connected { "" } else { "not "});
                         match msg {
-                            BroadcasterBroadcastChannelMessages::Stop => {
+                            UserOpCancellerBroadcastChannelMessages::Stop => {
                                 warn!("msg received to stop the {name} {note}");
-                                broadcaster_is_enabled = false;
-                                continue 'broadcaster_loop
+                                is_enabled = false;
+                                continue 'user_op_canceller_loop
                             },
-                            BroadcasterBroadcastChannelMessages::Start => {
+                            UserOpCancellerBroadcastChannelMessages::Start => {
                                 warn!("msg received to start the {name} {note}");
-                                broadcaster_is_enabled = true;
-                                continue 'broadcaster_loop
+                                is_enabled = true;
+                                continue 'user_op_canceller_loop
                             },
-                            BroadcasterBroadcastChannelMessages::CoreConnected => {
+                            UserOpCancellerBroadcastChannelMessages::CoreConnected => {
                                 warn!("core connected message received in {name} {note}");
                                 core_is_connected = true;
-                                continue 'broadcaster_loop
+                                continue 'user_op_canceller_loop
                             },
-                            BroadcasterBroadcastChannelMessages::CoreDisconnected => {
+                            UserOpCancellerBroadcastChannelMessages::CoreDisconnected => {
                                 warn!("core disconnected message received in {name} {note}");
                                 core_is_connected = false;
-                                continue 'broadcaster_loop
+                                continue 'user_op_canceller_loop
                             },
                         }
                     },
-                    Err(e) => break 'broadcaster_loop Err(e),
+                    Err(e) => break 'user_op_canceller_loop Err(e),
                 }
             },
-            r = rx.recv() , if broadcaster_is_enabled && core_is_connected => match r {
-                Some(BroadcasterMessages::CancelUserOps) => {
+            r = user_op_canceller_rx.recv() , if is_enabled && core_is_connected => match r {
+                Some(UserOpCancellerMessages::CancelUserOps) => {
                     match cancel_user_ops(
                         &config,
                         websocket_tx.clone(),
@@ -360,32 +361,32 @@ pub async fn broadcaster_loop(
                                 error!("!!! WARNING !!!");
                                 error!("!!! WARNING !!!");
                                 error!("!!! WARNING !!!");
-                                continue 'broadcaster_loop
+                                continue 'user_op_canceller_loop
                             },
                             e => {
                                 error!("unhandled user op error: {e}");
-                                break 'broadcaster_loop Err(e.into())
+                                break 'user_op_canceller_loop Err(e.into())
                             }
                         },
                         Err(e) => {
                             error!("{e}");
                         }
                     };
-                    continue 'broadcaster_loop
+                    continue 'user_op_canceller_loop
                 },
                 None => {
                     let m = "all {name} senders dropped!";
                     warn!("{m}");
-                    break 'broadcaster_loop Err(SentinelError::Custom(name.into()))
+                    break 'user_op_canceller_loop Err(SentinelError::Custom(name.into()))
                 },
             },
             _ = tokio::signal::ctrl_c() => {
                 warn!("{name} shutting down...");
-                break 'broadcaster_loop Err(SentinelError::SigInt(name.into()))
+                break 'user_op_canceller_loop Err(SentinelError::SigInt(name.into()))
             },
             else => {
-                warn!("in {name} `else` branch, {name} is currently {}abled", if broadcaster_is_enabled { "en" } else { "dis" });
-                continue 'broadcaster_loop
+                warn!("in {name} `else` branch, {name} is currently {}abled", if is_enabled { "en" } else { "dis" });
+                continue 'user_op_canceller_loop
             },
         }
     }

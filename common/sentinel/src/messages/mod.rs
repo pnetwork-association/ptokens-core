@@ -1,27 +1,27 @@
 mod broadcast_channel;
-mod broadcaster;
 mod challenge_responder;
 mod eth_rpc;
 mod responder;
 mod status_publisher;
 mod syncer;
+mod user_op_canceller;
 mod websocket;
 
 pub use self::{
     broadcast_channel::{
         BroadcastChannelMessages,
-        BroadcasterBroadcastChannelMessages,
         ChallengeResponderBroadcastChannelMessages,
         RpcServerBroadcastChannelMessages,
         StatusPublisherBroadcastChannelMessages,
         SyncerBroadcastChannelMessages,
+        UserOpCancellerBroadcastChannelMessages,
     },
-    broadcaster::BroadcasterMessages,
     challenge_responder::ChallengeResponderMessages,
     eth_rpc::EthRpcMessages,
     responder::Responder,
     status_publisher::StatusPublisherMessages,
     syncer::SyncerMessages,
+    user_op_canceller::UserOpCancellerMessages,
     websocket::{
         WebSocketMessages,
         WebSocketMessagesCancelUserOpArgs,

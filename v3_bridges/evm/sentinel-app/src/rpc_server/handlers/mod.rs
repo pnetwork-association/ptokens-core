@@ -1,4 +1,3 @@
-mod handle_broadcaster_start_stop;
 mod handle_cancel_user_ops;
 mod handle_db_ops;
 mod handle_get_cancellable_user_ops;
@@ -23,3 +22,4 @@ mod handle_set_status_publishing_frequency;
 mod handle_status_publisher_start_stop;
 mod handle_sync_state;
 mod handle_syncer_start_stop;
+mod handle_user_op_canceller_start_stop;

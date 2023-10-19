@@ -71,8 +71,6 @@ pub use self::{
     logging::{init_logger, LogLevel},
     messages::{
         BroadcastChannelMessages,
-        BroadcasterBroadcastChannelMessages,
-        BroadcasterMessages,
         ChallengeResponderBroadcastChannelMessages,
         ChallengeResponderMessages,
         EthRpcMessages,
@@ -82,6 +80,8 @@ pub use self::{
         StatusPublisherMessages,
         SyncerBroadcastChannelMessages,
         SyncerMessages,
+        UserOpCancellerBroadcastChannelMessages,
+        UserOpCancellerMessages,
         WebSocketMessages,
         WebSocketMessagesCancelUserOpArgs,
         WebSocketMessagesEncodable,

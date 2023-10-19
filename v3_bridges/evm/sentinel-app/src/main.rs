@@ -1,4 +1,3 @@
-mod broadcaster;
 mod challenge_responder;
 mod cli;
 mod eth_rpc;
@@ -7,6 +6,7 @@ mod start_sentinel;
 mod status_publisher;
 mod syncer;
 mod type_aliases;
+mod user_op_canceller;
 mod ws_server;
 
 #[macro_use]

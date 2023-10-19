@@ -14,10 +14,10 @@ use super::type_aliases::{RpcId, RpcParams};
 use crate::type_aliases::{
     BroadcastChannelRx,
     BroadcastChannelTx,
-    BroadcasterTx,
     CoreCxnStatus,
     EthRpcTx,
     StatusPublisherTx,
+    UserOpCancellerTx,
     WebSocketTx,
 };
 
@@ -59,10 +59,10 @@ pub(crate) enum RpcCall {
     GetUserOpList(RpcId, WebSocketTx, CoreCxnStatus),
     Get(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     Put(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
-    CancelUserOps(RpcId, BroadcasterTx, CoreCxnStatus),
     GetInclusionProof(RpcId, WebSocketTx, CoreCxnStatus),
     GetChallengesList(RpcId, WebSocketTx, CoreCxnStatus),
     Delete(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
+    CancelUserOps(RpcId, UserOpCancellerTx, CoreCxnStatus),
     GetUserOp(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     GetStatus(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetUnsolvedChallenges(RpcId, WebSocketTx, CoreCxnStatus),
@@ -76,7 +76,7 @@ pub(crate) enum RpcCall {
     LatestBlockNumbers(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     SetStatusPublishingFrequency(RpcId, RpcParams, StatusPublisherTx),
     GetCancellableUserOps(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
-    BroadcasterStartStop(RpcId, BroadcastChannelTx, CoreCxnStatus, bool),
+    UserOpCancellerStartStop(RpcId, BroadcastChannelTx, CoreCxnStatus, bool),
     GetRegistrationSignature(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     Init(
         RpcId,
@@ -132,7 +132,7 @@ impl RpcCall {
         websocket_tx: WebSocketTx,
         host_eth_rpc_tx: EthRpcTx,
         native_eth_rpc_tx: EthRpcTx,
-        broadcaster_tx: BroadcasterTx,
+        user_op_canceller_tx: UserOpCancellerTx,
         broadcast_channel_tx: BroadcastChannelTx,
         status_tx: StatusPublisherTx,
         core_cxn: bool,
@@ -150,14 +150,18 @@ impl RpcCall {
             "getChallangeResponses" => Self::GetUnsolvedChallenges(r.id, websocket_tx, core_cxn),
             "getChallenge" => Self::GetChallenge(r.id, websocket_tx, r.params.clone(), core_cxn),
             "stopSyncer" => Self::StopSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
-            "cancel" | "cancelUserOp" => Self::CancelUserOps(r.id, broadcaster_tx.clone(), core_cxn),
             "getStatus" | "status" => Self::GetStatus(r.id, websocket_tx, r.params.clone(), core_cxn),
             "startSyncer" => Self::StartSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
-            "startBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, true),
-            "stopBroadcaster" => Self::BroadcasterStartStop(r.id, broadcast_channel_tx, core_cxn, false),
+            "cancel" | "cancelUserOp" => Self::CancelUserOps(r.id, user_op_canceller_tx.clone(), core_cxn),
             "getChallengesList" | "getChallengeList" => Self::GetChallengesList(r.id, websocket_tx, core_cxn),
             "setStatusPublishingFrequency" => Self::SetStatusPublishingFrequency(r.id, r.params.clone(), status_tx),
             "removeChallenge" | "rmChallenge" => Self::RemoveChallenge(r.id, websocket_tx, r.params.clone(), core_cxn),
+            "stopUserOpCanceller" | "stopCanceller" => {
+                Self::UserOpCancellerStartStop(r.id, broadcast_channel_tx, core_cxn, false)
+            },
+            "startUserOpCanceller" | "startCanceller" => {
+                Self::UserOpCancellerStartStop(r.id, broadcast_channel_tx, core_cxn, true)
+            },
             "getRegistrationSignature" | "getRegSig" => {
                 Self::GetRegistrationSignature(r.id, websocket_tx, r.params.clone(), core_cxn)
             },
@@ -274,14 +278,13 @@ impl RpcCall {
             Self::GetStatus(id, websocket_tx, params, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_status(websocket_tx, params, core_cxn).await)
             },
-            Self::CancelUserOps(id, broadcaster_tx, core_cxn) => {
-                let result = Self::handle_cancel_user_ops(broadcaster_tx, core_cxn).await;
+            Self::CancelUserOps(id, user_op_canceller_tx, core_cxn) => {
+                let result = Self::handle_cancel_user_ops(user_op_canceller_tx, core_cxn).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
-            Self::BroadcasterStartStop(id, broadcast_channel_tx, core_cxn, start_broadcaster) => {
-                let result =
-                    Self::handle_broadcaster_start_stop(broadcast_channel_tx, core_cxn, start_broadcaster).await;
+            Self::UserOpCancellerStartStop(id, broadcast_channel_tx, core_cxn, start) => {
+                let result = Self::handle_user_op_canceller_start_stop(broadcast_channel_tx, core_cxn, start).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
@@ -433,16 +436,16 @@ async fn start_rpc_server(
     config: SentinelConfig,
     broadcast_channel_tx: BroadcastChannelTx,
     core_cxn: bool,
-    broadcaster_tx: BroadcasterTx,
+    user_op_canceller_tx: UserOpCancellerTx,
     status_tx: StatusPublisherTx,
 ) -> Result<(), SentinelError> {
     debug!("rpc server listening!");
     let core_cxn_filter = warp::any().map(move || core_cxn);
-    let websocket_tx_filter = warp::any().map(move || websocket_tx.clone());
-    let broadcaster_tx_filter = warp::any().map(move || broadcaster_tx.clone());
-    let host_eth_rpc_tx_filter = warp::any().map(move || host_eth_rpc_tx.clone());
-    let native_eth_rpc_tx_filter = warp::any().map(move || native_eth_rpc_tx.clone());
     let status_tx_filter = warp::any().map(move || status_tx.clone());
+    let websocket_tx_filter = warp::any().map(move || websocket_tx.clone());
+    let host_eth_rpc_tx_filter = warp::any().map(move || host_eth_rpc_tx.clone());
+    let broadcaster_tx_filter = warp::any().map(move || user_op_canceller_tx.clone());
+    let native_eth_rpc_tx_filter = warp::any().map(move || native_eth_rpc_tx.clone());
     let broadcast_channel_tx_filter = warp::any().map(move || broadcast_channel_tx.clone());
 
     let rpc = warp::path("v1")
@@ -491,7 +494,7 @@ pub async fn rpc_server_loop(
     config: SentinelConfig,
     disable: bool,
     broadcast_channel_tx: BroadcastChannelTx,
-    broadcaster_tx: BroadcasterTx,
+    user_op_canceller_tx: UserOpCancellerTx,
     status_tx: StatusPublisherTx,
 ) -> Result<(), SentinelError> {
     let rpc_server_is_enabled = !disable;
@@ -524,7 +527,7 @@ pub async fn rpc_server_loop(
                 config.clone(),
                 broadcast_channel_tx.clone(),
                 core_connection_status,
-                broadcaster_tx.clone(),
+                user_op_canceller_tx.clone(),
                 status_tx.clone(),
             ), if rpc_server_is_enabled => {
                 if r.is_ok() {
