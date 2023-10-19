@@ -82,6 +82,15 @@ pub(crate) enum RpcCall {
     SetChallengeResponderFrequency(RpcId, RpcParams, ChallengeResponderTx),
     GetRegistrationSignature(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     UserOpCancellerStartStop(RpcId, BroadcastChannelTx, CoreCxnStatus, bool),
+    GetChallengeState(
+        RpcId,
+        RpcParams,
+        Box<SentinelConfig>,
+        EthRpcTx,
+        EthRpcTx,
+        WebSocketTx,
+        CoreCxnStatus,
+    ),
     Init(
         RpcId,
         Box<SentinelConfig>,
@@ -190,6 +199,15 @@ impl RpcCall {
             "getCoreState" | "getEnclaveState" | "state" => {
                 Self::GetCoreState(r.id, r.params.clone(), websocket_tx, core_cxn)
             },
+            "getChallengeState" => Self::GetChallengeState(
+                r.id,
+                r.params.clone(),
+                Box::new(config.clone()),
+                native_eth_rpc_tx,
+                host_eth_rpc_tx,
+                websocket_tx,
+                core_cxn,
+            ),
             "getSyncState" => Self::GetSyncState(
                 r.id,
                 Box::new(config),
@@ -354,6 +372,20 @@ impl RpcCall {
                 Self::handle_ws_result(
                     id,
                     Self::handle_get_user_op_state(
+                        *config,
+                        websocket_tx,
+                        host_eth_rpc_tx,
+                        native_eth_rpc_tx,
+                        params,
+                        core_cxn,
+                    )
+                    .await,
+                )
+            },
+            Self::GetChallengeState(id, params, config, native_eth_rpc_tx, host_eth_rpc_tx, websocket_tx, core_cxn) => {
+                Self::handle_ws_result(
+                    id,
+                    Self::handle_get_challenge_state(
                         *config,
                         websocket_tx,
                         host_eth_rpc_tx,

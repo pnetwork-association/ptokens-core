@@ -2,8 +2,10 @@ use common_eth::EthSubmissionMaterial;
 use derive_more::{Constructor, Deref};
 use ethereum_types::Address as EthAddress;
 use serde::{Deserialize, Serialize};
+use serde_json::Value as Json;
 
 use super::{Challenge, ChallengePendingEvents, ChallengesError};
+use crate::WebSocketMessagesEncodable;
 
 #[derive(Debug, Clone, Eq, PartialEq, Constructor, Deref, Serialize, Deserialize)]
 pub struct Challenges(Vec<Challenge>);
@@ -13,6 +15,15 @@ impl Challenges {
         ChallengePendingEvents::from_sub_mat(sub_mat, pnetwork_hub)
             .map(|events| events.iter().map(Challenge::from).collect())
             .map(Self::new)
+    }
+}
+
+impl TryFrom<WebSocketMessagesEncodable> for Challenges {
+    type Error = ChallengesError;
+
+    fn try_from(m: WebSocketMessagesEncodable) -> Result<Self, Self::Error> {
+        let j = Json::try_from(m)?;
+        Ok(serde_json::from_value(j)?)
     }
 }
 

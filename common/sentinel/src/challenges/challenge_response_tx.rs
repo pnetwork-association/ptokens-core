@@ -46,7 +46,7 @@ impl Challenge {
         Ok(r)
     }
 
-    fn to_solve_challenge_tx(
+    pub fn to_solve_challenge_tx(
         self,
         nonce: u64,
         gas_price: u64,

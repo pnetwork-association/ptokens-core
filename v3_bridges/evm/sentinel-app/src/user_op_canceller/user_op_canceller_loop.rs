@@ -68,8 +68,6 @@ async fn cancel_user_op(
     )));
     websocket_tx.send(msg).await?;
 
-    warn!("here are the mcids: {mcids:?}"); // FIXME rm
-
     let cancellation_sig = UserOpCancellationSignature::try_from(tokio::select! {
         response = rx => response?,
         _ = sleep(Duration::from_secs(*config.core().timeout())) => {

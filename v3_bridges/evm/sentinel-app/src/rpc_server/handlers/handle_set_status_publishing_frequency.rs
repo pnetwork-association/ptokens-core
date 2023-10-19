@@ -1,4 +1,4 @@
-use common_sentinel::{sanity_check_frequency, SentinelError, SentinelStatusError, StatusPublisherMessages};
+use common_sentinel::{sanity_check_frequency, SentinelError, StatusPublisherMessages};
 use serde_json::{json, Value as Json};
 
 use crate::{

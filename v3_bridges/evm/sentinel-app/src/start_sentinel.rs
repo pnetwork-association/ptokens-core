@@ -74,6 +74,8 @@ pub async fn start_sentinel(
         challenge_responder_tx.clone(),
         broadcast_channel_tx.clone(),
         websocket_tx.clone(),
+        native_eth_rpc_tx.clone(),
+        host_eth_rpc_tx.clone(),
     ));
 
     let native_syncer_thread = tokio::spawn(syncer_loop(

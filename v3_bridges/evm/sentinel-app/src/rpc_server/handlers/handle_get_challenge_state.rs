@@ -1,15 +1,5 @@
-use std::str::FromStr;
-
 use common::BridgeSide;
-use common_sentinel::{
-    Challenge,
-    ConfigT,
-    EthRpcMessages,
-    SentinelConfig,
-    SentinelError,
-    WebSocketMessagesEncodable,
-    WebSocketMessagesError,
-};
+use common_sentinel::{Challenge, ConfigT, EthRpcMessages, SentinelConfig, SentinelError, WebSocketMessagesEncodable};
 use serde_json::json;
 
 use crate::{
@@ -44,7 +34,7 @@ impl RpcCall {
             BridgeSide::Host
         };
 
-        let (msg, rx) = EthRpcMessages::get_challenge_state_msg(side, challenge.clone(), config.pnetwork_hub(&side));
+        let (msg, rx) = EthRpcMessages::get_challenge_state_msg(side, challenge, config.pnetwork_hub(&side));
 
         if side.is_native() {
             native_eth_rpc_tx.send(msg).await?;
