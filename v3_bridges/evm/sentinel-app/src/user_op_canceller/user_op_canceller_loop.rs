@@ -341,6 +341,11 @@ pub async fn user_op_canceller_loop(
                 }
             },
             r = user_op_canceller_rx.recv() , if is_enabled && core_is_connected => match r {
+                Some(UserOpCancellerMessages::SetFrequency(new_frequency)) => {
+                    frequency = new_frequency;
+                    info!("updated user op canceller frequency to {new_frequency}");
+                    continue 'user_op_canceller_loop
+                },
                 Some(UserOpCancellerMessages::CancelUserOps) => {
                     match cancel_user_ops(
                         &config,

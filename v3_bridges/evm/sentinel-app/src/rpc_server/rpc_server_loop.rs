@@ -75,6 +75,7 @@ pub(crate) enum RpcCall {
     RemoveChallenge(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
+    SetUserOpCancellerFrequency(RpcId, RpcParams, UserOpCancellerTx),
     LatestBlockNumbers(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     SetStatusPublishingFrequency(RpcId, RpcParams, StatusPublisherTx),
     GetCancellableUserOps(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
@@ -162,6 +163,9 @@ impl RpcCall {
             "getChallengesList" | "getChallengeList" => Self::GetChallengesList(r.id, websocket_tx, core_cxn),
             "setStatusPublishingFrequency" => Self::SetStatusPublishingFrequency(r.id, r.params.clone(), status_tx),
             "removeChallenge" | "rmChallenge" => Self::RemoveChallenge(r.id, websocket_tx, r.params.clone(), core_cxn),
+            "setUserOpCancellerFrequency" => {
+                Self::SetUserOpCancellerFrequency(r.id, r.params.clone(), user_op_canceller_tx)
+            },
             "setChallengeResponderFrequency" => {
                 Self::SetChallengeResponderFrequency(r.id, r.params.clone(), challenge_responder_tx)
             },
@@ -268,6 +272,11 @@ impl RpcCall {
         match self {
             Self::SetStatusPublishingFrequency(id, status_tx, params) => {
                 let result = Self::handle_set_status_publishing_frequency(status_tx, params).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
+            Self::SetUserOpCancellerFrequency(id, user_op_canceller_tx, params) => {
+                let result = Self::handle_set_user_op_canceller_frequency(user_op_canceller_tx, params).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
