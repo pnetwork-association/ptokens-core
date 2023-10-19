@@ -112,7 +112,7 @@ pub async fn status_publisher_loop(
 
     let mcids = config.mcids();
     let mut core_is_connected = false;
-    let mut status_publisher_is_enabled = false;
+    let mut status_publisher_is_enabled = true;
     let core_timeout = *config.core().timeout(); // TODO Make updateable via rpc call
     let mut status_update_frequency = *config.ipfs().status_update_frequency();
 

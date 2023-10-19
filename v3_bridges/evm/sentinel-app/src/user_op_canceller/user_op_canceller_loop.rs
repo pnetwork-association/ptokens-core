@@ -280,7 +280,7 @@ pub async fn user_op_canceller_loop(
     let name = "user op canceller";
 
     let mut frequency = 120; // FIXME make configurable! Make updatable whilst running too!
-    let mut is_enabled = false;
+    let mut is_enabled = true;
     let mut core_is_connected = false;
 
     warn!("{name} not active yet due to no core connection");

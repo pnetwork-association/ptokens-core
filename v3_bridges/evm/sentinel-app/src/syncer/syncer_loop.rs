@@ -188,7 +188,7 @@ pub async fn syncer_loop(
     let name = format!("{mcid} syncer");
 
     let mut core_is_connected = false;
-    let mut syncer_is_enabled = false;
+    let mut syncer_is_enabled = true;
     let core_time_limit = *config.core().timeout(); // FIXME Make configurable via RPC call
 
     warn!("{name} not syncing yet due to no core connection and being disabled");
