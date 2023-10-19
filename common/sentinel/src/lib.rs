@@ -34,7 +34,15 @@ pub use self::{
     batching::Batch,
     bpm::{Bpm, BpmInfo, Bpms},
     call_core::call_core,
-    challenges::{ChallengeAndResponseInfo, ChallengeAndResponseInfos, Challenges, ChallengesError, ChallengesList},
+    challenges::{
+        Challenge,
+        ChallengeAndResponseInfo,
+        ChallengeAndResponseInfos,
+        ChallengeStatus,
+        Challenges,
+        ChallengesError,
+        ChallengesList,
+    },
     config::{
         ConfigT,
         HostConfig,

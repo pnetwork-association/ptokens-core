@@ -2,6 +2,7 @@ mod constants;
 mod eth_call;
 mod get_block;
 mod get_chain_id;
+mod get_challenge_status;
 mod get_eth_balance;
 mod get_gas_price;
 mod get_latest_block_num;
@@ -17,6 +18,7 @@ pub use self::{
     eth_call::eth_call,
     get_block::get_block,
     get_chain_id::get_chain_id,
+    get_challenge_status::get_challenge_status,
     get_eth_balance::get_eth_balance,
     get_gas_price::get_gas_price,
     get_latest_block_num::get_latest_block_num,

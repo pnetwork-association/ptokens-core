@@ -1,8 +1,12 @@
 use std::{fmt, str::FromStr};
 
+use common::Bytes;
+use common_eth::encode_fxn_call;
 use serde::{Deserialize, Serialize};
 
-use super::ChallengesError;
+use super::{Challenge, ChallengesError};
+
+const GET_CHALLENGE_STATUS_ABI: &str = "[{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"actor\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"challenger\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"timestamp\",\"type\":\"uint64\"},{\"internalType\":\"bytes4\",\"name\":\"networkId\",\"type\":\"bytes4\"}],\"internalType\":\"struct IPNetworkHub.Challenge\",\"name\":\"challenge\",\"type\":\"tuple\"}],\"name\":\"getChallengeStatus\",\"outputs\":[{\"internalType\":\"enum IPNetworkHub.ChallengeStatus\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]";
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum ChallengeStatus {
@@ -17,6 +21,13 @@ pub enum ChallengeStatus {
 impl ChallengeStatus {
     pub(super) fn is_unsolved(&self) -> bool {
         matches!(self, Self::Pending | Self::Unsolved | Self::PartiallyUnsolved)
+    }
+
+    pub fn encode_rpc_call_data(challenge: &Challenge) -> Result<Bytes, ChallengesError> {
+        let encoded = encode_fxn_call(GET_CHALLENGE_STATUS_ABI, "getChallengeStatus", &[
+            challenge.to_eth_abi_token()?
+        ])?;
+        Ok(encoded)
     }
 }
 
@@ -38,6 +49,24 @@ impl TryFrom<u8> for ChallengeStatus {
             4 => Ok(Self::PartiallyUnsolved),
             5 => Ok(Self::Cancelled),
             other => Err(Self::Error::CannotGetChallengeStatusFrom(format!("{other}"))),
+        }
+    }
+}
+
+impl TryFrom<Bytes> for ChallengeStatus {
+    type Error = ChallengesError;
+
+    fn try_from(bs: Bytes) -> Result<Self, Self::Error> {
+        let name = "ChallengeStatus";
+        debug!("getting '{name}' from bytes...");
+        if bs.is_empty() {
+            Err(ChallengesError::NotEnoughBytes {
+                got: 0,
+                expected: "1".to_string(),
+                location: name.to_string(),
+            })
+        } else {
+            Self::try_from(bs[0])
         }
     }
 }

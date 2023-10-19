@@ -11,16 +11,16 @@ mod challenges_error;
 mod challenges_list;
 mod test_utils;
 
-use self::{
-    challenge::Challenge,
-    challenge_list_entry::ChallengesListEntry,
-    challenge_pending_event::{ChallengePendingEvent, ChallengePendingEvents},
-    challenge_status::ChallengeStatus,
-};
 pub use self::{
+    challenge::Challenge,
     challenge_and_response_info::{ChallengeAndResponseInfo, ChallengeAndResponseInfos},
     challenge_response_signature::{ChallengeResponseSignatureInfo, ChallengeResponseSignatureInfos},
+    challenge_status::ChallengeStatus,
     challenges::Challenges,
     challenges_error::ChallengesError,
     challenges_list::ChallengesList,
+};
+use self::{
+    challenge_list_entry::ChallengesListEntry,
+    challenge_pending_event::{ChallengePendingEvent, ChallengePendingEvents},
 };

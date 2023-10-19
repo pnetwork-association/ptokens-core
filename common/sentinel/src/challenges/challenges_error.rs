@@ -4,7 +4,7 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum ChallengesError {
-    #[error("not enough bytes - got: {got}, expected: {expected} in '{location}'")]
+    #[error("challenge error not enough bytes - got: {got}, expected: {expected} in '{location}'")]
     NotEnoughBytes {
         got: usize,
         expected: String,
