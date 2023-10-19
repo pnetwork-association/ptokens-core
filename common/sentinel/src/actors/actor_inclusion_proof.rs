@@ -15,10 +15,12 @@ use crate::{DbKey, DbUtilsT, SentinelDbKeys, SentinelDbUtils, SentinelError, Web
 
 type Byte = u8;
 
+#[serde_with::serde_as]
 #[derive(Debug, Clone, Eq, Default, PartialEq, Constructor, Serialize, Deserialize, Getters)]
 pub struct ActorInclusionProof {
     epoch: U256,
     tx_hash: EthHash,
+    #[serde_as(as = "Vec<serde_with::hex::Hex>")]
     proof: Vec<Vec<u8>>,
     mcid: MetadataChainId,
 }
