@@ -3,7 +3,7 @@ use common_eth::{DefaultBlockParameter, EthSubmissionMaterial, EthTransaction};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use tokio::sync::{oneshot, oneshot::Receiver};
 
-use crate::{Responder, SentinelError, UserOp, UserOpSmartContractState};
+use crate::{Challenge, ChallengeState, Responder, SentinelError, UserOp, UserOpSmartContractState};
 
 #[derive(Debug)]
 pub enum EthRpcMessages {
@@ -15,6 +15,7 @@ pub enum EthRpcMessages {
     GetSubMat((BridgeSide, u64, Responder<EthSubmissionMaterial>)),
     GetEthBalance((BridgeSide, EthAddress, Responder<U256>)),
     GetUserOpState((BridgeSide, UserOp, EthAddress, Responder<UserOpSmartContractState>)),
+    GetChallengeState((BridgeSide, Challenge, EthAddress, Responder<ChallengeState>)),
 }
 
 impl EthRpcMessages {
@@ -25,6 +26,15 @@ impl EthRpcMessages {
     ) -> (Self, Receiver<Result<UserOpSmartContractState, SentinelError>>) {
         let (tx, rx) = oneshot::channel();
         (Self::GetUserOpState((s, o, a, tx)), rx)
+    }
+
+    pub fn get_challenge_state_msg(
+        s: BridgeSide,
+        c: Challenge,
+        a: EthAddress,
+    ) -> (Self, Receiver<Result<ChallengeState, SentinelError>>) {
+        let (tx, rx) = oneshot::channel();
+        (Self::GetChallengeState((s, c, a, tx)), rx)
     }
 
     pub fn get_eth_balance_msg(s: BridgeSide, a: EthAddress) -> (Self, Receiver<Result<U256, SentinelError>>) {

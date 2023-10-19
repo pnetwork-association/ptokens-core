@@ -2,6 +2,7 @@ use std::result::Result;
 
 use common_sentinel::{
     eth_call,
+    get_challenge_state,
     get_eth_balance,
     get_gas_price,
     get_latest_block_num,
@@ -51,6 +52,34 @@ pub async fn eth_rpc_loop(
             r = eth_rpc_rx.recv() => match r {
                 Some(msg) => {
                     match msg {
+                        EthRpcMessages::GetChallengeState((side, challenge, pnetwork_hub, responder)) => {
+                            'inner: loop {
+                                let r = get_challenge_state(
+                                    &challenge,
+                                    &pnetwork_hub,
+                                    if side.is_native() { &n_ws_client } else { &h_ws_client },
+                                    if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    side,
+                                ).await;
+                                match r {
+                                    Ok(r) => {
+                                        let _ = responder.send(Ok(r));
+                                        continue 'eth_rpc_loop
+                                    },
+                                    Err(e) => {
+                                        error!("{side} eth rpc error: {e}");
+                                        warn!("rotating {side} endpoint");
+                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
+                                        if side.is_native() {
+                                            n_ws_client = n_endpoints.rotate().await?;
+                                        } else {
+                                            h_ws_client = h_endpoints.rotate().await?;
+                                        };
+                                        continue 'inner
+                                    },
+                                }
+                            }
+                        },
                         EthRpcMessages::GetUserOpState((side, user_op, contract_address, responder)) => {
                             'inner: loop {
                                 let r = get_user_op_state(

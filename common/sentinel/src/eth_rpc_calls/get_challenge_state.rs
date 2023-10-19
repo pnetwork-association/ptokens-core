@@ -4,18 +4,18 @@ use ethereum_types::Address as EthAddress;
 use jsonrpsee::ws_client::WsClient;
 
 use super::eth_call;
-use crate::{Challenge, ChallengeStatus, SentinelError};
+use crate::{Challenge, ChallengeState, SentinelError};
 
-pub async fn get_challenge_status(
+pub async fn get_challenge_state(
     challenge: &Challenge,
     pnetwork_hub: &EthAddress,
     ws_client: &WsClient,
     sleep_time: u64,
     side: BridgeSide,
-) -> Result<ChallengeStatus, SentinelError> {
+) -> Result<ChallengeState, SentinelError> {
     let r = eth_call(
         pnetwork_hub,
-        &ChallengeStatus::encode_rpc_call_data(challenge)?,
+        &ChallengeState::encode_rpc_call_data(challenge)?,
         &DefaultBlockParameter::Latest,
         ws_client,
         sleep_time,
@@ -23,5 +23,5 @@ pub async fn get_challenge_status(
     )
     .await?;
 
-    Ok(ChallengeStatus::try_from(r)?)
+    Ok(ChallengeState::try_from(r)?)
 }

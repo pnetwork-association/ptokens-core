@@ -21,7 +21,7 @@ pub enum ChallengesError {
     NotInList(EthHash),
 
     #[error("cannot get challenge status from: '{0}'")]
-    CannotGetChallengeStatusFrom(String),
+    CannotGetChallengeStateFrom(String),
 
     #[error("challenges network id error: {0}")]
     NetworkId(#[from] crate::NetworkIdError),

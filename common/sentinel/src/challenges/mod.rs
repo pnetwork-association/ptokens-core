@@ -5,7 +5,7 @@ mod challenge_list_entry;
 mod challenge_pending_event;
 mod challenge_response_signature;
 mod challenge_response_tx;
-mod challenge_status;
+mod challenge_state;
 mod challenges;
 mod challenges_error;
 mod challenges_list;
@@ -15,7 +15,7 @@ pub use self::{
     challenge::Challenge,
     challenge_and_response_info::{ChallengeAndResponseInfo, ChallengeAndResponseInfos},
     challenge_response_signature::{ChallengeResponseSignatureInfo, ChallengeResponseSignatureInfos},
-    challenge_status::ChallengeStatus,
+    challenge_state::ChallengeState,
     challenges::Challenges,
     challenges_error::ChallengesError,
     challenges_list::ChallengesList,

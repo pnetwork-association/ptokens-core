@@ -6,12 +6,12 @@ use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use super::{Challenge, ChallengeStatus, ChallengesError};
+use super::{Challenge, ChallengeState, ChallengesError};
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Getters, Constructor)]
 pub struct ChallengesListEntry {
     hash: EthHash,
-    pub status: ChallengeStatus,
+    pub status: ChallengeState,
 }
 
 impl TryFrom<Challenge> for ChallengesListEntry {
@@ -28,7 +28,7 @@ impl TryFrom<&Challenge> for ChallengesListEntry {
     fn try_from(c: &Challenge) -> Result<Self, Self::Error> {
         // NOTE: If we're constructing a new list entry from a challenge, we assume that challenge
         // is pending.
-        Ok(Self::new(c.hash()?, ChallengeStatus::Pending))
+        Ok(Self::new(c.hash()?, ChallengeState::Pending))
     }
 }
 

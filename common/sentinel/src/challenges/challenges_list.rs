@@ -12,7 +12,7 @@ use super::{
     ChallengeAndResponseInfo,
     ChallengeAndResponseInfos,
     ChallengeResponseSignatureInfos,
-    ChallengeStatus,
+    ChallengeState,
     Challenges,
     ChallengesError,
     ChallengesListEntry,
@@ -50,7 +50,7 @@ impl ChallengesList {
         &mut self,
         db_utils: &SentinelDbUtils<D>,
         hash: &EthHash,
-        status: ChallengeStatus,
+        status: ChallengeState,
     ) -> Result<(), SentinelError> {
         debug!("updating status in challenges list to {status}");
         match self.entry_idx(hash) {
@@ -193,7 +193,7 @@ impl ChallengesList {
         db_utils: &SentinelDbUtils<D>,
         hash: &EthHash,
     ) -> Result<(), SentinelError> {
-        let status = ChallengeStatus::Solved;
+        let status = ChallengeState::Solved;
         self.update_challenge_status(db_utils, hash, status)
     }
 

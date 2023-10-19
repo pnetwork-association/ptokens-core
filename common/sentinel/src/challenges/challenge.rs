@@ -5,9 +5,10 @@ use derive_getters::Getters;
 use derive_more::Constructor;
 use ethereum_types::{Address as EthAddress, U256};
 use serde::{Deserialize, Serialize};
+use serde_json::Value as Json;
 
 use super::{ChallengePendingEvent, ChallengeResponseSignatureInfo, ChallengesError};
-use crate::{Actor, ActorInclusionProof, DbKey, DbUtilsT, SentinelError};
+use crate::{Actor, ActorInclusionProof, DbKey, DbUtilsT, SentinelError, WebSocketMessagesEncodable};
 
 /* Reference:
 From: https://github.com/pnetwork-association/pnetwork/blob/14d11b116da6abf70cba11e0fd931686f77f22b5/packages/ptokens-evm-contracts/contracts/interfaces/IPNetworkHub.sol#L47C1-L54C6
@@ -21,7 +22,7 @@ From: https://github.com/pnetwork-association/pnetwork/blob/14d11b116da6abf70cba
     }
 */
 
-// FIXME Do we want/need to track the `ChallengeStatus` in here?
+// FIXME Do we want/need to track the `ChallengeState` in here?
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, Getters, Constructor)]
 pub struct Challenge {
@@ -85,5 +86,14 @@ impl DbUtilsT for Challenge {
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, SentinelError> {
         Ok(serde_json::from_slice(bytes)?)
+    }
+}
+
+impl TryFrom<WebSocketMessagesEncodable> for Challenge {
+    type Error = ChallengesError;
+
+    fn try_from(m: WebSocketMessagesEncodable) -> Result<Self, Self::Error> {
+        let j = Json::try_from(m)?;
+        Ok(serde_json::from_value(j)?)
     }
 }

@@ -6,10 +6,10 @@ use serde::{Deserialize, Serialize};
 
 use super::{Challenge, ChallengesError};
 
-const GET_CHALLENGE_STATUS_ABI: &str = "[{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"actor\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"challenger\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"timestamp\",\"type\":\"uint64\"},{\"internalType\":\"bytes4\",\"name\":\"networkId\",\"type\":\"bytes4\"}],\"internalType\":\"struct IPNetworkHub.Challenge\",\"name\":\"challenge\",\"type\":\"tuple\"}],\"name\":\"getChallengeStatus\",\"outputs\":[{\"internalType\":\"enum IPNetworkHub.ChallengeStatus\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]";
+const GET_CHALLENGE_STATUS_ABI: &str = "[{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"actor\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"challenger\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"timestamp\",\"type\":\"uint64\"},{\"internalType\":\"bytes4\",\"name\":\"networkId\",\"type\":\"bytes4\"}],\"internalType\":\"struct IPNetworkHub.Challenge\",\"name\":\"challenge\",\"type\":\"tuple\"}],\"name\":\"getChallengeState\",\"outputs\":[{\"internalType\":\"enum IPNetworkHub.ChallengeState\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]";
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
-pub enum ChallengeStatus {
+pub enum ChallengeState {
     Null              = 0,
     Pending           = 1,
     Solved            = 2,
@@ -18,26 +18,26 @@ pub enum ChallengeStatus {
     Cancelled         = 5,
 }
 
-impl ChallengeStatus {
+impl ChallengeState {
     pub(super) fn is_unsolved(&self) -> bool {
         matches!(self, Self::Pending | Self::Unsolved | Self::PartiallyUnsolved)
     }
 
     pub fn encode_rpc_call_data(challenge: &Challenge) -> Result<Bytes, ChallengesError> {
-        let encoded = encode_fxn_call(GET_CHALLENGE_STATUS_ABI, "getChallengeStatus", &[
+        let encoded = encode_fxn_call(GET_CHALLENGE_STATUS_ABI, "getChallengeState", &[
             challenge.to_eth_abi_token()?
         ])?;
         Ok(encoded)
     }
 }
 
-impl Default for ChallengeStatus {
+impl Default for ChallengeState {
     fn default() -> Self {
         Self::Null
     }
 }
 
-impl TryFrom<u8> for ChallengeStatus {
+impl TryFrom<u8> for ChallengeState {
     type Error = ChallengesError;
 
     fn try_from(n: u8) -> Result<Self, Self::Error> {
@@ -48,16 +48,16 @@ impl TryFrom<u8> for ChallengeStatus {
             3 => Ok(Self::Unsolved),
             4 => Ok(Self::PartiallyUnsolved),
             5 => Ok(Self::Cancelled),
-            other => Err(Self::Error::CannotGetChallengeStatusFrom(format!("{other}"))),
+            other => Err(Self::Error::CannotGetChallengeStateFrom(format!("{other}"))),
         }
     }
 }
 
-impl TryFrom<Bytes> for ChallengeStatus {
+impl TryFrom<Bytes> for ChallengeState {
     type Error = ChallengesError;
 
     fn try_from(bs: Bytes) -> Result<Self, Self::Error> {
-        let name = "ChallengeStatus";
+        let name = "ChallengeState";
         debug!("getting '{name}' from bytes...");
         if bs.is_empty() {
             Err(ChallengesError::NotEnoughBytes {
@@ -71,20 +71,20 @@ impl TryFrom<Bytes> for ChallengeStatus {
     }
 }
 
-impl From<ChallengeStatus> for u8 {
-    fn from(s: ChallengeStatus) -> Self {
+impl From<ChallengeState> for u8 {
+    fn from(s: ChallengeState) -> Self {
         match s {
-            ChallengeStatus::Null => 0,
-            ChallengeStatus::Pending => 1,
-            ChallengeStatus::Solved => 2,
-            ChallengeStatus::Unsolved => 3,
-            ChallengeStatus::PartiallyUnsolved => 4,
-            ChallengeStatus::Cancelled => 5,
+            ChallengeState::Null => 0,
+            ChallengeState::Pending => 1,
+            ChallengeState::Solved => 2,
+            ChallengeState::Unsolved => 3,
+            ChallengeState::PartiallyUnsolved => 4,
+            ChallengeState::Cancelled => 5,
         }
     }
 }
 
-impl FromStr for ChallengeStatus {
+impl FromStr for ChallengeState {
     type Err = ChallengesError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -95,12 +95,12 @@ impl FromStr for ChallengeStatus {
             "3" | "unsolved" => Ok(Self::Unsolved),
             "4" | "partiallyunsolved" => Ok(Self::PartiallyUnsolved),
             "5" | "cancelled" => Ok(Self::Cancelled),
-            other => Err(Self::Err::CannotGetChallengeStatusFrom(other.to_string())),
+            other => Err(Self::Err::CannotGetChallengeStateFrom(other.to_string())),
         }
     }
 }
 
-impl fmt::Display for ChallengeStatus {
+impl fmt::Display for ChallengeState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match self {
             Self::Null => "null",
@@ -121,7 +121,7 @@ mod tests {
     #[test]
     fn should_make_u8_round_trip() {
         let n = 2u8;
-        let status = ChallengeStatus::try_from(n).unwrap();
+        let status = ChallengeState::try_from(n).unwrap();
         let r: u8 = status.into();
         assert_eq!(n, r);
     }
@@ -129,7 +129,7 @@ mod tests {
     #[test]
     fn should_make_str_round_trip() {
         let s = "2";
-        let status = ChallengeStatus::from_str(s).unwrap();
+        let status = ChallengeState::from_str(s).unwrap();
         let r = status.to_string();
         let expected_r = "solved";
         assert_eq!(r, expected_r);
