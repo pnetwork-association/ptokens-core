@@ -40,6 +40,10 @@ async fn main_loop(
     let sleep_duration = batch.get_sleep_duration();
 
     let latest_block_numbers = 'latest_block_getter_loop: loop {
+        if !core_is_connected {
+            return Err(SentinelError::NoCore);
+        };
+
         // NOTE: Get the core's latest block numbers for this chain
         let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetLatestBlockNumbers(vec![*batch.mcid()]));
         websocket_tx.send(msg).await?;
@@ -66,6 +70,10 @@ async fn main_loop(
     batch.set_block_num(latest_block_numbers.get_for(batch.mcid())? + 1);
 
     'main_loop: loop {
+        if !core_is_connected {
+            return Err(SentinelError::NoCore);
+        };
+
         let (msg, rx) = EthRpcMessages::get_sub_mat_msg(side, batch.get_block_num());
         eth_rpc_tx.send(msg).await?;
         match rx.await? {
@@ -234,6 +242,10 @@ pub async fn syncer_loop(
                         warn!("{name} timedout: {e}, restarting {name} now...");
                         continue 'syncer_loop
                     },
+                    Err(SentinelError::NoCore) => {
+                        warn!("core disconnected in {name}, restarting now...");
+                        continue 'syncer_loop
+                    }
                     Err(e) => {
                         warn!("{name} errored: {e}");
                         break 'syncer_loop Err(e)
