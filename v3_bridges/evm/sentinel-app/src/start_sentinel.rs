@@ -124,6 +124,7 @@ pub async fn start_sentinel(
         broadcast_channel_tx.clone(),
         user_op_canceller_tx.clone(),
         status_tx.clone(),
+        challenge_responder_tx.clone(),
     ));
 
     let ws_server_thread = tokio::spawn(ws_server_loop(

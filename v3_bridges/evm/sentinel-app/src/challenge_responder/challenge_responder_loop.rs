@@ -95,13 +95,13 @@ pub async fn challenge_responder_loop(
     let mut core_is_connected = false;
     let mut challenge_responder_is_enabled = true;
     let core_timeout = *config.core().timeout(); // TODO Make updateable via rpc call
-    let mut challenge_response_frequency = *config.core().challenge_response_frequency();
+    let mut frequency = *config.core().challenge_response_frequency();
 
     'challenge_response_loop: loop {
         tokio::select! {
             /*
             r = respond_to_challenges_loop(
-                    &challenge_response_frequency,
+                    &frequency,
                     challenge_responder_tx.clone(),
                     &core_is_connected,
                     &challenge_responder_is_enabled,
@@ -139,7 +139,7 @@ pub async fn challenge_responder_loop(
                     }
                 },
                 Some(ChallengeResponderMessages::SetChallengeResponseFrequency(new_frequency)) => {
-                    challenge_response_frequency = new_frequency;
+                    frequency = new_frequency;
                     info!("updated challenge responding frequency to {new_frequency}");
                     continue 'challenge_response_loop
                 },

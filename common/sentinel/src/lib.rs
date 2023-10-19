@@ -21,6 +21,7 @@ mod network_id;
 mod processor;
 mod processor_output;
 mod registration;
+mod sanity_check_frequency;
 mod side;
 mod status;
 mod test_utils;
@@ -96,8 +97,9 @@ pub use self::{
     processor::{process_batch, reset_chain},
     processor_output::ProcessorOutput,
     registration::get_registration_signature,
+    sanity_check_frequency::sanity_check_frequency,
     side::Side,
-    status::{SentinelStatus, SentinelStatusError, MAX_STATUS_PUBLISHING_FREQENCY, MIN_STATUS_PUBLISHING_FREQENCY},
+    status::{SentinelStatus, SentinelStatusError},
     user_ops::{
         UserOp,
         UserOpCancellationSignature,

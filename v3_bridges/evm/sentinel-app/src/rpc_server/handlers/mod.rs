@@ -19,6 +19,7 @@ mod handle_process_block;
 mod handle_remove_challenge;
 mod handle_remove_user_op;
 mod handle_reset_chain;
+mod handle_set_challenge_responder_frequency;
 mod handle_set_status_publishing_frequency;
 mod handle_status_publisher_start_stop;
 mod handle_sync_state;

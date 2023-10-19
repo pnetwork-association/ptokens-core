@@ -31,9 +31,6 @@ use crate::{get_utc_timestamp, NetworkId, SentinelError, WebSocketMessagesEncoda
 }
  */
 
-pub const MIN_STATUS_PUBLISHING_FREQENCY: u64 = 15;
-pub const MAX_STATUS_PUBLISHING_FREQENCY: u64 = 60 * 10;
-
 #[derive(BuildDateTime, BuildInfo)]
 struct GitCommitHashStruct;
 
@@ -47,9 +44,6 @@ pub enum SentinelStatusError {
 
     #[error("sentinel status serde json error: {0}")]
     SerdeJson(#[from] serde_json::Error),
-
-    #[error("invalid publishing frequency {0} - must be between {MIN_STATUS_PUBLISHING_FREQENCY} & {MAX_STATUS_PUBLISHING_FREQENCY}")]
-    InvalidPublishingFrequency(u64),
 
     #[error("cannot convert from: '{from}' to: 'SentinelStatus'")]
     CannotConvert { from: String },

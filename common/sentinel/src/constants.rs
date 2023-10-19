@@ -1,4 +1,6 @@
 pub const HEX_RADIX: u32 = 16;
+pub const MIN_FREQUENCY: u64 = 15;
+pub const MAX_FREQUENCY: u64 = 60 * 10;
 pub const DEFAULT_SLEEP_TIME: u64 = 15_000;
 pub const MILLISECONDS_MULTIPLIER: u64 = 1000;
 

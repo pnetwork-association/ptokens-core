@@ -22,6 +22,9 @@ impl From<SentinelError> for CommonError {
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("invalid frequency {frequency} - must be between {min} & {max}")]
+    InvalidFrequency { min: u64, max: u64, frequency: u64 },
+
     #[error("{0}")]
     Challenges(#[from] crate::ChallengesError),
 

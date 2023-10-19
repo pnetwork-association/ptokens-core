@@ -14,6 +14,7 @@ use super::type_aliases::{RpcId, RpcParams};
 use crate::type_aliases::{
     BroadcastChannelRx,
     BroadcastChannelTx,
+    ChallengeResponderTx,
     CoreCxnStatus,
     EthRpcTx,
     StatusPublisherTx,
@@ -77,8 +78,9 @@ pub(crate) enum RpcCall {
     LatestBlockNumbers(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     SetStatusPublishingFrequency(RpcId, RpcParams, StatusPublisherTx),
     GetCancellableUserOps(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
-    UserOpCancellerStartStop(RpcId, BroadcastChannelTx, CoreCxnStatus, bool),
+    SetChallengeResponderFrequency(RpcId, RpcParams, ChallengeResponderTx),
     GetRegistrationSignature(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
+    UserOpCancellerStartStop(RpcId, BroadcastChannelTx, CoreCxnStatus, bool),
     Init(
         RpcId,
         Box<SentinelConfig>,
@@ -136,6 +138,7 @@ impl RpcCall {
         user_op_canceller_tx: UserOpCancellerTx,
         broadcast_channel_tx: BroadcastChannelTx,
         status_tx: StatusPublisherTx,
+        challenge_responder_tx: ChallengeResponderTx,
         core_cxn: bool,
     ) -> Self {
         match r.method.as_ref() {
@@ -159,6 +162,9 @@ impl RpcCall {
             "getChallengesList" | "getChallengeList" => Self::GetChallengesList(r.id, websocket_tx, core_cxn),
             "setStatusPublishingFrequency" => Self::SetStatusPublishingFrequency(r.id, r.params.clone(), status_tx),
             "removeChallenge" | "rmChallenge" => Self::RemoveChallenge(r.id, websocket_tx, r.params.clone(), core_cxn),
+            "setChallengeResponderFrequency" => {
+                Self::SetChallengeResponderFrequency(r.id, r.params.clone(), challenge_responder_tx)
+            },
             "stopUserOpCanceller" | "stopCanceller" => {
                 Self::UserOpCancellerStartStop(r.id, broadcast_channel_tx, core_cxn, false)
             },
@@ -262,6 +268,11 @@ impl RpcCall {
         match self {
             Self::SetStatusPublishingFrequency(id, status_tx, params) => {
                 let result = Self::handle_set_status_publishing_frequency(status_tx, params).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
+            Self::SetChallengeResponderFrequency(id, challenge_tx, params) => {
+                let result = Self::handle_set_challenge_responder_frequency(challenge_tx, params).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
@@ -446,6 +457,7 @@ async fn start_rpc_server(
     core_cxn: bool,
     user_op_canceller_tx: UserOpCancellerTx,
     status_tx: StatusPublisherTx,
+    challenge_responder_tx: ChallengeResponderTx,
 ) -> Result<(), SentinelError> {
     debug!("rpc server listening!");
     let core_cxn_filter = warp::any().map(move || core_cxn);
@@ -455,6 +467,7 @@ async fn start_rpc_server(
     let broadcaster_tx_filter = warp::any().map(move || user_op_canceller_tx.clone());
     let native_eth_rpc_tx_filter = warp::any().map(move || native_eth_rpc_tx.clone());
     let broadcast_channel_tx_filter = warp::any().map(move || broadcast_channel_tx.clone());
+    let challenge_responder_tx_filter = warp::any().map(move || challenge_responder_tx.clone());
 
     let rpc = warp::path("v1")
         .and(warp::path("rpc"))
@@ -469,6 +482,7 @@ async fn start_rpc_server(
         .and(broadcaster_tx_filter.clone())
         .and(broadcast_channel_tx_filter.clone())
         .and(status_tx_filter.clone())
+        .and(challenge_responder_tx_filter.clone())
         .and(core_cxn_filter)
         .map(RpcCall::new)
         .and_then(|r: RpcCall| async move { r.handle().await });
@@ -494,7 +508,6 @@ async fn broadcast_channel_loop(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub async fn rpc_server_loop(
     host_eth_rpc_tx: EthRpcTx,
     native_eth_rpc_tx: EthRpcTx,
@@ -504,6 +517,7 @@ pub async fn rpc_server_loop(
     broadcast_channel_tx: BroadcastChannelTx,
     user_op_canceller_tx: UserOpCancellerTx,
     status_tx: StatusPublisherTx,
+    challenge_responder_tx: ChallengeResponderTx,
 ) -> Result<(), SentinelError> {
     let rpc_server_is_enabled = !disable;
     let name = "rpc server";
@@ -537,6 +551,7 @@ pub async fn rpc_server_loop(
                 core_connection_status,
                 user_op_canceller_tx.clone(),
                 status_tx.clone(),
+                challenge_responder_tx.clone(),
             ), if rpc_server_is_enabled => {
                 if r.is_ok() {
                     warn!("{name} returned, restarting {name} now...");
