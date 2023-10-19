@@ -5,14 +5,14 @@ use serde_json::json;
 
 use crate::android::State;
 
-pub fn get_registration_signature(a: EthAddress, state: State) -> Result<State, SentinelError> {
+pub fn get_registration_signature(a: EthAddress, n: u64, state: State) -> Result<State, SentinelError> {
     let owner = format!("0x{}", hex::encode(a));
     debug!("handling `GetRegistationSignature` for owner address {owner} in strongbox...");
     let chain_db_utils = ChainDbUtils::new(state.db());
     let pk = chain_db_utils.get_pk()?;
-    let sig = get_reg_sig(&a, &pk)?;
+    let sig = get_reg_sig(&a, n, &pk)?;
     let signer = format!("0x{}", hex::encode(pk.to_address()));
-    let json = json!({ "signer": signer, "owner": owner, "signature": format!("0x{sig}") });
+    let json = json!({ "signer": signer, "owner": owner, "nonce": n, "signature": format!("0x{sig}") });
     let r = WebSocketMessagesEncodable::Success(json);
     Ok(state.add_response(r))
 }

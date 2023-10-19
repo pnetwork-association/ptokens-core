@@ -16,7 +16,7 @@ impl RpcCall {
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
         Self::check_core_is_connected(core_cxn)?;
 
-        let n = 1;
+        let n = 2;
         let l = params.len();
         if l < n {
             return Err(WebSocketMessagesError::NotEnoughArgs {
@@ -28,9 +28,12 @@ impl RpcCall {
         }
 
         let owner_address = convert_hex_to_eth_address(&params[0])?;
-        debug!("owner address: {owner_address}");
+        let nonce = params[1].parse::<u64>()?;
 
-        let msg = WebSocketMessagesEncodable::GetRegistrationSignature(owner_address);
+        debug!("owner address: {owner_address}");
+        debug!("       inonce: {nonce}");
+
+        let msg = WebSocketMessagesEncodable::GetRegistrationSignature(owner_address, nonce);
 
         call_core(STRONGBOX_TIMEOUT_MS, websocket_tx.clone(), msg).await
     }
