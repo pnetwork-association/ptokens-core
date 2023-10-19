@@ -70,6 +70,7 @@ pub(crate) enum RpcCall {
     RemoveUserOp(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetChallenge(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetCoreState(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
+    ChallengeResponderStartStop(RpcId, BroadcastChannelTx, bool),
     RemoveChallenge(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
@@ -153,6 +154,8 @@ impl RpcCall {
             "getStatus" | "status" => Self::GetStatus(r.id, websocket_tx, r.params.clone(), core_cxn),
             "startSyncer" => Self::StartSyncer(r.id, broadcast_channel_tx, r.params.clone(), core_cxn),
             "cancel" | "cancelUserOp" => Self::CancelUserOps(r.id, user_op_canceller_tx.clone(), core_cxn),
+            "startChallengeResponder" => Self::ChallengeResponderStartStop(r.id, broadcast_channel_tx, true),
+            "stopChallengeResponder" => Self::ChallengeResponderStartStop(r.id, broadcast_channel_tx, false),
             "getChallengesList" | "getChallengeList" => Self::GetChallengesList(r.id, websocket_tx, core_cxn),
             "setStatusPublishingFrequency" => Self::SetStatusPublishingFrequency(r.id, r.params.clone(), status_tx),
             "removeChallenge" | "rmChallenge" => Self::RemoveChallenge(r.id, websocket_tx, r.params.clone(), core_cxn),
@@ -285,6 +288,11 @@ impl RpcCall {
             },
             Self::UserOpCancellerStartStop(id, broadcast_channel_tx, core_cxn, start) => {
                 let result = Self::handle_user_op_canceller_start_stop(broadcast_channel_tx, core_cxn, start).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
+            Self::ChallengeResponderStartStop(id, broadcast_channel_tx, start) => {
+                let result = Self::handle_challenge_responder_start_stop(broadcast_channel_tx, start).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
