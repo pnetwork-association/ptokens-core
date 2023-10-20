@@ -105,14 +105,16 @@ mod tests {
         let mut toml = BatchingToml::default();
         let batch_size = u64::MAX;
         toml.host_batch_size = batch_size;
-        let expected_error = SentinelConfigError::BatchSize {
-            size: batch_size,
-            min: 0,
-            max: 1000,
-        };
+        let expected_size = batch_size;
+        let expected_min = 0;
+        let expected_max = 1000;
         match BatchingConfig::from_toml(&toml) {
             Ok(_) => panic!("Should not have succeeded!"),
-            Err(SentinelError::SentinelConfig(e)) => assert_eq!(e, expected_error),
+            Err(SentinelError::SentinelConfig(SentinelConfigError::BatchSize { size, min, max })) => {
+                assert_eq!(min, expected_min);
+                assert_eq!(max, expected_max);
+                assert_eq!(size, expected_size);
+            },
             Err(error) => panic!("Wrong error received: {error}!"),
         }
     }
@@ -122,13 +124,14 @@ mod tests {
         let mut toml = BatchingToml::default();
         let duration = u64::MAX;
         toml.host_batch_duration = duration;
-        let expected_error = SentinelConfigError::BatchDuration {
-            size: duration,
-            max: 600,
-        };
+        let expected_size = duration;
+        let expected_max = 600;
         match BatchingConfig::from_toml(&toml) {
             Ok(_) => panic!("Should not have succeeded!"),
-            Err(SentinelError::SentinelConfig(e)) => assert_eq!(e, expected_error),
+            Err(SentinelError::SentinelConfig(SentinelConfigError::BatchDuration { max, size })) => {
+                assert_eq!(max, expected_max);
+                assert_eq!(size, expected_size);
+            },
             Err(error) => panic!("Wrong error received: {error}!"),
         }
     }

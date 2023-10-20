@@ -1,7 +1,4 @@
-use std::{result::Result, str::FromStr};
-
 use common::BridgeSide;
-use common_chain_ids::EthChainId;
 use common_eth::convert_hex_to_eth_address;
 use common_metadata::MetadataChainId;
 use derive_getters::Getters;
@@ -17,7 +14,6 @@ pub struct HostToml {
     gas_limit: usize,
     network_id: String,
     sleep_duration: u64,
-    eth_chain_id: String,
     pnetwork_hub: String,
     endpoints: Vec<String>,
     gas_price: Option<u64>,
@@ -33,7 +29,6 @@ pub struct HostConfig {
     endpoints: Endpoints,
     network_id: NetworkId,
     gas_price: Option<u64>,
-    eth_chain_id: EthChainId,
     pnetwork_hub: EthAddress,
     pre_filter_receipts: bool,
 }
@@ -50,14 +45,6 @@ impl HostConfig {
             network_id: NetworkId::try_from(&toml.network_id)?,
             pnetwork_hub: convert_hex_to_eth_address(&toml.pnetwork_hub)?,
             endpoints: Endpoints::new(sleep_duration, BridgeSide::Host, toml.endpoints.clone()),
-            eth_chain_id: match EthChainId::from_str(&toml.eth_chain_id) {
-                Ok(id) => id,
-                Err(e) => {
-                    warn!("Could not parse `eth_chain_id` from host config, defaulting to ETH mainnet!");
-                    warn!("{e}");
-                    EthChainId::Mainnet
-                },
-            },
         })
     }
 
@@ -67,10 +54,6 @@ impl HostConfig {
 
     pub fn get_sleep_duration(&self) -> u64 {
         self.sleep_duration
-    }
-
-    pub fn get_eth_chain_id(&self) -> EthChainId {
-        self.eth_chain_id.clone()
     }
 }
 
