@@ -22,7 +22,7 @@ pub fn process_batch(args: WebSocketMessagesProcessBatchArgs, state: State) -> R
         args.sub_mat_batch(),
         *args.validate(),
         *args.side(),
-        &network_id.to_bytes_4()?,
+        &network_id,
         *args.reprocess(),
         *args.dry_run(),
         *mcid,

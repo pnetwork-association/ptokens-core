@@ -1,11 +1,4 @@
-use common_eth::ChainDbUtils;
-use common_sentinel::{
-    ActorInclusionProof,
-    ChallengesList,
-    SentinelDbUtils,
-    SentinelError,
-    WebSocketMessagesEncodable,
-};
+use common_sentinel::{ChallengesList, SentinelDbUtils, SentinelError, WebSocketMessagesEncodable};
 use ethereum_types::H256 as EthHash;
 use serde_json::json;
 

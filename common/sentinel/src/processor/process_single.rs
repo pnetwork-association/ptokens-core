@@ -4,7 +4,7 @@ use common::{BridgeSide, DatabaseInterface};
 use common_eth::{Chain, ChainDbUtils, EthSubmissionMaterial};
 use ethereum_types::Address as EthAddress;
 
-use crate::{Bytes4, SentinelDbUtils, SentinelError, UserOpList, UserOps};
+use crate::{NetworkId, SentinelDbUtils, SentinelError, UserOpList, UserOps};
 
 pub(super) fn process_single<D: DatabaseInterface>(
     db: &D,
@@ -14,7 +14,7 @@ pub(super) fn process_single<D: DatabaseInterface>(
     _use_db_tx: bool,
     dry_run: bool,
     side: BridgeSide,
-    network_id: &Bytes4,
+    network_id: &NetworkId,
     reprocess: bool,
     chain: &mut Chain,
 ) -> Result<UserOps, SentinelError> {
@@ -61,7 +61,7 @@ pub(super) fn process_single<D: DatabaseInterface>(
         return Ok(UserOps::empty());
     }
 
-    let ops = UserOps::from_sub_mat(side, &network_id.to_vec(), pnetwork_hub, &canonical_sub_mat)?;
+    let ops = UserOps::from_sub_mat(side, network_id, pnetwork_hub, &canonical_sub_mat)?;
     debug!("found user ops: {ops}");
 
     let sentinel_db_utils = SentinelDbUtils::new(db);

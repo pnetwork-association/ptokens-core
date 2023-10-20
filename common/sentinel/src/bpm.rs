@@ -1,7 +1,7 @@
 use std::{convert::From, fmt};
 
 use bounded_vec_deque::BoundedVecDeque;
-use common_chain_ids::EthChainId;
+use common_metadata::MetadataChainId;
 use derive_more::Deref;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
@@ -16,7 +16,7 @@ const MAX_SIZE: usize = 5;
 pub struct Bpms(Vec<Bpm>);
 
 #[derive(Debug, Clone)]
-pub struct Bpm(EthChainId, BoundedVecDeque<BpmInfo>);
+pub struct Bpm(MetadataChainId, BoundedVecDeque<BpmInfo>);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BpmInfo(Timestamp, LatestBlockNum);
@@ -39,16 +39,16 @@ impl From<&ProcessorOutput> for BpmInfo {
 
 impl Default for Bpm {
     fn default() -> Self {
-        Self::new(EthChainId::default())
+        Self::new(MetadataChainId::default())
     }
 }
 
 impl Bpm {
-    pub fn cid(&self) -> EthChainId {
-        self.0.clone()
+    pub fn mcid(&self) -> MetadataChainId {
+        self.0
     }
 
-    pub fn new(cid: EthChainId) -> Self {
+    pub fn new(cid: MetadataChainId) -> Self {
         Self(cid, BoundedVecDeque::new(MAX_SIZE))
     }
 

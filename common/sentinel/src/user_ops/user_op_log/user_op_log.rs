@@ -4,14 +4,17 @@ use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
-use crate::user_ops::{
-    UserOpError,
-    UserOpProtocolLog,
-    UserSendLog,
-    CANCELLED_USER_OP_TOPIC,
-    ENQUEUED_USER_OP_TOPIC,
-    EXECUTED_USER_OP_TOPIC,
-    WITNESSED_USER_OP_TOPIC,
+use crate::{
+    user_ops::{
+        UserOpError,
+        UserOpProtocolLog,
+        UserSendLog,
+        CANCELLED_USER_OP_TOPIC,
+        ENQUEUED_USER_OP_TOPIC,
+        EXECUTED_USER_OP_TOPIC,
+        WITNESSED_USER_OP_TOPIC,
+    },
+    NetworkId,
 };
 
 // NOTE: So we have to parse a user op log from one of two types of logs. First there are logs
@@ -39,13 +42,10 @@ pub struct UserOpLog {
     pub(crate) network_fee_asset_amount: U256,
     pub(crate) forward_network_fee_asset_amount: U256,
     pub(crate) underlying_asset_token_address: EthAddress,
-    pub(crate) origin_network_id: Option<Bytes>,
-    #[serde_as(as = "serde_with::hex::Hex")]
-    pub(crate) destination_network_id: Bytes,
-    #[serde_as(as = "serde_with::hex::Hex")]
-    pub(crate) forward_destination_network_id: Bytes,
-    #[serde_as(as = "serde_with::hex::Hex")]
-    pub(crate) underlying_asset_network_id: Bytes,
+    pub(crate) origin_network_id: Option<NetworkId>,
+    pub(crate) destination_network_id: NetworkId,
+    pub(crate) forward_destination_network_id: NetworkId,
+    pub(crate) underlying_asset_network_id: NetworkId,
     pub(crate) origin_account: String,
     pub(crate) destination_account: String,
     pub(crate) underlying_asset_name: String,
@@ -64,12 +64,8 @@ impl Default for UserOpLog {
             nonce: U256::default(),
             is_for_protocol: false,
             asset_amount: U256::default(),
-            destination_network_id: vec![],
-            origin_network_id: Some(vec![]),
             options_mask: EthHash::default(),
             origin_account: String::default(),
-            underlying_asset_network_id: vec![],
-            forward_destination_network_id: vec![],
             destination_account: String::default(),
             underlying_asset_name: String::default(),
             origin_block_hash: Some(EthHash::zero()),
@@ -77,8 +73,12 @@ impl Default for UserOpLog {
             underlying_asset_decimals: U256::default(),
             underlying_asset_symbol: String::default(),
             protocol_fee_asset_amount: U256::default(),
+            destination_network_id: NetworkId::default(),
+            origin_network_id: Some(NetworkId::default()),
             origin_transaction_hash: Some(EthHash::zero()),
             forward_network_fee_asset_amount: U256::default(),
+            underlying_asset_network_id: NetworkId::default(),
+            forward_destination_network_id: NetworkId::default(),
             underlying_asset_token_address: EthAddress::default(),
         }
     }
@@ -89,7 +89,7 @@ impl UserOpLog {
         &mut self,
         origin_block_hash: EthHash,
         origin_transaction_hash: EthHash,
-        origin_network_id: Bytes,
+        origin_network_id: NetworkId,
     ) {
         // NOTE: A witnessed user op needs these fields from the block it was witnessed in. All
         // other states will include the full log, with these fields already included.
@@ -119,9 +119,8 @@ impl UserOpLog {
             .ok_or_else(|| UserOpError::MissingField("origin_transaction_hash".into()))
     }
 
-    pub fn origin_network_id(&self) -> Result<Bytes, UserOpError> {
+    pub fn origin_network_id(&self) -> Result<NetworkId, UserOpError> {
         self.origin_network_id
-            .clone()
             .ok_or_else(|| UserOpError::MissingField("origin_network_id".into()))
     }
 }

@@ -2,10 +2,9 @@
 use std::{fs::read_to_string, str::FromStr};
 
 use common::BridgeSide;
-use common_chain_ids::EthChainId;
 use common_eth::{convert_hex_to_eth_address, convert_hex_to_h256, EthSubmissionMaterial};
 
-use crate::{NetworkId, ProtocolId, UserOp, UserOps};
+use crate::{NetworkId, UserOp, UserOps};
 
 fn get_arbitrum_protocol_queue_operation_sub_mat() -> EthSubmissionMaterial {
     let path = "src/lib/eth_rpc_calls/test_utils/host-sub-mat-num-105419318.json";
@@ -14,12 +13,7 @@ fn get_arbitrum_protocol_queue_operation_sub_mat() -> EthSubmissionMaterial {
 
 pub fn get_arbitrum_protocol_queue_user_op() -> UserOp {
     let side = BridgeSide::Host;
-    let protocol_id = ProtocolId::Ethereum;
-    let origin_chain_id = EthChainId::XDaiMainnet;
-    let origin_network_id = NetworkId::new(origin_chain_id.to_u64(), protocol_id)
-        .to_bytes_4()
-        .unwrap()
-        .to_vec();
+    let origin_network_id = NetworkId::try_from("xdai").unwrap();
     let pnetwork_hub = convert_hex_to_eth_address("0xf84552a4B276B47718b8E25E8151eF749D64C4A6").unwrap();
     let ops = UserOps::from_sub_mat(
         side,

@@ -1,11 +1,12 @@
 use std::fmt;
 
-use common::{BridgeSide, Byte};
+use common::Byte;
 use derive_more::{Constructor, Deref};
 use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 
 use super::{UserOp, UserOpState};
+use crate::NetworkId;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default, PartialOrd, Deref, Constructor, Serialize, Deserialize)]
 pub struct UserOpFlag(Byte);
@@ -30,7 +31,7 @@ impl fmt::Display for UserOpFlag {
 impl From<&UserOp> for UserOpFlag {
     fn from(op: &UserOp) -> Self {
         let mut s = Self::default();
-        s.set_flag(&op.state());
+        s.set_flag(op.state());
         s
     }
 }
@@ -46,7 +47,7 @@ impl From<&UserOpState> for UserOpFlag {
 impl From<&UserOpFlag> for UserOpState {
     fn from(flag: &UserOpFlag) -> Self {
         let n: u8 = **flag;
-        let side = BridgeSide::default();
+        let nid = NetworkId::default();
         let zero_hash = EthHash::default();
 
         let max_witnessed: u8 = 0b0000_0001;
@@ -54,10 +55,10 @@ impl From<&UserOpFlag> for UserOpState {
         let max_executed: u8 = 0b0000_0111;
 
         match n {
-            _x if n <= max_witnessed => Self::Witnessed(side, zero_hash, <u64>::default()),
-            _x if n <= max_enqueued => Self::Enqueued(side, zero_hash, <u64>::default()),
-            _x if n <= max_executed => Self::Executed(side, zero_hash, <u64>::default()),
-            _ => Self::Cancelled(side, zero_hash, <u64>::default()),
+            _x if n <= max_witnessed => Self::Witnessed(nid, zero_hash, <u64>::default()),
+            _x if n <= max_enqueued => Self::Enqueued(nid, zero_hash, <u64>::default()),
+            _x if n <= max_executed => Self::Executed(nid, zero_hash, <u64>::default()),
+            _ => Self::Cancelled(nid, zero_hash, <u64>::default()),
         }
     }
 }
@@ -121,7 +122,6 @@ impl UserOpFlag {
 
 #[cfg(test)]
 mod tests {
-    use common::BridgeSide;
     use ethereum_types::H256 as EthHash;
     use strum::IntoEnumIterator;
 
@@ -158,10 +158,10 @@ mod tests {
     #[test]
     fn should_be_able_to_have_multiple_flag_set() {
         let mut user_op_flag = UserOpFlag::default();
-        let side = BridgeSide::Native;
+        let nid = NetworkId::default();
         let hash = EthHash::random();
-        let s1 = UserOpState::witnessed(side, hash);
-        let s2 = UserOpState::enqueued(side, hash);
+        let s1 = UserOpState::witnessed(nid, hash);
+        let s2 = UserOpState::enqueued(nid, hash);
         user_op_flag.set_flag(&s1);
         assert!(user_op_flag.is_set(&s1));
         user_op_flag.set_flag(&s2);

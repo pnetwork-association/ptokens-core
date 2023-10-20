@@ -6,7 +6,10 @@ use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use serde::{Deserialize, Serialize};
 
-use crate::user_ops::{UserOp, UserOpError};
+use crate::{
+    user_ops::{UserOp, UserOpError},
+    NetworkId,
+};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct UserOpProtocolLog {
@@ -20,10 +23,10 @@ pub struct UserOpProtocolLog {
     pub(super) network_fee_asset_amount: U256,
     pub(super) forward_network_fee_asset_amount: U256,
     pub(super) underlying_asset_token_address: EthAddress,
-    pub(super) origin_network_id: Bytes,
-    pub(super) destination_network_id: Bytes,
-    pub(super) forward_destination_network_id: Bytes,
-    pub(super) underlying_asset_network_id: Bytes,
+    pub(super) origin_network_id: NetworkId,
+    pub(super) destination_network_id: NetworkId,
+    pub(super) forward_destination_network_id: NetworkId,
+    pub(super) underlying_asset_network_id: NetworkId,
     pub(super) origin_account: String,
     pub(super) destination_account: String,
     pub(super) underlying_asset_name: String,
@@ -80,10 +83,10 @@ impl TryFrom<&EthLog> for UserOpProtocolLog {
         let network_fee_asset_amount = UserOp::get_u256_from_token(&tokens[7])?;
         let forward_network_fee_asset_amount = UserOp::get_u256_from_token(&tokens[8])?;
         let underlying_asset_token_address = UserOp::get_address_from_token(&tokens[9])?;
-        let origin_network_id = UserOp::get_fixed_bytes_from_token(&tokens[10])?;
-        let destination_network_id = UserOp::get_fixed_bytes_from_token(&tokens[11])?;
-        let forward_destination_network_id = UserOp::get_fixed_bytes_from_token(&tokens[12])?;
-        let underlying_asset_network_id = UserOp::get_fixed_bytes_from_token(&tokens[13])?;
+        let origin_network_id = NetworkId::try_from(&UserOp::get_fixed_bytes_from_token(&tokens[10])?)?;
+        let destination_network_id = NetworkId::try_from(&UserOp::get_fixed_bytes_from_token(&tokens[11])?)?;
+        let forward_destination_network_id = NetworkId::try_from(&UserOp::get_fixed_bytes_from_token(&tokens[12])?)?;
+        let underlying_asset_network_id = NetworkId::try_from(&UserOp::get_fixed_bytes_from_token(&tokens[13])?)?;
         let origin_account = UserOp::get_string_from_token(&tokens[14])?;
         let destination_account = UserOp::get_string_from_token(&tokens[15])?;
         let underlying_asset_name = UserOp::get_string_from_token(&tokens[16])?;
@@ -125,6 +128,7 @@ mod tests {
     fn should_parse_protocol_log_correctly() {
         let l = get_sample_log_with_protocol_queue();
         let r = UserOpProtocolLog::try_from(&l);
-        assert!(r.is_ok())
+        r.unwrap();
+        //assert!(r.is_ok());
     }
 }

@@ -95,7 +95,6 @@ mod tests {
 
     use common::BridgeSide;
     use common_eth::convert_hex_to_eth_address;
-    use common_metadata::MetadataChainId;
 
     use super::*;
     use crate::{
@@ -107,10 +106,10 @@ mod tests {
     fn should_get_user_op_cancellation_tx_correctly() {
         let side = BridgeSide::Host;
         let eth_chain_id = EthChainId::PolygonMainnet;
-        let origin_network_id = NetworkId::try_from(MetadataChainId::BscMainnet).unwrap();
+        let origin_network_id = NetworkId::try_from("binance").unwrap();
         let pnetwork_hub = convert_hex_to_eth_address("0xD2BAC275ffFdbDD23Ecea72f4B161b3aF90300A3").unwrap();
         let sub_mat = get_sub_mat_with_enqueued_user_op();
-        let ops = UserOps::from_sub_mat(side, &origin_network_id.to_bytes(), &pnetwork_hub, &sub_mat).unwrap();
+        let ops = UserOps::from_sub_mat(side, &origin_network_id, &pnetwork_hub, &sub_mat).unwrap();
         assert_eq!(ops.len(), 1);
         let op = ops[0].clone();
         let nonce = 0;

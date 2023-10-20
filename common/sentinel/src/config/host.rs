@@ -8,12 +8,14 @@ use derive_getters::Getters;
 use ethereum_types::Address as EthAddress;
 use serde::Deserialize;
 
-use crate::{config::ConfigT, constants::MILLISECONDS_MULTIPLIER, Endpoints, SentinelError};
+use super::SentinelConfigError;
+use crate::{config::ConfigT, constants::MILLISECONDS_MULTIPLIER, Endpoints, NetworkId, SentinelError};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct HostToml {
     validate: bool,
     gas_limit: usize,
+    network_id: String,
     sleep_duration: u64,
     eth_chain_id: String,
     pnetwork_hub: String,
@@ -29,6 +31,7 @@ pub struct HostConfig {
     sleep_duration: u64,
     #[getter(skip)]
     endpoints: Endpoints,
+    network_id: NetworkId,
     gas_price: Option<u64>,
     eth_chain_id: EthChainId,
     pnetwork_hub: EthAddress,
@@ -44,6 +47,7 @@ impl HostConfig {
             gas_price: toml.gas_price,
             gas_limit: toml.gas_limit,
             pre_filter_receipts: toml.pre_filter_receipts,
+            network_id: NetworkId::try_from(&toml.network_id)?,
             pnetwork_hub: convert_hex_to_eth_address(&toml.pnetwork_hub)?,
             endpoints: Endpoints::new(sleep_duration, BridgeSide::Host, toml.endpoints.clone()),
             eth_chain_id: match EthChainId::from_str(&toml.eth_chain_id) {
@@ -91,15 +95,11 @@ impl ConfigT for HostConfig {
         self.pnetwork_hub
     }
 
-    fn chain_id(&self) -> EthChainId {
-        self.eth_chain_id.clone()
+    fn metadata_chain_id(&self) -> Result<MetadataChainId, SentinelConfigError> {
+        Ok(MetadataChainId::try_from(self.network_id())?)
     }
 
-    fn metadata_chain_id(&self) -> MetadataChainId {
-        MetadataChainId::from(&self.chain_id())
-    }
-
-    fn mcid(&self) -> MetadataChainId {
+    fn mcid(&self) -> Result<MetadataChainId, SentinelConfigError> {
         self.metadata_chain_id()
     }
 

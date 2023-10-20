@@ -1,7 +1,6 @@
 use std::{result::Result, time::SystemTime};
 
 use common::BridgeSide;
-use common_chain_ids::EthChainId;
 use common_eth::{EthSubmissionMaterial, EthSubmissionMaterials};
 use common_metadata::MetadataChainId;
 use derive_getters::Getters;
@@ -87,7 +86,7 @@ impl Batch {
             Ok(ref o) => self.update_bpm(o),
             Err(e) => {
                 warn!("{err_msg}: {e}");
-                warn!("not updating {} syncer bpm", self.bpm.cid());
+                warn!("not updating {} syncer bpm", self.bpm.mcid());
             },
         }
     }
@@ -96,9 +95,9 @@ impl Batch {
         self.bpm.push(o)
     }
 
-    pub fn new(cid: EthChainId) -> Self {
+    pub fn new(mcid: MetadataChainId) -> Self {
         Self {
-            bpm: Bpm::new(cid),
+            bpm: Bpm::new(mcid),
             ..Default::default()
         }
     }
@@ -127,7 +126,7 @@ impl Batch {
         info!("getting {side} batch from config...");
         let is_native = side.is_native();
 
-        let mcid = MetadataChainId::from(&config.chain_id(&side));
+        let mcid = config.mcid(&side)?;
 
         let pre_filter_receipts: bool = if is_native {
             *config.native().pre_filter_receipts()
@@ -170,7 +169,7 @@ impl Batch {
             governance_address,
             pre_filter_receipts,
             receipt_filtering_addresses,
-            bpm: Bpm::new(config.chain_id(&side)),
+            bpm: Bpm::new(config.mcid(&side)?),
             batch_size: config.batching().get_batch_size(is_native),
             batch_duration: config.batching().get_batch_duration(is_native),
             ..Default::default()

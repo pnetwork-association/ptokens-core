@@ -22,9 +22,11 @@ use crate::{
         LogToml,
         NativeConfig,
         NativeToml,
+        SentinelConfigError,
         SentinelCoreConfig,
     },
     Endpoints,
+    NetworkId,
     SentinelError,
 };
 
@@ -106,11 +108,13 @@ impl SentinelConfig {
         }
     }
 
-    pub fn chain_id(&self, side: &BridgeSide) -> EthChainId {
-        if side.is_native() {
-            self.native.chain_id()
+    pub fn pnetwork_hub_from_network_id(&self, nid: &NetworkId) -> Result<EthAddress, SentinelConfigError> {
+        if self.native().network_id() == nid {
+            Ok(*self.native().pnetwork_hub())
+        } else if self.host().network_id() == nid {
+            Ok(*self.host().pnetwork_hub())
         } else {
-            self.host.chain_id()
+            Err(SentinelConfigError::NoConfig(*nid))
         }
     }
 
@@ -130,8 +134,16 @@ impl SentinelConfig {
         }
     }
 
-    pub fn mcids(&self) -> Vec<MetadataChainId> {
-        vec![self.native().mcid(), self.host.mcid()]
+    pub fn mcids(&self) -> Result<Vec<MetadataChainId>, SentinelConfigError> {
+        Ok(vec![self.native().mcid()?, self.host.mcid()?])
+    }
+
+    pub fn mcid(&self, side: &BridgeSide) -> Result<MetadataChainId, SentinelConfigError> {
+        if side.is_native() {
+            self.native().mcid()
+        } else {
+            self.host().mcid()
+        }
     }
 
     pub fn governance_address(&self, mcid: &MetadataChainId) -> Option<EthAddress> {
@@ -140,6 +152,31 @@ impl SentinelConfig {
             Some(*self.governance().governance_address())
         } else {
             None
+        }
+    }
+
+    pub fn network_id(&self, side: &BridgeSide) -> NetworkId {
+        if side.is_native() {
+            *self.native().network_id()
+        } else {
+            *self.host().network_id()
+        }
+    }
+
+    pub fn eth_chain_id(&self, side: &BridgeSide) -> Result<EthChainId, SentinelConfigError> {
+        Ok(EthChainId::try_from(&self.network_id(side))?)
+    }
+
+    pub fn eth_chain_id_from_network_id(&self, nid: &NetworkId) -> Result<EthChainId, SentinelConfigError> {
+        let n_network_id = self.native().network_id();
+        let h_network_id = self.host().network_id();
+
+        if n_network_id == nid {
+            Ok(EthChainId::try_from(n_network_id)?)
+        } else if h_network_id == nid {
+            Ok(EthChainId::try_from(h_network_id)?)
+        } else {
+            Err(SentinelConfigError::NoConfig(*nid))
         }
     }
 }

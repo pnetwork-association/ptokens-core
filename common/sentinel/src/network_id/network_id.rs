@@ -39,12 +39,72 @@ impl fmt::Display for Bytes4 {
     }
 }
 
+impl TryFrom<&NetworkId> for EthChainId {
+    type Error = NetworkIdError;
+
+    fn try_from(n: &NetworkId) -> Result<EthChainId, Self::Error> {
+        Ok(EthChainId::try_from(n.chain_id)?)
+    }
+}
+
+impl TryFrom<NetworkId> for EthChainId {
+    type Error = NetworkIdError;
+
+    fn try_from(n: NetworkId) -> Result<EthChainId, Self::Error> {
+        EthChainId::try_from(&n)
+    }
+}
+
 #[derive(Clone, Debug, Copy, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct NetworkId {
-    chain_id: u64,       // FIXME make this a u64, since that's how it's encoded
+    chain_id: u64,
     disambiguator: Byte, // NOTE: Can be rolled in case of collisions.
     protocol_id: ProtocolId,
     version: NetworkIdVersion,
+}
+
+impl TryFrom<Bytes> for NetworkId {
+    type Error = NetworkIdError;
+
+    fn try_from(bs: Bytes) -> Result<Self, Self::Error> {
+        Self::try_from(hex::encode(bs))
+    }
+}
+
+impl TryFrom<String> for NetworkId {
+    type Error = NetworkIdError;
+
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        Self::try_from(&s[..])
+    }
+}
+
+impl TryFrom<&String> for NetworkId {
+    type Error = NetworkIdError;
+
+    fn try_from(s: &String) -> Result<Self, Self::Error> {
+        Self::try_from(&s[..])
+    }
+}
+
+impl TryFrom<&str> for NetworkId {
+    type Error = NetworkIdError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        match s.to_lowercase().as_ref() {
+            "gor" | "goerli" | "0xb9286154" | "b9286154" => Ok(Self::new_v1_for_evm(EthChainId::Goerli)),
+            "sep" | "sepolia" | "0xe15503e4" | "e15503e4" => Ok(Self::new_v1_for_evm(EthChainId::Sepolia)),
+            "eth" | "ethereum" | "0x60ef5904" | "60ef5904" => Ok(Self::new_v1_for_evm(EthChainId::Mainnet)),
+            "bsc" | "binance" | "0x5aca268b" | "5aca268b" => Ok(Self::new_v1_for_evm(EthChainId::BscMainnet)),
+            "int" | "interim" | "0x57791abb" | "57791abb" => Ok(Self::new_v1_for_evm(EthChainId::InterimChain)),
+            "fan" | "fantom" | "0x14ffc6a2" | "14ffc6a2" => Ok(Self::new_v1_for_evm(EthChainId::FantomMainnet)),
+            "pol" | "polygon" | "0xf9b459a1" | "f9b459a1" => Ok(Self::new_v1_for_evm(EthChainId::PolygonMainnet)),
+            "arb" | "arbitrum" | "0xfc8ebb2b" | "fc8ebb2b" => Ok(Self::new_v1_for_evm(EthChainId::ArbitrumMainnet)),
+            "lux" | "luxochain" | "0x58920253" | "58920253" => Ok(Self::new_v1_for_evm(EthChainId::LuxochainMainnet)),
+            "gno" | "gnosis" | "xdai" | "0xd41b1c5b" | "d41b1c5b" => Ok(Self::new_v1_for_evm(EthChainId::XDaiMainnet)),
+            other => Err(NetworkIdError::InvalidNetworkId(other.to_string())),
+        }
+    }
 }
 
 impl NetworkId {
@@ -99,14 +159,6 @@ impl TryFrom<&Vec<u8>> for NetworkId {
     }
 }
 
-impl TryFrom<Vec<u8>> for NetworkId {
-    type Error = NetworkIdError;
-
-    fn try_from(bs: Vec<u8>) -> Result<Self, Self::Error> {
-        Self::from_str(&hex::encode(bs))
-    }
-}
-
 impl TryFrom<&[u8]> for NetworkId {
     type Error = NetworkIdError;
 
@@ -119,11 +171,7 @@ impl FromStr for NetworkId {
     type Err = NetworkIdError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_ref() {
-            "0xf9b459a1" | "f9b459a1" | "polygon" | "matic" => Ok(Self::new_v1_for_evm(EthChainId::PolygonMainnet)),
-            // TODO others!
-            other => Err(NetworkIdError::InvalidNetworkId(other.to_string())),
-        }
+        Self::try_from(s)
     }
 }
 
@@ -205,7 +253,7 @@ impl TryFrom<&NetworkId> for MetadataChainId {
 
     fn try_from(m: &NetworkId) -> Result<MetadataChainId, Self::Error> {
         let err = NetworkIdError::CannotConvert {
-            from: m.clone(),
+            from: *m,
             to: "MetadataChainId".to_string(),
         };
         if let Ok(ecid) = EthChainId::try_from(m.chain_id) {

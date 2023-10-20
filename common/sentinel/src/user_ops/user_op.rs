@@ -3,14 +3,14 @@ use std::{convert::TryFrom, fmt};
 use common::{BridgeSide, Byte, Bytes, MIN_DATA_SENSITIVITY_LEVEL};
 use common_eth::EthLog;
 use common_metadata::MetadataChainId;
+use derive_getters::Getters;
 use ethabi::{encode as eth_abi_encode, Token as EthAbiToken};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use serde::{Deserialize, Serialize};
-use serde_with::serde_as;
 use sha2::{Digest, Sha256};
 
 use super::{UserOpError, UserOpFlag, UserOpLog, UserOpState};
-use crate::{NetworkId, DbKey, DbUtilsT, SentinelError};
+use crate::{DbKey, DbUtilsT, NetworkId, SentinelError};
 
 impl DbUtilsT for UserOp {
     fn key(&self) -> Result<DbKey, SentinelError> {
@@ -33,19 +33,19 @@ impl UserOp {
     }
 }
 
-#[serde_as]
-#[derive(Clone, Debug, Default, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Eq, Serialize, Deserialize, Getters)]
 pub struct UserOp {
+    #[getter(skip)]
     pub(super) uid: EthHash,
     pub(super) tx_hash: EthHash,
+    pub(super) asset_amount: u64,
     pub(super) state: UserOpState,
     pub(super) block_hash: EthHash,
     pub(super) block_timestamp: u64,
     pub(super) user_op_log: UserOpLog,
     pub(super) bridge_side: BridgeSide,
-    #[serde_as(as = "serde_with::hex::Hex")]
-    pub(super) origin_network_id: Bytes,
     pub(super) witnessed_timestamp: u64,
+    pub(super) origin_network_id: NetworkId,
     pub(super) previous_states: Vec<UserOpState>,
 }
 
@@ -57,12 +57,8 @@ impl PartialEq for UserOp {
 }
 
 impl UserOp {
-    pub fn origin_network_id(&self) -> Result<NetworkId, UserOpError> {
-        Ok(NetworkId::try_from(&self.origin_network_id)?)
-    }
-
     pub fn origin_mcid(&self) -> Result<MetadataChainId, UserOpError> {
-        Ok(MetadataChainId::try_from(self.origin_network_id()?)?)
+        Ok(MetadataChainId::try_from(self.origin_network_id())?)
     }
 
     pub fn enqueued_timestamp(&self) -> Result<u64, UserOpError> {
@@ -99,17 +95,20 @@ impl UserOp {
         self.into()
     }
 
-    pub fn origin_side(&self) -> BridgeSide {
-        // NOTE: This depends entirely on which side of the bridge sees the user op first, since
-        // that's not guaranteed to be either or.
+    pub fn origin_nid(&self) -> Result<NetworkId, UserOpError> {
         match self.state {
-            UserOpState::Witnessed(side, ..) => side,
-            _ => self.state.side().opposite(),
+            UserOpState::Witnessed(nid, ..) => Ok(nid),
+            _ => Err(UserOpError::NotWitnessed(Box::new(self.clone()))),
         }
     }
 
-    pub fn destination_side(&self) -> BridgeSide {
-        self.origin_side().opposite()
+    pub fn destination_nid(&self) -> Result<NetworkId, UserOpError> {
+        match self.state {
+            UserOpState::Enqueued(nid, ..) | UserOpState::Executed(nid, ..) | UserOpState::Cancelled(nid, ..) => {
+                Ok(nid)
+            },
+            _ => Err(UserOpError::DestinationUnknown(Box::new(self.clone()))),
+        }
     }
 
     pub fn from_log(
@@ -118,26 +117,28 @@ impl UserOp {
         block_timestamp: u64,
         block_hash: EthHash,
         tx_hash: EthHash,
-        origin_network_id: &[Byte],
+        origin_network_id: &NetworkId,
         log: &EthLog,
     ) -> Result<Self, UserOpError> {
         let mut user_op_log = UserOpLog::try_from(log)?;
 
+        let asset_amount = user_op_log.asset_amount.as_u64();
         // NOTE: A witnessed user op needs these fields from the block it was witnessed in. All
         // other states will include the full log, with these fields already included.
-        user_op_log.maybe_update_fields(block_hash, tx_hash, origin_network_id.to_vec());
+        user_op_log.maybe_update_fields(block_hash, tx_hash, *origin_network_id);
 
         let mut op = Self {
             tx_hash,
             block_hash,
             bridge_side,
             user_op_log,
+            asset_amount,
             block_timestamp,
             witnessed_timestamp,
             uid: EthHash::zero(),
             previous_states: vec![],
-            origin_network_id: origin_network_id.to_vec(),
-            state: UserOpState::try_from_log(bridge_side, tx_hash, log, block_timestamp)?,
+            origin_network_id: *origin_network_id,
+            state: UserOpState::try_from_log(*origin_network_id, tx_hash, log, block_timestamp)?,
         };
 
         let uid = op.uid()?;
@@ -193,23 +194,19 @@ impl UserOp {
         };
 
         if self_state >= other_state {
-            if !self.previous_states.contains(&other_state) {
+            if !self.previous_states.contains(other_state) {
                 info!("previous state ({other_state}) not seen before, saving it but not updating self");
-                self.previous_states.push(other_state);
+                self.previous_states.push(*other_state);
             } else {
                 info!("previous state ({other_state}) seen before, doing nothing");
             }
         } else {
             info!("state more advanced, updating self from {self_state} to {other_state}");
-            self.previous_states.push(self_state);
-            self.state = other_state;
+            self.previous_states.push(*self_state);
+            self.state = *other_state;
         };
 
         Ok(())
-    }
-
-    pub fn state(&self) -> UserOpState {
-        self.state
     }
 
     pub fn uid(&self) -> Result<EthHash, UserOpError> {
@@ -235,10 +232,10 @@ impl UserOp {
             EthAbiToken::Uint(self.user_op_log.network_fee_asset_amount),
             EthAbiToken::Uint(self.user_op_log.forward_network_fee_asset_amount),
             EthAbiToken::Address(self.user_op_log.underlying_asset_token_address),
-            EthAbiToken::FixedBytes(self.user_op_log.origin_network_id()?),
-            EthAbiToken::FixedBytes(self.user_op_log.destination_network_id.clone()),
-            EthAbiToken::FixedBytes(self.user_op_log.forward_destination_network_id.clone()),
-            EthAbiToken::FixedBytes(self.user_op_log.underlying_asset_network_id.clone()),
+            EthAbiToken::FixedBytes(self.user_op_log.origin_network_id()?.to_bytes_4()?.to_vec()),
+            EthAbiToken::FixedBytes(self.user_op_log.destination_network_id.to_bytes_4()?.to_vec()),
+            EthAbiToken::FixedBytes(self.user_op_log.forward_destination_network_id.to_bytes_4()?.to_vec()),
+            EthAbiToken::FixedBytes(self.user_op_log.underlying_asset_network_id.to_bytes_4()?.to_vec()),
             EthAbiToken::String(self.user_op_log.origin_account.clone()),
             EthAbiToken::String(self.user_op_log.destination_account.clone()),
             EthAbiToken::String(self.user_op_log.underlying_asset_name.clone()),
@@ -359,10 +356,10 @@ mod tests {
     #[test]
     fn should_get_user_op_from_user_send() {
         let side = BridgeSide::Native;
-        let origin_network_id = hex::decode("5aca268b").unwrap(); // NOTE Bsc
+        let origin_network_id = NetworkId::try_from("binance").unwrap();
         let pnetwork_hub = convert_hex_to_eth_address("0x22BeC08c2241Ef915ed72bd876F4e4Bc4336d055").unwrap();
         let sub_mat = get_sample_submission_material_with_user_send();
-        let ops = UserOps::from_sub_mat(side, &origin_network_id[..], &pnetwork_hub, &sub_mat).unwrap();
+        let ops = UserOps::from_sub_mat(side, &origin_network_id, &pnetwork_hub, &sub_mat).unwrap();
         assert_eq!(ops.len(), 1);
         println!("{}", ops[0]);
         let op = ops[0].clone();
@@ -378,9 +375,9 @@ mod tests {
     fn should_get_user_op_from_user_send_2() {
         let sub_mat = get_sample_submission_material_with_user_send_2();
         let side = BridgeSide::Native;
-        let origin_network_id = hex::decode("5aca268b").unwrap(); // NOTE Bsc
+        let origin_network_id = NetworkId::try_from("binance").unwrap();
         let pnetwork_hub = convert_hex_to_eth_address("0x02878021ba5472F7F1e2bfb223ee6cf4b1eadA07").unwrap();
-        let ops = UserOps::from_sub_mat(side, &origin_network_id[..], &pnetwork_hub, &sub_mat).unwrap();
+        let ops = UserOps::from_sub_mat(side, &origin_network_id, &pnetwork_hub, &sub_mat).unwrap();
         assert_eq!(ops.len(), 1);
         let op = ops[0].clone();
         let uid = op.uid_hex().unwrap();

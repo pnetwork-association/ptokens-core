@@ -6,7 +6,6 @@ use common_sentinel::{
     SentinelError,
     WebSocketMessagesEncodable,
 };
-use ethereum_types::H256 as EthHash;
 use serde_json::json;
 
 use crate::android::State;

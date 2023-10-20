@@ -15,7 +15,7 @@ use super::{
     EXECUTED_USER_OP_TOPIC,
     WITNESSED_USER_OP_TOPIC,
 };
-use crate::{get_utc_timestamp, SentinelError, WebSocketMessagesEncodable, WebSocketMessagesError};
+use crate::{get_utc_timestamp, NetworkId, SentinelError, WebSocketMessagesEncodable, WebSocketMessagesError};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Deref, Serialize, Deserialize)]
 pub struct UserOps(Vec<UserOp>);
@@ -47,7 +47,7 @@ impl UserOps {
 
     pub fn from_sub_mat(
         side: BridgeSide,
-        origin_network_id: &[Byte],
+        origin_nid: &NetworkId,
         pnetwork_hub: &EthAddress,
         sub_mat: &EthSubmissionMaterial,
     ) -> Result<Self, SentinelError> {
@@ -77,7 +77,7 @@ impl UserOps {
                                 block_timestamp,
                                 block_hash,
                                 tx_hash,
-                                origin_network_id,
+                                origin_nid,
                                 log,
                             )?;
                             user_ops.push(op);

@@ -7,7 +7,10 @@ use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use serde::{Deserialize, Serialize};
 
-use crate::user_ops::{UserOp, UserOpError};
+use crate::{
+    user_ops::{UserOp, UserOpError},
+    NetworkId,
+};
 
 // NOTE: See example here: https://bscscan.com/tx/0xeadd7dcd6beae94fceac5322937fb9994ee32e25cc12a54959eadc0d5b36e7ca#eventlog
 
@@ -16,19 +19,19 @@ pub struct UserSendLog {
     pub(crate) nonce: U256,
     pub(crate) origin_account: String,
     pub(crate) destination_account: String,
-    pub(crate) destination_network_id: Bytes,
+    pub(crate) destination_network_id: NetworkId,
     pub(crate) underlying_asset_name: String,
     pub(crate) underlying_asset_symbol: String,
     pub(crate) underlying_asset_decimals: U256,
     pub(crate) underlying_asset_token_address: EthAddress,
-    pub(crate) underlying_asset_network_id: Bytes,
+    pub(crate) underlying_asset_network_id: NetworkId,
     pub(crate) asset_token_address: EthAddress,
     pub(crate) asset_amount: U256,
     pub(crate) protocol_fee_asset_token_address: EthAddress,
     pub(crate) protocol_fee_asset_amount: U256,
     pub(crate) network_fee_asset_amount: U256,
     pub(crate) forward_network_fee_asset_amount: U256,
-    pub(crate) forward_destination_network_id: Bytes,
+    pub(crate) forward_destination_network_id: NetworkId,
     pub(crate) user_data: Bytes,
     pub(crate) options_mask: EthHash,
     pub(crate) is_for_protocol: bool,
@@ -70,19 +73,19 @@ impl TryFrom<&EthLog> for UserSendLog {
         let nonce = UserOp::get_u256_from_token(&tokens[0])?;
         let origin_account = UserOp::get_string_from_token(&tokens[1])?;
         let destination_account = UserOp::get_string_from_token(&tokens[2])?;
-        let destination_network_id = UserOp::get_fixed_bytes_from_token(&tokens[3])?;
+        let destination_network_id = NetworkId::try_from(UserOp::get_fixed_bytes_from_token(&tokens[3])?)?;
         let underlying_asset_name = UserOp::get_string_from_token(&tokens[4])?;
         let underlying_asset_symbol = UserOp::get_string_from_token(&tokens[5])?;
         let underlying_asset_decimals = UserOp::get_u256_from_token(&tokens[6])?;
         let underlying_asset_token_address = UserOp::get_address_from_token(&tokens[7])?;
-        let underlying_asset_network_id = UserOp::get_fixed_bytes_from_token(&tokens[8])?;
+        let underlying_asset_network_id = NetworkId::try_from(UserOp::get_fixed_bytes_from_token(&tokens[8])?)?;
         let asset_token_address = UserOp::get_address_from_token(&tokens[9])?;
         let asset_amount = UserOp::get_u256_from_token(&tokens[10])?;
         let protocol_fee_asset_token_address = UserOp::get_address_from_token(&tokens[11])?;
         let protocol_fee_asset_amount = UserOp::get_u256_from_token(&tokens[12])?;
         let network_fee_asset_amount = UserOp::get_u256_from_token(&tokens[13])?;
         let forward_network_fee_asset_amount = UserOp::get_u256_from_token(&tokens[14])?;
-        let forward_destination_network_id = UserOp::get_fixed_bytes_from_token(&tokens[15])?;
+        let forward_destination_network_id = NetworkId::try_from(UserOp::get_fixed_bytes_from_token(&tokens[15])?)?;
         let user_data = UserOp::get_bytes_from_token(&tokens[16])?;
         let options_mask = UserOp::get_eth_hash_from_token(&tokens[17])?;
         let is_for_protocol = UserOp::get_bool_from_token(&tokens[18])?;

@@ -7,6 +7,12 @@ use super::{UserOp, UserOpState};
 
 #[derive(Error, Debug)]
 pub enum UserOpError {
+    #[error("destination unknown for user op: {0}")]
+    DestinationUnknown(Box<UserOp>),
+
+    #[error("user op has not been witnessed")]
+    NotWitnessed(Box<UserOp>),
+
     #[error("user op network id error: {0}")]
     NetworkId(#[from] crate::NetworkIdError),
 
@@ -30,7 +36,10 @@ pub enum UserOpError {
     InsufficientBalance { have: U256, need: U256 },
 
     #[error("cannot update user op state from: '{from}' to {to}")]
-    CannotUpdate { from: UserOpState, to: UserOpState },
+    CannotUpdate {
+        from: Box<UserOpState>,
+        to: Box<UserOpState>,
+    },
 
     #[error("user op processing error: {0}")]
     Process(String),

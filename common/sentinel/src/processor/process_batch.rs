@@ -6,7 +6,7 @@ use common_metadata::MetadataChainId;
 use ethereum_types::Address as EthAddress;
 
 use super::{maybe_handle_actors_propagated_events, maybe_handle_challenge_pending_events, process_single};
-use crate::{Bytes4, ProcessorOutput, SentinelDbUtils, SentinelError, UserOps};
+use crate::{NetworkId, ProcessorOutput, SentinelDbUtils, SentinelError, UserOps};
 
 pub fn process_batch<D: DatabaseInterface>(
     db: &D,
@@ -14,7 +14,7 @@ pub fn process_batch<D: DatabaseInterface>(
     batch: &EthSubmissionMaterials,
     validate: bool,
     side: BridgeSide,
-    network_id: &Bytes4,
+    network_id: &NetworkId,
     reprocess: bool,
     dry_run: bool,
     mcid: MetadataChainId,

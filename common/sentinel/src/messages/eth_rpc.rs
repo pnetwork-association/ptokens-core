@@ -3,11 +3,11 @@ use common_eth::{DefaultBlockParameter, EthSubmissionMaterial, EthTransaction};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use tokio::sync::{oneshot, oneshot::Receiver};
 
-use crate::{Challenge, ChallengeState, Responder, SentinelError, UserOp, UserOpSmartContractState};
+use crate::{NetworkId, Challenge, ChallengeState, Responder, SentinelError, UserOp, UserOpSmartContractState};
 
 #[derive(Debug)]
 pub enum EthRpcMessages {
-    PushTx((EthTransaction, BridgeSide, Responder<EthHash>)),
+    PushTx((EthTransaction, NetworkId, Responder<EthHash>)),
     GetLatestBlockNum((BridgeSide, Responder<u64>)),
     GetNonce((BridgeSide, EthAddress, Responder<u64>)),
     EthCall((Bytes, BridgeSide, EthAddress, DefaultBlockParameter, Responder<Bytes>)),
@@ -62,9 +62,9 @@ impl EthRpcMessages {
         (Self::GetLatestBlockNum((side, tx)), rx)
     }
 
-    pub fn get_push_tx_msg(t: EthTransaction, s: BridgeSide) -> (Self, Receiver<Result<EthHash, SentinelError>>) {
+    pub fn get_push_tx_msg(t: EthTransaction, nid: NetworkId) -> (Self, Receiver<Result<EthHash, SentinelError>>) {
         let (tx, rx) = oneshot::channel();
-        (Self::PushTx((t, s, tx)), rx)
+        (Self::PushTx((t, nid, tx)), rx)
     }
 
     pub fn get_eth_call_msg(

@@ -1,21 +1,19 @@
-use std::{result::Result, str::FromStr};
-
 use common::BridgeSide;
-use common_chain_ids::EthChainId;
 use common_eth::convert_hex_to_eth_address;
 use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use ethereum_types::Address as EthAddress;
 use serde::Deserialize;
 
-use crate::{config::ConfigT, constants::MILLISECONDS_MULTIPLIER, Endpoints, SentinelError};
+use super::SentinelConfigError;
+use crate::{config::ConfigT, constants::MILLISECONDS_MULTIPLIER, Endpoints, NetworkId, SentinelError};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct NativeToml {
     validate: bool,
     gas_limit: usize,
+    network_id: String,
     sleep_duration: u64,
-    eth_chain_id: String,
     pnetwork_hub: String,
     endpoints: Vec<String>,
     gas_price: Option<u64>,
@@ -29,8 +27,8 @@ pub struct NativeConfig {
     sleep_duration: u64,
     #[getter(skip)]
     endpoints: Endpoints,
+    network_id: NetworkId,
     gas_price: Option<u64>,
-    eth_chain_id: EthChainId,
     pnetwork_hub: EthAddress,
     pre_filter_receipts: bool,
 }
@@ -44,16 +42,9 @@ impl NativeConfig {
             gas_price: toml.gas_price,
             gas_limit: toml.gas_limit,
             pre_filter_receipts: toml.pre_filter_receipts,
+            network_id: NetworkId::try_from(&toml.network_id)?,
             pnetwork_hub: convert_hex_to_eth_address(&toml.pnetwork_hub)?,
             endpoints: Endpoints::new(sleep_duration, BridgeSide::Native, toml.endpoints.clone()),
-            eth_chain_id: match EthChainId::from_str(&toml.eth_chain_id) {
-                Ok(id) => id,
-                Err(e) => {
-                    warn!("Could not parse `eth_chain_id` from native config, defaulting to ETH mainnet!");
-                    warn!("{e}");
-                    EthChainId::Mainnet
-                },
-            },
         })
     }
 
@@ -63,10 +54,6 @@ impl NativeConfig {
 
     pub fn get_sleep_duration(&self) -> u64 {
         self.sleep_duration
-    }
-
-    pub fn get_eth_chain_id(&self) -> EthChainId {
-        self.eth_chain_id.clone()
     }
 }
 
@@ -91,15 +78,11 @@ impl ConfigT for NativeConfig {
         self.pnetwork_hub
     }
 
-    fn chain_id(&self) -> EthChainId {
-        self.eth_chain_id.clone()
+    fn metadata_chain_id(&self) -> Result<MetadataChainId, SentinelConfigError> {
+        Ok(MetadataChainId::try_from(self.network_id())?)
     }
 
-    fn metadata_chain_id(&self) -> MetadataChainId {
-        MetadataChainId::from(&self.chain_id())
-    }
-
-    fn mcid(&self) -> MetadataChainId {
+    fn mcid(&self) -> Result<MetadataChainId, SentinelConfigError> {
         self.metadata_chain_id()
     }
 
