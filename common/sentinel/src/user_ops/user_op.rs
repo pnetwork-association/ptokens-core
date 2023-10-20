@@ -2,6 +2,7 @@ use std::{convert::TryFrom, fmt};
 
 use common::{BridgeSide, Byte, Bytes, MIN_DATA_SENSITIVITY_LEVEL};
 use common_eth::EthLog;
+use common_metadata::MetadataChainId;
 use ethabi::{encode as eth_abi_encode, Token as EthAbiToken};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use serde::{Deserialize, Serialize};
@@ -9,7 +10,7 @@ use serde_with::serde_as;
 use sha2::{Digest, Sha256};
 
 use super::{UserOpError, UserOpFlag, UserOpLog, UserOpState};
-use crate::{DbKey, DbUtilsT, SentinelError};
+use crate::{NetworkId, DbKey, DbUtilsT, SentinelError};
 
 impl DbUtilsT for UserOp {
     fn key(&self) -> Result<DbKey, SentinelError> {
@@ -56,6 +57,14 @@ impl PartialEq for UserOp {
 }
 
 impl UserOp {
+    pub fn origin_network_id(&self) -> Result<NetworkId, UserOpError> {
+        Ok(NetworkId::try_from(&self.origin_network_id)?)
+    }
+
+    pub fn origin_mcid(&self) -> Result<MetadataChainId, UserOpError> {
+        Ok(MetadataChainId::try_from(self.origin_network_id()?)?)
+    }
+
     pub fn enqueued_timestamp(&self) -> Result<u64, UserOpError> {
         let e = UserOpError::HasNotBeenEnqueued;
 
@@ -88,10 +97,6 @@ impl UserOp {
 
     pub fn to_flag(&self) -> UserOpFlag {
         self.into()
-    }
-
-    pub fn origin_network_id(&self) -> Bytes {
-        self.origin_network_id.clone()
     }
 
     pub fn origin_side(&self) -> BridgeSide {

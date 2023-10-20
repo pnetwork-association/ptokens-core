@@ -7,6 +7,9 @@ use super::{UserOp, UserOpState};
 
 #[derive(Error, Debug)]
 pub enum UserOpError {
+    #[error("user op network id error: {0}")]
+    NetworkId(#[from] crate::NetworkIdError),
+
     #[error("ethabi error: {0}")]
     EthAbi(#[from] ethabi::Error),
 
