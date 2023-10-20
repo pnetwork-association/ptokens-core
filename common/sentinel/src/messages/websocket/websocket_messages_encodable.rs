@@ -1,13 +1,13 @@
 use std::{fmt, str::FromStr};
 
 use base64::{engine::general_purpose, Engine};
-use common_metadata::MetadataChainId;
 use ethereum_types::{Address as EthAddress, H256 as EthHash};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 
 use super::WebSocketMessagesEncodableDbOps;
 use crate::{
+    NetworkId,
     SentinelError,
     UserOpUniqueId,
     WebSocketMessagesCancelUserOpArgs,
@@ -29,16 +29,16 @@ pub enum WebSocketMessagesEncodable {
     GetChallenge(EthHash),
     GetUnsolvedChallenges,
     RemoveChallenge(EthHash),
+    GetStatus(Vec<NetworkId>),
     GetUserOp(UserOpUniqueId),
+    GetCoreState(Vec<NetworkId>),
     RemoveUserOp(UserOpUniqueId),
     Error(WebSocketMessagesError),
-    GetStatus(Vec<MetadataChainId>),
-    GetCoreState(Vec<MetadataChainId>),
     SetChallengesToSolved(Vec<EthHash>),
+    GetLatestBlockNumbers(Vec<NetworkId>),
     DbOps(WebSocketMessagesEncodableDbOps),
     GetRegistrationSignature(EthAddress, u64),
     Initialize(Box<WebSocketMessagesInitArgs>),
-    GetLatestBlockNumbers(Vec<MetadataChainId>),
     ResetChain(Box<WebSocketMessagesResetChainArgs>),
     ProcessBatch(Box<WebSocketMessagesProcessBatchArgs>),
     GetCancellableUserOps(Box<WebSocketMessagesGetCancellableUserOpArgs>),

@@ -1,6 +1,6 @@
 use common::AppError as CommonError;
 use common_chain_ids::EthChainId;
-use common_metadata::{MetadataChainId, MetadataChainIdError};
+use common_metadata::MetadataChainIdError;
 use thiserror::Error;
 
 use crate::{
@@ -8,6 +8,7 @@ use crate::{
     ChallengeResponderMessages,
     DbKey,
     EthRpcMessages,
+    NetworkId,
     StatusPublisherMessages,
     SyncerMessages,
     UserOpCancellerMessages,
@@ -22,6 +23,9 @@ impl From<SentinelError> for CommonError {
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("no nonce for network id {0}")]
+    NoNonce(NetworkId),
+
     #[error("invalid frequency {frequency} - must be between {min} & {max}")]
     InvalidFrequency { min: u64, max: u64, frequency: u64 },
 
@@ -55,8 +59,8 @@ pub enum SentinelError {
     #[error("a java exception occurred and was handled - see core logs for details")]
     JavaExceptionOccurred,
 
-    #[error("no latest block number for chain ID: {0}")]
-    NoLatestBlockNumber(MetadataChainId),
+    #[error("no latest block number for network ID: {0}")]
+    NoLatestBlockNumber(NetworkId),
 
     #[error("timed out whilst {0}")]
     Timedout(String),
@@ -143,7 +147,7 @@ pub enum SentinelError {
     Time(#[from] std::time::SystemTimeError),
 
     #[error("batching error: {0}")]
-    Batching(#[from] crate::batching::Error),
+    Batching(#[from] crate::batching::BatchingError),
 
     #[error("parse int error {0}")]
     ParseInt(#[from] std::num::ParseIntError),

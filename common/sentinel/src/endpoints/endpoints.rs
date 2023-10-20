@@ -1,38 +1,34 @@
 use std::result::Result;
 
-use common::BridgeSide;
+use derive_getters::Getters;
 use jsonrpsee::ws_client::WsClient;
 
 use super::EndpointError;
-use crate::{get_rpc_client, SentinelConfigError, SentinelError};
+use crate::{get_rpc_client, NetworkId, SentinelConfigError, SentinelError};
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Getters)]
 pub struct Endpoints {
-    sleep_time: u64,
-    side: BridgeSide,
-    endpoints: Vec<String>,
     current: usize,
+    sleep_time: u64,
     rotations: usize,
+    network_id: NetworkId,
+    endpoints: Vec<String>,
 }
 
 impl Endpoints {
-    pub fn new(sleep_time: u64, side: BridgeSide, endpoints: Vec<String>) -> Self {
+    pub fn new(sleep_time: u64, network_id: NetworkId, endpoints: Vec<String>) -> Self {
         Self {
-            side,
             endpoints,
+            network_id,
             sleep_time,
             ..Default::default()
         }
     }
 
-    pub fn sleep_time(&self) -> u64 {
-        self.sleep_time
-    }
-
     fn get_first_endpoint(&self) -> Result<String, SentinelConfigError> {
-        info!("getting first {} endpoint...", self.side());
+        info!("getting first endpoint for network {}", self.network_id());
         if self.endpoints.is_empty() {
-            Err(SentinelConfigError::NoEndpoints(self.side))
+            Err(SentinelConfigError::NoEndpoints(self.network_id))
         } else {
             Ok(self.endpoints[0].clone())
         }
@@ -59,18 +55,18 @@ impl Endpoints {
         );
         if next == 0 {
             self.rotations += 1;
-            debug!("incrementing num rotations to {}", self.rotations);
+            debug!("incrementing num rotationsi to {}", self.rotations);
         }
-        warn!("on {} endpoint rotation #{}", self.side(), self.rotations);
+        warn!(
+            "on endpoint rotation #{} for network {}",
+            self.network_id(),
+            self.rotations
+        );
         self.current = next;
         Ok(())
     }
 
     pub fn is_empty(&self) -> bool {
         self.endpoints.is_empty()
-    }
-
-    pub fn side(&self) -> BridgeSide {
-        self.side
     }
 }

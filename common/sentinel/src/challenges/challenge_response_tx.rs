@@ -1,12 +1,11 @@
 use common::Bytes;
 use common_chain_ids::EthChainId;
 use common_eth::{encode_fxn_call, EthPrivateKey, EthTransaction};
-use common_metadata::MetadataChainId;
 use ethabi::Token as EthAbiToken;
 use ethereum_types::{Address as EthAddress, U256};
 
 use super::{Challenge, ChallengeResponseSignatureInfo, ChallengesError};
-use crate::ActorType;
+use crate::{ActorType, NetworkId};
 
 const RESPONSE_FXN_ABI: &str = "[{\"internalType\":\"enum IPNetworkHub.ActorTypes\",\"name\":\"actorType\",\"type\":\"uint8\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"name\":\"solveChallenge\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"]";
 
@@ -51,14 +50,14 @@ impl Challenge {
         nonce: u64,
         gas_price: u64,
         gas_limit: usize,
-        mcid: &MetadataChainId,
+        network_id: &NetworkId,
         pnetwork_hub: &EthAddress,
         broadcaster_pk: &EthPrivateKey,
         sig_info: &ChallengeResponseSignatureInfo,
     ) -> Result<EthTransaction, ChallengesError> {
         let value = 0;
+        let ecid = EthChainId::try_from(network_id)?;
         let data = self.encode_solve_challenge_fxn_data(sig_info)?;
-        let ecid: EthChainId = mcid.to_eth_chain_id()?;
         debug!("nonce: {nonce}");
         debug!("gas_price: {gas_price}");
         debug!("gas_limit: {gas_limit}");

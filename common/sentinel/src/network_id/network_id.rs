@@ -3,11 +3,10 @@ use std::{fmt, str::FromStr};
 use common::{Byte, Bytes};
 use common_chain_ids::EthChainId;
 use common_metadata::{MetadataChainId, MetadataChainIdError};
-use derive_more::{Constructor, Deref};
+use derive_more::Deref;
 use ethabi::{encode as ethabi_encode, Token};
 use ethereum_types::U256;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use sha2::{Digest, Sha256};
 
 use super::{NetworkIdError, NetworkIdVersion, ProtocolId};
@@ -196,6 +195,22 @@ impl fmt::Display for NetworkId {
         match self.to_bytes_4() {
             Err(e) => write!(f, "error converting network id to bytes: {e}"),
             Ok(b4) => {
+                let s = hex::encode(b4.to_vec());
+                let x = match s.to_lowercase().as_ref() {
+                    "b9286154" => "Goerli".to_string(),
+                    "e15503e4" => "Sepolia".to_string(),
+                    "60ef5904" => "EthMainnet".to_string(),
+                    "5aca268b" => "BscMainnet".to_string(),
+                    "57791abb" => "InterimChain".to_string(),
+                    "14ffc6a2" => "FantomMainnet".to_string(),
+                    "f9b459a1" => "PolygonMainnet".to_string(),
+                    "fc8ebb2b" => "ArbitrumMainnet".to_string(),
+                    "58920253" => "LuxochainMainnet".to_string(),
+                    "d41b1c5b" => "GnosisMainnet".to_string(),
+                    other => format!("unknown: {other}"),
+                };
+                write!(f, "{x}")
+                /*
                 #[derive(Clone, Debug, Serialize, Deserialize, Constructor)]
                 struct Temp {
                     bytes: String,
@@ -212,6 +227,7 @@ impl fmt::Display for NetworkId {
                     self.version,
                 );
                 write!(f, "{}", json!(t))
+                */
             },
         }
     }

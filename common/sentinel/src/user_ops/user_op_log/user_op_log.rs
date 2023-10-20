@@ -1,5 +1,6 @@
 use common::Bytes;
 use common_eth::EthLog;
+use derive_getters::Getters;
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
@@ -30,9 +31,11 @@ use crate::{
 // etc). This is enforced via `Result` usage in th main `UserOp` struct.
 
 #[serde_as]
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Getters)]
 pub struct UserOpLog {
+    #[getter(skip)]
     pub(crate) origin_block_hash: Option<EthHash>,
+    #[getter(skip)]
     pub(crate) origin_transaction_hash: Option<EthHash>,
     pub(crate) options_mask: EthHash,
     pub(crate) nonce: U256,
@@ -42,6 +45,7 @@ pub struct UserOpLog {
     pub(crate) network_fee_asset_amount: U256,
     pub(crate) forward_network_fee_asset_amount: U256,
     pub(crate) underlying_asset_token_address: EthAddress,
+    #[getter(skip)]
     pub(crate) origin_network_id: Option<NetworkId>,
     pub(crate) destination_network_id: NetworkId,
     pub(crate) forward_destination_network_id: NetworkId,

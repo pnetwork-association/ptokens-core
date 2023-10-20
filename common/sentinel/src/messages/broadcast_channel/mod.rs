@@ -4,12 +4,12 @@ mod status_publisher;
 mod syncer;
 mod user_op_canceller;
 
-use common_metadata::MetadataChainId;
+use crate::NetworkId;
 
 #[derive(Debug, Clone)]
 pub enum BroadcastChannelMessages {
     RpcServer(RpcServerBroadcastChannelMessages),
-    Syncer(MetadataChainId, SyncerBroadcastChannelMessages),
+    Syncer(NetworkId, SyncerBroadcastChannelMessages),
     StatusPublisher(StatusPublisherBroadcastChannelMessages),
     UserOpCanceller(UserOpCancellerBroadcastChannelMessages),
     ChallengeResponder(ChallengeResponderBroadcastChannelMessages),

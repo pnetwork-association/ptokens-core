@@ -102,13 +102,8 @@ impl UserOp {
         }
     }
 
-    pub fn destination_nid(&self) -> Result<NetworkId, UserOpError> {
-        match self.state {
-            UserOpState::Enqueued(nid, ..) | UserOpState::Executed(nid, ..) | UserOpState::Cancelled(nid, ..) => {
-                Ok(nid)
-            },
-            _ => Err(UserOpError::DestinationUnknown(Box::new(self.clone()))),
-        }
+    pub fn destination_network_id(&self) -> NetworkId {
+        *self.user_op_log().destination_network_id()
     }
 
     pub fn from_log(

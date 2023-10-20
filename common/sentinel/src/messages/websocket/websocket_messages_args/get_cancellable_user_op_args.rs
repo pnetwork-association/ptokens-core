@@ -1,16 +1,13 @@
-use std::str::FromStr;
-
-use common_metadata::MetadataChainId;
 use derive_getters::{Dissolve, Getters};
 use derive_more::Constructor;
 use serde::{Deserialize, Serialize};
 
-use crate::WebSocketMessagesError;
+use crate::{NetworkId, WebSocketMessagesError};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Getters, Dissolve, Constructor)]
 pub struct WebSocketMessagesGetCancellableUserOpArgs {
     max_delta: u64,
-    mcids: Vec<MetadataChainId>,
+    network_ids: Vec<NetworkId>,
 }
 
 // NOTE: Because these args are passed in via an RPC call
@@ -44,13 +41,13 @@ impl TryFrom<Vec<String>> for WebSocketMessagesGetCancellableUserOpArgs {
             });
         };
 
-        let mcids = args[1..]
+        let network_ids = args[1..]
             .iter()
             .map(|arg| {
-                MetadataChainId::from_str(arg).map_err(|_| WebSocketMessagesError::UnrecognizedChainId(arg.to_string()))
+                NetworkId::try_from(arg).map_err(|_| WebSocketMessagesError::UnrecognizedNetworkId(arg.to_string()))
             })
-            .collect::<Result<Vec<MetadataChainId>, WebSocketMessagesError>>()?;
+            .collect::<Result<Vec<NetworkId>, WebSocketMessagesError>>()?;
 
-        Ok(Self { max_delta, mcids })
+        Ok(Self { max_delta, network_ids })
     }
 }

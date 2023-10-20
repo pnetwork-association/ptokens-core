@@ -6,13 +6,13 @@ use crate::{get_latest_block_num, Endpoints, SentinelError};
 
 impl Endpoints {
     pub async fn check_endpoint(&self, time_limit_secs: u64) -> Result<(), SentinelError> {
-        let side = self.side();
+        let network_id = self.network_id();
         info!("checking endpoint is working using a {time_limit_secs}s time limit...");
         let ws_client = self.get_first_ws_client().await?;
         let sleep_time = self.sleep_time();
         match timeout(
             Duration::from_secs(time_limit_secs),
-            get_latest_block_num(&ws_client, sleep_time, side),
+            get_latest_block_num(&ws_client, *sleep_time, network_id),
         )
         .await
         {
@@ -21,7 +21,7 @@ impl Endpoints {
                 Ok(())
             },
             Err(e) => {
-                error!("{side} endpoint check failed");
+                error!("{network_id} endpoint check failed");
                 Err(SentinelError::from(e))
             },
         }

@@ -1,14 +1,13 @@
 use std::{result::Result, time::SystemTime};
 
-use common::BridgeSide;
 use common_eth::{EthSubmissionMaterial, EthSubmissionMaterials};
-use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use ethereum_types::{Address as EthAddress, U256};
 use jsonrpsee::ws_client::WsClient;
 use serde_json::Value as Json;
+use thiserror::Error;
 
-use crate::{endpoints::Endpoints, Bpm, ProcessorOutput, SentinelConfig, SentinelError};
+use crate::{endpoints::Endpoints, Bpm, NetworkId, ProcessorOutput, SentinelConfig, SentinelError};
 
 #[derive(Debug, Clone, Getters)]
 pub struct Batch {
@@ -16,11 +15,10 @@ pub struct Batch {
     confs: u64,
     block_num: u64,
     batch_size: u64,
-    side: BridgeSide,
     sleep_duration: u64,
     batch_duration: u64,
     endpoints: Endpoints,
-    mcid: MetadataChainId,
+    network_id: NetworkId,
     pnetwork_hub: EthAddress,
     pre_filter_receipts: bool,
     batching_is_disabled: bool,
@@ -42,11 +40,10 @@ impl Default for Batch {
             batch_duration: 5 * 60, // NOTE: 5mins
             governance_address: None,
             pre_filter_receipts: false,
-            side: BridgeSide::default(),
             batching_is_disabled: false,
             single_submissions_flag: false,
             endpoints: Endpoints::default(),
-            mcid: MetadataChainId::default(),
+            network_id: NetworkId::default(),
             pnetwork_hub: EthAddress::default(),
             receipt_filtering_addresses: vec![],
             batch: EthSubmissionMaterials::default(),
@@ -86,7 +83,7 @@ impl Batch {
             Ok(ref o) => self.update_bpm(o),
             Err(e) => {
                 warn!("{err_msg}: {e}");
-                warn!("not updating {} syncer bpm", self.bpm.mcid());
+                warn!("not updating syncer bpm for network {}", self.bpm.network_id());
             },
         }
     }
@@ -95,9 +92,9 @@ impl Batch {
         self.bpm.push(o)
     }
 
-    pub fn new(mcid: MetadataChainId) -> Self {
+    pub fn new(nid: NetworkId) -> Self {
         Self {
-            bpm: Bpm::new(mcid),
+            bpm: Bpm::new(nid),
             ..Default::default()
         }
     }
@@ -110,37 +107,18 @@ impl Batch {
         self.endpoints.get_first_ws_client().await
     }
 
-    pub fn is_native(&self) -> bool {
-        self.side.is_native()
-    }
-
-    pub fn is_host(&self) -> bool {
-        self.side.is_host()
-    }
-
     pub fn get_sleep_duration(&self) -> u64 {
         self.sleep_duration
     }
 
-    pub fn new_from_config(side: BridgeSide, config: &SentinelConfig) -> Result<Self, SentinelError> {
-        info!("getting {side} batch from config...");
-        let is_native = side.is_native();
+    pub fn new_from_config(network_id: NetworkId, config: &SentinelConfig) -> Result<Self, SentinelError> {
+        info!("getting batch from config...");
 
-        let mcid = config.mcid(&side)?;
+        let pre_filter_receipts = config.pre_filter_receipts(&network_id)?;
 
-        let pre_filter_receipts: bool = if is_native {
-            *config.native().pre_filter_receipts()
-        } else {
-            *config.host().pre_filter_receipts()
-        };
+        let pnetwork_hub = config.pnetwork_hub_from_network_id(&network_id)?;
 
-        let pnetwork_hub = if is_native {
-            *config.native().pnetwork_hub()
-        } else {
-            *config.host().pnetwork_hub()
-        };
-
-        let governance_address = config.governance_address(&mcid);
+        let governance_address = config.governance_address(&network_id);
 
         let receipt_filtering_addresses = if let Some(ref address) = governance_address {
             vec![*address, pnetwork_hub]
@@ -148,35 +126,26 @@ impl Batch {
             vec![pnetwork_hub]
         };
 
-        let sleep_duration = if is_native {
-            config.native().get_sleep_duration()
-        } else {
-            config.host().get_sleep_duration()
-        };
+        let sleep_duration = config.sleep_duration(&network_id)?;
 
-        let endpoints = if is_native {
-            config.native().endpoints()
-        } else {
-            config.host().endpoints()
-        };
+        let endpoints = config.endpoints(&network_id)?;
 
         let res = Self {
-            side,
-            mcid,
             endpoints,
+            network_id,
             pnetwork_hub,
             sleep_duration,
             governance_address,
             pre_filter_receipts,
+            bpm: Bpm::new(network_id),
             receipt_filtering_addresses,
-            bpm: Bpm::new(config.mcid(&side)?),
-            batch_size: config.batching().get_batch_size(is_native),
-            batch_duration: config.batching().get_batch_duration(is_native),
+            batch_size: config.batch_size(&network_id)?,
+            batch_duration: config.batch_duration(&network_id)?,
             ..Default::default()
         };
 
         if res.endpoints.is_empty() {
-            Err(SentinelError::Batching(Error::NoEndpoint(is_native)))
+            Err(SentinelError::Batching(BatchingError::NoEndpoint(network_id)))
         } else {
             Ok(res)
         }
@@ -246,10 +215,13 @@ impl Batch {
 
     pub fn is_ready_to_submit(&self) -> bool {
         if self.is_empty() {
-            info!("{} batch not ready to submit because it's empty", self.mcid());
+            info!("{} batch not ready to submit because it's empty", self.network_id());
             return false;
         } else if self.single_submissions_flag {
-            info!("{} batch set to single submission so it's ready to submit", self.mcid());
+            info!(
+                "{} batch set to single submission so it's ready to submit",
+                self.network_id()
+            );
             return true;
         }
 
@@ -258,7 +230,7 @@ impl Batch {
         if size >= size_limit {
             info!(
                 "{} batch has sufficient blocks to submit! (blocks: {size}, limit: {size_limit})",
-                self.mcid()
+                self.network_id()
             );
             return true;
         }
@@ -266,7 +238,10 @@ impl Batch {
         let time_limit = self.batch_duration;
         let time = self.get_seconds_since_last_submission();
         if time >= time_limit {
-            info!("{} batch ready to submit because enough time has elapsed", self.mcid());
+            info!(
+                "{} batch ready to submit because enough time has elapsed",
+                self.network_id()
+            );
             return true;
         }
 
@@ -274,7 +249,7 @@ impl Batch {
         let pct_time = (time as f64 / time_limit as f64) * 100_f64;
         info!(
             "{} batch not ready to submit yet! ({size} blocks, {pct_full:.2}% full, {pct_time:.2}% time)",
-            self.mcid()
+            self.network_id()
         );
         false
     }
@@ -284,24 +259,24 @@ impl Batch {
         if num_blocks_in_batch < 2 {
             info!(
                 "no need to check {} batch chaining - it contains too few blocks to matter!",
-                self.mcid()
+                self.network_id()
             );
             Ok(self)
         } else {
-            info!("checking {} batch is chained correctly...", self.mcid());
+            info!("checking {} batch is chained correctly...", self.network_id());
             let mut i = num_blocks_in_batch - 1;
             while i > 0 {
                 if self.batch[i].get_parent_hash()? != self.batch[i - 1].get_block_hash()? {
                     let n_1 = self.batch[i].get_block_number()?;
                     let n_2 = self.batch[i - 1].get_block_number()?;
-                    return Err(SentinelError::Batching(Error::UnchainedBlocks {
+                    return Err(SentinelError::Batching(BatchingError::UnchainedBlocks {
                         block_num: n_1,
                         parent_block_num: n_2,
                     }));
                 }
                 i -= 1;
             }
-            info!("{} batch is chained correctly", self.mcid());
+            info!("{} batch is chained correctly", self.network_id());
             Ok(self)
         }
     }
@@ -311,39 +286,13 @@ impl Batch {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum Error {
-    /// Two blocks in the batch whose parent_hash & hash do not match.
+#[derive(Error, Debug, PartialEq)]
+pub enum BatchingError {
+    #[error("blocks {parent_block_num} and {block_num} are not correctly chained")]
     UnchainedBlocks { block_num: U256, parent_block_num: U256 },
 
-    /// No endpoint error
-    NoEndpoint(bool),
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match *self {
-            Self::UnchainedBlocks {
-                block_num: ref b,
-                parent_block_num: ref p,
-            } => write!(f, "block num {b} is not chained correctly to {p}"),
-            Self::NoEndpoint(ref is_native) => write!(
-                f,
-                "cannot create {} sub mat batch - no endpoints!",
-                if is_native == &true { "native" } else { "host" },
-            ),
-        }
-    }
-}
-
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        use self::Error::*;
-
-        match self {
-            UnchainedBlocks { .. } | NoEndpoint(_) => None,
-        }
-    }
+    #[error("no endpoints for network {0}")]
+    NoEndpoint(NetworkId),
 }
 
 #[cfg(test)]
@@ -355,8 +304,8 @@ mod tests {
 
     #[test]
     fn should_enable_batching() {
-        let cid = EthChainId::Mainnet;
-        let mut batch = Batch::new(cid);
+        let nid = NetworkId::try_from("eth").unwrap();
+        let mut batch = Batch::new(nid);
         batch.disable_batching();
         assert!(!batch.batching_is_enabled());
         batch.enable_batching();
@@ -366,8 +315,8 @@ mod tests {
 
     #[test]
     fn should_disable_batching() {
-        let cid = EthChainId::Mainnet;
-        let mut batch = Batch::new(cid);
+        let nid = NetworkId::try_from("eth").unwrap();
+        let mut batch = Batch::new(nid);
         batch.disable_batching();
         let result = batch.batching_is_enabled();
         assert!(!result);
@@ -375,8 +324,8 @@ mod tests {
 
     #[test]
     fn should_set_time_of_last_submission() {
-        let cid = EthChainId::Mainnet;
-        let mut batch = Batch::new(cid);
+        let nid = NetworkId::try_from("eth").unwrap();
+        let mut batch = Batch::new(nid);
         let timestamp_before = batch.get_time_of_last_submission();
         batch.set_time_of_last_submission();
         let result = batch.get_time_of_last_submission();
@@ -385,8 +334,8 @@ mod tests {
 
     #[test]
     fn should_push_to_batch() {
-        let cid = EthChainId::Mainnet;
-        let mut batch = Batch::new(cid);
+        let nid = NetworkId::try_from("eth").unwrap();
+        let mut batch = Batch::new(nid);
         assert!(batch.is_empty());
         let sub_mat = EthSubmissionMaterial::default();
         batch.push(sub_mat);
@@ -395,8 +344,8 @@ mod tests {
 
     #[test]
     fn should_drain_batch() {
-        let cid = EthChainId::Mainnet;
-        let mut batch = Batch::new(cid);
+        let nid = NetworkId::try_from("eth").unwrap();
+        let mut batch = Batch::new(nid);
         let sub_mat = EthSubmissionMaterial::default();
         batch.push(sub_mat);
         assert!(!batch.is_empty());
@@ -406,8 +355,8 @@ mod tests {
 
     #[test]
     fn should_get_size_in_blocks_of_batch() {
-        let cid = EthChainId::Mainnet;
-        let mut batch = Batch::new(cid);
+        let nid = NetworkId::try_from("eth").unwrap();
+        let mut batch = Batch::new(nid);
         assert_eq!(batch.size_in_blocks(), 0);
         let sub_mat = EthSubmissionMaterial::default();
         batch.push(sub_mat);
@@ -496,15 +445,15 @@ mod tests {
 
     #[test]
     fn should_pass_is_chained_check_if_batch_is_empty() {
-        let cid = EthChainId::Mainnet;
-        let batch = Batch::new(cid);
+        let nid = NetworkId::try_from("eth").unwrap();
+        let batch = Batch::new(nid);
         assert!(batch.check_is_chained().is_ok())
     }
 
     #[test]
     fn should_pass_is_chained_check_if_batch_has_one_member() {
-        let cid = EthChainId::Mainnet;
-        let mut batch = Batch::new(cid);
+        let nid = NetworkId::try_from("eth").unwrap();
+        let mut batch = Batch::new(nid);
         let sub_mat = EthSubmissionMaterial::default();
         batch.push(sub_mat);
         assert_eq!(batch.size_in_blocks(), 1);
@@ -523,7 +472,7 @@ mod tests {
         batch.batch.swap(0, 1);
         let block_1_number = batch.batch[2].get_block_number().unwrap();
         let block_2_number = batch.batch[1].get_block_number().unwrap();
-        let expected_error = Error::UnchainedBlocks {
+        let expected_error = BatchingError::UnchainedBlocks {
             block_num: block_1_number,
             parent_block_num: block_2_number,
         };
@@ -549,27 +498,5 @@ mod tests {
         assert_eq!(batch.get_block_num(), 0);
         batch.increment_block_num();
         assert_eq!(batch.get_block_num(), 1);
-    }
-
-    #[test]
-    fn should_get_native_side_correctly() {
-        let batch = Batch {
-            side: BridgeSide::Native,
-            ..Default::default()
-        };
-        let expected_result = BridgeSide::Native;
-        let result = *batch.side();
-        assert_eq!(result, expected_result);
-    }
-
-    #[test]
-    fn should_get_host_side_correctly() {
-        let batch = Batch {
-            side: BridgeSide::Host,
-            ..Default::default()
-        };
-        let expected_result = BridgeSide::Host;
-        let result = *batch.side();
-        assert_eq!(result, expected_result);
     }
 }

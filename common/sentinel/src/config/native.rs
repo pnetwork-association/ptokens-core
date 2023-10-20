@@ -12,7 +12,9 @@ use crate::{config::ConfigT, constants::MILLISECONDS_MULTIPLIER, Endpoints, Netw
 pub struct NativeToml {
     validate: bool,
     gas_limit: usize,
+    batch_size: u64,
     network_id: String,
+    batch_duration: u64,
     sleep_duration: u64,
     pnetwork_hub: String,
     endpoints: Vec<String>,
@@ -23,7 +25,9 @@ pub struct NativeToml {
 #[derive(Debug, Clone, Default, Getters)]
 pub struct NativeConfig {
     validate: bool,
+    batch_size: u64,
     gas_limit: usize,
+    batch_duration: u64,
     sleep_duration: u64,
     #[getter(skip)]
     endpoints: Endpoints,
@@ -35,16 +39,20 @@ pub struct NativeConfig {
 
 impl NativeConfig {
     pub fn from_toml(toml: &NativeToml) -> Result<Self, SentinelError> {
-        let sleep_duration = toml.sleep_duration * MILLISECONDS_MULTIPLIER;
+        let network_id = NetworkId::try_from(&toml.network_id)?;
+        let sleep_duration = toml.sleep_duration * MILLISECONDS_MULTIPLIER; // FIXME Make this seconds
+        let endpoints = Endpoints::new(sleep_duration, network_id, toml.endpoints.clone());
         Ok(Self {
+            endpoints,
+            network_id,
             sleep_duration,
             validate: toml.validate,
             gas_price: toml.gas_price,
             gas_limit: toml.gas_limit,
             pre_filter_receipts: toml.pre_filter_receipts,
-            network_id: NetworkId::try_from(&toml.network_id)?,
+            batch_size: Self::sanity_check_batch_size(toml.batch_size)?,
             pnetwork_hub: convert_hex_to_eth_address(&toml.pnetwork_hub)?,
-            endpoints: Endpoints::new(sleep_duration, BridgeSide::Native, toml.endpoints.clone()),
+            batch_duration: Self::sanity_check_batch_duration(toml.batch_duration)?,
         })
     }
 
@@ -54,6 +62,36 @@ impl NativeConfig {
 
     pub fn get_sleep_duration(&self) -> u64 {
         self.sleep_duration
+    }
+
+    // FIXME rm this duplicate code from host and native when we drop those monikers entirely
+    fn sanity_check_batch_size(batch_size: u64) -> Result<u64, SentinelError> {
+        info!("Sanity checking batch size...");
+        const MIN: u64 = 0;
+        const MAX: u64 = 1000;
+        if batch_size > MIN && batch_size <= MAX {
+            Ok(batch_size)
+        } else {
+            Err(SentinelError::SentinelConfig(SentinelConfigError::BatchSize {
+                size: batch_size,
+                min: MIN,
+                max: MAX,
+            }))
+        }
+    }
+
+    fn sanity_check_batch_duration(batch_duration: u64) -> Result<u64, SentinelError> {
+        info!("Sanity checking batch duration...");
+        // NOTE: A batch duration of 0 means we submit material one at a time...
+        const MAX: u64 = 60 * 10; // NOTE: Ten mins
+        if batch_duration <= MAX {
+            Ok(batch_duration)
+        } else {
+            Err(SentinelError::SentinelConfig(SentinelConfigError::BatchDuration {
+                max: MAX,
+                size: batch_duration,
+            }))
+        }
     }
 }
 

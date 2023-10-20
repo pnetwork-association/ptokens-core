@@ -1,12 +1,11 @@
 use std::{convert::From, fmt};
 
 use bounded_vec_deque::BoundedVecDeque;
-use common_metadata::MetadataChainId;
 use derive_more::Deref;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 
-use crate::ProcessorOutput;
+use crate::{NetworkId, ProcessorOutput};
 
 type Timestamp = u64;
 type LatestBlockNum = u64;
@@ -16,7 +15,7 @@ const MAX_SIZE: usize = 5;
 pub struct Bpms(Vec<Bpm>);
 
 #[derive(Debug, Clone)]
-pub struct Bpm(MetadataChainId, BoundedVecDeque<BpmInfo>);
+pub struct Bpm(NetworkId, BoundedVecDeque<BpmInfo>);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BpmInfo(Timestamp, LatestBlockNum);
@@ -39,16 +38,16 @@ impl From<&ProcessorOutput> for BpmInfo {
 
 impl Default for Bpm {
     fn default() -> Self {
-        Self::new(MetadataChainId::default())
+        Self::new(NetworkId::default())
     }
 }
 
 impl Bpm {
-    pub fn mcid(&self) -> MetadataChainId {
+    pub fn network_id(&self) -> NetworkId {
         self.0
     }
 
-    pub fn new(cid: MetadataChainId) -> Self {
+    pub fn new(cid: NetworkId) -> Self {
         Self(cid, BoundedVecDeque::new(MAX_SIZE))
     }
 

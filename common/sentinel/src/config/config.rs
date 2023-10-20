@@ -10,8 +10,6 @@ use serde::Deserialize;
 
 use crate::{
     config::{
-        BatchingConfig,
-        BatchingToml,
         ConfigT,
         GovernanceConfig,
         GovernanceToml,
@@ -36,7 +34,6 @@ struct SentinelConfigToml {
     host: HostToml,
     ipfs: IpfsConfig,
     native: NativeToml,
-    batching: BatchingToml,
     core: SentinelCoreConfig,
     governance: GovernanceToml,
 }
@@ -57,7 +54,6 @@ pub struct SentinelConfig {
     ipfs: IpfsConfig,
     native: NativeConfig,
     core: SentinelCoreConfig,
-    batching: BatchingConfig,
     governance: GovernanceConfig,
 }
 
@@ -75,7 +71,6 @@ impl SentinelConfig {
             log: LogConfig::from_toml(&toml.log)?,
             host: HostConfig::from_toml(&toml.host)?,
             native: NativeConfig::from_toml(&toml.native)?,
-            batching: BatchingConfig::from_toml(&toml.batching)?,
             governance: GovernanceConfig::try_from(&toml.governance)?,
         })
     }
@@ -92,11 +87,23 @@ impl SentinelConfig {
         self.native.endpoints()
     }
 
-    pub fn is_validating(&self, side: &BridgeSide) -> bool {
-        if side.is_native() {
-            self.native.is_validating()
+    pub fn endpoints(&self, nid: &NetworkId) -> Result<Endpoints, SentinelConfigError> {
+        if self.native().network_id() == nid {
+            Ok(self.native().endpoints())
+        } else if self.host().network_id() == nid {
+            Ok(self.host().endpoints())
         } else {
-            self.host.is_validating()
+            Err(SentinelConfigError::NoConfig(*nid))
+        }
+    }
+
+    pub fn validate(&self, nid: &NetworkId) -> Result<bool, SentinelConfigError> {
+        if self.native().network_id() == nid {
+            Ok(*self.native().validate())
+        } else if self.host().network_id() == nid {
+            Ok(*self.host().validate())
+        } else {
+            Err(SentinelConfigError::NoConfig(*nid))
         }
     }
 
@@ -118,24 +125,32 @@ impl SentinelConfig {
         }
     }
 
-    pub fn gas_price(&self, side: &BridgeSide) -> Option<u64> {
-        if side.is_native() {
-            *self.native.gas_price()
+    pub fn gas_price(&self, network_id: &NetworkId) -> Option<u64> {
+        if self.native().network_id() == network_id {
+            *self.native().gas_price()
+        } else if self.host().network_id() == network_id {
+            *self.host().gas_price()
         } else {
-            *self.host.gas_price()
+            None
         }
     }
 
-    pub fn gas_limit(&self, side: &BridgeSide) -> usize {
-        if side.is_native() {
-            *self.native.gas_limit()
+    pub fn gas_limit(&self, nid: &NetworkId) -> Result<usize, SentinelConfigError> {
+        if self.native().network_id() == nid {
+            Ok(*self.native().gas_limit())
+        } else if self.host().network_id() == nid {
+            Ok(*self.host().gas_limit())
         } else {
-            *self.host.gas_limit()
+            Err(SentinelConfigError::NoConfig(*nid))
         }
     }
 
     pub fn mcids(&self) -> Result<Vec<MetadataChainId>, SentinelConfigError> {
         Ok(vec![self.native().mcid()?, self.host.mcid()?])
+    }
+
+    pub fn network_ids(&self) -> Result<Vec<NetworkId>, SentinelConfigError> {
+        Ok(vec![*self.native().network_id(), *self.host().network_id()])
     }
 
     pub fn mcid(&self, side: &BridgeSide) -> Result<MetadataChainId, SentinelConfigError> {
@@ -146,9 +161,9 @@ impl SentinelConfig {
         }
     }
 
-    pub fn governance_address(&self, mcid: &MetadataChainId) -> Option<EthAddress> {
+    pub fn governance_address(&self, nid: &NetworkId) -> Option<EthAddress> {
         // NOTE: The governance contract lives on one chain only
-        if mcid == self.governance().mcid() {
+        if nid == self.governance().network_id() {
             Some(*self.governance().governance_address())
         } else {
             None
@@ -175,6 +190,46 @@ impl SentinelConfig {
             Ok(EthChainId::try_from(n_network_id)?)
         } else if h_network_id == nid {
             Ok(EthChainId::try_from(h_network_id)?)
+        } else {
+            Err(SentinelConfigError::NoConfig(*nid))
+        }
+    }
+
+    pub fn pre_filter_receipts(&self, nid: &NetworkId) -> Result<bool, SentinelConfigError> {
+        if self.native().network_id() == nid {
+            Ok(*self.native().pre_filter_receipts())
+        } else if self.host().network_id() == nid {
+            Ok(*self.host().pre_filter_receipts())
+        } else {
+            Err(SentinelConfigError::NoConfig(*nid))
+        }
+    }
+
+    pub fn sleep_duration(&self, nid: &NetworkId) -> Result<u64, SentinelConfigError> {
+        if self.native().network_id() == nid {
+            Ok(*self.native().sleep_duration())
+        } else if self.host().network_id() == nid {
+            Ok(*self.host().sleep_duration())
+        } else {
+            Err(SentinelConfigError::NoConfig(*nid))
+        }
+    }
+
+    pub fn batch_duration(&self, nid: &NetworkId) -> Result<u64, SentinelConfigError> {
+        if self.native().network_id() == nid {
+            Ok(*self.native().batch_duration())
+        } else if self.host().network_id() == nid {
+            Ok(*self.host().batch_duration())
+        } else {
+            Err(SentinelConfigError::NoConfig(*nid))
+        }
+    }
+
+    pub fn batch_size(&self, nid: &NetworkId) -> Result<u64, SentinelConfigError> {
+        if self.native().network_id() == nid {
+            Ok(*self.native().batch_size())
+        } else if self.host().network_id() == nid {
+            Ok(*self.host().batch_size())
         } else {
             Err(SentinelConfigError::NoConfig(*nid))
         }

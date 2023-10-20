@@ -4,8 +4,12 @@ use super::NetworkId;
 
 #[derive(Debug, Error)]
 pub enum NetworkIdError {
+    #[error("unsupported network id: {0}")]
+    Unsupported(NetworkId),
+
     #[error("network id app error: {0}")]
     AppError(#[from] common::AppError),
+
     #[error("invalid network ID '{0}'")]
     InvalidNetworkId(String),
 

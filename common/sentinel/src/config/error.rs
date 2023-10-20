@@ -1,4 +1,3 @@
-use common::BridgeSide;
 use thiserror::Error;
 
 use crate::NetworkId;
@@ -20,8 +19,8 @@ pub enum SentinelConfigError {
     #[error("batch size of {size} is not between min of {min} and max of {max}")]
     BatchSize { size: u64, min: u64, max: u64 },
 
-    #[error("Cannot create {0} sub mat batch - there are  no endpoints")]
-    NoEndpoints(BridgeSide),
+    #[error("Cannot create sub mat batch for network {0} - there are  no endpoints")]
+    NoEndpoints(NetworkId),
 
     #[error("no config for network id {0}")]
     NoConfig(NetworkId),

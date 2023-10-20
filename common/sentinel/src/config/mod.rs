@@ -1,4 +1,3 @@
-mod batching;
 mod config;
 mod core;
 mod error;
@@ -10,7 +9,6 @@ mod native;
 mod traits;
 
 pub use self::{
-    batching::{BatchingConfig, BatchingToml},
     config::SentinelConfig,
     core::SentinelCoreConfig,
     error::SentinelConfigError,

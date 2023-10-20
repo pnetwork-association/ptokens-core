@@ -1,12 +1,11 @@
 #![cfg(test)]
 use std::{env, fs::read_to_string, str::FromStr};
 
-use common::BridgeSide;
 use common_eth::EthSubmissionMaterial;
 use dotenv::dotenv;
 use jsonrpsee::ws_client::WsClient;
 
-use crate::{get_rpc_client, Batch, Endpoints, SentinelError};
+use crate::{get_rpc_client, Batch, Endpoints, NetworkId, SentinelError};
 
 const ENV_VAR: &str = "TEST_ENDPOINT";
 
@@ -26,7 +25,7 @@ pub async fn get_test_endpoints() -> Endpoints {
         .map_err(|_| SentinelError::Custom(format!("Please set env var '{ENV_VAR}' to a working endpoint!").into()))
         .unwrap();
     let urls = vec![url];
-    Endpoints::new(sleep_time, BridgeSide::Native, urls)
+    Endpoints::new(sleep_time, NetworkId::default(), urls)
 }
 
 pub fn get_sample_sub_mat_n(n: usize) -> EthSubmissionMaterial {

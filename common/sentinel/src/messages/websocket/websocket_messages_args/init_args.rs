@@ -1,12 +1,9 @@
-use std::str::FromStr;
-
 use common_eth::{convert_hex_to_eth_address, EthSubmissionMaterial};
-use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use ethereum_types::Address as EthAddress;
 use serde::{Deserialize, Serialize};
 
-use crate::WebSocketMessagesError;
+use crate::{NetworkId, WebSocketMessagesError};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Getters)]
 pub struct WebSocketMessagesInitArgs {
@@ -14,7 +11,7 @@ pub struct WebSocketMessagesInitArgs {
     hub: EthAddress,
     tail_length: u64,
     confirmations: u64,
-    mcid: MetadataChainId,
+    network_id: NetworkId,
     #[getter(skip)]
     sub_mat: Option<EthSubmissionMaterial>,
 }
@@ -32,8 +29,8 @@ impl WebSocketMessagesInitArgs {
         match self.sub_mat {
             Some(ref b) => Ok(b.clone()),
             None => Err(WebSocketMessagesError::NoBlock {
-                mcid: self.mcid,
                 struct_name: self.name(),
+                network_id: self.network_id,
             }),
         }
     }
@@ -66,10 +63,10 @@ impl TryFrom<Vec<String>> for WebSocketMessagesInitArgs {
             .parse::<u64>()
             .map_err(|_| WebSocketMessagesError::ParseInt(confirmations_arg))?;
 
-        let mcid_arg = args[4].clone();
-        let mcid = MetadataChainId::from_str(&mcid_arg).map_err(|e| {
+        let network_id_arg = args[4].clone();
+        let network_id = NetworkId::try_from(&network_id_arg).map_err(|e| {
             error!("{e}");
-            WebSocketMessagesError::ParseMetadataChainId(mcid_arg)
+            WebSocketMessagesError::ParseNetworkId(network_id_arg)
         })?;
 
         Ok(Self {
@@ -77,7 +74,7 @@ impl TryFrom<Vec<String>> for WebSocketMessagesInitArgs {
             hub: convert_hex_to_eth_address(&args[1])?,
             tail_length,
             confirmations,
-            mcid,
+            network_id,
             sub_mat: None,
         })
     }

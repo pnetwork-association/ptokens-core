@@ -1,12 +1,11 @@
 use common::AppError as CommonError;
 use common_chain_ids::EthChainId;
 use common_eth::{ChainError, NoParentError};
-use common_metadata::MetadataChainId;
 use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::SentinelError;
+use crate::{NetworkId, SentinelError};
 
 #[derive(Clone, Error, Debug, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesError {
@@ -22,8 +21,8 @@ pub enum WebSocketMessagesError {
     #[error("wrong field of enum - got: {got}, expected {expected}")]
     WrongField { got: String, expected: String },
 
-    #[error("could not parse metadata chain id from string: {0}")]
-    ParseMetadataChainId(String),
+    #[error("could not parse network id from string: {0}")]
+    ParseNetworkId(String),
 
     #[error("strongbox panicked - check the logs for more info")]
     Panicked,
@@ -50,17 +49,17 @@ pub enum WebSocketMessagesError {
     #[error("could not parse u64 from {0}")]
     ParseInt(String),
 
-    #[error("cannot parse metadata chain id from: '{0}'")]
-    UnrecognizedChainId(String),
+    #[error("cannot parse network id from: '{0}'")]
+    UnrecognizedNetworkId(String),
 
-    #[error("unsupported chain id {0}")]
-    Unsupported(MetadataChainId),
+    #[error("unsupported network id {0}")]
+    Unsupported(NetworkId),
 
     #[error("timed out - strongbox took longer than {0}ms to respond")]
     Timedout(u64),
 
-    #[error("no block found in {struct_name} for chain: {mcid}")]
-    NoBlock { mcid: MetadataChainId, struct_name: String },
+    #[error("no block found in {struct_name} for chain: {network_id}")]
+    NoBlock { network_id: NetworkId, struct_name: String },
 
     #[error("common error: {0}")]
     CommonError(String),
@@ -80,11 +79,11 @@ pub enum WebSocketMessagesError {
     #[error("{0}")]
     NoParent(NoParentError),
 
-    #[error("block {num} with hash {hash} already in db for chain id {mcid}")]
+    #[error("block {num} with hash {hash} already in db for network id {network_id}")]
     BlockAlreadyInDb {
         num: u64,
         hash: EthHash,
-        mcid: MetadataChainId,
+        network_id: NetworkId,
     },
 
     #[error("unexpected websocket response {0}")]
@@ -116,7 +115,11 @@ impl From<ChainError> for WebSocketMessagesError {
     fn from(e: ChainError) -> Self {
         match e {
             ChainError::NoParent(e) => Self::NoParent(e),
-            ChainError::BlockAlreadyInDb { num, mcid, hash } => Self::BlockAlreadyInDb { num, mcid, hash },
+            ChainError::BlockAlreadyInDb { num, mcid, hash } => Self::BlockAlreadyInDb {
+                num,
+                network_id: NetworkId::try_from(mcid).expect("mcid -> nid conversion not to fail"),
+                hash,
+            },
             _ => Self::ChainError(e),
         }
     }
