@@ -31,11 +31,10 @@ impl TryFrom<WebSocketMessagesEncodable> for Challenges {
 mod tests {
     use std::str::FromStr;
 
-    use common_metadata::MetadataChainId;
     use ethereum_types::U256;
 
     use super::*;
-    use crate::{challenges::test_utils::get_sample_sub_mat_with_challenge_pending_event, Actor, ActorType};
+    use crate::{challenges::test_utils::get_sample_sub_mat_with_challenge_pending_event, Actor, ActorType, NetworkId};
 
     fn get_expected_challenge() -> Challenge {
         Challenge::new(
@@ -45,7 +44,7 @@ mod tests {
                 EthAddress::from_str("0x73659a0f105905121edbf44fb476b97c785688ec").unwrap(),
             ),
             1697147101,
-            MetadataChainId::PolygonMainnet,
+            NetworkId::try_from("polygon").unwrap(),
             EthAddress::from_str("0xada2de876567a06ed79b0b29ae6ab2e142129e51").unwrap(),
         )
     }

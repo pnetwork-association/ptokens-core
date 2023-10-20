@@ -3,7 +3,6 @@ use ethabi::{encode as eth_abi_encode, Token as EthAbiToken};
 use ethereum_types::{H256 as EthHash, U256};
 
 use super::{Challenge, ChallengesError};
-use crate::NetworkId;
 
 impl Challenge {
     pub(super) fn to_eth_abi_token(self) -> Result<EthAbiToken, ChallengesError> {
@@ -16,7 +15,7 @@ impl Challenge {
             EthAbiToken::Address(*self.challenger_address()),
             EthAbiToken::Uint(U256::from(actor_type)),
             EthAbiToken::Uint(U256::from_big_endian(&self.timestamp().to_be_bytes())),
-            EthAbiToken::FixedBytes(NetworkId::try_from(self.mcid())?.to_bytes_4()?.to_vec()),
+            EthAbiToken::FixedBytes(self.network_id().to_bytes_4()?.to_vec()),
         ]))
     }
 
@@ -38,11 +37,10 @@ impl Challenge {
 mod tests {
     use std::str::FromStr;
 
-    use common_metadata::MetadataChainId;
     use ethereum_types::{Address as EthAddress, U256};
 
     use super::*;
-    use crate::{Actor, ActorType};
+    use crate::{Actor, ActorType, NetworkId};
 
     #[test]
     fn should_get_expected_challenge_id() {
@@ -53,7 +51,7 @@ mod tests {
                 EthAddress::from_str("0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f").unwrap(),
             ),
             1697545846,
-            MetadataChainId::BscMainnet,
+            NetworkId::try_from("bsc").unwrap(),
             EthAddress::from_str("0x1CBd3b2770909D4e10f157cABC84C7264073C9Ec").unwrap(),
         );
         let encoding = hex::encode(c.abi_encode().unwrap());

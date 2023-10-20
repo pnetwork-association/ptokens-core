@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use common_eth::{EthLog, EthLogExt, EthSubmissionMaterial};
-use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use derive_more::{Constructor, Deref};
 use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType, Token as EthAbiToken};
@@ -39,7 +38,7 @@ impl ChallengePendingEvents {
 pub(super) struct ChallengePendingEvent {
     nonce: U256,
     timestamp: u64,
-    mcid: MetadataChainId,
+    network_id: NetworkId,
     actor_type: ActorType,
     actor_address: EthAddress,
     challenger_address: EthAddress,
@@ -134,8 +133,8 @@ impl TryFrom<Vec<EthAbiToken>> for ChallengePendingEvent {
             }),
         }?;
 
-        let mcid = match tokens[5] {
-            EthAbiToken::FixedBytes(ref bs) => Ok(MetadataChainId::try_from(NetworkId::try_from(bs)?)?),
+        let network_id = match tokens[5] {
+            EthAbiToken::FixedBytes(ref bs) => Ok(NetworkId::try_from(bs)?),
             ref token => Err(Self::Error::WrongToken {
                 got: token.clone(),
                 expected: "FixedBytes".to_string(),
@@ -145,7 +144,7 @@ impl TryFrom<Vec<EthAbiToken>> for ChallengePendingEvent {
         Ok(Self::new(
             nonce,
             timestamp,
-            mcid,
+            network_id,
             actor_type,
             actor_address,
             challenger_address,
@@ -165,8 +164,8 @@ mod tests {
         ChallengePendingEvent {
             nonce: U256::from(0),
             timestamp: 1697147101,
-            mcid: MetadataChainId::PolygonMainnet,
             actor_type: ActorType::Sentinel,
+            network_id: NetworkId::try_from("polygon").unwrap(),
             actor_address: EthAddress::from_str("0x73659a0f105905121edbf44fb476b97c785688ec").unwrap(),
             challenger_address: EthAddress::from_str("0xada2de876567a06ed79b0b29ae6ab2e142129e51").unwrap(),
         }

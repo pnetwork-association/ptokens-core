@@ -1,6 +1,5 @@
 use common::MIN_DATA_SENSITIVITY_LEVEL;
 use common_eth::{EthPrivateKey, EthSignature, EthSigningCapabilities};
-use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use derive_more::Constructor;
 use ethereum_types::{Address as EthAddress, U256};
@@ -8,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 
 use super::{ChallengePendingEvent, ChallengeResponseSignatureInfo, ChallengesError};
-use crate::{Actor, ActorInclusionProof, DbKey, DbUtilsT, SentinelError, WebSocketMessagesEncodable};
+use crate::{Actor, ActorInclusionProof, DbKey, DbUtilsT, NetworkId, SentinelError, WebSocketMessagesEncodable};
 
 /* Reference:
 From: https://github.com/pnetwork-association/pnetwork/blob/14d11b116da6abf70cba11e0fd931686f77f22b5/packages/ptokens-evm-contracts/contracts/interfaces/IPNetworkHub.sol#L47C1-L54C6
@@ -29,7 +28,7 @@ pub struct Challenge {
     nonce: U256,
     actor: Actor,
     timestamp: u64,
-    mcid: MetadataChainId,
+    network_id: NetworkId,
     challenger_address: EthAddress,
 }
 
@@ -41,7 +40,7 @@ impl Challenge {
             U256::from(rand::thread_rng().gen_range(0..100_000_000)),
             Actor::random(),
             rand::thread_rng().gen_range(0..100_000_000),
-            MetadataChainId::default(),
+            NetworkId::default(),
             EthAddress::random(),
         )
     }
@@ -66,9 +65,9 @@ impl Challenge {
 impl From<&ChallengePendingEvent> for Challenge {
     fn from(event: &ChallengePendingEvent) -> Self {
         Self {
-            mcid: *event.mcid(),
             nonce: *event.nonce(),
             timestamp: *event.timestamp(),
+            network_id: *event.network_id(),
             challenger_address: *event.challenger_address(),
             actor: Actor::new(*event.actor_type(), *event.actor_address()),
         }
