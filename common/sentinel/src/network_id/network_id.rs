@@ -39,7 +39,7 @@ impl fmt::Display for Bytes4 {
     }
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Copy, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct NetworkId {
     chain_id: u64,       // FIXME make this a u64, since that's how it's encoded
     disambiguator: Byte, // NOTE: Can be rolled in case of collisions.
@@ -146,7 +146,7 @@ impl TryFrom<MetadataChainId> for NetworkId {
 impl fmt::Display for NetworkId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.to_bytes_4() {
-            Err(e) => write!(f, "error converting netowrk id to bytes: {e}"),
+            Err(e) => write!(f, "error converting network id to bytes: {e}"),
             Ok(b4) => {
                 #[derive(Clone, Debug, Serialize, Deserialize, Constructor)]
                 struct Temp {
