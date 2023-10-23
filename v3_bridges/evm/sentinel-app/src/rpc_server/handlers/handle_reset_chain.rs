@@ -1,15 +1,13 @@
 use common::BridgeSide;
-use common_metadata::MetadataChainId;
 use common_sentinel::{
+    call_core,
     EthRpcMessages,
     SentinelConfig,
     SentinelError,
-    WebSocketMessages,
     WebSocketMessagesEncodable,
     WebSocketMessagesError,
     WebSocketMessagesResetChainArgs,
 };
-use tokio::time::{sleep, Duration};
 
 use crate::{
     rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT_MS},
@@ -28,21 +26,21 @@ impl RpcCall {
         Self::check_core_is_connected(core_cxn)?;
         let mut args = WebSocketMessagesResetChainArgs::try_from(params)?;
 
-        let mcid = *args.mcid();
-        let side = if mcid == MetadataChainId::from(&config.chain_id(&BridgeSide::Host)) {
+        let network_id = *args.network_id();
+        let side = if network_id == *config.host().network_id() {
             BridgeSide::Host
-        } else if mcid == MetadataChainId::from(&config.chain_id(&BridgeSide::Native)) {
+        } else if network_id == *config.native().network_id() {
             BridgeSide::Native
         } else {
             return Ok(WebSocketMessagesEncodable::Error(WebSocketMessagesError::Unsupported(
-                mcid,
+                network_id,
             )));
         };
 
         let block_num = if let Some(n) = args.block_num() {
             *n
         } else {
-            let (msg, responder) = EthRpcMessages::get_latest_block_num_msg(side);
+            let (msg, responder) = EthRpcMessages::get_latest_block_num_msg(network_id);
             if side.is_host() {
                 host_eth_rpc_tx.send(msg).await?;
             } else {
@@ -51,9 +49,9 @@ impl RpcCall {
             responder.await??
         };
 
-        debug!("getting sub mat for block num {block_num} on side {side} for cid {mcid}");
+        debug!("getting sub mat for block num {block_num} for cid {network_id}");
 
-        let (eth_rpc_msg, responder) = EthRpcMessages::get_sub_mat_msg(side, block_num);
+        let (eth_rpc_msg, responder) = EthRpcMessages::get_sub_mat_msg(network_id, block_num);
         if side.is_host() {
             host_eth_rpc_tx.send(eth_rpc_msg).await?;
         } else {
@@ -64,17 +62,7 @@ impl RpcCall {
         args.add_sub_mat(sub_mat);
         args.add_side(side);
 
-        let encodable_msg = WebSocketMessagesEncodable::ResetChain(Box::new(args));
-
-        let (websocket_msg, rx) = WebSocketMessages::new(encodable_msg);
-        websocket_tx.send(websocket_msg).await?;
-        tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "submitting block";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
-        }
+        let msg = WebSocketMessagesEncodable::ResetChain(Box::new(args));
+        call_core(STRONGBOX_TIMEOUT_MS, websocket_tx.clone(), msg).await
     }
 }

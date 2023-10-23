@@ -1,6 +1,5 @@
 use std::result::Result;
 
-use common::BridgeSide;
 use common_sentinel::{
     flatten_join_handle,
     Batch,
@@ -79,7 +78,7 @@ pub async fn start_sentinel(
     ));
 
     let native_syncer_thread = tokio::spawn(syncer_loop(
-        Batch::new_from_config(BridgeSide::Native, config)?,
+        Batch::new_from_config(*config.native().network_id(), config)?,
         config.clone(),
         native_eth_rpc_tx.clone(),
         websocket_tx.clone(),
@@ -87,7 +86,7 @@ pub async fn start_sentinel(
     ));
 
     let host_syncer_thread = tokio::spawn(syncer_loop(
-        Batch::new_from_config(BridgeSide::Host, config)?,
+        Batch::new_from_config(*config.host().network_id(), config)?,
         config.clone(),
         host_eth_rpc_tx.clone(),
         websocket_tx.clone(),

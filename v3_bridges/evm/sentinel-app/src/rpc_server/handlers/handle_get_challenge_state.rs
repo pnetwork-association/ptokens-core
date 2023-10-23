@@ -1,5 +1,4 @@
-use common::BridgeSide;
-use common_sentinel::{Challenge, ConfigT, EthRpcMessages, SentinelConfig, SentinelError, WebSocketMessagesEncodable};
+use common_sentinel::{Challenge, EthRpcMessages, SentinelConfig, SentinelError, WebSocketMessagesEncodable};
 use serde_json::json;
 
 use crate::{
@@ -22,23 +21,21 @@ impl RpcCall {
         // NOTE: Core cxn checked for us in list handler
         let challenge = Challenge::try_from(Self::handle_get_challenge(websocket_tx, checked_params, core_cxn).await?)?;
 
-        let mcid = challenge.mcid();
+        let network_id = challenge.network_id();
 
         // NOTE We're still stuck with host and native for now, so we need to figure out which of
         // those this challenge originated.
-        let side = if config.native().mcid() == *mcid {
+        let (msg, rx) = EthRpcMessages::get_challenge_state_msg(
+            *network_id,
+            challenge,
+            config.pnetwork_hub_from_network_id(network_id)?,
+        );
+
+        if config.native().network_id() == network_id {
             warn!("using bridge side NATIVE");
-            BridgeSide::Native
-        } else {
-            warn!("using bridge side HOST");
-            BridgeSide::Host
-        };
-
-        let (msg, rx) = EthRpcMessages::get_challenge_state_msg(side, challenge, config.pnetwork_hub(&side));
-
-        if side.is_native() {
             native_eth_rpc_tx.send(msg).await?;
         } else {
+            warn!("using bridge side HOST");
             host_eth_rpc_tx.send(msg).await?;
         };
 

@@ -4423,6 +4423,7 @@ dependencies = [
  "clap",
  "common",
  "config",
+ "derive-getters",
  "derive_more",
  "dotenv",
  "enclave_info",

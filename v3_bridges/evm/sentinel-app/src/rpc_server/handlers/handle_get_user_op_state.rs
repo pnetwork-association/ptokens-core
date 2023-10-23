@@ -39,29 +39,37 @@ impl RpcCall {
         }?;
 
         let user_op = user_ops.get(&uid)?;
-        let origin_side = user_op.destination_side();
-        let destination_side = user_op.destination_side();
+        let origin_network_id = *user_op.origin_network_id();
+        let destination_network_id = user_op.destination_network_id();
 
-        let (origin_msg, origin_rx) =
-            EthRpcMessages::get_user_op_state_msg(origin_side, user_op.clone(), config.pnetwork_hub(&origin_side));
-        let (destination_msg, destination_rx) =
-            EthRpcMessages::get_user_op_state_msg(destination_side, user_op, config.pnetwork_hub(&destination_side));
+        let (origin_msg, origin_rx) = EthRpcMessages::get_user_op_state_msg(
+            origin_network_id,
+            user_op.clone(),
+            config.pnetwork_hub_from_network_id(&origin_network_id)?,
+        );
 
-        if destination_side.is_host() {
+        let (destination_msg, destination_rx) = EthRpcMessages::get_user_op_state_msg(
+            destination_network_id,
+            user_op,
+            config.pnetwork_hub_from_network_id(&destination_network_id)?,
+        );
+
+        if destination_network_id == *config.host().network_id() {
             native_eth_rpc_tx.send(origin_msg).await?;
             host_eth_rpc_tx.send(destination_msg).await?;
         } else {
             host_eth_rpc_tx.send(origin_msg).await?;
             native_eth_rpc_tx.send(destination_msg).await?;
         };
+
         let origin_user_op_state = origin_rx.await??;
         let destination_user_op_state = destination_rx.await??;
 
         Ok(WebSocketMessagesEncodable::Success(json!({
             "uid": uid,
-            "originChainId": config.chain_id(&origin_side),
+            "origigNetworkId": origin_network_id,
             "originState": origin_user_op_state.to_string(),
-            "destinationChainId": config.chain_id(&destination_side),
+            "destinationNetworkId": destination_network_id,
             "destinationState": destination_user_op_state.to_string(),
         })))
     }

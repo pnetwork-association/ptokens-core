@@ -1,17 +1,13 @@
-use std::str::FromStr;
-
-use common::BridgeSide;
 use common_eth::EthSubmissionMaterials;
 use common_sentinel::{
-    ConfigT,
+    call_core,
     EthRpcMessages,
+    NetworkId,
     SentinelConfig,
     SentinelError,
-    WebSocketMessages,
     WebSocketMessagesEncodable,
     WebSocketMessagesProcessBatchArgs,
 };
-use tokio::time::{sleep, Duration};
 
 use crate::{
     rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT_MS},
@@ -30,46 +26,33 @@ impl RpcCall {
         Self::check_core_is_connected(core_cxn)?;
         let checked_params = Self::check_params(params, 4)?;
 
-        let side = BridgeSide::from_str(&checked_params[0])?;
+        let network_id = NetworkId::try_from(&checked_params[0])?;
         let block_num = checked_params[1].parse::<u64>()?;
-        let (eth_rpc_msg, responder) = EthRpcMessages::get_sub_mat_msg(side, block_num);
-        if side.is_host() {
-            host_eth_rpc_tx.send(eth_rpc_msg).await?;
-        } else {
+        let (eth_rpc_msg, responder) = EthRpcMessages::get_sub_mat_msg(network_id, block_num);
+        //
+        // FIXME We still need the "side" sometimes...
+        let use_native = &network_id == config.native().network_id();
+
+        if use_native {
             native_eth_rpc_tx.send(eth_rpc_msg).await?;
+        } else {
+            host_eth_rpc_tx.send(eth_rpc_msg).await?;
         };
         let sub_mat = responder.await??;
 
         let dry_run = matches!(checked_params[2].as_ref(), "true");
         let reprocess = matches!(checked_params[3].as_ref(), "true");
 
-        let mcid = if side.is_host() {
-            config.host().mcid()
-        } else {
-            config.native().mcid()
-        };
-
         let submit_args = WebSocketMessagesProcessBatchArgs::new(
+            config.validate(&network_id)?,
             dry_run,
-            config.is_validating(&side),
             reprocess,
-            side,
-            mcid,
-            config.pnetwork_hub(&side),
+            network_id,
+            config.pnetwork_hub_from_network_id(&network_id)?,
             EthSubmissionMaterials::new(vec![sub_mat]), // NOTE: The processor always deals with batches of submat
-            config.governance_address(&mcid),
+            config.governance_address(&network_id),
         );
-        let encodable_msg = WebSocketMessagesEncodable::ProcessBatch(Box::new(submit_args));
-
-        let (websocket_msg, rx) = WebSocketMessages::new(encodable_msg);
-        websocket_tx.send(websocket_msg).await?;
-        tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "submitting block";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
-        }
+        let msg = WebSocketMessagesEncodable::ProcessBatch(Box::new(submit_args));
+        call_core(STRONGBOX_TIMEOUT_MS, websocket_tx.clone(), msg).await
     }
 }

@@ -1,8 +1,4 @@
-use std::str::FromStr;
-
-use common_metadata::MetadataChainId;
-use common_sentinel::{SentinelError, WebSocketMessages, WebSocketMessagesEncodable};
-use tokio::time::{sleep, Duration};
+use common_sentinel::{call_core, NetworkId, SentinelError, WebSocketMessagesEncodable};
 
 use crate::{
     rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT_MS},
@@ -16,20 +12,16 @@ impl RpcCall {
         core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
         Self::check_core_is_connected(core_cxn)?;
-        let mcids = params
+        let network_ids = params
             .iter()
-            .map(|s| MetadataChainId::from_str(s).map_err(|e| e.into()))
-            .collect::<Result<Vec<MetadataChainId>, SentinelError>>()?;
-        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetLatestBlockNumbers(mcids));
-        websocket_tx.send(msg).await?;
+            .map(|s| NetworkId::try_from(s).map_err(|e| e.into()))
+            .collect::<Result<Vec<NetworkId>, SentinelError>>()?;
 
-        tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
-                let m = "getting latest block numbers";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
-        }
+        call_core(
+            STRONGBOX_TIMEOUT_MS,
+            websocket_tx.clone(),
+            WebSocketMessagesEncodable::GetLatestBlockNumbers(network_ids),
+        )
+        .await
     }
 }

@@ -7,9 +7,10 @@ use common_sentinel::{
     ChallengeAndResponseInfos,
     ChallengeResponderBroadcastChannelMessages,
     ChallengeResponderMessages,
-    ConfigT,
     Env,
     EthRpcMessages,
+    NetworkId,
+    NetworkIdError,
     SentinelConfig,
     SentinelError,
     WebSocketMessagesEncodable,
@@ -38,8 +39,8 @@ async fn respond_to_challenge(
     websocket_tx: WebSocketTx,
 ) -> Result<(), SentinelError> {
     let id = info.challenge().id()?;
-    let mcid = *info.challenge().mcid();
-    let side = if config.native().mcid() == mcid {
+    let c_network_id = *info.challenge().network_id();
+    let side = if config.native().network_id() == &c_network_id {
         BridgeSide::Native
     } else {
         BridgeSide::Host
@@ -49,14 +50,14 @@ async fn respond_to_challenge(
         nonce,
         gas_price,
         gas_limit,
-        &mcid,
+        &c_network_id,
         &hub,
         broadcaster_pk,
         info.response_info(),
     )?;
     // NOTE: We're still stuck with the host/native paradigm for the time being.
 
-    let (msg, rx) = EthRpcMessages::get_push_tx_msg(signed_tx, side);
+    let (msg, rx) = EthRpcMessages::get_push_tx_msg(signed_tx, c_network_id);
     eth_rpc_tx.send(msg).await?;
     let tx_hash = rx.await??;
 
@@ -72,15 +73,19 @@ async fn respond_to_challenge(
     Ok(())
 }
 
-async fn get_gas_price(config: &SentinelConfig, side: BridgeSide, eth_rpc_tx: EthRpcTx) -> Result<u64, SentinelError> {
-    let p = if let Some(p) = config.gas_price(&side) {
-        debug!("using {side} gas price from config: {p}");
+async fn get_gas_price(
+    config: &SentinelConfig,
+    network_id: &NetworkId,
+    eth_rpc_tx: EthRpcTx,
+) -> Result<u64, SentinelError> {
+    let p = if let Some(p) = config.gas_price(network_id) {
+        debug!("using {network_id} gas price from config: {p}");
         p
     } else {
-        let (msg, rx) = EthRpcMessages::get_gas_price_msg(side);
+        let (msg, rx) = EthRpcMessages::get_gas_price_msg(*network_id);
         eth_rpc_tx.send(msg).await?;
         let p = rx.await??;
-        debug!("using {side} gas price from rpc: {p}");
+        debug!("using {network_id} gas price from rpc: {p}");
         p
     };
     Ok(p)
@@ -110,27 +115,47 @@ async fn respond_to_challenges(
     }
 
     let address = pk.to_address();
-    let (native_msg, native_rx) = EthRpcMessages::get_nonce_msg(BridgeSide::Native, address);
-    let (host_msg, host_rx) = EthRpcMessages::get_nonce_msg(BridgeSide::Host, address);
-    native_eth_rpc_tx.send(native_msg).await?;
-    host_eth_rpc_tx.send(host_msg).await?;
-    let mut native_nonce = native_rx.await??;
-    let mut host_nonce = host_rx.await??;
 
-    let native_gas_price = get_gas_price(config, BridgeSide::Native, native_eth_rpc_tx.clone()).await?;
-    let host_gas_price = get_gas_price(config, BridgeSide::Host, host_eth_rpc_tx.clone()).await?;
+    let mut native_nonce: Option<u64> = None;
+    let mut host_nonce: Option<u64> = None;
+
+    let n_network_id = *config.native().network_id();
+    let h_network_id = *config.host().network_id();
+
+    let native_gas_price = get_gas_price(config, &n_network_id, native_eth_rpc_tx.clone()).await?;
+    let host_gas_price = get_gas_price(config, &h_network_id, host_eth_rpc_tx.clone()).await?;
 
     let gas_limit = 1_000_000; // FIXME make configurable for this
 
     for challenge_info in unsolved_challenges.iter() {
-        let side = if config.native().mcid() == *challenge_info.challenge().mcid() {
-            BridgeSide::Native
+        let c_network_id = *challenge_info.challenge().network_id();
+        let side = if n_network_id == c_network_id {
+            std::result::Result::<BridgeSide, SentinelError>::Ok(BridgeSide::Native)
+        } else if h_network_id == c_network_id {
+            std::result::Result::<BridgeSide, SentinelError>::Ok(BridgeSide::Host)
         } else {
-            BridgeSide::Host
+            Err(NetworkIdError::Unsupported(c_network_id).into())
+        }?;
+
+        if side.is_native() && native_nonce.is_none() {
+            let (native_msg, native_rx) = EthRpcMessages::get_nonce_msg(n_network_id, address);
+            native_eth_rpc_tx.send(native_msg).await?;
+            native_nonce = Some(native_rx.await??);
         };
+
+        if side.is_host() && host_nonce.is_none() {
+            let (host_msg, host_rx) = EthRpcMessages::get_nonce_msg(h_network_id, address);
+            host_eth_rpc_tx.send(host_msg).await?;
+            host_nonce = Some(host_rx.await??);
+        }
+
         respond_to_challenge(
             challenge_info,
-            if side.is_native() { native_nonce } else { host_nonce },
+            if side.is_native() {
+                native_nonce.ok_or_else(|| SentinelError::NoNonce(n_network_id))?
+            } else {
+                host_nonce.ok_or_else(|| SentinelError::NoNonce(h_network_id))?
+            },
             if side.is_native() {
                 native_gas_price
             } else {
@@ -149,9 +174,9 @@ async fn respond_to_challenges(
         .await?;
 
         if side.is_native() {
-            native_nonce += 1
+            native_nonce = native_nonce.map(|n| n + 1)
         } else {
-            host_nonce += 1
+            host_nonce = host_nonce.map(|n| n + 1)
         };
     }
 

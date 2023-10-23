@@ -1,11 +1,11 @@
 use std::result::Result;
 
-use common_metadata::MetadataChainId;
 use common_sentinel::{
     Batch,
     BroadcastChannelMessages,
     EthRpcMessages,
     LatestBlockNumbers,
+    NetworkId,
     SentinelConfig,
     SentinelError,
     SyncerBroadcastChannelMessages,
@@ -32,11 +32,10 @@ async fn main_loop(
     core_is_connected: &bool,
     core_time_limit: &u64,
 ) -> Result<(), SentinelError> {
-    let side = *batch.side();
-    let mcid = *batch.mcid();
-    let log_prefix = format!("{mcid} syncer");
-    let validate = config.is_validating(&side);
-    let pnetwork_hub = config.pnetwork_hub(&side);
+    let network_id = *batch.network_id();
+    let log_prefix = format!("{network_id} syncer");
+    let validate = matches!(config.validate(&network_id), Ok(true));
+    let pnetwork_hub = config.pnetwork_hub_from_network_id(&network_id)?;
     let sleep_duration = batch.get_sleep_duration();
 
     let latest_block_numbers = 'latest_block_getter_loop: loop {
@@ -45,13 +44,13 @@ async fn main_loop(
         };
 
         // NOTE: Get the core's latest block numbers for this chain
-        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetLatestBlockNumbers(vec![*batch.mcid()]));
+        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetLatestBlockNumbers(vec![network_id]));
         websocket_tx.send(msg).await?;
 
         let websocket_response = tokio::select! {
             response = rx => response?,
             _ = sleep(Duration::from_secs(*core_time_limit)) => {
-                let m = "getting latest block numbers in {side} syncer";
+                let m = "getting latest block numbers in {network_id} syncer";
                 error!("timed out whilst {m}");
                 Err(SentinelError::Timedout(m.into()))
             }
@@ -67,14 +66,14 @@ async fn main_loop(
     };
 
     // NOTE: Set block number to start syncing from in the batch
-    batch.set_block_num(latest_block_numbers.get_for(batch.mcid())? + 1);
+    batch.set_block_num(latest_block_numbers.get_for(&network_id)? + 1);
 
     'main_loop: loop {
         if !core_is_connected {
             return Err(SentinelError::NoCore);
         };
 
-        let (msg, rx) = EthRpcMessages::get_sub_mat_msg(side, batch.get_block_num());
+        let (msg, rx) = EthRpcMessages::get_sub_mat_msg(network_id, batch.get_block_num());
         eth_rpc_tx.send(msg).await?;
         match rx.await? {
             Ok(block) => {
@@ -87,8 +86,7 @@ async fn main_loop(
                 info!("{log_prefix} batch is ready to submit!");
                 let args = WebSocketMessagesProcessBatchArgs::new_for_syncer(
                     validate,
-                    side,
-                    mcid,
+                    network_id,
                     pnetwork_hub,
                     batch.to_submission_material(),
                     *batch.governance_address(),
@@ -99,7 +97,7 @@ async fn main_loop(
                 let websocket_response = tokio::select! {
                     response = rx => response?,
                     _ = sleep(Duration::from_secs(*core_time_limit)) => {
-                        let m = "submitting batch for {side} {mcid}";
+                        let m = "submitting batch for {side} {network_id}";
                         error!("timed out whilst {m}");
                         Err(SentinelError::Timedout(m.into()))
                     }
@@ -150,7 +148,7 @@ async fn main_loop(
 }
 
 async fn broadcast_channel_loop(
-    mcid: MetadataChainId,
+    network_id: NetworkId,
     mut broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
 ) -> Result<SyncerBroadcastChannelMessages, SentinelError> {
     // NOTE: This loops continuously listening to the broadcasting channel, and only returns if we
@@ -158,14 +156,14 @@ async fn broadcast_channel_loop(
     // tokios::select, so then the main_loop can continue doing its work.
     'broadcast_channel_loop: loop {
         match broadcast_channel_rx.recv().await {
-            Ok(BroadcastChannelMessages::Syncer(msg_mcid, msg)) => {
+            Ok(BroadcastChannelMessages::Syncer(nid, msg)) => {
                 // NOTE: We have a syncer message...
-                if mcid == msg_mcid {
+                if network_id == nid {
                     // ...and it's for this syncer so we return it
                     break 'broadcast_channel_loop Ok(msg);
                 } else {
                     // ...but it's not for this syncer so we go back to listening on the receiver
-                    debug!("syncer message: '{msg}' for mcid: '{mcid}' ignored");
+                    debug!("syncer message: '{msg}' for network id: '{network_id}' ignored");
                     continue 'broadcast_channel_loop;
                 }
             },
@@ -184,8 +182,8 @@ pub async fn syncer_loop(
 ) -> Result<(), SentinelError> {
     batch.check_endpoint().await?;
 
-    let mcid = *batch.mcid();
-    let name = format!("{mcid} syncer");
+    let network_id = *batch.network_id();
+    let name = format!("{network_id} syncer");
 
     let mut core_is_connected = false;
     let mut syncer_is_enabled = true;
@@ -195,7 +193,7 @@ pub async fn syncer_loop(
 
     'syncer_loop: loop {
         tokio::select! {
-            r = broadcast_channel_loop(mcid, broadcast_channel_tx.subscribe()) => {
+            r = broadcast_channel_loop(network_id, broadcast_channel_tx.subscribe()) => {
                 match r {
                     Ok(msg) => {
                         let note = format!("(core is currently {}connected)", if core_is_connected { "" } else { "not "});

@@ -11,11 +11,10 @@ use axum::{
     Router,
     TypedHeader,
 };
-use common::BridgeSide;
-use common_metadata::MetadataChainId;
 use common_sentinel::{
     BroadcastChannelMessages,
     ChallengeResponderBroadcastChannelMessages,
+    NetworkId,
     RpcServerBroadcastChannelMessages,
     SentinelConfig,
     SentinelError,
@@ -26,6 +25,7 @@ use common_sentinel::{
     WebSocketMessagesEncodable,
     WebSocketMessagesError,
 };
+use derive_getters::Getters;
 use futures::{stream::StreamExt, SinkExt};
 use tokio::{sync::Mutex, time::sleep};
 use tower_http::services::ServeDir;
@@ -37,7 +37,7 @@ async fn handle_socket(
     who: SocketAddr,
     websocket_rx: Arc<Mutex<WebSocketRx>>,
     broadcast_channel_tx: BroadcastChannelTx,
-    mcids: Vec<MetadataChainId>,
+    network_ids: Vec<NetworkId>,
 ) -> Result<(), SentinelError> {
     if socket.send(Message::Ping(vec![1, 3, 3, 7])).await.is_ok() {
         debug!("pinged {}...", who);
@@ -72,25 +72,25 @@ async fn handle_socket(
 
     // FIXME Need a better way/single location for all the services that need to know about this
     // core cxn status
-    for mcid in mcids.iter().cloned() {
+    for network_id in network_ids.iter().cloned() {
         // NOTE: Tell the various components that a core is connected.
         broadcast_channel_tx.send(BroadcastChannelMessages::Syncer(
-            mcid,
+            network_id,
             SyncerBroadcastChannelMessages::CoreConnected,
         ))?;
-        broadcast_channel_tx.send(BroadcastChannelMessages::RpcServer(
-            RpcServerBroadcastChannelMessages::CoreConnected,
-        ))?;
-        broadcast_channel_tx.send(BroadcastChannelMessages::UserOpCanceller(
-            UserOpCancellerBroadcastChannelMessages::CoreConnected,
-        ))?;
-        broadcast_channel_tx.send(BroadcastChannelMessages::StatusPublisher(
-            StatusPublisherBroadcastChannelMessages::CoreConnected,
-        ))?;
-        broadcast_channel_tx.send(BroadcastChannelMessages::ChallengeResponder(
-            ChallengeResponderBroadcastChannelMessages::CoreConnected,
-        ))?;
     }
+    broadcast_channel_tx.send(BroadcastChannelMessages::RpcServer(
+        RpcServerBroadcastChannelMessages::CoreConnected,
+    ))?;
+    broadcast_channel_tx.send(BroadcastChannelMessages::UserOpCanceller(
+        UserOpCancellerBroadcastChannelMessages::CoreConnected,
+    ))?;
+    broadcast_channel_tx.send(BroadcastChannelMessages::StatusPublisher(
+        StatusPublisherBroadcastChannelMessages::CoreConnected,
+    ))?;
+    broadcast_channel_tx.send(BroadcastChannelMessages::ChallengeResponder(
+        ChallengeResponderBroadcastChannelMessages::CoreConnected,
+    ))?;
 
     'ws_loop: loop {
         tokio::select! {
@@ -153,41 +153,41 @@ async fn handle_socket(
         }
     }
 
-    for mcid in mcids {
+    for network_id in network_ids {
         // NOTE: Tell the various components that a core is no longer connected.
         broadcast_channel_tx.send(BroadcastChannelMessages::Syncer(
-            mcid,
+            network_id,
             SyncerBroadcastChannelMessages::CoreDisconnected,
         ))?;
-        broadcast_channel_tx.send(BroadcastChannelMessages::RpcServer(
-            RpcServerBroadcastChannelMessages::CoreDisconnected,
-        ))?;
-        broadcast_channel_tx.send(BroadcastChannelMessages::UserOpCanceller(
-            UserOpCancellerBroadcastChannelMessages::CoreDisconnected,
-        ))?;
-        broadcast_channel_tx.send(BroadcastChannelMessages::StatusPublisher(
-            StatusPublisherBroadcastChannelMessages::CoreDisconnected,
-        ))?;
-        broadcast_channel_tx.send(BroadcastChannelMessages::ChallengeResponder(
-            ChallengeResponderBroadcastChannelMessages::CoreDisconnected,
-        ))?;
     }
+    broadcast_channel_tx.send(BroadcastChannelMessages::RpcServer(
+        RpcServerBroadcastChannelMessages::CoreDisconnected,
+    ))?;
+    broadcast_channel_tx.send(BroadcastChannelMessages::UserOpCanceller(
+        UserOpCancellerBroadcastChannelMessages::CoreDisconnected,
+    ))?;
+    broadcast_channel_tx.send(BroadcastChannelMessages::StatusPublisher(
+        StatusPublisherBroadcastChannelMessages::CoreDisconnected,
+    ))?;
+    broadcast_channel_tx.send(BroadcastChannelMessages::ChallengeResponder(
+        ChallengeResponderBroadcastChannelMessages::CoreDisconnected,
+    ))?;
 
     error!("websocket context {who} destroyed");
     Ok(())
 }
 
-#[derive(Clone)]
+#[derive(Clone, Getters)]
 struct AppState {
-    mcids: Vec<MetadataChainId>,
+    network_ids: Vec<NetworkId>,
     websocket_rx: Arc<Mutex<WebSocketRx>>,
     broadcast_channel_tx: BroadcastChannelTx,
 }
 
 impl AppState {
-    fn new(websocket_rx: WebSocketRx, broadcast_channel_tx: BroadcastChannelTx, mcids: Vec<MetadataChainId>) -> Self {
+    fn new(websocket_rx: WebSocketRx, broadcast_channel_tx: BroadcastChannelTx, network_ids: Vec<NetworkId>) -> Self {
         Self {
-            mcids,
+            network_ids,
             broadcast_channel_tx,
             websocket_rx: Arc::new(Mutex::new(websocket_rx)),
         }
@@ -212,7 +212,7 @@ async fn ws_handler(
             addr,
             state.websocket_rx,
             state.broadcast_channel_tx,
-            state.mcids,
+            state.network_ids,
         )
         .await
         {
@@ -236,8 +236,8 @@ async fn start_ws_server(
         .fallback_service(ServeDir::new(assets_dir).append_index_html_on_directories(true))
         .route("/ws", get(ws_handler))
         .with_state(AppState::new(websocket_rx, broadcast_channel_tx, vec![
-            MetadataChainId::from(&config.chain_id(&BridgeSide::Native)),
-            MetadataChainId::from(&config.chain_id(&BridgeSide::Host)),
+            *config.native().network_id(),
+            *config.host().network_id(),
         ]));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000)); // FIXME make configurable

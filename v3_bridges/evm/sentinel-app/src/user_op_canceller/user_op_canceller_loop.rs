@@ -1,12 +1,12 @@
 use std::result::Result;
 
-use common::BridgeSide;
 use common_eth::EthPrivateKey;
 use common_sentinel::{
+    call_core,
     BroadcastChannelMessages,
-    ConfigT,
     Env,
     EthRpcMessages,
+    NetworkId,
     SentinelConfig,
     SentinelError,
     UserOp,
@@ -47,12 +47,11 @@ async fn cancel_user_op(
     // NOTE: First we check we can afford the tx
     //op.check_affordability(balance, gas_limit, gas_price)?;
 
-    let side = op.destination_side();
-    let pnetwork_hub = config.pnetwork_hub(&side);
-    debug!("cancelling user op on side: {side} nonce: {nonce} gas price: {gas_price}");
+    let destination_network_id = op.destination_network_id();
+    let pnetwork_hub = config.pnetwork_hub_from_network_id(&destination_network_id)?;
+    debug!("cancelling user op on network: {destination_network_id} nonce: {nonce} gas price: {gas_price}");
 
-    /*
-    let (msg, rx) = EthRpcMessages::get_user_op_state_msg(side, op.clone(), pnetwork_hub);
+    let (msg, rx) = EthRpcMessages::get_user_op_state_msg(destination_network_id, op.clone(), pnetwork_hub);
     eth_rpc_tx.send(msg).await?;
     let user_op_smart_contract_state = rx.await??;
     debug!("user op state before cancellation: {user_op_smart_contract_state}");
@@ -60,9 +59,8 @@ async fn cancel_user_op(
     if !user_op_smart_contract_state.is_cancellable() {
         return Err(UserOpError::CannotCancel(Box::new(op)).into());
     }
-    */
 
-    let mcids = vec![config.native().mcid(), config.host().mcid()];
+    let mcids = config.mcids()?;
     let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetUserOpCancellationSiganture(Box::new(
         WebSocketMessagesCancelUserOpArgs::new(mcids.clone(), op.clone()),
     )));
@@ -84,14 +82,14 @@ async fn cancel_user_op(
         gas_price,
         gas_limit,
         &pnetwork_hub,
-        &config.chain_id(&side),
+        &config.eth_chain_id_from_network_id(&destination_network_id)?,
         broadcaster_pk,
         &cancellation_sig,
     )?;
 
     debug!("signed tx: {}", signed_tx.serialize_hex());
 
-    let (msg, rx) = EthRpcMessages::get_push_tx_msg(signed_tx, side);
+    let (msg, rx) = EthRpcMessages::get_push_tx_msg(signed_tx, destination_network_id);
     eth_rpc_tx.send(msg).await?;
     let tx_hash = rx.await??;
 
@@ -99,15 +97,19 @@ async fn cancel_user_op(
     Ok(tx_hash)
 }
 
-async fn get_gas_price(config: &SentinelConfig, side: BridgeSide, eth_rpc_tx: EthRpcTx) -> Result<u64, SentinelError> {
-    let p = if let Some(p) = config.gas_price(&side) {
-        debug!("using {side} gas price from config: {p}");
+async fn get_gas_price(
+    config: &SentinelConfig,
+    network_id: &NetworkId,
+    eth_rpc_tx: EthRpcTx,
+) -> Result<u64, SentinelError> {
+    let p = if let Some(p) = config.gas_price(network_id) {
+        debug!("using {network_id} gas price from config: {p}");
         p
     } else {
-        let (msg, rx) = EthRpcMessages::get_gas_price_msg(side);
+        let (msg, rx) = EthRpcMessages::get_gas_price_msg(*network_id);
         eth_rpc_tx.send(msg).await?;
         let p = rx.await??;
-        debug!("using {side} gas price from rpc: {p}");
+        debug!("using {network_id} gas price from rpc: {p}");
         p
     };
     Ok(p)
@@ -117,53 +119,31 @@ async fn cancel_user_ops(
     config: &SentinelConfig,
     websocket_tx: WebSocketTx,
     eth_rpc_tx: EthRpcTx,
-    native_broadcaster_pk: &EthPrivateKey,
-    host_broadcaster_pk: &EthPrivateKey,
+    pk: &EthPrivateKey,
 ) -> Result<(), SentinelError> {
     info!("handling user op cancellation request...");
 
     let max_delta = config.core().max_cancellable_time_delta();
     let args = WebSocketMessagesGetCancellableUserOpArgs::new(*max_delta, vec![
-        // NOTE/FIXME For now, the ordering of these is very important since they're _assumed_ to
-        // be in the order of native/host. Eventually we will be able to deal with > 2 chains, at
-        // which point the ordering will stop mattering.
-        config.native().metadata_chain_id(),
-        config.host().metadata_chain_id(),
+        *config.native().network_id(),
+        *config.host().network_id(),
     ]);
-    let encodable_msg = WebSocketMessagesEncodable::GetCancellableUserOps(Box::new(args));
-    let (msg, rx) = WebSocketMessages::new(encodable_msg);
-    websocket_tx.send(msg).await?;
 
-    let cancellable_user_ops = UserOps::try_from(tokio::select! {
-        response = rx => response?,
-        _ = sleep(Duration::from_secs(*config.core().timeout())) => {
-            let m = "getting cancellable user ops";
-            error!("timed out whilst {m}");
-            Err(SentinelError::Timedout(m.into()))
-        }
-    }?)?;
+    let cancellable_user_ops = UserOps::try_from(
+        call_core(
+            *config.core().timeout(),
+            websocket_tx.clone(),
+            WebSocketMessagesEncodable::GetCancellableUserOps(Box::new(args)),
+        )
+        .await?,
+    )?;
 
     if cancellable_user_ops.is_empty() {
         warn!("no user ops to cancel");
         return Ok(());
     }
 
-    let host_address = host_broadcaster_pk.to_address();
-    let native_address = native_broadcaster_pk.to_address();
-
-    let (host_msg, host_rx) = EthRpcMessages::get_nonce_msg(BridgeSide::Host, host_address);
-    eth_rpc_tx.send(host_msg).await?;
-    let mut host_nonce = host_rx.await??;
-
-    let (native_msg, native_rx) = EthRpcMessages::get_nonce_msg(BridgeSide::Native, native_address);
-    eth_rpc_tx.send(native_msg).await?;
-    let mut native_nonce = native_rx.await??;
-
-    let host_gas_price = get_gas_price(config, BridgeSide::Host, eth_rpc_tx.clone()).await?;
-    let native_gas_price = get_gas_price(config, BridgeSide::Native, eth_rpc_tx.clone()).await?;
-
-    let host_gas_limit = config.gas_limit(&BridgeSide::Host);
-    let native_gas_limit = config.gas_limit(&BridgeSide::Native);
+    let address = pk.to_address();
 
     /*
     let (host_balance_msg, host_balance_rx) = EthRpcMessages::get_eth_balance_msg(BridgeSide::Host, host_address);
@@ -178,62 +158,35 @@ async fn cancel_user_ops(
     let err_msg = "error cancelling user op ";
 
     for op in cancellable_user_ops.iter() {
-        match op.destination_side() {
-            BridgeSide::Native => {
-                let uid = op.uid()?;
-                match cancel_user_op(
-                    op.clone(),
-                    native_nonce,
-                    //native_balance,
-                    native_gas_price,
-                    native_gas_limit,
-                    config,
-                    native_broadcaster_pk,
-                    eth_rpc_tx.clone(),
-                    websocket_tx.clone(),
-                )
-                .await
-                {
-                    Err(e) => {
-                        error!("{err_msg} {uid} {e}");
-                    },
-                    Ok(tx_hash) => {
-                        info!(
-                            "user op {uid} cancelled successfully @ tx {}",
-                            hex::encode(tx_hash.as_bytes())
-                        );
-                    },
-                }
-                native_nonce += 1;
-                //native_balance -= UserOp::get_tx_cost(native_gas_limit, native_gas_price);
+        let (msg, rx) = EthRpcMessages::get_nonce_msg(op.destination_network_id(), address);
+        eth_rpc_tx.send(msg).await?;
+        let nonce = rx.await??;
+
+        let destination_network_id = op.destination_network_id();
+        let gas_price = get_gas_price(config, &destination_network_id, eth_rpc_tx.clone()).await?;
+        let gas_limit = config.gas_limit(&destination_network_id)?;
+        let uid = op.uid()?;
+        match cancel_user_op(
+            op.clone(),
+            nonce,
+            //native_balance,
+            gas_price,
+            gas_limit,
+            config,
+            pk,
+            eth_rpc_tx.clone(),
+            websocket_tx.clone(),
+        )
+        .await
+        {
+            Err(e) => {
+                error!("{err_msg} {uid} {e}");
             },
-            BridgeSide::Host => {
-                let uid = op.uid()?;
-                match cancel_user_op(
-                    op.clone(),
-                    host_nonce,
-                    //host_balance,
-                    host_gas_price,
-                    host_gas_limit,
-                    config,
-                    host_broadcaster_pk,
-                    eth_rpc_tx.clone(),
-                    websocket_tx.clone(),
-                )
-                .await
-                {
-                    Err(e) => {
-                        error!("{err_msg} {uid} {e}");
-                    },
-                    Ok(tx_hash) => {
-                        info!(
-                            "user op {uid} cancelled successfully @ tx {}",
-                            hex::encode(tx_hash.as_bytes())
-                        );
-                    },
-                }
-                host_nonce += 1;
-                //host_balance -= UserOp::get_tx_cost(host_gas_limit, host_gas_price);
+            Ok(tx_hash) => {
+                info!(
+                    "user op {uid} cancelled successfully @ tx {}",
+                    hex::encode(tx_hash.as_bytes())
+                );
             },
         }
     }
@@ -286,8 +239,7 @@ pub async fn user_op_canceller_loop(
     warn!("{name} not active yet due to no core connection");
 
     Env::init()?;
-    let host_broadcaster_pk = Env::get_host_broadcaster_private_key()?;
-    let native_broadcaster_pk = Env::get_native_broadcaster_private_key()?;
+    let pk = Env::get_native_broadcaster_private_key()?; // FIXME: We just use the one pk now
 
     'user_op_canceller_loop: loop {
         tokio::select! {
@@ -349,8 +301,7 @@ pub async fn user_op_canceller_loop(
                         &config,
                         websocket_tx.clone(),
                         eth_rpc_tx.clone(),
-                        &native_broadcaster_pk,
-                        &host_broadcaster_pk,
+                        &pk,
                     ).await {
                         Ok(_) => {
                             info!("finished handling user op cancellation request");

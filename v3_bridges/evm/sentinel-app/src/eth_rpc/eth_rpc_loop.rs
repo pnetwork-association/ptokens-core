@@ -1,5 +1,6 @@
 use std::result::Result;
 
+use common::BridgeSide;
 use common_sentinel::{
     eth_call,
     get_challenge_state,
@@ -12,6 +13,8 @@ use common_sentinel::{
     push_tx,
     BroadcastChannelMessages,
     EthRpcMessages,
+    NetworkId,
+    NetworkIdError,
     SentinelConfig,
     SentinelError,
 };
@@ -34,6 +37,15 @@ use tokio::{
 
 const ENDPOINT_ROTATION_SLEEP_TIME: u64 = 2000;
 
+fn get_side_from_network_id(config: &SentinelConfig, nid: &NetworkId) -> Result<BridgeSide, SentinelError> {
+    if nid == config.native().network_id() {
+        Ok(BridgeSide::Native)
+    } else if nid == config.host().network_id() {
+        Ok(BridgeSide::Host)
+    } else {
+        Err(NetworkIdError::Unsupported(*nid).into())
+    }
+}
 pub async fn eth_rpc_loop(
     mut eth_rpc_rx: MpscRx<EthRpcMessages>,
     config: SentinelConfig,
@@ -42,17 +54,19 @@ pub async fn eth_rpc_loop(
 ) -> Result<(), SentinelError> {
     let mut h_endpoints = config.get_host_endpoints();
     let mut n_endpoints = config.get_native_endpoints();
-    let n_sleep_time = n_endpoints.sleep_time();
-    let h_sleep_time = h_endpoints.sleep_time();
+    let n_sleep_time = *n_endpoints.sleep_time();
+    let h_sleep_time = *h_endpoints.sleep_time();
     let mut h_ws_client = h_endpoints.get_first_ws_client().await?;
     let mut n_ws_client = n_endpoints.get_first_ws_client().await?;
 
+    // FIXME Lots of usage of "side" in here that needs removing
     'eth_rpc_loop: loop {
         tokio::select! {
             r = eth_rpc_rx.recv() => match r {
                 Some(msg) => {
                     match msg {
-                        EthRpcMessages::GetChallengeState((side, challenge, pnetwork_hub, responder)) => {
+                        EthRpcMessages::GetChallengeState((network_id, challenge, pnetwork_hub, responder)) => {
+                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = get_challenge_state(
                                     &challenge,
@@ -80,7 +94,8 @@ pub async fn eth_rpc_loop(
                                 }
                             }
                         },
-                        EthRpcMessages::GetUserOpState((side, user_op, contract_address, responder)) => {
+                        EthRpcMessages::GetUserOpState((network_id, user_op, contract_address, responder)) => {
+                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = get_user_op_state(
                                     &user_op,
@@ -108,12 +123,13 @@ pub async fn eth_rpc_loop(
                                 }
                             }
                         },
-                        EthRpcMessages::GetLatestBlockNum((side, responder)) => {
+                        EthRpcMessages::GetLatestBlockNum((network_id, responder)) => {
+                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = get_latest_block_num(
                                     if side.is_native() { &n_ws_client } else { &h_ws_client },
                                     if side.is_native() { n_sleep_time } else { h_sleep_time },
-                                    side,
+                                    &network_id,
                                 ).await;
                                 match r {
                                     Ok(r) => {
@@ -134,7 +150,8 @@ pub async fn eth_rpc_loop(
                                 }
                             }
                         },
-                        EthRpcMessages::GetGasPrice((side, responder)) => {
+                        EthRpcMessages::GetGasPrice((network_id, responder)) => {
+                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = get_gas_price(
                                     if side.is_native() { &n_ws_client } else { &h_ws_client },
@@ -160,7 +177,8 @@ pub async fn eth_rpc_loop(
                                 }
                             }
                         },
-                        EthRpcMessages::PushTx((tx, side, responder)) => {
+                        EthRpcMessages::PushTx((tx, network_id, responder)) => {
+                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = push_tx(
                                     &tx,
@@ -187,7 +205,8 @@ pub async fn eth_rpc_loop(
                                 }
                             }
                         },
-                        EthRpcMessages::GetNonce((side, address, responder)) => {
+                        EthRpcMessages::GetNonce((network_id, address, responder)) => {
+                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = get_nonce(
                                     if side.is_native() { &n_ws_client } else { &h_ws_client },
@@ -214,7 +233,8 @@ pub async fn eth_rpc_loop(
                                 }
                             }
                         },
-                        EthRpcMessages::EthCall((data, side, address, default_block_parameter, responder)) => {
+                        EthRpcMessages::EthCall((data, network_id, address, default_block_parameter, responder)) => {
+                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = eth_call(
                                     &address,
@@ -243,13 +263,14 @@ pub async fn eth_rpc_loop(
                                 }
                             }
                         },
-                        EthRpcMessages::GetSubMat((side, block_num, responder)) => {
+                        EthRpcMessages::GetSubMat((network_id, block_num, responder)) => {
+                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = get_sub_mat(
                                     if side.is_native() { &n_ws_client } else { &h_ws_client },
                                     block_num,
                                     if side.is_native() { n_sleep_time } else { h_sleep_time },
-                                    side,
+                                    &network_id,
                                 ).await;
                                 match r {
                                     Ok(r) => {
@@ -270,7 +291,8 @@ pub async fn eth_rpc_loop(
                                 }
                             }
                         },
-                        EthRpcMessages::GetEthBalance((side, address, responder)) => {
+                        EthRpcMessages::GetEthBalance((network_id, address, responder)) => {
+                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = get_eth_balance(
                                     if side.is_native() { &n_ws_client } else { &h_ws_client },

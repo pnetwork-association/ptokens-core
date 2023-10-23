@@ -3,6 +3,7 @@ use common_sentinel::{
     check_ipfs_daemon_is_running,
     publish_status as publish_status_via_ipfs,
     BroadcastChannelMessages,
+    NetworkId,
     SentinelConfig,
     SentinelError,
     SentinelStatus,
@@ -15,25 +16,18 @@ use tokio::{
     time::{sleep, Duration},
 };
 
-use crate::type_aliases::{
-    BroadcastChannelTx,
-    CoreCxnStatus,
-    Mcids,
-    StatusPublisherRx,
-    StatusPublisherTx,
-    WebSocketTx,
-};
+use crate::type_aliases::{BroadcastChannelTx, CoreCxnStatus, StatusPublisherRx, StatusPublisherTx, WebSocketTx};
 
 async fn publish_status(
     config: &SentinelConfig,
     websocket_tx: WebSocketTx,
     core_timeout: &u64,
-    mcids: Mcids,
+    network_ids: Vec<NetworkId>,
 ) -> Result<(), SentinelError> {
     let core_result = call_core(
         *core_timeout,
         websocket_tx.clone(),
-        WebSocketMessagesEncodable::GetStatus(mcids),
+        WebSocketMessagesEncodable::GetStatus(network_ids),
     )
     .await?;
 
@@ -110,7 +104,7 @@ pub async fn status_publisher_loop(
     let ipfs_bin_path = config.ipfs().ipfs_bin_path();
     check_ipfs_daemon_is_running(ipfs_bin_path)?;
 
-    let mcids = config.mcids();
+    let network_ids = config.network_ids()?;
     let mut core_is_connected = false;
     let mut status_publisher_is_enabled = true;
     let core_timeout = *config.core().timeout(); // TODO Make updateable via rpc call
@@ -143,7 +137,7 @@ pub async fn status_publisher_loop(
                             &config,
                             websocket_tx.clone(),
                             &core_timeout,
-                            mcids.clone(),
+                            network_ids.clone(),
                         ).await {
                             Ok(_) => continue 'status_loop,
                             Err(e) => break 'status_loop Err(e)
