@@ -2,20 +2,17 @@ mod config;
 mod core;
 mod error;
 mod governance;
-mod host;
 mod ipfs;
 mod log;
-mod native;
-mod traits;
+mod network;
 
 pub use self::{
     config::SentinelConfig,
     core::SentinelCoreConfig,
     error::SentinelConfigError,
-    governance::{GovernanceConfig, GovernanceToml},
-    host::{HostConfig, HostToml},
+    governance::GovernanceConfig,
     ipfs::IpfsConfig,
-    log::{LogConfig, LogToml},
-    native::{NativeConfig, NativeToml},
-    traits::ConfigT,
+    log::LogConfig,
+    network::NetworkConfig,
 };
+use self::{governance::GovernanceToml, log::LogToml, network::NetworkToml};

@@ -4,6 +4,7 @@ use common_sentinel::{
     Batch,
     BroadcastChannelMessages,
     EthRpcMessages,
+    EthRpcSenders,
     LatestBlockNumbers,
     NetworkId,
     SentinelConfig,
@@ -176,10 +177,12 @@ async fn broadcast_channel_loop(
 pub async fn syncer_loop(
     batch: Batch,
     config: SentinelConfig,
-    eth_rpc_tx: MpscTx<EthRpcMessages>,
+    eth_rpc_senders: EthRpcSenders,
     websocket_tx: MpscTx<WebSocketMessages>,
     broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
 ) -> Result<(), SentinelError> {
+    todo!("this");
+    /*
     batch.check_endpoint().await?;
 
     let network_id = *batch.network_id();
@@ -260,4 +263,5 @@ pub async fn syncer_loop(
             },
         }
     }
+    */
 }

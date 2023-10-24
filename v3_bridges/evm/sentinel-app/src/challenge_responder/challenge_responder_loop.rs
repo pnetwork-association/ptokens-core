@@ -8,6 +8,7 @@ use common_sentinel::{
     ChallengeResponderMessages,
     Env,
     EthRpcMessages,
+    EthRpcSenders,
     NetworkId,
     SentinelConfig,
     SentinelError,
@@ -21,7 +22,6 @@ use crate::type_aliases::{
     ChallengeResponderRx,
     ChallengeResponderTx,
     CoreCxnStatus,
-    EthRpcTx,
     WebSocketTx,
 };
 
@@ -33,9 +33,11 @@ async fn respond_to_challenge(
     gas_limit: usize,
     config: &SentinelConfig,
     broadcaster_pk: &EthPrivateKey,
-    eth_rpc_tx: EthRpcTx,
+    eth_rpc_senders: EthRpcSenders,
     websocket_tx: WebSocketTx,
 ) -> Result<(), SentinelError> {
+    todo!("this");
+    /*
     let id = info.challenge().id()?;
     let c_network_id = *info.challenge().network_id();
     let hub = config.pnetwork_hub(&c_network_id)?;
@@ -63,14 +65,17 @@ async fn respond_to_challenge(
     .await?;
 
     Ok(())
+    */
 }
 
 async fn get_gas_price(
     config: &SentinelConfig,
     network_id: &NetworkId,
-    eth_rpc_tx: EthRpcTx,
+    eth_rpc_senders: EthRpcSenders,
 ) -> Result<u64, SentinelError> {
-    let p = if let Some(p) = config.gas_price(network_id) {
+    todo!("this");
+    /*
+    let p = if let Ok(Some(p)) = config.gas_price(network_id) {
         debug!("using {network_id} gas price from config: {p}");
         p
     } else {
@@ -81,16 +86,18 @@ async fn get_gas_price(
         p
     };
     Ok(p)
+    */
 }
 
 async fn respond_to_challenges(
     config: &SentinelConfig,
     websocket_tx: WebSocketTx,
     core_timeout: &u64,
-    native_eth_rpc_tx: EthRpcTx,
-    host_eth_rpc_tx: EthRpcTx,
+    eth_rpc_senders: EthRpcSenders,
     pk: &EthPrivateKey,
 ) -> Result<(), SentinelError> {
+    todo!("");
+    /*
     info!("responding to challenges...");
     let unsolved_challenges = ChallengeAndResponseInfos::try_from(
         call_core(
@@ -169,6 +176,7 @@ async fn respond_to_challenges(
     }
 
     Ok(())
+        */
 }
 
 async fn broadcast_channel_loop(
@@ -225,8 +233,7 @@ pub async fn challenge_responder_loop(
     challenge_responder_tx: ChallengeResponderTx,
     broadcast_channel_tx: BroadcastChannelTx,
     websocket_tx: WebSocketTx,
-    native_eth_rpc_tx: EthRpcTx,
-    host_eth_rpc_tx: EthRpcTx,
+    eth_rpc_senders: EthRpcSenders,
 ) -> Result<(), SentinelError> {
     let name = "challenge responder loop";
 
@@ -267,8 +274,7 @@ pub async fn challenge_responder_loop(
                             &config,
                             websocket_tx.clone(),
                             &core_timeout,
-                            native_eth_rpc_tx.clone(),
-                            host_eth_rpc_tx.clone(),
+                            eth_rpc_senders.clone(),
                             &pk,
                         ).await {
                             Ok(_) => continue 'challenge_response_loop,

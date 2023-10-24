@@ -54,6 +54,14 @@ impl TryFrom<NetworkId> for EthChainId {
     }
 }
 
+use std::hash::{Hash, Hasher};
+
+impl Hash for NetworkId {
+    fn hash<H: Hasher>(&self, _state: &mut H) {
+        self.to_bytes();
+    }
+}
+
 #[derive(Clone, Debug, Copy, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct NetworkId {
     chain_id: u64,

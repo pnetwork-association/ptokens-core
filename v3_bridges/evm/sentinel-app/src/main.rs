@@ -33,14 +33,6 @@ pub struct Cli {
     #[arg(long, short)]
     config_path: Option<String>,
 
-    /// Disable the ws server
-    #[arg(short = 'y', long)]
-    disable_ws_server: bool,
-
-    /// Disable the rpc server
-    #[arg(short = 'z', long)]
-    disable_rpc_server: bool,
-
     // NOTE: These are optional, if no command is passed the sentinel is started proper
     #[command(subcommand)]
     commands: Option<Commands>,
@@ -68,8 +60,9 @@ async fn start() -> Result<String, SentinelError> {
     if let Some(commands) = cli_args.commands {
         handle_cli(commands).await
     } else {
-        let r = start_sentinel::start_sentinel(&config, cli_args.disable_rpc_server, cli_args.disable_ws_server).await;
-        r.map_err(|e| SentinelError::Json(json!({"jsonrpc": "2.0", "error": e.to_string()})))
+        start_sentinel::start_sentinel(&config)
+            .await
+            .map_err(|e| SentinelError::Json(json!({"jsonrpc": "2.0", "error": e.to_string()})))
     }
 }
 

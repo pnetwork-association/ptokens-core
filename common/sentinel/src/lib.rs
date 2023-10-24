@@ -1,4 +1,5 @@
 mod actors;
+mod eth_rpc_channels;
 mod batching;
 mod bpm;
 mod call_core;
@@ -28,6 +29,7 @@ mod utils;
 
 use self::db_utils::SentinelDbKeys;
 pub use self::{
+    eth_rpc_channels::{EthRpcSenders, EthRpcChannels},
     actors::{Actor, ActorInclusionProof, ActorType, Actors, ActorsError},
     batching::Batch,
     bpm::{Bpm, BpmInfo, Bpms},
@@ -41,18 +43,10 @@ pub use self::{
         ChallengesError,
         ChallengesList,
     },
-    config::{
-        ConfigT,
-        HostConfig,
-        IpfsConfig,
-        LogConfig,
-        LogToml,
-        NativeConfig,
-        SentinelConfig,
-        SentinelConfigError,
-        SentinelCoreConfig,
+    config::{IpfsConfig, LogConfig, NetworkConfig, SentinelConfig, SentinelConfigError, SentinelCoreConfig},
+    constants::{DEFAULT_SLEEP_TIME, HOST_PROTOCOL_ID, MILLISECONDS_MULTIPLIER, NATIVE_PROTOCOL_ID,
+MAX_CHANNEL_CAPACITY
     },
-    constants::{DEFAULT_SLEEP_TIME, HOST_PROTOCOL_ID, MILLISECONDS_MULTIPLIER, NATIVE_PROTOCOL_ID},
     core_state::CoreState,
     db_utils::{DbKey, DbUtilsT, SentinelDbUtils},
     endpoints::{EndpointError, Endpoints},

@@ -1,5 +1,6 @@
 use common_sentinel::{
     BroadcastChannelMessages,
+    EthRpcSenders,
     RpcServerBroadcastChannelMessages,
     SentinelConfig,
     SentinelError,
@@ -16,7 +17,6 @@ use crate::type_aliases::{
     BroadcastChannelTx,
     ChallengeResponderTx,
     CoreCxnStatus,
-    EthRpcTx,
     StatusPublisherTx,
     UserOpCancellerTx,
     WebSocketTx,
@@ -86,55 +86,36 @@ pub(crate) enum RpcCall {
         RpcId,
         RpcParams,
         Box<SentinelConfig>,
-        EthRpcTx,
-        EthRpcTx,
+        EthRpcSenders,
         WebSocketTx,
         CoreCxnStatus,
     ),
     Init(
         RpcId,
         Box<SentinelConfig>,
-        EthRpcTx,
-        EthRpcTx,
+        EthRpcSenders,
         WebSocketTx,
         RpcParams,
         CoreCxnStatus,
     ),
-    GetSyncState(
-        RpcId,
-        Box<SentinelConfig>,
-        WebSocketTx,
-        EthRpcTx,
-        EthRpcTx,
-        CoreCxnStatus,
-    ),
+    GetSyncState(RpcId, Box<SentinelConfig>, WebSocketTx, EthRpcSenders, CoreCxnStatus),
     GetUserOpState(
         RpcId,
         Box<SentinelConfig>,
         WebSocketTx,
-        EthRpcTx,
-        EthRpcTx,
+        EthRpcSenders,
         RpcParams,
         CoreCxnStatus,
     ),
     ResetChain(
         RpcId,
         Box<SentinelConfig>,
-        EthRpcTx,
-        EthRpcTx,
+        EthRpcSenders,
         WebSocketTx,
         RpcParams,
         CoreCxnStatus,
     ),
-    ProcessBlock(
-        RpcId,
-        Box<SentinelConfig>,
-        EthRpcTx,
-        EthRpcTx,
-        WebSocketTx,
-        RpcParams,
-        bool,
-    ),
+    ProcessBlock(RpcId, Box<SentinelConfig>, EthRpcSenders, WebSocketTx, RpcParams, bool),
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -143,8 +124,7 @@ impl RpcCall {
         r: JsonRpcRequest,
         config: SentinelConfig,
         websocket_tx: WebSocketTx,
-        host_eth_rpc_tx: EthRpcTx,
-        native_eth_rpc_tx: EthRpcTx,
+        eth_rpc_senders: EthRpcSenders,
         user_op_canceller_tx: UserOpCancellerTx,
         broadcast_channel_tx: BroadcastChannelTx,
         status_tx: StatusPublisherTx,
@@ -203,25 +183,16 @@ impl RpcCall {
                 r.id,
                 r.params.clone(),
                 Box::new(config.clone()),
-                native_eth_rpc_tx,
-                host_eth_rpc_tx,
+                eth_rpc_senders,
                 websocket_tx,
                 core_cxn,
             ),
-            "getSyncState" => Self::GetSyncState(
-                r.id,
-                Box::new(config),
-                websocket_tx,
-                host_eth_rpc_tx,
-                native_eth_rpc_tx,
-                core_cxn,
-            ),
+            "getSyncState" => Self::GetSyncState(r.id, Box::new(config), websocket_tx, eth_rpc_senders, core_cxn),
             "getUserOpState" => Self::GetUserOpState(
                 r.id,
                 Box::new(config),
                 websocket_tx,
-                host_eth_rpc_tx,
-                native_eth_rpc_tx,
+                eth_rpc_senders,
                 r.params.clone(),
                 core_cxn,
             ),
@@ -231,8 +202,7 @@ impl RpcCall {
             "reset" | "resetChain" => Self::ResetChain(
                 r.id,
                 Box::new(config),
-                host_eth_rpc_tx,
-                native_eth_rpc_tx,
+                eth_rpc_senders,
                 websocket_tx,
                 r.params.clone(),
                 core_cxn,
@@ -240,8 +210,7 @@ impl RpcCall {
             "init" => Self::Init(
                 r.id,
                 Box::new(config),
-                host_eth_rpc_tx,
-                native_eth_rpc_tx,
+                eth_rpc_senders,
                 websocket_tx,
                 r.params.clone(),
                 core_cxn,
@@ -249,8 +218,7 @@ impl RpcCall {
             "processBlock" | "process" | "submitBlock" | "submit" => Self::ProcessBlock(
                 r.id,
                 Box::new(config),
-                host_eth_rpc_tx,
-                native_eth_rpc_tx,
+                eth_rpc_senders,
                 websocket_tx,
                 r.params.clone(),
                 core_cxn,
@@ -303,12 +271,10 @@ impl RpcCall {
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
-            Self::GetSyncState(id, config, websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, core_cxn) => {
-                Self::handle_ws_result(
-                    id,
-                    Self::handle_sync_state(*config, websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, core_cxn).await,
-                )
-            },
+            Self::GetSyncState(id, config, websocket_tx, eth_rpc_senders, core_cxn) => Self::handle_ws_result(
+                id,
+                Self::handle_sync_state(*config, websocket_tx, eth_rpc_senders, core_cxn).await,
+            ),
             Self::GetRegistrationSignature(id, websocket_tx, params, core_cxn) => Self::handle_ws_result(
                 id,
                 Self::handle_get_registration_signature(websocket_tx, params, core_cxn).await,
@@ -346,20 +312,10 @@ impl RpcCall {
             Self::Delete(id, websocket_tx, params, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_delete(websocket_tx, params, core_cxn).await)
             },
-            Self::ResetChain(id, config, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params, core_cxn) => {
-                Self::handle_ws_result(
-                    id,
-                    Self::handle_reset_chain(
-                        *config,
-                        host_eth_rpc_tx,
-                        native_eth_rpc_tx,
-                        websocket_tx,
-                        params,
-                        core_cxn,
-                    )
-                    .await,
-                )
-            },
+            Self::ResetChain(id, config, eth_rpc_senders, websocket_tx, params, core_cxn) => Self::handle_ws_result(
+                id,
+                Self::handle_reset_chain(*config, eth_rpc_senders, websocket_tx, params, core_cxn).await,
+            ),
             Self::StopSyncer(id, broadcast_channel_tx, params, core_cxn) => {
                 let result = Self::handle_syncer_start_stop(broadcast_channel_tx, params, true, core_cxn).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
@@ -368,32 +324,16 @@ impl RpcCall {
             Self::GetUnsolvedChallenges(id, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_unsolved_challenges(websocket_tx, core_cxn).await)
             },
-            Self::GetUserOpState(id, config, websocket_tx, host_eth_rpc_tx, native_eth_rpc_tx, params, core_cxn) => {
+            Self::GetUserOpState(id, config, websocket_tx, eth_rpc_senders, params, core_cxn) => {
                 Self::handle_ws_result(
                     id,
-                    Self::handle_get_user_op_state(
-                        *config,
-                        websocket_tx,
-                        host_eth_rpc_tx,
-                        native_eth_rpc_tx,
-                        params,
-                        core_cxn,
-                    )
-                    .await,
+                    Self::handle_get_user_op_state(*config, websocket_tx, eth_rpc_senders, params, core_cxn).await,
                 )
             },
-            Self::GetChallengeState(id, params, config, native_eth_rpc_tx, host_eth_rpc_tx, websocket_tx, core_cxn) => {
+            Self::GetChallengeState(id, params, config, eth_rpc_senders, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(
                     id,
-                    Self::handle_get_challenge_state(
-                        *config,
-                        websocket_tx,
-                        host_eth_rpc_tx,
-                        native_eth_rpc_tx,
-                        params,
-                        core_cxn,
-                    )
-                    .await,
+                    Self::handle_get_challenge_state(*config, websocket_tx, eth_rpc_senders, params, core_cxn).await,
                 )
             },
             Self::StartSyncer(id, broadcast_channel_tx, params, core_cxn) => {
@@ -406,35 +346,15 @@ impl RpcCall {
                 id,
                 Self::handle_get_latest_block_numbers(websocket_tx, params, core_cxn).await,
             ),
-            Self::ProcessBlock(id, config, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params, core_cxn) => {
-                Self::handle_ws_result(
-                    id,
-                    Self::handle_process_block(
-                        *config,
-                        host_eth_rpc_tx,
-                        native_eth_rpc_tx,
-                        websocket_tx,
-                        params,
-                        core_cxn,
-                    )
-                    .await,
-                )
-            },
+            Self::ProcessBlock(id, config, eth_rpc_senders, websocket_tx, params, core_cxn) => Self::handle_ws_result(
+                id,
+                Self::handle_process_block(*config, eth_rpc_senders, websocket_tx, params, core_cxn).await,
+            ),
             Self::Ping(id) => Ok(warp::reply::json(&create_json_rpc_response(id, "pong"))),
-            Self::Init(id, config, host_eth_rpc_tx, native_eth_rpc_tx, websocket_tx, params, core_cxn) => {
-                Self::handle_ws_result(
-                    id,
-                    Self::handle_init(
-                        *config,
-                        websocket_tx,
-                        host_eth_rpc_tx,
-                        native_eth_rpc_tx,
-                        params,
-                        core_cxn,
-                    )
-                    .await,
-                )
-            },
+            Self::Init(id, config, eth_rpc_senders, websocket_tx, params, core_cxn) => Self::handle_ws_result(
+                id,
+                Self::handle_init(*config, websocket_tx, eth_rpc_senders, params, core_cxn).await,
+            ),
             Self::GetCoreState(id, params, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_core_state(params, websocket_tx, core_cxn).await)
             },
@@ -490,8 +410,7 @@ impl RpcCall {
 }
 
 async fn start_rpc_server(
-    host_eth_rpc_tx: EthRpcTx,
-    native_eth_rpc_tx: EthRpcTx,
+    eth_rpc_senders: EthRpcSenders,
     websocket_tx: WebSocketTx,
     config: SentinelConfig,
     broadcast_channel_tx: BroadcastChannelTx,
@@ -504,9 +423,8 @@ async fn start_rpc_server(
     let core_cxn_filter = warp::any().map(move || core_cxn);
     let status_tx_filter = warp::any().map(move || status_tx.clone());
     let websocket_tx_filter = warp::any().map(move || websocket_tx.clone());
-    let host_eth_rpc_tx_filter = warp::any().map(move || host_eth_rpc_tx.clone());
+    let eth_rpc_senders_filter = warp::any().map(move || eth_rpc_senders.clone());
     let broadcaster_tx_filter = warp::any().map(move || user_op_canceller_tx.clone());
-    let native_eth_rpc_tx_filter = warp::any().map(move || native_eth_rpc_tx.clone());
     let broadcast_channel_tx_filter = warp::any().map(move || broadcast_channel_tx.clone());
     let challenge_responder_tx_filter = warp::any().map(move || challenge_responder_tx.clone());
 
@@ -518,8 +436,7 @@ async fn start_rpc_server(
         .and(warp::body::json::<JsonRpcRequest>())
         .and(warp::any().map(move || config.clone()))
         .and(websocket_tx_filter.clone())
-        .and(host_eth_rpc_tx_filter.clone())
-        .and(native_eth_rpc_tx_filter.clone())
+        .and(eth_rpc_senders_filter.clone())
         .and(broadcaster_tx_filter.clone())
         .and(broadcast_channel_tx_filter.clone())
         .and(status_tx_filter.clone())
@@ -550,22 +467,17 @@ async fn broadcast_channel_loop(
 }
 
 pub async fn rpc_server_loop(
-    host_eth_rpc_tx: EthRpcTx,
-    native_eth_rpc_tx: EthRpcTx,
+    eth_rpc_senders: EthRpcSenders,
     websocket_tx: WebSocketTx,
     config: SentinelConfig,
-    disable: bool,
     broadcast_channel_tx: BroadcastChannelTx,
     user_op_canceller_tx: UserOpCancellerTx,
     status_tx: StatusPublisherTx,
     challenge_responder_tx: ChallengeResponderTx,
 ) -> Result<(), SentinelError> {
-    let rpc_server_is_enabled = !disable;
     let name = "rpc server";
-    if disable {
-        warn!("{name} disabled!")
-    };
 
+    let rpc_server_is_enabled = true; // FIXME rm
     let mut core_connection_status = false;
 
     'rpc_server_loop: loop {
@@ -584,8 +496,7 @@ pub async fn rpc_server_loop(
                 }
             },
             r = start_rpc_server(
-                host_eth_rpc_tx.clone(),
-                native_eth_rpc_tx.clone(),
+                eth_rpc_senders.clone(),
                 websocket_tx.clone(),
                 config.clone(),
                 broadcast_channel_tx.clone(),

@@ -1,20 +1,28 @@
-use common_sentinel::{Challenge, EthRpcMessages, SentinelConfig, SentinelError, WebSocketMessagesEncodable};
+use common_sentinel::{
+    Challenge,
+    EthRpcMessages,
+    EthRpcSenders,
+    SentinelConfig,
+    SentinelError,
+    WebSocketMessagesEncodable,
+};
 use serde_json::json;
 
 use crate::{
     rpc_server::{RpcCall, RpcParams},
-    type_aliases::{EthRpcTx, WebSocketTx},
+    type_aliases::WebSocketTx,
 };
 
 impl RpcCall {
     pub(crate) async fn handle_get_challenge_state(
         config: SentinelConfig,
         websocket_tx: WebSocketTx,
-        host_eth_rpc_tx: EthRpcTx,
-        native_eth_rpc_tx: EthRpcTx,
+        eth_rpc_senders: EthRpcSenders,
         params: RpcParams,
         core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        todo!("this");
+        /*
         debug!("handling get challenge state...");
         let checked_params = Self::check_params(params, 1)?;
 
@@ -39,5 +47,6 @@ impl RpcCall {
         let state = rx.await??;
 
         Ok(WebSocketMessagesEncodable::Success(json!(state)))
+        */
     }
 }

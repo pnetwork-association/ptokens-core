@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use common_sentinel::{
     EthRpcMessages,
+    EthRpcSenders,
     SentinelConfig,
     SentinelError,
     UserOpUniqueId,
@@ -13,18 +14,19 @@ use serde_json::json;
 
 use crate::{
     rpc_server::{RpcCall, RpcParams},
-    type_aliases::{EthRpcTx, WebSocketTx},
+    type_aliases::WebSocketTx,
 };
 
 impl RpcCall {
     pub(crate) async fn handle_get_user_op_state(
         config: SentinelConfig,
         websocket_tx: WebSocketTx,
-        host_eth_rpc_tx: EthRpcTx,
-        native_eth_rpc_tx: EthRpcTx,
+        eth_rpc_senders: EthRpcSenders,
         params: RpcParams,
         core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        todo!("this");
+        /*
         debug!("handling get user op state...");
         let checked_params = Self::check_params(params, 1)?;
         let uid = UserOpUniqueId::from_str(&checked_params[0])?;
@@ -72,5 +74,6 @@ impl RpcCall {
             "destinationNetworkId": destination_network_id,
             "destinationState": destination_user_op_state.to_string(),
         })))
+        */
     }
 }

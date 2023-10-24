@@ -2,6 +2,7 @@ use common_eth::EthSubmissionMaterials;
 use common_sentinel::{
     call_core,
     EthRpcMessages,
+    EthRpcSenders,
     NetworkId,
     SentinelConfig,
     SentinelError,
@@ -11,18 +12,19 @@ use common_sentinel::{
 
 use crate::{
     rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT_MS},
-    type_aliases::{EthRpcTx, WebSocketTx},
+    type_aliases::WebSocketTx,
 };
 
 impl RpcCall {
     pub(crate) async fn handle_process_block(
         config: SentinelConfig,
-        host_eth_rpc_tx: EthRpcTx,
-        native_eth_rpc_tx: EthRpcTx,
+        eth_rpc_senders: EthRpcSenders,
         websocket_tx: WebSocketTx,
         params: RpcParams,
         core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        todo!("this");
+        /*
         Self::check_core_is_connected(core_cxn)?;
         let checked_params = Self::check_params(params, 4)?;
 
@@ -54,5 +56,6 @@ impl RpcCall {
         );
         let msg = WebSocketMessagesEncodable::ProcessBatch(Box::new(submit_args));
         call_core(STRONGBOX_TIMEOUT_MS, websocket_tx.clone(), msg).await
+        */
     }
 }

@@ -235,10 +235,7 @@ async fn start_ws_server(
     let app = Router::new()
         .fallback_service(ServeDir::new(assets_dir).append_index_html_on_directories(true))
         .route("/ws", get(ws_handler))
-        .with_state(AppState::new(websocket_rx, broadcast_channel_tx, vec![
-            *config.native().network_id(),
-            *config.host().network_id(),
-        ]));
+        .with_state(AppState::new(websocket_rx, broadcast_channel_tx, config.network_ids()));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000)); // FIXME make configurable
     debug!("ws server listening on {}", addr);
@@ -251,16 +248,10 @@ async fn start_ws_server(
 pub async fn ws_server_loop(
     websocket_rx: WebSocketRx,
     config: SentinelConfig,
-    disable: bool,
     broadcast_channel_tx: BroadcastChannelTx,
 ) -> Result<(), SentinelError> {
     let name = "ws server";
-    if disable {
-        warn!("{name} disabled!")
-    } else {
-        debug!("{name} started")
-    };
-    let ws_server_is_enabled = !disable;
+    let ws_server_is_enabled = false;
 
     tokio::select! {
         r = start_ws_server(

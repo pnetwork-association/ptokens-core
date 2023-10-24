@@ -1,6 +1,7 @@
 use common_sentinel::{
     call_core,
     EthRpcMessages,
+    EthRpcSenders,
     LatestBlockNumbers,
     NetworkId,
     SentinelConfig,
@@ -13,23 +14,21 @@ use serde_json::json;
 
 use crate::{
     rpc_server::{RpcCall, STRONGBOX_TIMEOUT_MS},
-    type_aliases::{EthRpcTx, WebSocketTx},
+    type_aliases::WebSocketTx,
 };
 
 impl RpcCall {
     pub(crate) async fn handle_sync_state(
         config: SentinelConfig,
         websocket_tx: WebSocketTx,
-        host_eth_rpc_tx: EthRpcTx,
-        native_eth_rpc_tx: EthRpcTx,
+        eth_rpc_senders: EthRpcSenders,
         core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        todo!("this");
+        /*
         Self::check_core_is_connected(core_cxn)?;
 
-        // FIXME eventually this will have to work with one or more chains
-        let h_nid = *config.host().network_id();
-        let n_nid = *config.native().network_id();
-        let network_ids = vec![n_nid, h_nid];
+        let network_ids = config.network_ids();
 
         // NOTE: The following will check core state for us...
         let core_latest_block_numbers = LatestBlockNumbers::try_from(
@@ -41,11 +40,12 @@ impl RpcCall {
             .await?,
         )?;
 
-        let h_core_latest_block_num = core_latest_block_numbers.get_for(&h_nid)?;
-        let n_core_latest_block_num = core_latest_block_numbers.get_for(&n_nid)?;
+        //let msgs = network_id.iter().map(|id| core_latest_block_numbers.get_for(id)).collect::<Result<Vec<EthRpcMessages>, SentinelError>>()?;
 
-        let (h_msg, h_rx) = EthRpcMessages::get_latest_block_num_msg(h_nid);
-        let (n_msg, n_rx) = EthRpcMessages::get_latest_block_num_msg(n_nid);
+        //let h_core_latest_block_num = core_latest_block_numbers.get_for(&h_nid)?;
+        //let n_core_latest_block_num = core_latest_block_numbers.get_for(&n_nid)?;
+
+        let msgs = network_id.iter().map(|id| EthRpcMessages::get_latest_block_num_msg(id)).collect::<Vec<EthRpcMessages>>();
         host_eth_rpc_tx.send(h_msg).await?;
         native_eth_rpc_tx.send(n_msg).await?;
         let h_node_latest_block_num = h_rx.await??;
@@ -85,5 +85,6 @@ impl RpcCall {
         ]));
 
         Ok(WebSocketMessagesEncodable::Success(j))
+        */
     }
 }

@@ -42,3 +42,28 @@ ipfs_bin_path = "" # Path to the ipfs binary on your system
 [governance]
 network_id = "polygon" # Chain on which the governance contract lives
 address = "0xc508e6af23d3C1FcAbD24Dfab5A5304F65c0042c" # Governance contract address
+
+[networks]
+[networks.bsc]
+pnetwork_hub = "0xc508e6af23d3C1FcAbD24Dfab5A5304F65c0042c"
+endpoints = [ "" ]
+sleep_duration = 5 # How long to wait before trying to get the next host block (in seconds)
+network_id = "binance"
+validate = false # Used to turn off validation for this side's chain.
+gas_limit = 1
+gas_price = 2 # NOTE: If this is omitted, and rpc call will be made to determine the gas price from the node
+batch_size = 500 # Max number of blocks to batch together before submitting to core
+batch_duration = 60 # Max amount of time (in seconds) between batch submissions
+pre_filter_receipts = true # Pre filter receipts in app before submitting to the core
+
+[networks.polygon]
+pnetwork_hub = "0x578E916A4064c32F2eF44614Ff9B04B6D2546A13"
+network_id = "arbitrum"
+endpoints = [ "" ]
+sleep_duration = 1 # How long to wait before trying to get the next native block (in seconds)
+validate = false # Used to turn off validation for this side's chain.
+gas_limit = 1
+gas_price = 2 # NOTE: If this is omitted, and rpc call will be made to determine the gas price from the node
+pre_filter_receipts = true # Pre filter receipts in app before submitting to the core
+batch_size = 500 # Max number of host blocks to batch together before submission
+batch_duration = 60 # Max amount of time between batch submission in seconds

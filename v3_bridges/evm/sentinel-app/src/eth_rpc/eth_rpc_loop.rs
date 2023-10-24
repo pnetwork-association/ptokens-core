@@ -35,21 +35,14 @@ use tokio::{
 
 const ENDPOINT_ROTATION_SLEEP_TIME: u64 = 2000;
 
-fn get_side_from_network_id(config: &SentinelConfig, nid: &NetworkId) -> Result<BridgeSide, SentinelError> {
-    if nid == config.native().network_id() {
-        Ok(BridgeSide::Native)
-    } else if nid == config.host().network_id() {
-        Ok(BridgeSide::Host)
-    } else {
-        Err(NetworkIdError::Unsupported(*nid).into())
-    }
-}
 pub async fn eth_rpc_loop(
     mut eth_rpc_rx: MpscRx<EthRpcMessages>,
     config: SentinelConfig,
     _broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
     _broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
 ) -> Result<(), SentinelError> {
+    todo!("this");
+    /*
     let mut h_endpoints = config.get_host_endpoints();
     let mut n_endpoints = config.get_native_endpoints();
     let n_sleep_time = *n_endpoints.sleep_time();
@@ -331,4 +324,5 @@ pub async fn eth_rpc_loop(
             },
         }
     }
+    */
 }

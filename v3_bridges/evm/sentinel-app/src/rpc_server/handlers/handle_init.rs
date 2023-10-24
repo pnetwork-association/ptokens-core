@@ -1,6 +1,7 @@
 use common_sentinel::{
     call_core,
     EthRpcMessages,
+    EthRpcSenders,
     SentinelConfig,
     SentinelError,
     WebSocketMessagesEncodable,
@@ -10,18 +11,19 @@ use common_sentinel::{
 
 use crate::{
     rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT_MS},
-    type_aliases::{EthRpcTx, WebSocketTx},
+    type_aliases::WebSocketTx,
 };
 
 impl RpcCall {
     pub(crate) async fn handle_init(
         config: SentinelConfig,
         websocket_tx: WebSocketTx,
-        host_eth_rpc_tx: EthRpcTx,
-        native_eth_rpc_tx: EthRpcTx,
+        eth_rpc_senders: EthRpcSenders,
         params: RpcParams,
         core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
+        todo!("this");
+        /*
         Self::check_core_is_connected(core_cxn)?;
 
         let mut args = WebSocketMessagesInitArgs::try_from(params)?;
@@ -67,5 +69,6 @@ impl RpcCall {
             WebSocketMessagesEncodable::Initialize(Box::new(args)),
         )
         .await
+        */
     }
 }

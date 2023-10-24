@@ -4,14 +4,13 @@ use ethereum_types::Address as EthAddress;
 use serde::Deserialize;
 
 use super::SentinelConfigError;
-use crate::{config::ConfigT, constants::MILLISECONDS_MULTIPLIER, Endpoints, NetworkId, SentinelError};
+use crate::{Endpoints, NetworkId, SentinelError};
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct NativeToml {
+pub struct NetworkToml {
     validate: bool,
-    gas_limit: usize,
     batch_size: u64,
-    network_id: String,
+    gas_limit: usize,
     batch_duration: u64,
     sleep_duration: u64,
     pnetwork_hub: String,
@@ -21,7 +20,7 @@ pub struct NativeToml {
 }
 
 #[derive(Debug, Clone, Default, Getters)]
-pub struct NativeConfig {
+pub struct NetworkConfig {
     validate: bool,
     batch_size: u64,
     gas_limit: usize,
@@ -29,20 +28,17 @@ pub struct NativeConfig {
     sleep_duration: u64,
     #[getter(skip)]
     endpoints: Endpoints,
-    network_id: NetworkId,
     gas_price: Option<u64>,
     pnetwork_hub: EthAddress,
     pre_filter_receipts: bool,
 }
 
-impl NativeConfig {
-    pub fn from_toml(toml: &NativeToml) -> Result<Self, SentinelError> {
-        let network_id = NetworkId::try_from(&toml.network_id)?;
-        let sleep_duration = toml.sleep_duration * MILLISECONDS_MULTIPLIER; // FIXME Make this seconds
+impl NetworkConfig {
+    pub fn from_toml(network_id: NetworkId, toml: &NetworkToml) -> Result<Self, SentinelError> {
+        let sleep_duration = toml.sleep_duration;
         let endpoints = Endpoints::new(sleep_duration, network_id, toml.endpoints.clone());
         Ok(Self {
             endpoints,
-            network_id,
             sleep_duration,
             validate: toml.validate,
             gas_price: toml.gas_price,
@@ -62,7 +58,6 @@ impl NativeConfig {
         self.sleep_duration
     }
 
-    // FIXME rm this duplicate code from host and native when we drop those monikers entirely
     fn sanity_check_batch_size(batch_size: u64) -> Result<u64, SentinelError> {
         info!("Sanity checking batch size...");
         const MIN: u64 = 0;
@@ -90,27 +85,5 @@ impl NativeConfig {
                 size: batch_duration,
             }))
         }
-    }
-}
-
-impl ConfigT for NativeConfig {
-    fn is_validating(&self) -> bool {
-        self.validate
-    }
-
-    fn gas_price(&self) -> Option<u64> {
-        self.gas_price
-    }
-
-    fn gas_limit(&self) -> usize {
-        self.gas_limit
-    }
-
-    fn pnetwork_hub(&self) -> EthAddress {
-        self.pnetwork_hub
-    }
-
-    fn pre_filter_receipts(&self) -> bool {
-        *self.pre_filter_receipts()
     }
 }

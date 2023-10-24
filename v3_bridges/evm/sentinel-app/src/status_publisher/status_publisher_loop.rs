@@ -104,8 +104,8 @@ pub async fn status_publisher_loop(
     let ipfs_bin_path = config.ipfs().ipfs_bin_path();
     check_ipfs_daemon_is_running(ipfs_bin_path)?;
 
-    let network_ids = config.network_ids()?;
     let mut core_is_connected = false;
+    let network_ids = config.network_ids();
     let mut status_publisher_is_enabled = true;
     let core_timeout = *config.core().timeout(); // TODO Make updateable via rpc call
     let mut status_update_frequency = *config.ipfs().status_update_frequency();

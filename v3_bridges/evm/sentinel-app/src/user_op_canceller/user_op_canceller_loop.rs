@@ -7,6 +7,7 @@ use common_sentinel::{
     BroadcastChannelMessages,
     Env,
     EthRpcMessages,
+    EthRpcSenders,
     NetworkId,
     SentinelConfig,
     SentinelError,
@@ -23,14 +24,7 @@ use common_sentinel::{
 use ethereum_types::H256 as EthHash;
 use tokio::time::{sleep, Duration};
 
-use crate::type_aliases::{
-    BroadcastChannelRx,
-    BroadcastChannelTx,
-    EthRpcTx,
-    UserOpCancellerRx,
-    UserOpCancellerTx,
-    WebSocketTx,
-};
+use crate::type_aliases::{BroadcastChannelRx, BroadcastChannelTx, UserOpCancellerRx, UserOpCancellerTx, WebSocketTx};
 
 async fn cancel_user_op(
     op: UserOp,
@@ -40,9 +34,11 @@ async fn cancel_user_op(
     gas_limit: usize,
     config: &SentinelConfig,
     broadcaster_pk: &EthPrivateKey,
-    eth_rpc_tx: EthRpcTx,
+    eth_rpc_senders: EthRpcSenders,
     websocket_tx: WebSocketTx,
 ) -> Result<EthHash, SentinelError> {
+    todo!("this");
+    /*
     // FIXME re-instate the balance checks
     // NOTE: First we check we can afford the tx
     //op.check_affordability(balance, gas_limit, gas_price)?;
@@ -60,9 +56,8 @@ async fn cancel_user_op(
         return Err(UserOpError::CannotCancel(Box::new(op)).into());
     }
 
-    let network_ids = config.network_ids()?;
     let msg = WebSocketMessagesEncodable::GetUserOpCancellationSignature(Box::new(
-        WebSocketMessagesCancelUserOpArgs::new(network_ids, op.clone()),
+        WebSocketMessagesCancelUserOpArgs::new(config.network_ids(), op.clone()),
     ));
 
     let cancellation_sig =
@@ -87,14 +82,17 @@ async fn cancel_user_op(
 
     info!("tx hash: {tx_hash}");
     Ok(tx_hash)
+    */
 }
 
 async fn get_gas_price(
     config: &SentinelConfig,
     network_id: &NetworkId,
-    eth_rpc_tx: EthRpcTx,
+    eth_rpc_senders: EthRpcSenders,
 ) -> Result<u64, SentinelError> {
-    let p = if let Some(p) = config.gas_price(network_id) {
+    todo!("this");
+    /*
+    let p = if let Ok(Some(p)) = config.gas_price(network_id) {
         debug!("using {network_id} gas price from config: {p}");
         p
     } else {
@@ -105,21 +103,21 @@ async fn get_gas_price(
         p
     };
     Ok(p)
+    */
 }
 
 async fn cancel_user_ops(
     config: &SentinelConfig,
     websocket_tx: WebSocketTx,
-    eth_rpc_tx: EthRpcTx,
+    eth_rpc_senders: EthRpcSenders,
     pk: &EthPrivateKey,
 ) -> Result<(), SentinelError> {
+    todo!("this");
+    /*
     info!("handling user op cancellation request...");
 
     let max_delta = config.core().max_cancellable_time_delta();
-    let args = WebSocketMessagesGetCancellableUserOpArgs::new(*max_delta, vec![
-        *config.native().network_id(),
-        *config.host().network_id(),
-    ]);
+    let args = WebSocketMessagesGetCancellableUserOpArgs::new(*max_delta, config.network_ids());
 
     let cancellable_user_ops = UserOps::try_from(
         call_core(
@@ -184,6 +182,7 @@ async fn cancel_user_ops(
     }
 
     Ok(())
+    */
 }
 
 async fn broadcast_channel_loop(
@@ -216,7 +215,7 @@ async fn cancellation_loop(frequency: &u64, user_op_canceller_tx: UserOpCancelle
 
 pub async fn user_op_canceller_loop(
     mut user_op_canceller_rx: UserOpCancellerRx,
-    eth_rpc_tx: EthRpcTx,
+    eth_rpc_senders: EthRpcSenders,
     config: SentinelConfig,
     broadcast_channel_tx: BroadcastChannelTx,
     websocket_tx: WebSocketTx,
@@ -292,7 +291,7 @@ pub async fn user_op_canceller_loop(
                     match cancel_user_ops(
                         &config,
                         websocket_tx.clone(),
-                        eth_rpc_tx.clone(),
+                        eth_rpc_senders.clone(),
                         &pk,
                     ).await {
                         Ok(_) => {
