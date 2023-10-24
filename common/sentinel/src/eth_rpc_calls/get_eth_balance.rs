@@ -1,12 +1,12 @@
 use std::result::Result;
 
-use common::{strip_hex_prefix, BridgeSide};
+use common::strip_hex_prefix;
 use ethereum_types::{Address as EthAddress, U256};
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
 use tokio::time::{sleep, Duration};
 
 use super::{ETH_RPC_CALL_TIME_LIMIT, MAX_RPC_CALL_ATTEMPTS};
-use crate::{run_timer, EndpointError, SentinelError};
+use crate::{run_timer, EndpointError, NetworkId, SentinelError};
 
 const RPC_CMD: &str = "eth_getBalance";
 
@@ -28,11 +28,11 @@ pub async fn get_eth_balance(
     ws_client: &WsClient,
     address: &EthAddress,
     sleep_time: u64,
-    side: BridgeSide,
+    network_id: NetworkId,
 ) -> Result<U256, SentinelError> {
     let mut attempt = 1;
     loop {
-        let m = format!("{side} calling {RPC_CMD} for addresss {address} attempt #{attempt}");
+        let m = format!("{network_id} calling {RPC_CMD} for addresss {address} attempt #{attempt}");
         debug!("{m}");
 
         let r = tokio::select! {
@@ -45,17 +45,17 @@ pub async fn get_eth_balance(
             Ok(r) => break Ok(r),
             Err(e) => match e {
                 SentinelError::Endpoint(EndpointError::WsClientDisconnected(_)) => {
-                    warn!("{side} {RPC_CMD} failed due to web socket dropping");
+                    warn!("{network_id} {RPC_CMD} failed due to web socket dropping");
                     break Err(e);
                 },
                 _ => {
                     if attempt < MAX_RPC_CALL_ATTEMPTS {
                         attempt += 1;
-                        warn!("{side} sleeping for {sleep_time}ms before retrying...");
+                        warn!("{network_id} sleeping for {sleep_time}ms before retrying...");
                         sleep(Duration::from_millis(sleep_time)).await;
                         continue;
                     } else {
-                        warn!("{side} {RPC_CMD} failed after {attempt} attempts");
+                        warn!("{network_id} {RPC_CMD} failed after {attempt} attempts");
                         break Err(e);
                     }
                 },
@@ -80,7 +80,7 @@ mod tests {
     #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_get_eth_balance() {
         let ws_client = get_test_ws_client().await;
-        let result = get_eth_balance(&ws_client, &*ADDRESS, DEFAULT_SLEEP_TIME, BridgeSide::default()).await;
+        let result = get_eth_balance(&ws_client, &*ADDRESS, DEFAULT_SLEEP_TIME, NetworkId::default()).await;
         assert!(result.is_ok());
     }
 

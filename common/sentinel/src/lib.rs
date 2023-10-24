@@ -19,10 +19,8 @@ mod logging;
 mod messages;
 mod network_id;
 mod processor;
-mod processor_output;
 mod registration;
 mod sanity_check_frequency;
-mod side;
 mod status;
 mod test_utils;
 mod user_ops;
@@ -103,11 +101,9 @@ pub use self::{
         WebSocketMessagesResetChainArgs,
     },
     network_id::{Bytes4, NetworkId, NetworkIdError, ProtocolId},
-    processor::{process_batch, reset_chain},
-    processor_output::ProcessorOutput,
+    processor::{process_batch, ProcessorOutput},
     registration::get_registration_signature,
     sanity_check_frequency::sanity_check_frequency,
-    side::Side,
     status::{SentinelStatus, SentinelStatusError},
     user_ops::{
         UserOp,

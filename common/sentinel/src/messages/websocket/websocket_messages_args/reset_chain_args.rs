@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use common::BridgeSide;
 use common_eth::EthSubmissionMaterial;
 use derive_getters::{Dissolve, Getters};
 use ethereum_types::Address as EthAddress;
@@ -16,17 +15,12 @@ pub struct WebSocketMessagesResetChainArgs {
     use_latest_block: bool,
     block_num: Option<u64>,
     hub: Option<EthAddress>,
-    side: Option<BridgeSide>,
     block: Option<EthSubmissionMaterial>,
 }
 
 impl WebSocketMessagesResetChainArgs {
     pub fn add_sub_mat(&mut self, m: EthSubmissionMaterial) {
         self.block = Some(m)
-    }
-
-    pub fn add_side(&mut self, s: BridgeSide) {
-        self.side = Some(s)
     }
 }
 
@@ -70,7 +64,6 @@ impl TryFrom<Vec<String>> for WebSocketMessagesResetChainArgs {
         let validate = matches!(args[3].as_ref(), "true");
 
         let block = None;
-        let side = None;
 
         let hub = if args.len() > expected_num_args {
             EthAddress::from_str(&args[4]).ok()
@@ -80,7 +73,6 @@ impl TryFrom<Vec<String>> for WebSocketMessagesResetChainArgs {
 
         Ok(Self {
             hub,
-            side,
             block,
             confs,
             validate,

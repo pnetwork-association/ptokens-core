@@ -32,7 +32,7 @@ impl BpmInfo {
 
 impl From<&ProcessorOutput> for BpmInfo {
     fn from(v: &ProcessorOutput) -> Self {
-        Self(v.timestamp(), v.latest_block_num())
+        Self(*v.timestamp(), *v.latest_block_num())
     }
 }
 
@@ -62,7 +62,7 @@ impl Bpm {
     pub fn push(&mut self, o: &ProcessorOutput) {
         let last_timestamp = self.last_timestamp();
         let this_timestamp = o.timestamp();
-        if this_timestamp > last_timestamp {
+        if this_timestamp > &last_timestamp {
             self.1.push_back(BpmInfo::from(o));
         }
     }

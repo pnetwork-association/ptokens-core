@@ -15,7 +15,6 @@ use common_sentinel::{
     UserOpCancellerMessages,
     UserOpError,
     UserOps,
-    WebSocketMessages,
     WebSocketMessagesCancelUserOpArgs,
     WebSocketMessagesEncodable,
     WebSocketMessagesGetCancellableUserOpArgs,
@@ -60,22 +59,13 @@ async fn cancel_user_op(
         return Err(UserOpError::CannotCancel(Box::new(op)).into());
     }
 
-    let mcids = config.mcids()?;
-    let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetUserOpCancellationSiganture(Box::new(
-        WebSocketMessagesCancelUserOpArgs::new(mcids.clone(), op.clone()),
-    )));
-    websocket_tx.send(msg).await?;
+    let network_ids = config.network_ids()?;
+    let msg = WebSocketMessagesEncodable::GetUserOpCancellationSignature(Box::new(
+        WebSocketMessagesCancelUserOpArgs::new(network_ids, op.clone()),
+    ));
 
-    let cancellation_sig = UserOpCancellationSignature::try_from(tokio::select! {
-        response = rx => response?,
-        _ = sleep(Duration::from_secs(*config.core().timeout())) => {
-            let m = "getting cancellation signature";
-            error!("timed out whilst {m}");
-            Err(SentinelError::Timedout(m.into()))
-        }
-    }?)?;
-
-    warn!("cancellation signature: {mcids:?}"); // FIXME rm
+    let cancellation_sig =
+        UserOpCancellationSignature::try_from(call_core(*config.core().timeout(), websocket_tx.clone(), msg).await?)?;
 
     let signed_tx = op.get_cancellation_tx(
         nonce,

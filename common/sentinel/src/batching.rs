@@ -116,7 +116,7 @@ impl Batch {
 
         let pre_filter_receipts = config.pre_filter_receipts(&network_id)?;
 
-        let pnetwork_hub = config.pnetwork_hub_from_network_id(&network_id)?;
+        let pnetwork_hub = config.pnetwork_hub(&network_id)?;
 
         let governance_address = config.governance_address(&network_id);
 

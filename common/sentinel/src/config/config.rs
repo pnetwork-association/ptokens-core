@@ -1,6 +1,5 @@
 use std::result::Result;
 
-use common::BridgeSide;
 use common_chain_ids::EthChainId;
 use derive_getters::Getters;
 use ethereum_types::Address as EthAddress;
@@ -105,15 +104,7 @@ impl SentinelConfig {
         }
     }
 
-    pub fn pnetwork_hub(&self, side: &BridgeSide) -> EthAddress {
-        if side.is_native() {
-            *self.native.pnetwork_hub()
-        } else {
-            *self.host.pnetwork_hub()
-        }
-    }
-
-    pub fn pnetwork_hub_from_network_id(&self, nid: &NetworkId) -> Result<EthAddress, SentinelConfigError> {
+    pub fn pnetwork_hub(&self, nid: &NetworkId) -> Result<EthAddress, SentinelConfigError> {
         if self.native().network_id() == nid {
             Ok(*self.native().pnetwork_hub())
         } else if self.host().network_id() == nid {
@@ -156,19 +147,7 @@ impl SentinelConfig {
         }
     }
 
-    pub fn network_id(&self, side: &BridgeSide) -> NetworkId {
-        if side.is_native() {
-            *self.native().network_id()
-        } else {
-            *self.host().network_id()
-        }
-    }
-
-    pub fn eth_chain_id(&self, side: &BridgeSide) -> Result<EthChainId, SentinelConfigError> {
-        Ok(EthChainId::try_from(&self.network_id(side))?)
-    }
-
-    pub fn eth_chain_id_from_network_id(&self, nid: &NetworkId) -> Result<EthChainId, SentinelConfigError> {
+    pub fn eth_chain_id(&self, nid: &NetworkId) -> Result<EthChainId, SentinelConfigError> {
         let n_network_id = self.native().network_id();
         let h_network_id = self.host().network_id();
 

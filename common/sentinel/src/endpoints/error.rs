@@ -1,5 +1,6 @@
-use common::BridgeSide;
 use thiserror::Error;
+
+use crate::NetworkId;
 
 #[derive(Error, Debug)]
 pub enum EndpointError {
@@ -21,6 +22,9 @@ pub enum EndpointError {
     #[error("endpoint timed out whilst {0}")]
     TimeOut(String),
 
-    #[error("max number of {0} endpoint rotations of {1} reached")]
-    MaxRotations(BridgeSide, usize),
+    #[error("max number of endpoint rotations ({num_rotations}) reached for network {network_id}")]
+    MaxRotations {
+        network_id: NetworkId,
+        num_rotations: usize,
+    },
 }

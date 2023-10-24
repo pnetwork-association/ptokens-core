@@ -1,11 +1,11 @@
 use std::result::Result;
 
-use common::{strip_hex_prefix, BridgeSide};
+use common::strip_hex_prefix;
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
 use tokio::time::{sleep, Duration};
 
 use super::{ETH_RPC_CALL_TIME_LIMIT, MAX_RPC_CALL_ATTEMPTS};
-use crate::{run_timer, EndpointError, SentinelError};
+use crate::{run_timer, EndpointError, NetworkId, SentinelError};
 
 const RPC_CMD: &str = "eth_gasPrice";
 
@@ -17,10 +17,10 @@ async fn get_gas_price_inner(ws_client: &WsClient) -> Result<u64, SentinelError>
     }
 }
 
-pub async fn get_gas_price(ws_client: &WsClient, sleep_time: u64, side: BridgeSide) -> Result<u64, SentinelError> {
+pub async fn get_gas_price(ws_client: &WsClient, sleep_time: u64, network_id: NetworkId) -> Result<u64, SentinelError> {
     let mut attempt = 1;
     loop {
-        let m = format!("{side} getting gas price attempt #{attempt}");
+        let m = format!("{network_id} getting gas price attempt #{attempt}");
         debug!("{m}");
 
         let r = tokio::select! {
@@ -33,17 +33,17 @@ pub async fn get_gas_price(ws_client: &WsClient, sleep_time: u64, side: BridgeSi
             Ok(r) => break Ok(r),
             Err(e) => match e {
                 SentinelError::Endpoint(EndpointError::WsClientDisconnected(_)) => {
-                    warn!("{side} {RPC_CMD} failed due to web socket dropping");
+                    warn!("{network_id} {RPC_CMD} failed due to web socket dropping");
                     break Err(e);
                 },
                 _ => {
                     if attempt < MAX_RPC_CALL_ATTEMPTS {
                         attempt += 1;
-                        warn!("{side} sleeping for {sleep_time}ms before retrying...");
+                        warn!("{network_id} sleeping for {sleep_time}ms before retrying...");
                         sleep(Duration::from_millis(sleep_time)).await;
                         continue;
                     } else {
-                        warn!("{side} {RPC_CMD} failed after {attempt} attempts");
+                        warn!("{network_id} {RPC_CMD} failed after {attempt} attempts");
                         break Err(e);
                     }
                 },
@@ -70,7 +70,7 @@ mod tests {
     #[cfg_attr(not(feature = "test-eth-rpc"), ignore)]
     async fn should_get_gas_price() {
         let ws_client = get_test_ws_client().await;
-        let result = get_gas_price(&ws_client, DEFAULT_SLEEP_TIME, BridgeSide::default()).await;
+        let result = get_gas_price(&ws_client, DEFAULT_SLEEP_TIME, NetworkId::default()).await;
         assert!(result.is_ok());
         assert!(result.unwrap() > 0);
     }

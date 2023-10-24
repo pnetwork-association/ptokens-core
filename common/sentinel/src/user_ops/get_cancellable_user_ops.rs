@@ -1,4 +1,4 @@
-use common::{BridgeSide, DatabaseInterface};
+use common::DatabaseInterface;
 
 use super::{UserOp, UserOpList, UserOps};
 use crate::{DbUtilsT, SentinelDbUtils, SentinelError};
@@ -33,6 +33,7 @@ impl UserOpList {
         &self,
         max_delta: u64,
         db_utils: &SentinelDbUtils<D>,
+        // FIXME take vec of tuples of nid & timestamp
         n_latest_block_timestamp: u64,
         h_latest_block_timestamp: u64,
     ) -> Result<UserOps, SentinelError> {
@@ -49,12 +50,15 @@ impl UserOpList {
                 );
 
                 let mut ops: Vec<UserOp> = vec![];
+                /*
                 for op in potentially_cancellable_ops.iter() {
                     let side = op.side();
                     let uid = op.uid_hex()?;
                     let time = op.enqueued_timestamp()?;
 
                     // FIXME check for underflow!
+
+                    // TODO fix this to check ALL other chains. If any one is not in sync then we can't in good faith cancel a user op");
 
                     let is_cancellable = match side {
                         // NOTE: Note that for host cancellations we need to ensure the _native_
@@ -71,6 +75,7 @@ impl UserOpList {
                         ops.push(op.clone())
                     }
                 }
+                */
 
                 let r = UserOps::new(ops);
                 debug!("num cancellable ops: {}", r.len());

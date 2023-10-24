@@ -1,7 +1,6 @@
 #![cfg(test)]
 use std::{fs::read_to_string, str::FromStr};
 
-use common::BridgeSide;
 use common_eth::{convert_hex_to_eth_address, convert_hex_to_h256, EthSubmissionMaterial};
 
 use crate::{NetworkId, UserOp, UserOps};
@@ -12,11 +11,9 @@ fn get_arbitrum_protocol_queue_operation_sub_mat() -> EthSubmissionMaterial {
 }
 
 pub fn get_arbitrum_protocol_queue_user_op() -> UserOp {
-    let side = BridgeSide::Host;
     let origin_network_id = NetworkId::try_from("xdai").unwrap();
     let pnetwork_hub = convert_hex_to_eth_address("0xf84552a4B276B47718b8E25E8151eF749D64C4A6").unwrap();
     let ops = UserOps::from_sub_mat(
-        side,
         &origin_network_id,
         &pnetwork_hub,
         &get_arbitrum_protocol_queue_operation_sub_mat(),

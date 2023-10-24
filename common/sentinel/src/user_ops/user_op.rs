@@ -1,6 +1,6 @@
 use std::{convert::TryFrom, fmt};
 
-use common::{BridgeSide, Byte, Bytes, MIN_DATA_SENSITIVITY_LEVEL};
+use common::{Byte, Bytes, MIN_DATA_SENSITIVITY_LEVEL};
 use common_eth::EthLog;
 use derive_getters::Getters;
 use ethabi::{encode as eth_abi_encode, Token as EthAbiToken};
@@ -42,7 +42,6 @@ pub struct UserOp {
     pub(super) block_hash: EthHash,
     pub(super) block_timestamp: u64,
     pub(super) user_op_log: UserOpLog,
-    pub(super) bridge_side: BridgeSide,
     pub(super) witnessed_timestamp: u64,
     pub(super) origin_network_id: NetworkId,
     pub(super) previous_states: Vec<UserOpState>,
@@ -82,10 +81,6 @@ impl UserOp {
         Ok(enqueued_state.timestamp())
     }
 
-    pub fn side(&self) -> BridgeSide {
-        self.bridge_side
-    }
-
     pub fn to_flag(&self) -> UserOpFlag {
         self.into()
     }
@@ -102,7 +97,6 @@ impl UserOp {
     }
 
     pub fn from_log(
-        bridge_side: BridgeSide,
         witnessed_timestamp: u64,
         block_timestamp: u64,
         block_hash: EthHash,
@@ -120,7 +114,6 @@ impl UserOp {
         let mut op = Self {
             tx_hash,
             block_hash,
-            bridge_side,
             user_op_log,
             asset_amount,
             block_timestamp,
@@ -345,11 +338,10 @@ mod tests {
 
     #[test]
     fn should_get_user_op_from_user_send() {
-        let side = BridgeSide::Native;
         let origin_network_id = NetworkId::try_from("binance").unwrap();
         let pnetwork_hub = convert_hex_to_eth_address("0x22BeC08c2241Ef915ed72bd876F4e4Bc4336d055").unwrap();
         let sub_mat = get_sample_submission_material_with_user_send();
-        let ops = UserOps::from_sub_mat(side, &origin_network_id, &pnetwork_hub, &sub_mat).unwrap();
+        let ops = UserOps::from_sub_mat(&origin_network_id, &pnetwork_hub, &sub_mat).unwrap();
         assert_eq!(ops.len(), 1);
         println!("{}", ops[0]);
         let op = ops[0].clone();
@@ -364,10 +356,9 @@ mod tests {
     #[test]
     fn should_get_user_op_from_user_send_2() {
         let sub_mat = get_sample_submission_material_with_user_send_2();
-        let side = BridgeSide::Native;
         let origin_network_id = NetworkId::try_from("binance").unwrap();
         let pnetwork_hub = convert_hex_to_eth_address("0x02878021ba5472F7F1e2bfb223ee6cf4b1eadA07").unwrap();
-        let ops = UserOps::from_sub_mat(side, &origin_network_id, &pnetwork_hub, &sub_mat).unwrap();
+        let ops = UserOps::from_sub_mat(&origin_network_id, &pnetwork_hub, &sub_mat).unwrap();
         assert_eq!(ops.len(), 1);
         let op = ops[0].clone();
         let uid = op.uid_hex().unwrap();

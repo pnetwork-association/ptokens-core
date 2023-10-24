@@ -1,6 +1,6 @@
 use std::result::Result;
 
-use common::{BridgeSide, DatabaseInterface};
+use common::DatabaseInterface;
 use common_eth::{Chain, ChainDbUtils, EthSubmissionMaterial};
 use ethereum_types::Address as EthAddress;
 
@@ -13,7 +13,6 @@ pub(super) fn process_single<D: DatabaseInterface>(
     validate: bool,
     _use_db_tx: bool,
     dry_run: bool,
-    side: BridgeSide,
     network_id: &NetworkId,
     reprocess: bool,
     chain: &mut Chain,
@@ -61,7 +60,7 @@ pub(super) fn process_single<D: DatabaseInterface>(
         return Ok(UserOps::empty());
     }
 
-    let ops = UserOps::from_sub_mat(side, network_id, pnetwork_hub, &canonical_sub_mat)?;
+    let ops = UserOps::from_sub_mat(network_id, pnetwork_hub, &canonical_sub_mat)?;
     debug!("found user ops: {ops}");
 
     let sentinel_db_utils = SentinelDbUtils::new(db);

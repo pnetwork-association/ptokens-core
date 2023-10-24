@@ -1,43 +1,31 @@
 use std::fmt;
 
-use common::BridgeSide;
+use derive_getters::Getters;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 
-use crate::{get_utc_timestamp, SentinelError, UserOps};
+use crate::{get_utc_timestamp, NetworkId, SentinelError, UserOps};
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, Getters)]
 pub struct ProcessorOutput {
     timestamp: u64,
-    side: BridgeSide,
+    network_id: NetworkId,
     latest_block_num: u64,
     processed_user_ops: UserOps,
 }
 
 impl ProcessorOutput {
-    pub fn new(side: BridgeSide, latest_block_num: u64, processed_user_ops: UserOps) -> Result<Self, SentinelError> {
+    pub fn new(
+        network_id: NetworkId,
+        latest_block_num: u64,
+        processed_user_ops: UserOps,
+    ) -> Result<Self, SentinelError> {
         Ok(Self {
-            side,
+            network_id,
             latest_block_num,
             processed_user_ops,
             timestamp: get_utc_timestamp()?,
         })
-    }
-
-    pub fn timestamp(&self) -> u64 {
-        self.timestamp
-    }
-
-    pub fn processed_use_ops(&self) -> UserOps {
-        self.processed_user_ops.clone()
-    }
-
-    pub fn latest_block_num(&self) -> u64 {
-        self.latest_block_num
-    }
-
-    pub fn side(&self) -> BridgeSide {
-        self.side
     }
 
     pub fn has_user_ops(&self) -> bool {

@@ -4,8 +4,6 @@ use common_eth::EthPrivateKey;
 use dotenv::dotenv;
 use thiserror::Error;
 
-const BROADCASTER_PRIVATE_KEY_ENV_VAR_SUFFIX: &str = "_BROADCASTER_PRIVATE_KEY";
-
 #[derive(Error, Debug)]
 pub enum EnvError {
     #[error("cannot find `.env` file")]
@@ -41,11 +39,7 @@ impl Env {
         })
     }
 
-    pub fn get_native_broadcaster_private_key() -> Result<EthPrivateKey, EnvError> {
-        Self::get_eth_pk_from_env_var(&format!("NATIVE{BROADCASTER_PRIVATE_KEY_ENV_VAR_SUFFIX}"))
-    }
-
-    pub fn get_host_broadcaster_private_key() -> Result<EthPrivateKey, EnvError> {
-        Self::get_eth_pk_from_env_var(&format!("HOST{BROADCASTER_PRIVATE_KEY_ENV_VAR_SUFFIX}"))
+    pub fn get_private_key() -> Result<EthPrivateKey, EnvError> {
+        Self::get_eth_pk_from_env_var("PRIVATE_KEY")
     }
 }

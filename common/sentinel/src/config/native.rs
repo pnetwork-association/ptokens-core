@@ -1,4 +1,3 @@
-use common::BridgeSide;
 use common_eth::convert_hex_to_eth_address;
 use derive_getters::Getters;
 use ethereum_types::Address as EthAddress;
@@ -95,10 +94,6 @@ impl NativeConfig {
 }
 
 impl ConfigT for NativeConfig {
-    fn side(&self) -> BridgeSide {
-        BridgeSide::Native
-    }
-
     fn is_validating(&self) -> bool {
         self.validate
     }

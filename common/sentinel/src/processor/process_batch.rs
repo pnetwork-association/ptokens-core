@@ -1,6 +1,6 @@
 use std::result::Result;
 
-use common::{BridgeSide, DatabaseInterface};
+use common::DatabaseInterface;
 use common_eth::{Chain, ChainDbUtils, EthSubmissionMaterials};
 use ethereum_types::Address as EthAddress;
 
@@ -12,7 +12,6 @@ pub fn process_batch<D: DatabaseInterface>(
     pnetwork_hub: &EthAddress,
     batch: &EthSubmissionMaterials,
     validate: bool,
-    side: BridgeSide,
     network_id: &NetworkId,
     reprocess: bool,
     dry_run: bool,
@@ -59,7 +58,6 @@ pub fn process_batch<D: DatabaseInterface>(
                     validate,
                     use_db_tx,
                     dry_run,
-                    side,
                     network_id,
                     reprocess,
                     &mut chain,
@@ -68,7 +66,7 @@ pub fn process_batch<D: DatabaseInterface>(
             .collect::<Result<Vec<UserOps>, SentinelError>>()?,
     );
 
-    info!("finished processing {side} submission material");
-    let r = ProcessorOutput::new(side, batch.get_last_block_num()?, processed_user_ops)?;
+    info!("finished processing {network_id} submission material");
+    let r = ProcessorOutput::new(*network_id, batch.get_last_block_num()?, processed_user_ops)?;
     Ok(r)
 }

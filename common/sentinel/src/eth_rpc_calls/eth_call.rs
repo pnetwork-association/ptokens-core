@@ -1,6 +1,6 @@
 use std::result::Result;
 
-use common::{strip_hex_prefix, BridgeSide, Byte, Bytes};
+use common::{strip_hex_prefix, Byte, Bytes};
 use common_eth::DefaultBlockParameter;
 use ethereum_types::Address as EthAddress;
 use jsonrpsee::{core::client::ClientT, rpc_params, ws_client::WsClient};
@@ -8,7 +8,7 @@ use serde_json::json;
 use tokio::time::{sleep, Duration};
 
 use super::{ETH_RPC_CALL_TIME_LIMIT, MAX_RPC_CALL_ATTEMPTS};
-use crate::{run_timer, EndpointError, SentinelError};
+use crate::{run_timer, EndpointError, NetworkId, SentinelError};
 
 const RPC_CMD: &str = "eth_call";
 
@@ -34,11 +34,11 @@ pub async fn eth_call(
     default_block_parameter: &DefaultBlockParameter,
     ws_client: &WsClient,
     sleep_time: u64,
-    side: BridgeSide,
+    network_id: NetworkId,
 ) -> Result<Bytes, SentinelError> {
     let mut attempt = 1;
     loop {
-        let m = format!("making {side} eth call attempt #{attempt}");
+        let m = format!("making {network_id} eth call attempt #{attempt}");
         debug!("{m}");
 
         let r = tokio::select! {
@@ -51,17 +51,17 @@ pub async fn eth_call(
             Ok(r) => break Ok(r),
             Err(e) => match e {
                 SentinelError::Endpoint(EndpointError::WsClientDisconnected(_)) => {
-                    warn!("{side} {RPC_CMD} failed due to web socket dropping");
+                    warn!("{network_id} {RPC_CMD} failed due to web socket dropping");
                     break Err(e);
                 },
                 _ => {
                     if attempt < MAX_RPC_CALL_ATTEMPTS {
                         attempt += 1;
-                        warn!("{side} sleeping for {sleep_time}ms before retrying...");
+                        warn!("{network_id} sleeping for {sleep_time}ms before retrying...");
                         sleep(Duration::from_millis(sleep_time)).await;
                         continue;
                     } else {
-                        warn!("{side} {RPC_CMD} failed after {attempt} attempts");
+                        warn!("{network_id} {RPC_CMD} failed after {attempt} attempts");
                         break Err(e);
                     }
                 },
@@ -84,7 +84,7 @@ mod tests {
         let to = convert_hex_to_eth_address("0x89Ab32156e46F46D02ade3FEcbe5Fc4243B9AAeD").unwrap();
         let data = hex::decode("70a08231000000000000000000000000aeaa8c6ebb17db8056fa30a08fd3097de555f571").unwrap();
         let ws = get_test_ws_client().await;
-        let chain_id = get_chain_id(&ws, DEFAULT_SLEEP_TIME, BridgeSide::default())
+        let chain_id = get_chain_id(&ws, DEFAULT_SLEEP_TIME, NetworkId::default())
             .await
             .unwrap();
         if chain_id == 1 {
@@ -101,7 +101,7 @@ mod tests {
         let to = convert_hex_to_eth_address("0x89Ab32156e46F46D02ade3FEcbe5Fc4243B9AAeD").unwrap();
         let data = hex::decode("70a08231000000000000000000000000aeaa8c6ebb17db8056fa30a08fd3097de555f571").unwrap();
         let ws = get_test_ws_client().await;
-        let chain_id = get_chain_id(&ws, DEFAULT_SLEEP_TIME, BridgeSide::default())
+        let chain_id = get_chain_id(&ws, DEFAULT_SLEEP_TIME, NetworkId::default())
             .await
             .unwrap();
         if chain_id == 1 {

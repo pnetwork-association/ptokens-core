@@ -1,6 +1,6 @@
 use std::{convert::TryFrom, fmt, str::FromStr};
 
-use common::{BridgeSide, Byte, Bytes};
+use common::{Byte, Bytes};
 use common_eth::EthSubmissionMaterial;
 use derive_more::{Constructor, Deref};
 use ethereum_types::{Address as EthAddress, U256};
@@ -46,7 +46,6 @@ impl UserOps {
     }
 
     pub fn from_sub_mat(
-        side: BridgeSide,
         origin_nid: &NetworkId,
         pnetwork_hub: &EthAddress,
         sub_mat: &EthSubmissionMaterial,
@@ -72,7 +71,6 @@ impl UserOps {
                     for topic in log.topics.iter() {
                         if topics.contains(topic) {
                             let op = UserOp::from_log(
-                                side,
                                 witnessed_timestamp,
                                 block_timestamp,
                                 block_hash,

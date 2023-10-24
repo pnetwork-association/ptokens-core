@@ -128,7 +128,6 @@ mod tests {
     fn should_parse_protocol_log_correctly() {
         let l = get_sample_log_with_protocol_queue();
         let r = UserOpProtocolLog::try_from(&l);
-        r.unwrap();
-        //assert!(r.is_ok());
+        assert!(r.is_ok());
     }
 }
