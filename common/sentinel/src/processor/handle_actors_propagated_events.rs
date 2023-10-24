@@ -2,14 +2,13 @@ use std::result::Result;
 
 use common::DatabaseInterface;
 use common_eth::EthSubmissionMaterial;
-use common_metadata::MetadataChainId;
 use ethereum_types::Address as EthAddress;
 
-use crate::{Actor, Actors, SentinelDbUtils, SentinelError};
+use crate::{Actor, Actors, NetworkId, SentinelDbUtils, SentinelError};
 
 pub(super) fn maybe_handle_actors_propagated_events<D: DatabaseInterface>(
     db_utils: &SentinelDbUtils<D>,
-    mcid: &MetadataChainId,
+    network_id: &NetworkId,
     governance_address: &EthAddress,
     sentinel_address: &EthAddress,
     sub_mat: &EthSubmissionMaterial,
@@ -19,7 +18,7 @@ pub(super) fn maybe_handle_actors_propagated_events<D: DatabaseInterface>(
         return Ok(());
     }
 
-    match Actors::from_sub_mat(sub_mat, *governance_address, *mcid)? {
+    match Actors::from_sub_mat(sub_mat, *governance_address, *network_id)? {
         None => Ok(()),
         Some(actors) => match actors.get_inclusion_proof_for_actor(&Actor::from(sentinel_address)) {
             Err(e) => {

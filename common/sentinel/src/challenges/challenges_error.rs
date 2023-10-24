@@ -29,9 +29,6 @@ pub enum ChallengesError {
     #[error("challenges app error: {0}")]
     AppError(#[from] common::AppError),
 
-    #[error("challenges metadata chain id error: {0}")]
-    MetadataChainId(#[from] common_metadata::MetadataChainIdError),
-
     #[error("challenges actors error: {0}")]
     Actors(#[from] crate::ActorsError),
 

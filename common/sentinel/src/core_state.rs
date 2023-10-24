@@ -6,7 +6,7 @@ use common_metadata::MetadataChainId;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::SentinelError;
+use crate::{NetworkId, NetworkIdError, SentinelError};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CoreState {
@@ -14,7 +14,11 @@ pub struct CoreState {
 }
 
 impl CoreState {
-    pub fn get<D: DatabaseInterface>(db: &D, mcids: Vec<MetadataChainId>) -> Result<Self, SentinelError> {
+    pub fn get<D: DatabaseInterface>(db: &D, network_ids: Vec<NetworkId>) -> Result<Self, SentinelError> {
+        let mcids = network_ids
+            .iter()
+            .map(MetadataChainId::try_from)
+            .collect::<Result<Vec<MetadataChainId>, NetworkIdError>>()?;
         let chain_db_utils = ChainDbUtils::new(db);
         let chain_state = mcids
             .iter()

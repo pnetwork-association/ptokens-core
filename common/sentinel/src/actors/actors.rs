@@ -1,20 +1,20 @@
 use std::fmt;
 
 use common_eth::{EthReceipts, EthSubmissionMaterial};
-use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use derive_more::Constructor;
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use serde::{Deserialize, Serialize};
 
 use super::{type_aliases::Hash, Actor, ActorsError, ActorsPropagatedEvent, ACTORS_PROPAGATED_EVENT_TOPIC};
+use crate::NetworkId;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Constructor, Getters, Serialize, Deserialize)]
 pub struct Actors {
     epoch: U256,
     tx_hash: EthHash,
     actors: Vec<Actor>,
-    mcid: MetadataChainId,
+    network_id: NetworkId,
     governance_contract: EthAddress,
 }
 
@@ -43,7 +43,7 @@ impl Actors {
     pub fn from_sub_mat(
         sub_mat: &EthSubmissionMaterial,
         governance_contract: EthAddress,
-        mcid: MetadataChainId,
+        network_id: NetworkId,
     ) -> Result<Option<Self>, ActorsError> {
         let block_hash = sub_mat.hash.unwrap_or_default();
         let governance_receipts = EthReceipts::new(sub_mat.get_receipts())
@@ -60,7 +60,7 @@ impl Actors {
 
         if logs.len() > 1 {
             return Err(ActorsError::TooManyLogs {
-                chain: mcid,
+                network_id,
                 block_hash: format!("0x{}", hex::encode(block_hash.as_bytes())),
             });
         };
@@ -78,7 +78,7 @@ impl Actors {
             *event.epoch(),
             tx_hash,
             actors,
-            mcid,
+            network_id,
             governance_contract,
         )))
     }
@@ -107,8 +107,8 @@ mod tests {
     fn should_get_actors_from_sub_mat() {
         let sub_mat = get_sample_actors_propagated_sub_mat();
         let governance_contract = get_governance_address();
-        let mcid = MetadataChainId::PolygonMainnet;
-        let actors = Actors::from_sub_mat(&sub_mat, governance_contract, mcid).unwrap();
+        let network_id = NetworkId::try_from("polygon").unwrap();
+        let actors = Actors::from_sub_mat(&sub_mat, governance_contract, network_id).unwrap();
         let expected_actors = get_sample_actors();
         assert_eq!(actors, Some(expected_actors))
     }
@@ -118,8 +118,8 @@ mod tests {
         let sub_mat = get_sample_actors_propagated_sub_mat();
         let governance_contract = EthAddress::random();
         assert_ne!(governance_contract, get_governance_address());
-        let mcid = MetadataChainId::PolygonMainnet;
-        let actors = Actors::from_sub_mat(&sub_mat, governance_contract, mcid).unwrap();
+        let network_id = NetworkId::try_from("polygon").unwrap();
+        let actors = Actors::from_sub_mat(&sub_mat, governance_contract, network_id).unwrap();
         assert_eq!(actors, None);
     }
 }

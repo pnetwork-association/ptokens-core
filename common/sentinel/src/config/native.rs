@@ -1,6 +1,5 @@
 use common::BridgeSide;
 use common_eth::convert_hex_to_eth_address;
-use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use ethereum_types::Address as EthAddress;
 use serde::Deserialize;
@@ -114,14 +113,6 @@ impl ConfigT for NativeConfig {
 
     fn pnetwork_hub(&self) -> EthAddress {
         self.pnetwork_hub
-    }
-
-    fn metadata_chain_id(&self) -> Result<MetadataChainId, SentinelConfigError> {
-        Ok(MetadataChainId::try_from(self.network_id())?)
-    }
-
-    fn mcid(&self) -> Result<MetadataChainId, SentinelConfigError> {
-        self.metadata_chain_id()
     }
 
     fn pre_filter_receipts(&self) -> bool {

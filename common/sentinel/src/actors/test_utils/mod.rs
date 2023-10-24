@@ -2,10 +2,12 @@
 use std::{fs::read_to_string, str::FromStr};
 
 use common_eth::{EthLog, EthSubmissionMaterial};
-use common_metadata::MetadataChainId;
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 
-use crate::actors::{Actor, ActorType, Actors};
+use crate::{
+    actors::{Actor, ActorType, Actors},
+    NetworkId,
+};
 
 pub fn get_sample_actors_propagated_sub_mat() -> EthSubmissionMaterial {
     EthSubmissionMaterial::from_str(
@@ -22,7 +24,7 @@ pub fn get_sample_actors() -> Actors {
     // NOTE: See here:
     // https://polygonscan.com/tx/0xf577503260b8f1c6608d3e50c93895833f783509ae059f1bd0e6f0922720fa67#eventlog
     let epoch = U256::from(26);
-    let mcid = MetadataChainId::PolygonMainnet;
+    let network_id = NetworkId::try_from("Polygon").unwrap();
     let tx_hash = EthHash::from_str("0xf577503260b8f1c6608d3e50c93895833f783509ae059f1bd0e6f0922720fa67").unwrap();
     let governance_contract = EthAddress::from_str("0x186d7656ca8e16d6e04b2a87b196d473f3566f54").unwrap();
     let actors = vec![
@@ -51,5 +53,5 @@ pub fn get_sample_actors() -> Actors {
             EthAddress::from_str("0x73659a0f105905121edbf44fb476b97c785688ec").unwrap(),
         ),
     ];
-    Actors::new(epoch, tx_hash, actors, mcid, governance_contract)
+    Actors::new(epoch, tx_hash, actors, network_id, governance_contract)
 }

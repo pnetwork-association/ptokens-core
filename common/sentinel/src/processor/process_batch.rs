@@ -2,7 +2,6 @@ use std::result::Result;
 
 use common::{BridgeSide, DatabaseInterface};
 use common_eth::{Chain, ChainDbUtils, EthSubmissionMaterials};
-use common_metadata::MetadataChainId;
 use ethereum_types::Address as EthAddress;
 
 use super::{maybe_handle_actors_propagated_events, maybe_handle_challenge_pending_events, process_single};
@@ -17,16 +16,15 @@ pub fn process_batch<D: DatabaseInterface>(
     network_id: &NetworkId,
     reprocess: bool,
     dry_run: bool,
-    mcid: MetadataChainId,
     maybe_governance_address: Option<EthAddress>,
     sentinel_address: EthAddress,
 ) -> Result<ProcessorOutput, SentinelError> {
-    info!("Processing {mcid} batch of submission material...");
+    info!("processing {network_id} batch of submission material...");
 
     let c_db_utils = ChainDbUtils::new(db);
     let s_db_utils = SentinelDbUtils::new(db);
 
-    let mut chain = Chain::get(&c_db_utils, mcid)?;
+    let mut chain = Chain::get(&c_db_utils, network_id.try_into()?)?;
 
     let use_db_tx = !dry_run;
 
@@ -38,7 +36,7 @@ pub fn process_batch<D: DatabaseInterface>(
         batch.iter().try_for_each(|sub_mat| {
             maybe_handle_actors_propagated_events(
                 &SentinelDbUtils::new(db),
-                &mcid,
+                network_id,
                 governance_address,
                 &sentinel_address,
                 sub_mat,

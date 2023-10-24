@@ -4,7 +4,6 @@ use std::{
 };
 
 use common_eth::{Chain, ChainBlockData, EthPrivateKey, EthSignature, EthSigningCapabilities};
-use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use ethereum_types::{Address as EthAddress, H256 as EthHash};
 use rbtag::{BuildDateTime, BuildInfo};
@@ -48,8 +47,11 @@ pub enum SentinelStatusError {
     #[error("cannot convert from: '{from}' to: 'SentinelStatus'")]
     CannotConvert { from: String },
 
-    #[error("no mcid in sync status: {0}")]
-    NoMcid(SyncStatus),
+    #[error("no network id in sync status: {0}")]
+    NoNetworkId(SyncStatus),
+
+    #[error("status metadata chain id error: {0}")]
+    MetadataChainId(#[from] common_metadata::MetadataChainIdError),
 }
 
 #[derive(Clone, Default, Debug, Eq, PartialEq, Serialize, Deserialize, Getters)]
@@ -59,9 +61,8 @@ pub struct SyncStatus {
     latest_block_number: u64,
     latest_block_timestamp: u64,
 
-    #[getter(skip)]
     #[serde(skip_serializing)] // NOTE: This is used to generate the string key of the hashmap
-    mcid: Option<MetadataChainId>,
+    network_id: Option<NetworkId>,
 }
 
 impl fmt::Display for SyncStatus {
@@ -70,20 +71,18 @@ impl fmt::Display for SyncStatus {
     }
 }
 
-impl SyncStatus {
-    fn mcid(&self) -> Result<MetadataChainId, SentinelStatusError> {
-        self.mcid.ok_or_else(|| SentinelStatusError::NoMcid(self.clone()))
+impl TryFrom<Chain> for SyncStatus {
+    type Error = SentinelStatusError;
+
+    fn try_from(c: Chain) -> Result<Self, Self::Error> {
+        SyncStatus::try_from(&c)
     }
 }
 
-impl From<Chain> for SyncStatus {
-    fn from(c: Chain) -> Self {
-        SyncStatus::from(&c)
-    }
-}
+impl TryFrom<&Chain> for SyncStatus {
+    type Error = SentinelStatusError;
 
-impl From<&Chain> for SyncStatus {
-    fn from(c: &Chain) -> Self {
+    fn try_from(c: &Chain) -> Result<Self, Self::Error> {
         // NOTE: Due to forks, there's always the possibility of > 1 block at any point in the chain
         let latest_block_data: Vec<ChainBlockData> =
             c.get_latest_block_data().map(|x| x.to_vec()).unwrap_or_else(Vec::new);
@@ -93,13 +92,14 @@ impl From<&Chain> for SyncStatus {
             *latest_block_data[0].hash()
         };
         let latest_block_hash = format!("0x{}", hex::encode(h.as_bytes()));
+        let network_id = NetworkId::try_from(c.mcid())?;
 
-        Self {
+        Ok(Self {
             latest_block_hash,
-            mcid: Some(*c.chain_id()),
+            network_id: Some(network_id),
             latest_block_number: c.latest_block_num(),
             latest_block_timestamp: c.latest_block_timestamp().as_secs(),
-        }
+        })
     }
 }
 
@@ -150,8 +150,10 @@ impl SentinelStatus {
 
         let mut sync_state = HashMap::<String, SyncStatus>::new();
         for chain in chains {
-            let sync_status = SyncStatus::from(chain);
-            let key = NetworkId::try_from(sync_status.mcid()?)?.to_hex()?;
+            let mcid = chain.mcid();
+            let network_id = NetworkId::try_from(mcid)?;
+            let sync_status = SyncStatus::try_from(chain)?;
+            let key = network_id.to_hex()?;
             sync_state.insert(key, sync_status);
         }
 
@@ -229,16 +231,13 @@ mod tests {
         // NOTE: See reference json at top of file
 
         let sync_state_struct = SyncStatus {
-            mcid: Some(MetadataChainId::XDaiMainnet),
+            network_id: Some(NetworkId::try_from("XDai").unwrap()),
             latest_block_hash: "0x81b4c556ffb342d579cb3feadcdfe2440d62c5f7c6300ed1635bca347dd34f39".to_string(),
             latest_block_number: 30031338,
             latest_block_timestamp: 1695029854,
         };
         let mut sync_state = HashMap::<String, SyncStatus>::new();
-        let key = NetworkId::try_from(sync_state_struct.mcid().unwrap())
-            .unwrap()
-            .to_hex()
-            .unwrap();
+        let key = sync_state_struct.network_id().unwrap().to_hex().unwrap();
         sync_state.insert(key, sync_state_struct);
         let mut software_versions = HashMap::<String, String>::new();
         software_versions.insert("listener".to_string(), "1.0.0".to_string());

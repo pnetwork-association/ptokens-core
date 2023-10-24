@@ -42,7 +42,7 @@ pub enum WebSocketMessagesEncodable {
     ResetChain(Box<WebSocketMessagesResetChainArgs>),
     ProcessBatch(Box<WebSocketMessagesProcessBatchArgs>),
     GetCancellableUserOps(Box<WebSocketMessagesGetCancellableUserOpArgs>),
-    GetUserOpCancellationSiganture(Box<WebSocketMessagesCancelUserOpArgs>),
+    GetUserOpCancellationSignature(Box<WebSocketMessagesCancelUserOpArgs>),
 }
 
 impl TryFrom<WebSocketMessagesEncodable> for Json {
@@ -95,7 +95,7 @@ impl fmt::Display for WebSocketMessagesEncodable {
             Self::GetLatestBlockNumbers(..) => "GetLatestBlockNumbers".to_string(),
             Self::SetChallengesToSolved(..) => "SetChallengesToSolved".to_string(),
             Self::GetRegistrationSignature(..) => "GetRegistrationSignature".to_string(),
-            Self::GetUserOpCancellationSiganture(..) => "GetUserOpCancellationSiganture".to_string(),
+            Self::GetUserOpCancellationSignature(..) => "GetUserOpCancellationSignature".to_string(),
         };
         write!(f, "{prefix}{s}")
     }

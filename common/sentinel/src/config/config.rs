@@ -2,7 +2,6 @@ use std::result::Result;
 
 use common::BridgeSide;
 use common_chain_ids::EthChainId;
-use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use ethereum_types::Address as EthAddress;
 use log::Level as LogLevel;
@@ -10,7 +9,6 @@ use serde::Deserialize;
 
 use crate::{
     config::{
-        ConfigT,
         GovernanceConfig,
         GovernanceToml,
         HostConfig,
@@ -145,20 +143,8 @@ impl SentinelConfig {
         }
     }
 
-    pub fn mcids(&self) -> Result<Vec<MetadataChainId>, SentinelConfigError> {
-        Ok(vec![self.native().mcid()?, self.host.mcid()?])
-    }
-
     pub fn network_ids(&self) -> Result<Vec<NetworkId>, SentinelConfigError> {
         Ok(vec![*self.native().network_id(), *self.host().network_id()])
-    }
-
-    pub fn mcid(&self, side: &BridgeSide) -> Result<MetadataChainId, SentinelConfigError> {
-        if side.is_native() {
-            self.native().mcid()
-        } else {
-            self.host().mcid()
-        }
     }
 
     pub fn governance_address(&self, nid: &NetworkId) -> Option<EthAddress> {

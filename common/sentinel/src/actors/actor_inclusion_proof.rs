@@ -1,7 +1,6 @@
 use std::fmt;
 
 use common::{crypto_utils::keccak_hash_bytes, DatabaseInterface, MIN_DATA_SENSITIVITY_LEVEL};
-use common_metadata::MetadataChainId;
 use derive_getters::Getters;
 use derive_more::Constructor;
 use ethabi::Token as EthAbiToken;
@@ -11,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value as Json};
 
 use super::{type_aliases::Hash, Actor, Actors, ActorsError};
-use crate::{DbKey, DbUtilsT, SentinelDbKeys, SentinelDbUtils, SentinelError, WebSocketMessagesEncodable};
+use crate::{DbKey, DbUtilsT, NetworkId, SentinelDbKeys, SentinelDbUtils, SentinelError, WebSocketMessagesEncodable};
 
 type Byte = u8;
 
@@ -22,7 +21,7 @@ pub struct ActorInclusionProof {
     tx_hash: EthHash,
     #[serde_as(as = "Vec<serde_with::hex::Hex>")]
     proof: Vec<Vec<u8>>,
-    mcid: MetadataChainId,
+    network_id: NetworkId,
 }
 
 impl TryFrom<Json> for ActorInclusionProof {
@@ -80,7 +79,7 @@ impl TryFrom<Vec<&str>> for ActorInclusionProof {
             U256::default(),
             EthHash::default(),
             proof,
-            MetadataChainId::default(),
+            NetworkId::default(),
         ))
     }
 }
@@ -139,7 +138,7 @@ impl fmt::Display for ActorInclusionProof {
         let j = json!({
             "proof": proof,
             "txHash": format!("0x{}", hex::encode(self.tx_hash())),
-            "chain": self.mcid(),
+            "network_id": self.network_id(),
         });
         write!(f, "{j}")
     }
@@ -206,7 +205,7 @@ impl Actors {
             *self.epoch(),
             *self.tx_hash(),
             proof,
-            *self.mcid(),
+            *self.network_id(),
         ))
     }
 
@@ -251,7 +250,7 @@ mod tests {
                 hex::decode("fec594682ae56dd0b4e447418d170ac775de8a0d49b7f0624a2221daaedb1bb1").unwrap(),
                 hex::decode("056b10a893fe384684692e4ae89d2adac2f7b0a3104be865f1ea2e6e8d549e51").unwrap(),
             ],
-            MetadataChainId::PolygonMainnet,
+            NetworkId::try_from("polygon").unwrap(),
         )
     }
 
