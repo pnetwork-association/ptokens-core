@@ -92,7 +92,7 @@ mod tests {
             "0x4838B106FCe9647Bdf1E7877BF73cE8B0BAD5f97",
             "50",
             "10",
-            "EthereumMainnet",
+            "eth",
         ];
         let r = WebSocketMessagesEncodable::try_from(args);
         assert!(r.is_ok());
