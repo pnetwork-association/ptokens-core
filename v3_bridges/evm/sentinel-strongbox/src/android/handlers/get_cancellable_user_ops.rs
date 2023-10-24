@@ -1,5 +1,7 @@
 use common_eth::{Chain, ChainDbUtils, ChainError};
+use common_metadata::MetadataChainId;
 use common_sentinel::{
+    NetworkIdError,
     SentinelDbUtils,
     SentinelError,
     UserOpList,
@@ -16,7 +18,11 @@ pub fn get_cancellable_user_ops(
     state: State,
 ) -> Result<State, SentinelError> {
     debug!("handling cancellable user ops in core...");
-    let (max_delta, mcids) = args.dissolve();
+    let (max_delta, network_ids) = args.dissolve();
+    let mcids = network_ids
+        .iter()
+        .map(MetadataChainId::try_from)
+        .collect::<Result<Vec<MetadataChainId>, NetworkIdError>>()?;
     let c_db_utils = ChainDbUtils::new(state.db());
     let s_db_utils = SentinelDbUtils::new(state.db());
     let chains = mcids

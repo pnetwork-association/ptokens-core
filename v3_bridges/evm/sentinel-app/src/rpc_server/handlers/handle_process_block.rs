@@ -48,7 +48,7 @@ impl RpcCall {
             dry_run,
             reprocess,
             network_id,
-            config.pnetwork_hub_from_network_id(&network_id)?,
+            config.pnetwork_hub(&network_id)?,
             EthSubmissionMaterials::new(vec![sub_mat]), // NOTE: The processor always deals with batches of submat
             config.governance_address(&network_id),
         );

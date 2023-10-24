@@ -33,8 +33,6 @@ use tokio::{
 // TODO DRY out the repeat code below, though it's not trivial due to having to replace the mutable websocket clients
 // upon endpoint rotation.
 
-// FIXME Take mcid in etc here not BridgeSide
-
 const ENDPOINT_ROTATION_SLEEP_TIME: u64 = 2000;
 
 fn get_side_from_network_id(config: &SentinelConfig, nid: &NetworkId) -> Result<BridgeSide, SentinelError> {
@@ -59,7 +57,7 @@ pub async fn eth_rpc_loop(
     let mut h_ws_client = h_endpoints.get_first_ws_client().await?;
     let mut n_ws_client = n_endpoints.get_first_ws_client().await?;
 
-    // FIXME Lots of usage of "side" in here that needs removing
+    // FIXME We assume the the endpoint to be host in here if it's not native. Rm this paradigm entirely.
     'eth_rpc_loop: loop {
         tokio::select! {
             r = eth_rpc_rx.recv() => match r {
@@ -73,7 +71,7 @@ pub async fn eth_rpc_loop(
                                     &pnetwork_hub,
                                     if side.is_native() { &n_ws_client } else { &h_ws_client },
                                     if side.is_native() { n_sleep_time } else { h_sleep_time },
-                                    side,
+                                    network_id,
                                 ).await;
                                 match r {
                                     Ok(r) => {
@@ -102,7 +100,7 @@ pub async fn eth_rpc_loop(
                                     &contract_address,
                                     if side.is_native() { &n_ws_client } else { &h_ws_client },
                                     if side.is_native() { n_sleep_time } else { h_sleep_time },
-                                    side,
+                                    network_id,
                                 ).await;
                                 match r {
                                     Ok(r) => {
@@ -156,7 +154,7 @@ pub async fn eth_rpc_loop(
                                 let r = get_gas_price(
                                     if side.is_native() { &n_ws_client } else { &h_ws_client },
                                     if side.is_native() { n_sleep_time } else { h_sleep_time },
-                                    side,
+                                    network_id,
                                 ).await;
                                 match r {
                                     Ok(r) => {
@@ -184,7 +182,7 @@ pub async fn eth_rpc_loop(
                                     &tx,
                                     if side.is_native() { &n_ws_client } else { &h_ws_client },
                                     if side.is_native() { n_sleep_time } else { h_sleep_time },
-                                    side,
+                                    &network_id,
                                 ).await;
                                 match r {
                                     Ok(r) => {
@@ -212,7 +210,7 @@ pub async fn eth_rpc_loop(
                                     if side.is_native() { &n_ws_client } else { &h_ws_client },
                                     &address,
                                     if side.is_native() { n_sleep_time } else { h_sleep_time },
-                                    side,
+                                    network_id,
                                 ).await;
                                 match r {
                                     Ok(r) => {
@@ -242,7 +240,7 @@ pub async fn eth_rpc_loop(
                                     &default_block_parameter,
                                     if side.is_native() { &n_ws_client } else { &h_ws_client },
                                     if side.is_native() { n_sleep_time } else { h_sleep_time },
-                                    side,
+                                    network_id,
                                 ).await;
                                 match r {
                                     Ok(r) => {
@@ -298,7 +296,7 @@ pub async fn eth_rpc_loop(
                                     if side.is_native() { &n_ws_client } else { &h_ws_client },
                                     &address,
                                     if side.is_native() { n_sleep_time } else { h_sleep_time },
-                                    side,
+                                    network_id,
                                 ).await;
                                 match r {
                                     Ok(r) => {

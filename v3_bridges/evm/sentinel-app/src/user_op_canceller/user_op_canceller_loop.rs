@@ -1,5 +1,6 @@
 use std::result::Result;
 
+use common_chain_ids::EthChainId;
 use common_eth::EthPrivateKey;
 use common_sentinel::{
     call_core,
@@ -47,7 +48,7 @@ async fn cancel_user_op(
     //op.check_affordability(balance, gas_limit, gas_price)?;
 
     let destination_network_id = op.destination_network_id();
-    let pnetwork_hub = config.pnetwork_hub_from_network_id(&destination_network_id)?;
+    let pnetwork_hub = config.pnetwork_hub(&destination_network_id)?;
     debug!("cancelling user op on network: {destination_network_id} nonce: {nonce} gas price: {gas_price}");
 
     let (msg, rx) = EthRpcMessages::get_user_op_state_msg(destination_network_id, op.clone(), pnetwork_hub);
@@ -67,12 +68,13 @@ async fn cancel_user_op(
     let cancellation_sig =
         UserOpCancellationSignature::try_from(call_core(*config.core().timeout(), websocket_tx.clone(), msg).await?)?;
 
+    let ecid: EthChainId = EthChainId::try_from(destination_network_id)?;
     let signed_tx = op.get_cancellation_tx(
         nonce,
         gas_price,
         gas_limit,
         &pnetwork_hub,
-        &config.eth_chain_id_from_network_id(&destination_network_id)?,
+        &ecid,
         broadcaster_pk,
         &cancellation_sig,
     )?;
@@ -229,7 +231,7 @@ pub async fn user_op_canceller_loop(
     warn!("{name} not active yet due to no core connection");
 
     Env::init()?;
-    let pk = Env::get_native_broadcaster_private_key()?; // FIXME: We just use the one pk now
+    let pk = Env::get_private_key()?;
 
     'user_op_canceller_loop: loop {
         tokio::select! {

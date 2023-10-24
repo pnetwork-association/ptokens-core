@@ -1,13 +1,17 @@
 use common_eth::{Chain, ChainDbUtils};
 use common_metadata::MetadataChainId;
-use common_sentinel::{SentinelError, SentinelStatus, WebSocketMessagesEncodable};
+use common_sentinel::{NetworkId, NetworkIdError, SentinelError, SentinelStatus, WebSocketMessagesEncodable};
 use serde_json::json;
 
 use crate::android::State;
 
-pub fn get_status(mcids: Vec<MetadataChainId>, state: State) -> Result<State, SentinelError> {
+pub fn get_status(network_ids: Vec<NetworkId>, state: State) -> Result<State, SentinelError> {
     debug!("handling `getStatus` message in strongbox...");
     let db_utils = ChainDbUtils::new(state.db());
+    let mcids = network_ids
+        .iter()
+        .map(MetadataChainId::try_from)
+        .collect::<Result<Vec<MetadataChainId>, NetworkIdError>>()?;
     let chains = mcids
         .iter()
         .map(|mcid| Chain::get(&db_utils, *mcid).map_err(|e| e.into()))

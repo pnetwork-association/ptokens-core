@@ -1,4 +1,5 @@
 use common_eth::{Chain, ChainDbUtils};
+use common_metadata::MetadataChainId;
 use common_sentinel::{
     SentinelError,
     WebSocketMessagesEncodable,
@@ -10,8 +11,9 @@ use serde_json::json;
 use crate::android::State;
 
 pub fn reset_chain(args: WebSocketMessagesResetChainArgs, state: State) -> Result<State, SentinelError> {
-    let (confs, validate, mcid, _, _, maybe_hub, _, maybe_sub_mat) = args.dissolve();
-    debug!("resetting {mcid} chain...");
+    let (confs, validate, network_id, _, _, maybe_hub, maybe_sub_mat) = args.dissolve();
+    let mcid = MetadataChainId::try_from(network_id)?;
+    debug!("resetting {network_id} chain...");
 
     let sub_mat = match maybe_sub_mat {
         Some(s) => Ok(s),

@@ -43,13 +43,13 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
         MSG::RemoveChallenge(hash) => super::handlers::remove_challenge(*hash, state),
         MSG::RemoveUserOp(uid) => super::handlers::remove_user_op(uid.clone(), state),
         MSG::ProcessBatch(args) => super::handlers::process_batch(*args.clone(), state),
-        MSG::GetCoreState(mcids) => super::handlers::get_core_state(mcids.clone(), state),
+        MSG::GetCoreState(network_ids) => super::handlers::get_core_state(network_ids.clone(), state),
         MSG::SetChallengesToSolved(ids) => super::handlers::set_challenges_to_solved(ids.clone(), state),
         MSG::GetLatestBlockNumbers(mcids) => super::handlers::get_latest_block_numbers(mcids.clone(), state),
         MSG::GetRegistrationSignature(owner, nonce) => {
             super::handlers::get_registration_signature(*owner, *nonce, state)
         },
-        MSG::GetUserOpCancellationSiganture(args) => {
+        MSG::GetUserOpCancellationSignature(args) => {
             super::handlers::get_user_op_cancellation_signature(*args.clone(), state)
         },
         MSG::DbOps(WebSocketMessagesEncodableDbOps::Get(k)) => super::handlers::get(k.clone(), state),

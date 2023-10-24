@@ -60,7 +60,6 @@ impl RpcCall {
         let sub_mat = responder.await??;
 
         args.add_sub_mat(sub_mat);
-        args.add_side(side);
 
         let msg = WebSocketMessagesEncodable::ResetChain(Box::new(args));
         call_core(STRONGBOX_TIMEOUT_MS, websocket_tx.clone(), msg).await

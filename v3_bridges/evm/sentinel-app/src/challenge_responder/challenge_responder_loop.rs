@@ -1,4 +1,3 @@
-use common::BridgeSide;
 use common_eth::EthPrivateKey;
 use common_sentinel::{
     call_core,
@@ -10,7 +9,6 @@ use common_sentinel::{
     Env,
     EthRpcMessages,
     NetworkId,
-    NetworkIdError,
     SentinelConfig,
     SentinelError,
     WebSocketMessagesEncodable,
@@ -40,12 +38,7 @@ async fn respond_to_challenge(
 ) -> Result<(), SentinelError> {
     let id = info.challenge().id()?;
     let c_network_id = *info.challenge().network_id();
-    let side = if config.native().network_id() == &c_network_id {
-        BridgeSide::Native
-    } else {
-        BridgeSide::Host
-    };
-    let hub = config.pnetwork_hub(&side);
+    let hub = config.pnetwork_hub(&c_network_id)?;
     let signed_tx = info.challenge().to_solve_challenge_tx(
         nonce,
         gas_price,
@@ -55,7 +48,6 @@ async fn respond_to_challenge(
         broadcaster_pk,
         info.response_info(),
     )?;
-    // NOTE: We're still stuck with the host/native paradigm for the time being.
 
     let (msg, rx) = EthRpcMessages::get_push_tx_msg(signed_tx, c_network_id);
     eth_rpc_tx.send(msg).await?;
@@ -129,53 +121,49 @@ async fn respond_to_challenges(
 
     for challenge_info in unsolved_challenges.iter() {
         let c_network_id = *challenge_info.challenge().network_id();
-        let side = if n_network_id == c_network_id {
-            std::result::Result::<BridgeSide, SentinelError>::Ok(BridgeSide::Native)
-        } else if h_network_id == c_network_id {
-            std::result::Result::<BridgeSide, SentinelError>::Ok(BridgeSide::Host)
-        } else {
-            Err(NetworkIdError::Unsupported(c_network_id).into())
-        }?;
 
-        if side.is_native() && native_nonce.is_none() {
+        if c_network_id == n_network_id && native_nonce.is_none() {
             let (native_msg, native_rx) = EthRpcMessages::get_nonce_msg(n_network_id, address);
             native_eth_rpc_tx.send(native_msg).await?;
             native_nonce = Some(native_rx.await??);
         };
 
-        if side.is_host() && host_nonce.is_none() {
+        if c_network_id == h_network_id && host_nonce.is_none() {
             let (host_msg, host_rx) = EthRpcMessages::get_nonce_msg(h_network_id, address);
             host_eth_rpc_tx.send(host_msg).await?;
             host_nonce = Some(host_rx.await??);
-        }
+        };
 
         respond_to_challenge(
             challenge_info,
-            if side.is_native() {
+            if c_network_id == n_network_id {
                 native_nonce.ok_or_else(|| SentinelError::NoNonce(n_network_id))?
             } else {
                 host_nonce.ok_or_else(|| SentinelError::NoNonce(h_network_id))?
             },
-            if side.is_native() {
+            if c_network_id == n_network_id {
                 native_gas_price
             } else {
+                // FIXME Rm host/native paradigm altogether
                 host_gas_price
             },
             gas_limit,
             config,
             pk,
-            if side.is_native() {
+            if c_network_id == n_network_id {
                 native_eth_rpc_tx.clone()
             } else {
+                // FIXME Rm host/native paradigm altogether
                 host_eth_rpc_tx.clone()
             },
             websocket_tx.clone(),
         )
         .await?;
 
-        if side.is_native() {
+        if c_network_id == n_network_id {
             native_nonce = native_nonce.map(|n| n + 1)
         } else {
+            // FIXME Rm host/native paradigm altogether
             host_nonce = host_nonce.map(|n| n + 1)
         };
     }
@@ -249,7 +237,7 @@ pub async fn challenge_responder_loop(
 
     Env::init()?;
     // NOTE: We don't use sides in the broadcasting pk management
-    let pk = Env::get_native_broadcaster_private_key()?;
+    let pk = Env::get_private_key()?;
 
     'challenge_response_loop: loop {
         tokio::select! {

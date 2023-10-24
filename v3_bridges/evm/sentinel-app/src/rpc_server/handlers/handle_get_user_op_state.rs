@@ -45,13 +45,13 @@ impl RpcCall {
         let (origin_msg, origin_rx) = EthRpcMessages::get_user_op_state_msg(
             origin_network_id,
             user_op.clone(),
-            config.pnetwork_hub_from_network_id(&origin_network_id)?,
+            config.pnetwork_hub(&origin_network_id)?,
         );
 
         let (destination_msg, destination_rx) = EthRpcMessages::get_user_op_state_msg(
             destination_network_id,
             user_op,
-            config.pnetwork_hub_from_network_id(&destination_network_id)?,
+            config.pnetwork_hub(&destination_network_id)?,
         );
 
         if destination_network_id == *config.host().network_id() {

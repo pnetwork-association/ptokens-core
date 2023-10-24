@@ -35,7 +35,7 @@ async fn main_loop(
     let network_id = *batch.network_id();
     let log_prefix = format!("{network_id} syncer");
     let validate = matches!(config.validate(&network_id), Ok(true));
-    let pnetwork_hub = config.pnetwork_hub_from_network_id(&network_id)?;
+    let pnetwork_hub = config.pnetwork_hub(&network_id)?;
     let sleep_duration = batch.get_sleep_duration();
 
     let latest_block_numbers = 'latest_block_getter_loop: loop {

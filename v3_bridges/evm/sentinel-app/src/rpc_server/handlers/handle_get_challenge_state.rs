@@ -25,11 +25,8 @@ impl RpcCall {
 
         // NOTE We're still stuck with host and native for now, so we need to figure out which of
         // those this challenge originated.
-        let (msg, rx) = EthRpcMessages::get_challenge_state_msg(
-            *network_id,
-            challenge,
-            config.pnetwork_hub_from_network_id(network_id)?,
-        );
+        let (msg, rx) =
+            EthRpcMessages::get_challenge_state_msg(*network_id, challenge, config.pnetwork_hub(network_id)?);
 
         if config.native().network_id() == network_id {
             warn!("using bridge side NATIVE");

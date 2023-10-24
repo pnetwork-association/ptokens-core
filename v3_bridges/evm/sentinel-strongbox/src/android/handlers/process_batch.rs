@@ -1,7 +1,6 @@
 use common_eth::{ChainDbUtils, ChainError};
 use common_sentinel::{
     process_batch as process_batch_of_blocks,
-    NetworkId,
     SentinelError,
     WebSocketMessagesEncodable,
     WebSocketMessagesError,
@@ -12,8 +11,7 @@ use serde_json::json;
 use crate::android::State;
 
 pub fn process_batch(args: WebSocketMessagesProcessBatchArgs, state: State) -> Result<State, SentinelError> {
-    let mcid = args.mcid();
-    let network_id = NetworkId::try_from(mcid)?;
+    let network_id = args.network_id();
     let sentinel_address = ChainDbUtils::new(state.db()).get_signing_address()?;
 
     let result = process_batch_of_blocks(
@@ -21,11 +19,9 @@ pub fn process_batch(args: WebSocketMessagesProcessBatchArgs, state: State) -> R
         args.pnetwork_hub(),
         args.sub_mat_batch(),
         *args.validate(),
-        *args.side(),
         &network_id,
         *args.reprocess(),
         *args.dry_run(),
-        *mcid,
         *args.governance_address(),
         sentinel_address,
     );
@@ -36,7 +32,11 @@ pub fn process_batch(args: WebSocketMessagesProcessBatchArgs, state: State) -> R
             WebSocketMessagesEncodable::Error(WebSocketMessagesError::NoParent(e))
         },
         Err(SentinelError::ChainError(ChainError::BlockAlreadyInDb { num, mcid, hash })) => {
-            WebSocketMessagesEncodable::Error(WebSocketMessagesError::BlockAlreadyInDb { num, mcid, hash })
+            WebSocketMessagesEncodable::Error(WebSocketMessagesError::BlockAlreadyInDb {
+                num,
+                network_id: mcid.try_into()?,
+                hash,
+            })
         },
         Err(e) => WebSocketMessagesEncodable::Error(e.into()),
     };
