@@ -1,6 +1,8 @@
 use common_eth::{Chain, ChainDbUtils, ChainError};
 use common_metadata::MetadataChainId;
 use common_sentinel::{
+    LatestBlockInfo,
+    LatestBlockInfos,
     NetworkIdError,
     SentinelDbUtils,
     SentinelError,
@@ -11,6 +13,7 @@ use common_sentinel::{
 };
 use serde_json::json;
 
+use super::get_latest_block_infos;
 use crate::android::State;
 
 pub fn get_cancellable_user_ops(
@@ -29,10 +32,22 @@ pub fn get_cancellable_user_ops(
         .iter()
         .map(|mcid| Chain::get(&c_db_utils, *mcid))
         .collect::<Result<Vec<Chain>, ChainError>>()?;
+
+    let latest_block_nums = chains.iter().map(|chain| *chain.offset()).collect::<Vec<u64>>();
+
     let latest_block_timestamps = chains
         .iter()
         .map(|c| c.latest_block_timestamp().as_secs())
         .collect::<Vec<u64>>();
+
+    let infos = LatestBlockInfos::new(
+        latest_block_nums
+            .iter()
+            .zip(latest_block_timestamps.iter())
+            .enumerate()
+            .map(|(i, (n, t))| LatestBlockInfo::new(*n, *t, network_ids[i]))
+            .collect::<Vec<LatestBlockInfo>>(),
+    );
 
     // NOTE: We need at least two chains in order to make useful decisions for user ops
     // cancellation eligibility.
@@ -44,20 +59,10 @@ pub fn get_cancellable_user_ops(
             expected: min_num_chains,
         })
     } else {
-        // FIXME We currently assume the first one passed in to be native and the second to be host.
-        // Future changes will get rid of this foot gun.
-        let n_latest_block_timestamp = latest_block_timestamps[0];
-        let h_latest_block_timestamp = latest_block_timestamps[1];
-
         let list = UserOpList::get(&s_db_utils);
         debug!("user op list: {list}");
 
-        let cancellable_ops = list.get_cancellable_ops(
-            max_delta,
-            &s_db_utils,
-            n_latest_block_timestamp,
-            h_latest_block_timestamp,
-        )?;
+        let cancellable_ops = list.get_cancellable_ops(max_delta, &s_db_utils, infos)?;
         debug!("cancellable ops: {cancellable_ops}");
 
         WebSocketMessagesEncodable::Success(json!(cancellable_ops))

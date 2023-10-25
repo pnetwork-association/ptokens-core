@@ -15,7 +15,7 @@ mod handle_get_user_op_list;
 mod handle_get_user_op_state;
 mod handle_get_user_ops;
 mod handle_init;
-mod handle_latest_block_numbers;
+mod handle_latest_block_infos;
 mod handle_process_block;
 mod handle_remove_challenge;
 mod handle_remove_user_op;

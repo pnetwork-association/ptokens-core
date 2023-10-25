@@ -4,7 +4,7 @@ mod get_challenge;
 mod get_challenges_list;
 mod get_core_state;
 mod get_inclusion_proof;
-mod get_latest_block_numbers;
+mod get_latest_block_infos;
 mod get_registration_signature;
 mod get_status;
 mod get_unsolved_challenges;
@@ -26,7 +26,7 @@ pub(crate) use self::{
     get_challenges_list::get_challenges_list,
     get_core_state::get_core_state,
     get_inclusion_proof::get_inclusion_proof,
-    get_latest_block_numbers::get_latest_block_numbers,
+    get_latest_block_infos::get_latest_block_infos,
     get_registration_signature::get_registration_signature,
     get_status::get_status,
     get_unsolved_challenges::get_unsolved_challenges,

@@ -37,15 +37,15 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
         MSG::GetInclusionProof => super::handlers::get_inclusion_proof(state),
         MSG::GetChallenge(hash) => super::handlers::get_challenge(*hash, state),
         MSG::GetUserOp(uid) => super::handlers::get_user_op(uid.clone(), state),
-        MSG::GetStatus(mcids) => super::handlers::get_status(mcids.clone(), state),
+        MSG::GetStatus(nids) => super::handlers::get_status(nids.clone(), state),
         MSG::ResetChain(args) => super::handlers::reset_chain(*args.clone(), state),
         MSG::GetUnsolvedChallenges => super::handlers::get_unsolved_challenges(state),
         MSG::RemoveChallenge(hash) => super::handlers::remove_challenge(*hash, state),
         MSG::RemoveUserOp(uid) => super::handlers::remove_user_op(uid.clone(), state),
         MSG::ProcessBatch(args) => super::handlers::process_batch(*args.clone(), state),
-        MSG::GetCoreState(network_ids) => super::handlers::get_core_state(network_ids.clone(), state),
+        MSG::GetCoreState(nids) => super::handlers::get_core_state(nids.clone(), state),
+        MSG::GetLatestBlockInfos(nids) => super::handlers::get_latest_block_infos(nids.clone(), state),
         MSG::SetChallengesToSolved(ids) => super::handlers::set_challenges_to_solved(ids.clone(), state),
-        MSG::GetLatestBlockNumbers(mcids) => super::handlers::get_latest_block_numbers(mcids.clone(), state),
         MSG::GetRegistrationSignature(owner, nonce) => {
             super::handlers::get_registration_signature(*owner, *nonce, state)
         },

@@ -62,8 +62,8 @@ pub enum SentinelError {
     #[error("a java exception occurred and was handled - see core logs for details")]
     JavaExceptionOccurred,
 
-    #[error("no latest block number for network ID: {0}")]
-    NoLatestBlockNumber(NetworkId),
+    #[error("no latest block info for network ID: {0}")]
+    NoLatestBlockInfo(NetworkId),
 
     #[error("timed out whilst {0}")]
     Timedout(String),

@@ -6,7 +6,7 @@ use crate::{
 };
 
 impl RpcCall {
-    pub(crate) async fn handle_get_latest_block_numbers(
+    pub(crate) async fn handle_get_latest_block_infos(
         websocket_tx: WebSocketTx,
         params: RpcParams,
         core_cxn: bool,
@@ -20,7 +20,7 @@ impl RpcCall {
         call_core(
             STRONGBOX_TIMEOUT,
             websocket_tx.clone(),
-            WebSocketMessagesEncodable::GetLatestBlockNumbers(network_ids),
+            WebSocketMessagesEncodable::GetLatestBlockInfos(network_ids),
         )
         .await
     }

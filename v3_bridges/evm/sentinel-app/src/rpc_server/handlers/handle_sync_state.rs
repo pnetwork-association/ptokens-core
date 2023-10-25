@@ -2,7 +2,7 @@ use common_sentinel::{
     call_core,
     EthRpcMessages,
     EthRpcSenders,
-    LatestBlockNumbers,
+    LatestBlockInfos,
     NetworkId,
     Responder,
     SentinelConfig,
@@ -31,18 +31,18 @@ impl RpcCall {
         let network_ids = config.network_ids();
 
         // NOTE: The following will check core state for us...
-        let core_latest_block_numbers_structure = LatestBlockNumbers::try_from(
+        let core_latest_block_infos = LatestBlockInfos::try_from(
             call_core(
                 STRONGBOX_TIMEOUT,
                 websocket_tx.clone(),
-                WebSocketMessagesEncodable::GetLatestBlockNumbers(network_ids.clone()),
+                WebSocketMessagesEncodable::GetLatestBlockInfos(network_ids.clone()),
             )
             .await?,
         )?;
 
         let core_latest_block_numbers = network_ids
             .iter()
-            .map(|id| core_latest_block_numbers_structure.get_for(id))
+            .map(|id| core_latest_block_infos.get_for(id).map(|info| *info.block_number()))
             .collect::<Result<Vec<u64>, SentinelError>>()?;
 
         let mut rpc_latest_block_nums = vec![];

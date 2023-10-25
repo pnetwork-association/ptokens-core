@@ -1,7 +1,7 @@
 use common::DatabaseInterface;
 
 use super::{UserOp, UserOpList, UserOps};
-use crate::{DbUtilsT, SentinelDbUtils, SentinelError};
+use crate::{DbUtilsT, LatestBlockInfos, SentinelDbUtils, SentinelError};
 
 const NUM_PAST_OPS_TO_CHECK_FOR_CANCELLABILITY: usize = 10; // TODO make configurable?
 
@@ -33,9 +33,7 @@ impl UserOpList {
         &self,
         max_delta: u64,
         db_utils: &SentinelDbUtils<D>,
-        // FIXME take vec of tuples of nid & timestamp
-        n_latest_block_timestamp: u64,
-        h_latest_block_timestamp: u64,
+        latest_block_info: LatestBlockInfos,
     ) -> Result<UserOps, SentinelError> {
         if self.is_empty() {
             return Ok(UserOps::empty());
@@ -45,14 +43,14 @@ impl UserOpList {
             .map(|ops| ops.get_enqueued_but_not_witnessed())
             .and_then(|potentially_cancellable_ops| {
                 debug!("num ops queued but not witnessed: {}", potentially_cancellable_ops.len());
+
+                let mut ops: Vec<UserOp> = vec![];
+                todo!("this, but first have to clarify what on earth is going on on chain with the origin/destination/forward network ids");
+                /*
                 debug!(
                     "max delta: {max_delta}, n_latest_timestamp: {n_latest_block_timestamp}, h_latest_block_timestamp: {h_latest_block_timestamp}"
                 );
-
-                let mut ops: Vec<UserOp> = vec![];
-                /*
                 for op in potentially_cancellable_ops.iter() {
-                    let side = op.side();
                     let uid = op.uid_hex()?;
                     let time = op.enqueued_timestamp()?;
 

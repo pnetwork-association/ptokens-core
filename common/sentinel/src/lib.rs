@@ -15,7 +15,7 @@ mod eth_rpc_channels;
 mod flatten_join_handle;
 mod get_rpc_client;
 mod ipfs;
-mod latest_block_numbers;
+mod latest_block_info;
 mod logging;
 mod messages;
 mod network_id;
@@ -74,7 +74,7 @@ pub use self::{
     flatten_join_handle::flatten_join_handle,
     get_rpc_client::get_rpc_client,
     ipfs::{check_ipfs_daemon_is_running, publish_status, IpfsError},
-    latest_block_numbers::{LatestBlockNumber, LatestBlockNumbers},
+    latest_block_info::{LatestBlockInfo, LatestBlockInfos},
     logging::{init_logger, LogLevel},
     messages::{
         BroadcastChannelMessages,

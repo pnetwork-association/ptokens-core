@@ -1,11 +1,12 @@
 use std::result::Result;
 
 use common_sentinel::{
+    call_core,
     Batch,
     BroadcastChannelMessages,
     EthRpcMessages,
     EthRpcSenders,
-    LatestBlockNumbers,
+    LatestBlockInfos,
     NetworkId,
     SentinelConfig,
     SentinelError,
@@ -45,18 +46,9 @@ async fn main_loop(
         };
 
         // NOTE: Get the core's latest block numbers for this chain
-        let (msg, rx) = WebSocketMessages::new(WebSocketMessagesEncodable::GetLatestBlockNumbers(vec![network_id]));
-        websocket_tx.send(msg).await?;
+        let msg = WebSocketMessagesEncodable::GetLatestBlockInfos(vec![network_id]);
 
-        let websocket_response = tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_secs(*core_time_limit)) => {
-                let m = "getting latest block numbers in {network_id} syncer";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
-        }?;
-        match LatestBlockNumbers::try_from(websocket_response) {
+        match LatestBlockInfos::try_from(call_core(*core_time_limit, websocket_tx.clone(), msg).await?) {
             Ok(x) => break 'latest_block_getter_loop x,
             Err(e) => {
                 warn!("error when getting latest block numbers in {log_prefix}: {e}, retrying in {SLEEP_TIME}ms...");
@@ -67,7 +59,7 @@ async fn main_loop(
     };
 
     // NOTE: Set block number to start syncing from in the batch
-    batch.set_block_num(latest_block_numbers.get_for(&network_id)? + 1);
+    batch.set_block_num(latest_block_numbers.get_for(&network_id)?.block_number() + 1);
 
     'main_loop: loop {
         if !core_is_connected {
