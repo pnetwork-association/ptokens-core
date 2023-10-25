@@ -181,11 +181,9 @@ pub async fn syncer_loop(
     websocket_tx: MpscTx<WebSocketMessages>,
     broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
 ) -> Result<(), SentinelError> {
-    todo!("this");
-    /*
     batch.check_endpoint().await?;
-
     let network_id = *batch.network_id();
+    let eth_rpc_tx = eth_rpc_senders.sender(&network_id)?;
     let name = format!("{network_id} syncer");
 
     let mut core_is_connected = false;
@@ -263,5 +261,4 @@ pub async fn syncer_loop(
             },
         }
     }
-    */
 }
