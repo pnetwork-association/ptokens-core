@@ -23,6 +23,7 @@ impl FromStr for IpfsIdOutput {
 }
 
 pub fn check_ipfs_daemon_is_running(ipfs_bin_path: &str) -> Result<(), IpfsError> {
+    info!("checking ipfs daemon is running...");
     let output = Command::new(ipfs_bin_path).arg("id").output()?;
 
     if !output.status.success() {
@@ -32,8 +33,10 @@ pub fn check_ipfs_daemon_is_running(ipfs_bin_path: &str) -> Result<(), IpfsError
     let parsed_output = IpfsIdOutput::from_str(from_utf8(&output.stdout)?)?;
 
     if parsed_output.addresses.is_none() && parsed_output.protocols.is_none() {
-        return Err(IpfsError::DaemonNotRunning);
+        error!("ipfs daemon not running: {parsed_output:?}");
+        Err(IpfsError::DaemonNotRunning)
+    } else {
+        info!("ipfs daemon appears to be running correctly");
+        Ok(())
     }
-
-    Ok(())
 }

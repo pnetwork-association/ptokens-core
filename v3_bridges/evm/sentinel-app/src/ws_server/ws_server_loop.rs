@@ -251,7 +251,7 @@ pub async fn ws_server_loop(
     broadcast_channel_tx: BroadcastChannelTx,
 ) -> Result<(), SentinelError> {
     let name = "ws server";
-    let ws_server_is_enabled = false;
+    let ws_server_is_enabled = true;
 
     tokio::select! {
         r = start_ws_server(

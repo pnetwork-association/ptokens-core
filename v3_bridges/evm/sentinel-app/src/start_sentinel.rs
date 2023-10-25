@@ -12,7 +12,7 @@ use common_sentinel::{
     UserOpCancellerMessages,
     WebSocketMessages,
 };
-use futures::future::join_all;
+use futures::future::try_join_all;
 use serde_json::json;
 use tokio::sync::{
     broadcast,
@@ -137,11 +137,7 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
     ];
     threads.append(&mut other_threads);
 
-    match join_all(threads.into_iter().map(flatten_join_handle).collect::<Vec<_>>())
-        .await
-        .into_iter()
-        .collect::<Result<Vec<_>, SentinelError>>()
-    {
+    match try_join_all(threads.into_iter().map(flatten_join_handle).collect::<Vec<_>>()).await {
         Ok(r) => Ok(json!({ "jsonrpc": "2.0", "result": r }).to_string()),
         Err(SentinelError::SigInt(_)) => Ok(json!({ "jsonrpc": "2.0", "result": "sigint handled" }).to_string()),
         Err(e) => Err(e),
