@@ -5,7 +5,6 @@ use common_sentinel::{
     Batch,
     ChallengeResponderMessages,
     EthRpcChannels,
-    EthRpcMessages,
     EthRpcSenders,
     SentinelConfig,
     SentinelError,
@@ -138,10 +137,9 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
     ];
     threads.append(&mut other_threads);
 
-    match join_all(threads.into_iter().map(|t| flatten_join_handle(t)).collect::<Vec<_>>())
+    match join_all(threads.into_iter().map(flatten_join_handle).collect::<Vec<_>>())
         .await
         .into_iter()
-        .map(|x| x)
         .collect::<Result<Vec<_>, SentinelError>>()
     {
         Ok(r) => Ok(json!({ "jsonrpc": "2.0", "result": r }).to_string()),

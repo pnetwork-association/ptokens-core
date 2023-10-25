@@ -34,7 +34,7 @@ impl RpcCall {
         let (msg, rx) =
             EthRpcMessages::get_challenge_state_msg(*network_id, challenge, config.pnetwork_hub(network_id)?);
 
-        let sender = eth_rpc_senders.sender(&network_id)?;
+        let sender = eth_rpc_senders.sender(network_id)?;
         sender.send(msg).await?;
         let state = rx.await??;
 

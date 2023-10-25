@@ -13,7 +13,6 @@ use common_sentinel::{
 };
 use serde_json::json;
 
-use super::get_latest_block_infos;
 use crate::android::State;
 
 pub fn get_cancellable_user_ops(

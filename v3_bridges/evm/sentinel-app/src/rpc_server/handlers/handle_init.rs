@@ -16,7 +16,7 @@ use crate::{
 
 impl RpcCall {
     pub(crate) async fn handle_init(
-        config: SentinelConfig,
+        _config: SentinelConfig,
         websocket_tx: WebSocketTx,
         eth_rpc_senders: EthRpcSenders,
         params: RpcParams,

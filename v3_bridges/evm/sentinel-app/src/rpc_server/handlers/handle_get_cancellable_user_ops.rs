@@ -1,5 +1,4 @@
-use common_sentinel::{call_core, SentinelError, WebSocketMessages, WebSocketMessagesEncodable};
-use tokio::time::{sleep, Duration};
+use common_sentinel::{call_core, SentinelError, WebSocketMessagesEncodable};
 
 use crate::{
     rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT},

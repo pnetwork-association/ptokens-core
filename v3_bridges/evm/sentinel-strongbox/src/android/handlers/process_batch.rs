@@ -19,7 +19,7 @@ pub fn process_batch(args: WebSocketMessagesProcessBatchArgs, state: State) -> R
         args.pnetwork_hub(),
         args.sub_mat_batch(),
         *args.validate(),
-        &network_id,
+        network_id,
         *args.reprocess(),
         *args.dry_run(),
         *args.governance_address(),

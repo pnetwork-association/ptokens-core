@@ -1,4 +1,3 @@
-use common::BridgeSide;
 use common_sentinel::{
     call_core,
     EthRpcMessages,
@@ -17,7 +16,7 @@ use crate::{
 
 impl RpcCall {
     pub(crate) async fn handle_reset_chain(
-        config: SentinelConfig,
+        _config: SentinelConfig,
         eth_rpc_senders: EthRpcSenders,
         websocket_tx: WebSocketTx,
         params: RpcParams,

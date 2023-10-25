@@ -1,6 +1,5 @@
-use std::{collections::HashMap, result::Result};
+use std::result::Result;
 
-use common::BridgeSide;
 use common_sentinel::{
     eth_call,
     get_challenge_state,
@@ -14,7 +13,6 @@ use common_sentinel::{
     BroadcastChannelMessages,
     EthRpcMessages,
     NetworkId,
-    NetworkIdError,
     SentinelConfig,
     SentinelError,
 };
@@ -265,7 +263,7 @@ pub async fn eth_rpc_loop(
                 None => {
                     let m = format!("all eth rpc for network {network_id} senders dropped!");
                     error!("{m}");
-                    break 'eth_rpc_loop Err(SentinelError::Custom(m.into()))
+                    break 'eth_rpc_loop Err(SentinelError::Custom(m))
                 },
             },
             _ = tokio::signal::ctrl_c() => {

@@ -8,7 +8,6 @@ use common_sentinel::{
     UserOpUniqueId,
     UserOps,
     WebSocketMessagesEncodable,
-    WebSocketMessagesError,
 };
 use serde_json::json;
 

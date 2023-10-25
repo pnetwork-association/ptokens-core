@@ -3,15 +3,11 @@ use common_sentinel::{
     EthRpcMessages,
     EthRpcSenders,
     LatestBlockInfos,
-    NetworkId,
-    Responder,
     SentinelConfig,
     SentinelError,
     SyncState,
     WebSocketMessagesEncodable,
 };
-use derive_more::{Constructor, Deref};
-use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{
@@ -55,7 +51,7 @@ impl RpcCall {
             rpc_latest_block_nums.push(n);
         }
 
-        let mut state = SyncState::from((network_ids, core_latest_block_numbers, rpc_latest_block_nums));
+        let state = SyncState::from((network_ids, core_latest_block_numbers, rpc_latest_block_nums));
 
         Ok(WebSocketMessagesEncodable::Success(json!(state)))
     }
