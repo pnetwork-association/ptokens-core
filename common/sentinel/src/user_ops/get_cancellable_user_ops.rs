@@ -33,7 +33,7 @@ impl UserOpList {
         &self,
         max_delta: u64,
         db_utils: &SentinelDbUtils<D>,
-        latest_block_info: LatestBlockInfos,
+        latest_block_infos: LatestBlockInfos,
     ) -> Result<UserOps, SentinelError> {
         if self.is_empty() {
             return Ok(UserOps::empty());
@@ -42,40 +42,41 @@ impl UserOpList {
         self.get_up_to_last_x_ops(db_utils, NUM_PAST_OPS_TO_CHECK_FOR_CANCELLABILITY)
             .map(|ops| ops.get_enqueued_but_not_witnessed())
             .and_then(|potentially_cancellable_ops| {
-                debug!("num ops queued but not witnessed: {}", potentially_cancellable_ops.len());
-
-                let mut ops: Vec<UserOp> = vec![];
-                todo!("this, but first have to clarify what on earth is going on on chain with the origin/destination/forward network ids");
-                /*
                 debug!(
-                    "max delta: {max_delta}, n_latest_timestamp: {n_latest_block_timestamp}, h_latest_block_timestamp: {h_latest_block_timestamp}"
+                    "num ops queued but not witnessed: {}",
+                    potentially_cancellable_ops.len()
                 );
+                let mut cancellable_ops: Vec<UserOp> = vec![];
+
                 for op in potentially_cancellable_ops.iter() {
                     let uid = op.uid_hex()?;
-                    let time = op.enqueued_timestamp()?;
+                    let d_nid = op.destination_network_id();
+                    let enqueued_timestamp = op.enqueued_timestamp()?;
 
-                    // FIXME check for underflow!
+                    // NOTE:User ops don't include their origin network IDs, meaning we have to
+                    // ensure _all_ other chains this sentinel works with are withing the max
+                    // allowable delta in order to conclude whether or not an operation is
+                    // cancellable.
+                    let is_cancellable = latest_block_infos.iter().all(|info| {
+                        let latest_block_timestamp = *info.block_timestamp();
+                        if max_delta > enqueued_timestamp && latest_block_timestamp > 0 {
+                            enqueued_timestamp - max_delta < latest_block_timestamp
+                        } else {
+                            false
+                        }
+                    });
 
-                    // TODO fix this to check ALL other chains. If any one is not in sync then we can't in good faith cancel a user op");
-
-                    let is_cancellable = match side {
-                        // NOTE: Note that for host cancellations we need to ensure the _native_
-                        // chain is in sync (within the allowable delta) and vice versa. This is so
-                        // we've had every chance to witness  the originationg `userSend` event.
-                        BridgeSide::Host => time - max_delta < n_latest_block_timestamp,
-                        BridgeSide::Native => time - max_delta < h_latest_block_timestamp,
-                    };
                     debug!(
-                        "op uid: {uid}, destination: {side}, enqueued_timestamp: {time}, is_cancellable: {is_cancellable}"
+                        "op uid: {}, max_delta {}, destination: {}, enqueued_timestamp: {}, is_cancellable: {}",
+                        uid, max_delta, d_nid, enqueued_timestamp, is_cancellable,
                     );
 
                     if is_cancellable {
-                        ops.push(op.clone())
+                        cancellable_ops.push(op.clone())
                     }
                 }
-                */
 
-                let r = UserOps::new(ops);
+                let r = UserOps::new(cancellable_ops);
                 debug!("num cancellable ops: {}", r.len());
                 Ok(r)
             })
