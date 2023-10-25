@@ -10,7 +10,7 @@ use common_sentinel::{
 };
 
 use crate::{
-    rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT_MS},
+    rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT},
     type_aliases::WebSocketTx,
 };
 
@@ -22,53 +22,37 @@ impl RpcCall {
         params: RpcParams,
         core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        todo!("this");
-        /*
         Self::check_core_is_connected(core_cxn)?;
 
         let mut args = WebSocketMessagesInitArgs::try_from(params)?;
         let network_id = *args.network_id();
 
-        let h_nid = *config.host().network_id();
-        let n_nid = *config.native().network_id();
+        match eth_rpc_senders.sender(&network_id) {
+            Err(e) => {
+                error!("{e}");
+                Err(WebSocketMessagesError::Unsupported(network_id).into())
+            },
+            Ok(sender) => {
+                // NOTE: Get the latest block num from the RPC
+                let (n_msg, n_rx) = EthRpcMessages::get_latest_block_num_msg(network_id);
+                sender.send(n_msg).await?;
+                let latest_block_num = n_rx.await??;
 
-        let use_native = if network_id == n_nid {
-            Result::<bool, SentinelError>::Ok(true)
-        } else if network_id == h_nid {
-            Result::<bool, SentinelError>::Ok(false)
-        } else {
-            Err(WebSocketMessagesError::Unsupported(network_id).into())
-        }?;
+                // NOTE: Now use that number to get the latest submission material
+                let (b_msg, b_rx) = EthRpcMessages::get_sub_mat_msg(network_id, latest_block_num);
+                sender.send(b_msg).await?;
+                let sub_mat = b_rx.await??;
 
-        // NOTE: Now we can get the latest block number for the correct chain from the ETH RPC
-        let (latest_block_num_msg, latest_block_num_responder) = EthRpcMessages::get_latest_block_num_msg(network_id);
+                // NOTE: Now we need to add the sub mat to the args to send to strongbox
+                args.add_sub_mat(sub_mat);
 
-        if use_native {
-            native_eth_rpc_tx.send(latest_block_num_msg).await?;
-        } else {
-            host_eth_rpc_tx.send(latest_block_num_msg).await?;
-        };
-
-        let latest_block_num = latest_block_num_responder.await??;
-
-        // NOTE: Get use that number to get the latest submission material
-        let (latest_block_msg, latest_block_responder) = EthRpcMessages::get_sub_mat_msg(network_id, latest_block_num);
-        if use_native {
-            native_eth_rpc_tx.send(latest_block_msg).await?;
-        } else {
-            host_eth_rpc_tx.send(latest_block_msg).await?;
+                call_core(
+                    STRONGBOX_TIMEOUT,
+                    websocket_tx.clone(),
+                    WebSocketMessagesEncodable::Initialize(Box::new(args)),
+                )
+                .await
+            },
         }
-        let sub_mat = latest_block_responder.await??;
-
-        // NOTE: Now we need to add the sub mat to the args to send to strongbox
-        args.add_sub_mat(sub_mat);
-
-        call_core(
-            STRONGBOX_TIMEOUT_MS,
-            websocket_tx.clone(),
-            WebSocketMessagesEncodable::Initialize(Box::new(args)),
-        )
-        .await
-        */
     }
 }

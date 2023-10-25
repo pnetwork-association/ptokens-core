@@ -1,7 +1,7 @@
 use common_sentinel::{call_core, SentinelError, WebSocketMessagesEncodable};
 
 use crate::{
-    rpc_server::{RpcCall, STRONGBOX_TIMEOUT_MS},
+    rpc_server::{RpcCall, STRONGBOX_TIMEOUT},
     type_aliases::WebSocketTx,
 };
 
@@ -12,7 +12,7 @@ impl RpcCall {
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
         Self::check_core_is_connected(core_cxn)?;
         call_core(
-            STRONGBOX_TIMEOUT_MS,
+            STRONGBOX_TIMEOUT,
             websocket_tx.clone(),
             WebSocketMessagesEncodable::GetInclusionProof,
         )

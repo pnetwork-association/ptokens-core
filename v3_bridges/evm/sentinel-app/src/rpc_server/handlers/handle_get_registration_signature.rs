@@ -2,7 +2,7 @@ use common_eth::convert_hex_to_eth_address;
 use common_sentinel::{call_core, SentinelError, WebSocketMessagesEncodable, WebSocketMessagesError};
 
 use crate::{
-    rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT_MS},
+    rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT},
     type_aliases::WebSocketTx,
 };
 
@@ -35,6 +35,6 @@ impl RpcCall {
 
         let msg = WebSocketMessagesEncodable::GetRegistrationSignature(owner_address, nonce);
 
-        call_core(STRONGBOX_TIMEOUT_MS, websocket_tx.clone(), msg).await
+        call_core(STRONGBOX_TIMEOUT, websocket_tx.clone(), msg).await
     }
 }

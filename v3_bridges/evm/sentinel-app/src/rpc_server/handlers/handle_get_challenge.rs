@@ -4,7 +4,7 @@ use common_sentinel::{call_core, SentinelError, WebSocketMessagesEncodable};
 use ethereum_types::H256 as EthHash;
 
 use crate::{
-    rpc_server::{type_aliases::RpcParams, RpcCall, STRONGBOX_TIMEOUT_MS},
+    rpc_server::{type_aliases::RpcParams, RpcCall, STRONGBOX_TIMEOUT},
     type_aliases::WebSocketTx,
 };
 
@@ -18,7 +18,7 @@ impl RpcCall {
         let checked_params = Self::check_params(params, 1)?;
         let hash = EthHash::from_str(&checked_params[0])?;
         call_core(
-            STRONGBOX_TIMEOUT_MS,
+            STRONGBOX_TIMEOUT,
             websocket_tx.clone(),
             WebSocketMessagesEncodable::GetChallenge(hash),
         )

@@ -2,7 +2,7 @@ use common_sentinel::{SentinelError, WebSocketMessages, WebSocketMessagesEncodab
 use tokio::time::{sleep, Duration};
 
 use crate::{
-    rpc_server::{RpcCall, STRONGBOX_TIMEOUT_MS},
+    rpc_server::{RpcCall, STRONGBOX_TIMEOUT},
     type_aliases::WebSocketTx,
 };
 
@@ -17,7 +17,7 @@ impl RpcCall {
 
         tokio::select! {
             response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT_MS)) => {
+            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT)) => {
                 let m = "getting user ops";
                 error!("timed out whilst {m}");
                 Err(SentinelError::Timedout(m.into()))

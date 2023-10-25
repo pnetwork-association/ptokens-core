@@ -4,8 +4,10 @@ use common_sentinel::{
     EthRpcSenders,
     LatestBlockNumbers,
     NetworkId,
+    Responder,
     SentinelConfig,
     SentinelError,
+    SyncState,
     WebSocketMessagesEncodable,
 };
 use derive_more::{Constructor, Deref};
@@ -13,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{
-    rpc_server::{RpcCall, STRONGBOX_TIMEOUT_MS},
+    rpc_server::{RpcCall, STRONGBOX_TIMEOUT},
     type_aliases::WebSocketTx,
 };
 
@@ -24,67 +26,37 @@ impl RpcCall {
         eth_rpc_senders: EthRpcSenders,
         core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        todo!("this");
-        /*
         Self::check_core_is_connected(core_cxn)?;
 
         let network_ids = config.network_ids();
 
         // NOTE: The following will check core state for us...
-        let core_latest_block_numbers = LatestBlockNumbers::try_from(
+        let core_latest_block_numbers_structure = LatestBlockNumbers::try_from(
             call_core(
-                STRONGBOX_TIMEOUT_MS,
+                STRONGBOX_TIMEOUT,
                 websocket_tx.clone(),
-                WebSocketMessagesEncodable::GetLatestBlockNumbers(network_ids),
+                WebSocketMessagesEncodable::GetLatestBlockNumbers(network_ids.clone()),
             )
             .await?,
         )?;
 
-        //let msgs = network_id.iter().map(|id| core_latest_block_numbers.get_for(id)).collect::<Result<Vec<EthRpcMessages>, SentinelError>>()?;
+        let core_latest_block_numbers = network_ids
+            .iter()
+            .map(|id| core_latest_block_numbers_structure.get_for(id))
+            .collect::<Result<Vec<u64>, SentinelError>>()?;
 
-        //let h_core_latest_block_num = core_latest_block_numbers.get_for(&h_nid)?;
-        //let n_core_latest_block_num = core_latest_block_numbers.get_for(&n_nid)?;
+        let mut rpc_latest_block_nums = vec![];
 
-        let msgs = network_id.iter().map(|id| EthRpcMessages::get_latest_block_num_msg(id)).collect::<Vec<EthRpcMessages>>();
-        host_eth_rpc_tx.send(h_msg).await?;
-        native_eth_rpc_tx.send(n_msg).await?;
-        let h_node_latest_block_num = h_rx.await??;
-        let n_node_latest_block_num = n_rx.await??;
-
-        // TODO factor out to own mod in lib probably
-        #[derive(Clone, Debug, Serialize, Deserialize, Deref, Constructor)]
-        struct SyncState(Vec<SyncStatus>);
-
-        #[derive(Clone, Debug, Serialize, Deserialize)]
-        #[serde(rename_all = "camelCase")]
-        struct SyncStatus {
-            network_id: NetworkId,
-            core_latest_block_num: u64,
-            node_latest_block_num: u64,
-            delta: u64,
+        for id in network_ids.iter() {
+            let (msg, rx) = EthRpcMessages::get_latest_block_num_msg(*id);
+            let sender = eth_rpc_senders.sender(id)?;
+            sender.send(msg).await?;
+            let n = rx.await??;
+            rpc_latest_block_nums.push(n);
         }
 
-        impl SyncStatus {
-            pub fn new(network_id: NetworkId, core_latest_block_num: u64, node_latest_block_num: u64) -> Self {
-                Self {
-                    network_id,
-                    core_latest_block_num,
-                    node_latest_block_num,
-                    delta: if node_latest_block_num > core_latest_block_num {
-                        node_latest_block_num - core_latest_block_num
-                    } else {
-                        0
-                    },
-                }
-            }
-        }
+        let mut state = SyncState::from((network_ids, core_latest_block_numbers, rpc_latest_block_nums));
 
-        let j = json!(SyncState::new(vec![
-            SyncStatus::new(n_nid, n_core_latest_block_num, n_node_latest_block_num),
-            SyncStatus::new(h_nid, h_core_latest_block_num, h_node_latest_block_num),
-        ]));
-
-        Ok(WebSocketMessagesEncodable::Success(j))
-        */
+        Ok(WebSocketMessagesEncodable::Success(json!(state)))
     }
 }

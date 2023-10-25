@@ -21,8 +21,6 @@ impl RpcCall {
         params: RpcParams,
         core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
-        todo!("this");
-        /*
         debug!("handling get challenge state...");
         let checked_params = Self::check_params(params, 1)?;
 
@@ -36,17 +34,10 @@ impl RpcCall {
         let (msg, rx) =
             EthRpcMessages::get_challenge_state_msg(*network_id, challenge, config.pnetwork_hub(network_id)?);
 
-        if config.native().network_id() == network_id {
-            warn!("using bridge side NATIVE");
-            native_eth_rpc_tx.send(msg).await?;
-        } else {
-            warn!("using bridge side HOST");
-            host_eth_rpc_tx.send(msg).await?;
-        };
-
+        let sender = eth_rpc_senders.sender(&network_id)?;
+        sender.send(msg).await?;
         let state = rx.await??;
 
         Ok(WebSocketMessagesEncodable::Success(json!(state)))
-        */
     }
 }

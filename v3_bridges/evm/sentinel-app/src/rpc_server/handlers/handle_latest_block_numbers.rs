@@ -1,7 +1,7 @@
 use common_sentinel::{call_core, NetworkId, SentinelError, WebSocketMessagesEncodable};
 
 use crate::{
-    rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT_MS},
+    rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT},
     type_aliases::WebSocketTx,
 };
 
@@ -18,7 +18,7 @@ impl RpcCall {
             .collect::<Result<Vec<NetworkId>, SentinelError>>()?;
 
         call_core(
-            STRONGBOX_TIMEOUT_MS,
+            STRONGBOX_TIMEOUT,
             websocket_tx.clone(),
             WebSocketMessagesEncodable::GetLatestBlockNumbers(network_ids),
         )
