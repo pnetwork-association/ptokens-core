@@ -1,5 +1,4 @@
 mod actors;
-mod eth_rpc_channels;
 mod batching;
 mod bpm;
 mod call_core;
@@ -12,6 +11,7 @@ mod endpoints;
 mod env;
 mod error;
 mod eth_rpc_calls;
+mod eth_rpc_channels;
 mod flatten_join_handle;
 mod get_rpc_client;
 mod ipfs;
@@ -23,13 +23,13 @@ mod processor;
 mod registration;
 mod sanity_check_frequency;
 mod status;
+mod sync_state;
 mod test_utils;
 mod user_ops;
 mod utils;
 
 use self::db_utils::SentinelDbKeys;
 pub use self::{
-    eth_rpc_channels::{EthRpcSenders, EthRpcChannels},
     actors::{Actor, ActorInclusionProof, ActorType, Actors, ActorsError},
     batching::Batch,
     bpm::{Bpm, BpmInfo, Bpms},
@@ -44,8 +44,12 @@ pub use self::{
         ChallengesList,
     },
     config::{IpfsConfig, LogConfig, NetworkConfig, SentinelConfig, SentinelConfigError, SentinelCoreConfig},
-    constants::{DEFAULT_SLEEP_TIME, HOST_PROTOCOL_ID, MILLISECONDS_MULTIPLIER, NATIVE_PROTOCOL_ID,
-MAX_CHANNEL_CAPACITY
+    constants::{
+        DEFAULT_SLEEP_TIME,
+        HOST_PROTOCOL_ID,
+        MAX_CHANNEL_CAPACITY,
+        MILLISECONDS_MULTIPLIER,
+        NATIVE_PROTOCOL_ID,
     },
     core_state::CoreState,
     db_utils::{DbKey, DbUtilsT, SentinelDbUtils},
@@ -66,6 +70,7 @@ MAX_CHANNEL_CAPACITY
         get_user_op_state,
         push_tx,
     },
+    eth_rpc_channels::{EthRpcChannels, EthRpcSenders},
     flatten_join_handle::flatten_join_handle,
     get_rpc_client::get_rpc_client,
     ipfs::{check_ipfs_daemon_is_running, publish_status, IpfsError},
@@ -99,6 +104,7 @@ MAX_CHANNEL_CAPACITY
     registration::get_registration_signature,
     sanity_check_frequency::sanity_check_frequency,
     status::{SentinelStatus, SentinelStatusError},
+    sync_state::SyncState,
     user_ops::{
         UserOp,
         UserOpCancellationSignature,

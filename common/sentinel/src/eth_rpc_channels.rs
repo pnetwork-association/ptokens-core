@@ -1,23 +1,30 @@
 use std::collections::HashMap;
-use tokio::sync::{mpsc, mpsc::{Receiver, Sender}};
+
 use derive_more::{Constructor, Deref, DerefMut};
-use crate::{SentinelConfigError, MAX_CHANNEL_CAPACITY, EthRpcMessages, NetworkId};
+use tokio::sync::{
+    mpsc,
+    mpsc::{Receiver, Sender},
+};
+
+use crate::{EthRpcMessages, NetworkId, SentinelConfigError, MAX_CHANNEL_CAPACITY};
 
 #[derive(Debug, Clone, Constructor, Deref)]
 pub struct EthRpcSenders(HashMap<NetworkId, Sender<EthRpcMessages>>);
 
 impl EthRpcSenders {
     pub fn sender(&self, nid: &NetworkId) -> Result<Sender<EthRpcMessages>, SentinelConfigError> {
-        self.get(nid).map(|x| x.clone()).ok_or_else(|| SentinelConfigError::NoConfig(*nid))
+        self.get(nid)
+            .cloned()
+            .ok_or_else(|| SentinelConfigError::NoConfig(*nid))
     }
 }
 
 impl From<&EthRpcChannels> for EthRpcSenders {
-    fn from(cs: &EthRpcChannels) -> Self{
+    fn from(cs: &EthRpcChannels) -> Self {
         let mut r: HashMap<NetworkId, Sender<EthRpcMessages>> = HashMap::new();
         for (k, v) in cs.iter() {
             r.insert(*k, v.0.clone());
-        };
+        }
         Self::new(r)
     }
 }
@@ -30,7 +37,7 @@ impl From<Vec<NetworkId>> for EthRpcChannels {
         let mut r: HashMap<NetworkId, (Sender<EthRpcMessages>, Receiver<EthRpcMessages>)> = HashMap::new();
         for id in nids.into_iter() {
             r.insert(id, mpsc::channel(MAX_CHANNEL_CAPACITY));
-        };
+        }
         Self::new(r)
     }
 }
@@ -40,7 +47,7 @@ impl EthRpcChannels {
         let mut r: Vec<Receiver<EthRpcMessages>> = vec![];
         for (_, v) in self.drain() {
             r.push(v.1)
-        };
+        }
         r
     }
 }
