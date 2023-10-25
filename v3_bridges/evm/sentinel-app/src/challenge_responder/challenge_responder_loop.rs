@@ -22,6 +22,7 @@ use crate::type_aliases::{
     ChallengeResponderRx,
     ChallengeResponderTx,
     CoreCxnStatus,
+    EthRpcTx,
     WebSocketTx,
 };
 
@@ -33,11 +34,9 @@ async fn respond_to_challenge(
     gas_limit: usize,
     config: &SentinelConfig,
     broadcaster_pk: &EthPrivateKey,
-    eth_rpc_senders: EthRpcSenders,
+    eth_rpc_tx: EthRpcTx,
     websocket_tx: WebSocketTx,
 ) -> Result<(), SentinelError> {
-    todo!("this");
-    /*
     let id = info.challenge().id()?;
     let c_network_id = *info.challenge().network_id();
     let hub = config.pnetwork_hub(&c_network_id)?;
@@ -65,16 +64,13 @@ async fn respond_to_challenge(
     .await?;
 
     Ok(())
-    */
 }
 
 async fn get_gas_price(
     config: &SentinelConfig,
     network_id: &NetworkId,
-    eth_rpc_senders: EthRpcSenders,
+    eth_rpc_tx: EthRpcTx,
 ) -> Result<u64, SentinelError> {
-    todo!("this");
-    /*
     let p = if let Ok(Some(p)) = config.gas_price(network_id) {
         debug!("using {network_id} gas price from config: {p}");
         p
@@ -86,7 +82,6 @@ async fn get_gas_price(
         p
     };
     Ok(p)
-    */
 }
 
 async fn respond_to_challenges(
@@ -96,8 +91,6 @@ async fn respond_to_challenges(
     eth_rpc_senders: EthRpcSenders,
     pk: &EthPrivateKey,
 ) -> Result<(), SentinelError> {
-    todo!("");
-    /*
     info!("responding to challenges...");
     let unsolved_challenges = ChallengeAndResponseInfos::try_from(
         call_core(
@@ -114,69 +107,40 @@ async fn respond_to_challenges(
     }
 
     let address = pk.to_address();
-
-    let mut native_nonce: Option<u64> = None;
-    let mut host_nonce: Option<u64> = None;
-
-    let n_network_id = *config.native().network_id();
-    let h_network_id = *config.host().network_id();
-
-    let native_gas_price = get_gas_price(config, &n_network_id, native_eth_rpc_tx.clone()).await?;
-    let host_gas_price = get_gas_price(config, &h_network_id, host_eth_rpc_tx.clone()).await?;
-
+    let mut nonce: Option<u64> = None;
+    let mut gas_price: Option<u64> = None;
     let gas_limit = 1_000_000; // FIXME make configurable for this
 
     for challenge_info in unsolved_challenges.iter() {
-        let c_network_id = *challenge_info.challenge().network_id();
+        let network_id = *challenge_info.challenge().network_id();
+        let eth_rpc_tx = eth_rpc_senders.sender(&network_id)?;
 
-        if c_network_id == n_network_id && native_nonce.is_none() {
-            let (native_msg, native_rx) = EthRpcMessages::get_nonce_msg(n_network_id, address);
-            native_eth_rpc_tx.send(native_msg).await?;
-            native_nonce = Some(native_rx.await??);
+        if gas_price.is_none() {
+            gas_price = Some(get_gas_price(config, &network_id, eth_rpc_tx.clone()).await?)
         };
 
-        if c_network_id == h_network_id && host_nonce.is_none() {
-            let (host_msg, host_rx) = EthRpcMessages::get_nonce_msg(h_network_id, address);
-            host_eth_rpc_tx.send(host_msg).await?;
-            host_nonce = Some(host_rx.await??);
+        if nonce.is_none() {
+            let (msg, rx) = EthRpcMessages::get_nonce_msg(network_id, address);
+            eth_rpc_tx.send(msg).await?;
+            nonce = Some(rx.await??);
         };
 
         respond_to_challenge(
             challenge_info,
-            if c_network_id == n_network_id {
-                native_nonce.ok_or_else(|| SentinelError::NoNonce(n_network_id))?
-            } else {
-                host_nonce.ok_or_else(|| SentinelError::NoNonce(h_network_id))?
-            },
-            if c_network_id == n_network_id {
-                native_gas_price
-            } else {
-                // FIXME Rm host/native paradigm altogether
-                host_gas_price
-            },
+            nonce.ok_or_else(|| SentinelError::NoNonce(network_id))?,
+            gas_price.ok_or_else(|| SentinelError::NoGasPrice(network_id))?,
             gas_limit,
             config,
             pk,
-            if c_network_id == n_network_id {
-                native_eth_rpc_tx.clone()
-            } else {
-                // FIXME Rm host/native paradigm altogether
-                host_eth_rpc_tx.clone()
-            },
+            eth_rpc_tx.clone(),
             websocket_tx.clone(),
         )
         .await?;
 
-        if c_network_id == n_network_id {
-            native_nonce = native_nonce.map(|n| n + 1)
-        } else {
-            // FIXME Rm host/native paradigm altogether
-            host_nonce = host_nonce.map(|n| n + 1)
-        };
+        nonce = nonce.map(|n| n + 1)
     }
 
     Ok(())
-        */
 }
 
 async fn broadcast_channel_loop(
@@ -243,7 +207,6 @@ pub async fn challenge_responder_loop(
     let mut frequency = *config.core().challenge_response_frequency();
 
     Env::init()?;
-    // NOTE: We don't use sides in the broadcasting pk management
     let pk = Env::get_private_key()?;
 
     'challenge_response_loop: loop {
@@ -323,7 +286,6 @@ pub async fn challenge_responder_loop(
                     },
                 }
             },
-
             _ = tokio::signal::ctrl_c() => {
                 warn!("{name} shutting down...");
                 break 'challenge_response_loop Err(SentinelError::SigInt(name.into()))

@@ -23,6 +23,9 @@ impl From<SentinelError> for CommonError {
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("no gas price for network id {0}")]
+    NoGasPrice(NetworkId),
+
     #[error("no nonce for network id {0}")]
     NoNonce(NetworkId),
 
