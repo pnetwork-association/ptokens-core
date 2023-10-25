@@ -43,10 +43,10 @@ impl From<Vec<NetworkId>> for EthRpcChannels {
 }
 
 impl EthRpcChannels {
-    pub fn to_receivers(mut self) -> Vec<Receiver<EthRpcMessages>> {
-        let mut r: Vec<Receiver<EthRpcMessages>> = vec![];
-        for (_, v) in self.drain() {
-            r.push(v.1)
+    pub fn to_receivers(mut self) -> Vec<(NetworkId, Receiver<EthRpcMessages>)> {
+        let mut r: Vec<(NetworkId, Receiver<EthRpcMessages>)> = vec![];
+        for (id, v) in self.drain() {
+            r.push((id, v.1))
         }
         r
     }

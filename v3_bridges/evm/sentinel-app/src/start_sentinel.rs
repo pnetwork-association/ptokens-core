@@ -117,10 +117,11 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
     let mut eth_rpc_threads = eth_rpc_channels
         .to_receivers()
         .into_iter()
-        .map(|receiver| {
+        .map(|(network_id, receiver)| {
             tokio::spawn(eth_rpc_loop(
                 receiver,
                 config.clone(),
+                network_id,
                 broadcast_channel_tx.clone(),
                 broadcast_channel_tx.subscribe(),
             ))

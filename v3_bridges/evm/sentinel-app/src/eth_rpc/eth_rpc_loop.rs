@@ -1,4 +1,4 @@
-use std::result::Result;
+use std::{collections::HashMap, result::Result};
 
 use common::BridgeSide;
 use common_sentinel::{
@@ -33,37 +33,31 @@ use tokio::{
 // TODO DRY out the repeat code below, though it's not trivial due to having to replace the mutable websocket clients
 // upon endpoint rotation.
 
-const ENDPOINT_ROTATION_SLEEP_TIME: u64 = 2000;
+const ENDPOINT_ROTATION_SLEEP_TIME: u64 = 20;
 
 pub async fn eth_rpc_loop(
     mut eth_rpc_rx: MpscRx<EthRpcMessages>,
     config: SentinelConfig,
+    network_id: NetworkId,
     _broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
     _broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
 ) -> Result<(), SentinelError> {
-    todo!("this");
-    /*
-    let mut h_endpoints = config.get_host_endpoints();
-    let mut n_endpoints = config.get_native_endpoints();
-    let n_sleep_time = *n_endpoints.sleep_time();
-    let h_sleep_time = *h_endpoints.sleep_time();
-    let mut h_ws_client = h_endpoints.get_first_ws_client().await?;
-    let mut n_ws_client = n_endpoints.get_first_ws_client().await?;
+    let mut endpoints = config.endpoints(&network_id)?;
+    let sleep_duration = *endpoints.sleep_time();
+    let mut ws_client = endpoints.get_first_ws_client().await?;
 
-    // FIXME We assume the the endpoint to be host in here if it's not native. Rm this paradigm entirely.
     'eth_rpc_loop: loop {
         tokio::select! {
             r = eth_rpc_rx.recv() => match r {
                 Some(msg) => {
                     match msg {
                         EthRpcMessages::GetChallengeState((network_id, challenge, pnetwork_hub, responder)) => {
-                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = get_challenge_state(
                                     &challenge,
                                     &pnetwork_hub,
-                                    if side.is_native() { &n_ws_client } else { &h_ws_client },
-                                    if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    &ws_client,
+                                    sleep_duration,
                                     network_id,
                                 ).await;
                                 match r {
@@ -72,27 +66,22 @@ pub async fn eth_rpc_loop(
                                         continue 'eth_rpc_loop
                                     },
                                     Err(e) => {
-                                        error!("{side} eth rpc error: {e}");
-                                        warn!("rotating {side} endpoint");
-                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        if side.is_native() {
-                                            n_ws_client = n_endpoints.rotate().await?;
-                                        } else {
-                                            h_ws_client = h_endpoints.rotate().await?;
-                                        };
+                                        error!("{network_id} eth rpc error: {e}");
+                                        warn!("rotating {network_id} endpoint");
+                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
+                                        ws_client = endpoints.rotate().await?;
                                         continue 'inner
                                     },
                                 }
                             }
                         },
                         EthRpcMessages::GetUserOpState((network_id, user_op, contract_address, responder)) => {
-                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = get_user_op_state(
                                     &user_op,
                                     &contract_address,
-                                    if side.is_native() { &n_ws_client } else { &h_ws_client },
-                                    if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    &ws_client,
+                                    sleep_duration,
                                     network_id,
                                 ).await;
                                 match r {
@@ -101,25 +90,20 @@ pub async fn eth_rpc_loop(
                                         continue 'eth_rpc_loop
                                     },
                                     Err(e) => {
-                                        error!("{side} eth rpc error: {e}");
-                                        warn!("rotating {side} endpoint");
-                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        if side.is_native() {
-                                            n_ws_client = n_endpoints.rotate().await?;
-                                        } else {
-                                            h_ws_client = h_endpoints.rotate().await?;
-                                        };
+                                        error!("{network_id} eth rpc error: {e}");
+                                        warn!("rotating {network_id} endpoint");
+                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
+                                        ws_client = endpoints.rotate().await?;
                                         continue 'inner
                                     },
                                 }
                             }
                         },
                         EthRpcMessages::GetLatestBlockNum((network_id, responder)) => {
-                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = get_latest_block_num(
-                                    if side.is_native() { &n_ws_client } else { &h_ws_client },
-                                    if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    &ws_client,
+                                    sleep_duration,
                                     &network_id,
                                 ).await;
                                 match r {
@@ -128,25 +112,20 @@ pub async fn eth_rpc_loop(
                                         continue 'eth_rpc_loop
                                     },
                                     Err(e) => {
-                                        error!("{side} eth rpc error: {e}");
-                                        warn!("rotating {side} endpoint");
-                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        if side.is_native() {
-                                            n_ws_client = n_endpoints.rotate().await?;
-                                        } else {
-                                            h_ws_client = h_endpoints.rotate().await?;
-                                        };
+                                        error!("{network_id} eth rpc error: {e}");
+                                        warn!("rotating {network_id} endpoint");
+                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
+                                        ws_client = endpoints.rotate().await?;
                                         continue 'inner
                                     },
                                 }
                             }
                         },
                         EthRpcMessages::GetGasPrice((network_id, responder)) => {
-                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = get_gas_price(
-                                    if side.is_native() { &n_ws_client } else { &h_ws_client },
-                                    if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    &ws_client,
+                                    sleep_duration,
                                     network_id,
                                 ).await;
                                 match r {
@@ -155,26 +134,21 @@ pub async fn eth_rpc_loop(
                                         continue 'eth_rpc_loop
                                     },
                                     Err(e) => {
-                                        error!("{side} eth rpc error: {e}");
-                                        warn!("rotating {side} endpoint");
-                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        if side.is_native() {
-                                            n_ws_client = n_endpoints.rotate().await?;
-                                        } else {
-                                            h_ws_client = h_endpoints.rotate().await?;
-                                        };
+                                        error!("{network_id} eth rpc error: {e}");
+                                        warn!("rotating {network_id} endpoint");
+                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
+                                        ws_client = endpoints.rotate().await?;
                                         continue 'inner
                                     },
                                 }
                             }
                         },
                         EthRpcMessages::PushTx((tx, network_id, responder)) => {
-                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = push_tx(
                                     &tx,
-                                    if side.is_native() { &n_ws_client } else { &h_ws_client },
-                                    if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    &ws_client,
+                                    sleep_duration,
                                     &network_id,
                                 ).await;
                                 match r {
@@ -183,26 +157,21 @@ pub async fn eth_rpc_loop(
                                         continue 'eth_rpc_loop
                                     },
                                     Err(e) => {
-                                        error!("{side} eth rpc error: {e}");
-                                        warn!("rotating {side} endpoint");
-                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        if side.is_native() {
-                                            n_ws_client = n_endpoints.rotate().await?;
-                                        } else {
-                                            h_ws_client = h_endpoints.rotate().await?;
-                                        };
+                                        error!("{network_id} eth rpc error: {e}");
+                                        warn!("rotating {network_id} endpoint");
+                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
+                                        ws_client = endpoints.rotate().await?;
                                         continue 'inner
                                     },
                                 }
                             }
                         },
                         EthRpcMessages::GetNonce((network_id, address, responder)) => {
-                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = get_nonce(
-                                    if side.is_native() { &n_ws_client } else { &h_ws_client },
+                                    &ws_client,
                                     &address,
-                                    if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    sleep_duration,
                                     network_id,
                                 ).await;
                                 match r {
@@ -211,28 +180,23 @@ pub async fn eth_rpc_loop(
                                         continue 'eth_rpc_loop
                                     },
                                     Err(e) => {
-                                        error!("{side} eth rpc error: {e}");
-                                        warn!("rotating {side} endpoint");
-                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        if side.is_native() {
-                                            n_ws_client = n_endpoints.rotate().await?;
-                                        } else {
-                                            h_ws_client = h_endpoints.rotate().await?;
-                                        };
+                                        error!("{network_id} eth rpc error: {e}");
+                                        warn!("rotating {network_id} endpoint");
+                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
+                                        ws_client = endpoints.rotate().await?;
                                         continue 'inner
                                     },
                                 }
                             }
                         },
                         EthRpcMessages::EthCall((data, network_id, address, default_block_parameter, responder)) => {
-                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = eth_call(
                                     &address,
                                     &data,
                                     &default_block_parameter,
-                                    if side.is_native() { &n_ws_client } else { &h_ws_client },
-                                    if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    &ws_client,
+                                    sleep_duration,
                                     network_id,
                                 ).await;
                                 match r {
@@ -241,26 +205,21 @@ pub async fn eth_rpc_loop(
                                         continue 'eth_rpc_loop
                                     },
                                     Err(e) => {
-                                        error!("{side} eth rpc error: {e}");
-                                        warn!("rotating {side} endpoint");
-                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        if side.is_native() {
-                                            n_ws_client = n_endpoints.rotate().await?;
-                                        } else {
-                                            h_ws_client = h_endpoints.rotate().await?;
-                                        };
+                                        error!("{network_id} eth rpc error: {e}");
+                                        warn!("rotating {network_id} endpoint");
+                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
+                                        ws_client = endpoints.rotate().await?;
                                         continue 'inner
                                     },
                                 }
                             }
                         },
                         EthRpcMessages::GetSubMat((network_id, block_num, responder)) => {
-                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = get_sub_mat(
-                                    if side.is_native() { &n_ws_client } else { &h_ws_client },
+                                    &ws_client,
                                     block_num,
-                                    if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    sleep_duration,
                                     &network_id,
                                 ).await;
                                 match r {
@@ -269,26 +228,21 @@ pub async fn eth_rpc_loop(
                                         continue 'eth_rpc_loop
                                     }
                                     Err(e) => {
-                                        error!("{side} eth rpc error: {e}");
-                                        warn!("rotating {side} endpoint");
-                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        if side.is_native() {
-                                            n_ws_client = n_endpoints.rotate().await?;
-                                        } else {
-                                            h_ws_client = h_endpoints.rotate().await?;
-                                        };
+                                        error!("{network_id} eth rpc error: {e}");
+                                        warn!("rotating {network_id} endpoint");
+                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
+                                        ws_client = endpoints.rotate().await?;
                                         continue 'inner
                                     },
                                 }
                             }
                         },
                         EthRpcMessages::GetEthBalance((network_id, address, responder)) => {
-                            let side =  get_side_from_network_id(&config, &network_id)?;
                             'inner: loop {
                                 let r = get_eth_balance(
-                                    if side.is_native() { &n_ws_client } else { &h_ws_client },
+                                    &ws_client,
                                     &address,
-                                    if side.is_native() { n_sleep_time } else { h_sleep_time },
+                                    sleep_duration,
                                     network_id,
                                 ).await;
                                 match r {
@@ -297,14 +251,10 @@ pub async fn eth_rpc_loop(
                                         continue 'eth_rpc_loop
                                     }
                                     Err(e) => {
-                                        error!("{side} eth rpc error: {e}");
-                                        warn!("rotating {side} endpoint");
-                                        sleep(Duration::from_millis(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        if side.is_native() {
-                                            n_ws_client = n_endpoints.rotate().await?;
-                                        } else {
-                                            h_ws_client = h_endpoints.rotate().await?;
-                                        };
+                                        error!("{network_id} eth rpc error: {e}");
+                                        warn!("rotating {network_id} endpoint");
+                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
+                                        ws_client = endpoints.rotate().await?;
                                         continue 'inner
                                     },
                                 }
@@ -313,16 +263,15 @@ pub async fn eth_rpc_loop(
                     }
                 },
                 None => {
-                    let m = "all eth rpc senders dropped!";
+                    let m = format!("all eth rpc for network {network_id} senders dropped!");
                     error!("{m}");
                     break 'eth_rpc_loop Err(SentinelError::Custom(m.into()))
                 },
             },
             _ = tokio::signal::ctrl_c() => {
-                warn!("eth rpc shutting down...");
+                warn!("eth rpc for network {network_id} shutting down...");
                 break 'eth_rpc_loop Err(SentinelError::SigInt("eth rpc".into()))
             },
         }
     }
-    */
 }
