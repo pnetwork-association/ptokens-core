@@ -24,7 +24,14 @@ use common_sentinel::{
 use ethereum_types::H256 as EthHash;
 use tokio::time::{sleep, Duration};
 
-use crate::type_aliases::{BroadcastChannelRx, BroadcastChannelTx, UserOpCancellerRx, UserOpCancellerTx, WebSocketTx};
+use crate::type_aliases::{
+    BroadcastChannelRx,
+    BroadcastChannelTx,
+    EthRpcTx,
+    UserOpCancellerRx,
+    UserOpCancellerTx,
+    WebSocketTx,
+};
 
 async fn cancel_user_op(
     op: UserOp,
@@ -34,11 +41,9 @@ async fn cancel_user_op(
     gas_limit: usize,
     config: &SentinelConfig,
     broadcaster_pk: &EthPrivateKey,
-    eth_rpc_senders: EthRpcSenders,
+    eth_rpc_tx: EthRpcTx,
     websocket_tx: WebSocketTx,
 ) -> Result<EthHash, SentinelError> {
-    todo!("this");
-    /*
     // FIXME re-instate the balance checks
     // NOTE: First we check we can afford the tx
     //op.check_affordability(balance, gas_limit, gas_price)?;
@@ -82,16 +87,13 @@ async fn cancel_user_op(
 
     info!("tx hash: {tx_hash}");
     Ok(tx_hash)
-    */
 }
 
 async fn get_gas_price(
     config: &SentinelConfig,
     network_id: &NetworkId,
-    eth_rpc_senders: EthRpcSenders,
+    eth_rpc_tx: EthRpcTx,
 ) -> Result<u64, SentinelError> {
-    todo!("this");
-    /*
     let p = if let Ok(Some(p)) = config.gas_price(network_id) {
         debug!("using {network_id} gas price from config: {p}");
         p
@@ -103,7 +105,6 @@ async fn get_gas_price(
         p
     };
     Ok(p)
-    */
 }
 
 async fn cancel_user_ops(
@@ -112,8 +113,6 @@ async fn cancel_user_ops(
     eth_rpc_senders: EthRpcSenders,
     pk: &EthPrivateKey,
 ) -> Result<(), SentinelError> {
-    todo!("this");
-    /*
     info!("handling user op cancellation request...");
 
     let max_delta = config.core().max_cancellable_time_delta();
@@ -143,17 +142,19 @@ async fn cancel_user_ops(
     let mut host_balance = host_balance_rx.await??;
     eth_rpc_tx.send(host_balance_msg).await?;
     let mut native_balance = native_balance_rx.await??;
-    */
 
+    */
     let err_msg = "error cancelling user op ";
 
     for op in cancellable_user_ops.iter() {
-        let (msg, rx) = EthRpcMessages::get_nonce_msg(op.destination_network_id(), address);
-        eth_rpc_tx.send(msg).await?;
+        let destination_network_id = op.destination_network_id();
+        let sender = eth_rpc_senders.sender(&destination_network_id)?;
+
+        let (msg, rx) = EthRpcMessages::get_nonce_msg(destination_network_id, address);
+        sender.send(msg).await?;
         let nonce = rx.await??;
 
-        let destination_network_id = op.destination_network_id();
-        let gas_price = get_gas_price(config, &destination_network_id, eth_rpc_tx.clone()).await?;
+        let gas_price = get_gas_price(config, &destination_network_id, sender.clone()).await?;
         let gas_limit = config.gas_limit(&destination_network_id)?;
         let uid = op.uid()?;
         match cancel_user_op(
@@ -164,7 +165,7 @@ async fn cancel_user_ops(
             gas_limit,
             config,
             pk,
-            eth_rpc_tx.clone(),
+            sender.clone(),
             websocket_tx.clone(),
         )
         .await
@@ -182,7 +183,6 @@ async fn cancel_user_ops(
     }
 
     Ok(())
-    */
 }
 
 async fn broadcast_channel_loop(
