@@ -48,8 +48,8 @@ pub async fn get_block(
                 _ => {
                     if attempt < MAX_RPC_CALL_ATTEMPTS {
                         attempt += 1;
-                        warn!("{network_id} sleeping for {sleep_time}ms before retrying...");
-                        sleep(Duration::from_millis(sleep_time)).await;
+                        warn!("{network_id} sleeping for {sleep_time}s before retrying...");
+                        sleep(Duration::from_secs(sleep_time)).await;
                         continue;
                     } else {
                         warn!("{network_id} {RPC_CMD} failed after {attempt} attempts");
