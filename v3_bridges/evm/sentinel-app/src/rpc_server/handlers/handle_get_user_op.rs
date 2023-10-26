@@ -4,11 +4,11 @@ use common_sentinel::{SentinelError, UserOpUniqueId, WebSocketMessages, WebSocke
 use tokio::time::{sleep, Duration};
 
 use crate::{
-    rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT},
+    rpc_server::{RpcCalls, RpcParams, STRONGBOX_TIMEOUT},
     type_aliases::WebSocketTx,
 };
 
-impl RpcCall {
+impl RpcCalls {
     pub(crate) async fn handle_get_user_op(
         params: RpcParams,
         websocket_tx: WebSocketTx,

@@ -12,11 +12,11 @@ use common_sentinel::{
 };
 
 use crate::{
-    rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT},
+    rpc_server::{RpcCalls, RpcParams, STRONGBOX_TIMEOUT},
     type_aliases::WebSocketTx,
 };
 
-impl RpcCall {
+impl RpcCalls {
     pub(crate) async fn handle_process_block(
         config: SentinelConfig,
         eth_rpc_senders: EthRpcSenders,

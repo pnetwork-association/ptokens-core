@@ -2,11 +2,11 @@ use common_sentinel::{SentinelError, WebSocketMessages, WebSocketMessagesEncodab
 use tokio::time::{sleep, Duration};
 
 use crate::{
-    rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT},
+    rpc_server::{RpcCalls, RpcParams, STRONGBOX_TIMEOUT},
     type_aliases::WebSocketTx,
 };
 
-impl RpcCall {
+impl RpcCalls {
     pub(crate) async fn handle_remove_user_op(
         websocket_tx: WebSocketTx,
         params: RpcParams,

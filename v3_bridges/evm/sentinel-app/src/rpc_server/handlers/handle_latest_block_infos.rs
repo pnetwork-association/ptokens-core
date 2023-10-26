@@ -1,11 +1,11 @@
 use common_sentinel::{call_core, NetworkId, SentinelError, WebSocketMessagesEncodable};
 
 use crate::{
-    rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT},
+    rpc_server::{RpcCalls, RpcParams, STRONGBOX_TIMEOUT},
     type_aliases::WebSocketTx,
 };
 
-impl RpcCall {
+impl RpcCalls {
     pub(crate) async fn handle_get_latest_block_infos(
         websocket_tx: WebSocketTx,
         params: RpcParams,

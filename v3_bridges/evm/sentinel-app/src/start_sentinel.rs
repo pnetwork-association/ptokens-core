@@ -98,6 +98,8 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
 
     let mut threads = vec![];
 
+    // NOTE: For each network defined in the config, a thread is created to handle a module that
+    // syncs that blockchain...
     let mut syncer_threads = config
         .network_ids()
         .iter()
@@ -113,6 +115,8 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
         .collect::<Result<Vec<_>, SentinelError>>()?;
     threads.append(&mut syncer_threads);
 
+    // NOTE: For each network defined in the config, a thread is create dedicated to handling eth
+    // RPC calls for that network...
     let mut eth_rpc_threads = eth_rpc_channels
         .to_receivers()
         .into_iter()
@@ -128,6 +132,7 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
         .collect::<Vec<_>>();
     threads.append(&mut eth_rpc_threads);
 
+    // NOTE: These final threads are all single modules, not dynamically generated.
     let mut other_threads = vec![
         ws_server_thread,
         rpc_server_thread,

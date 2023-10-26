@@ -1,11 +1,11 @@
 use common_sentinel::{call_core, SentinelError, WebSocketMessagesEncodable};
 
 use crate::{
-    rpc_server::{RpcCall, STRONGBOX_TIMEOUT},
+    rpc_server::{RpcCalls, STRONGBOX_TIMEOUT},
     type_aliases::WebSocketTx,
 };
 
-impl RpcCall {
+impl RpcCalls {
     pub(crate) async fn handle_get_unsolved_challenges(
         websocket_tx: WebSocketTx,
         core_cxn: bool,

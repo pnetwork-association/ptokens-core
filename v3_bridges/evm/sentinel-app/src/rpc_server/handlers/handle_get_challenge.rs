@@ -4,11 +4,11 @@ use common_sentinel::{call_core, SentinelError, WebSocketMessagesEncodable};
 use ethereum_types::H256 as EthHash;
 
 use crate::{
-    rpc_server::{type_aliases::RpcParams, RpcCall, STRONGBOX_TIMEOUT},
+    rpc_server::{type_aliases::RpcParams, RpcCalls, STRONGBOX_TIMEOUT},
     type_aliases::WebSocketTx,
 };
 
-impl RpcCall {
+impl RpcCalls {
     pub(crate) async fn handle_get_challenge(
         websocket_tx: WebSocketTx,
         params: RpcParams,

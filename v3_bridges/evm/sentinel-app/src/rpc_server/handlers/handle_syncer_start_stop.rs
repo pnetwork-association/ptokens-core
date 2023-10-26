@@ -8,11 +8,11 @@ use common_sentinel::{
 use serde_json::{json, Value as Json};
 
 use crate::{
-    rpc_server::{RpcCall, RpcParams},
+    rpc_server::{RpcCalls, RpcParams},
     type_aliases::BroadcastChannelTx,
 };
 
-impl RpcCall {
+impl RpcCalls {
     pub(crate) async fn handle_syncer_start_stop(
         broadcast_channel_tx: BroadcastChannelTx,
         params: RpcParams,

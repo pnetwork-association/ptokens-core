@@ -1,9 +1,9 @@
 use common_sentinel::{BroadcastChannelMessages, SentinelError, UserOpCancellerBroadcastChannelMessages};
 use serde_json::{json, Value as Json};
 
-use crate::{rpc_server::RpcCall, type_aliases::BroadcastChannelTx};
+use crate::{rpc_server::RpcCalls, type_aliases::BroadcastChannelTx};
 
-impl RpcCall {
+impl RpcCalls {
     pub(crate) async fn handle_user_op_canceller_start_stop(
         broadcast_channel_tx: BroadcastChannelTx,
         core_cxn: bool,

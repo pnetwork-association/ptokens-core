@@ -2,11 +2,11 @@ use common_sentinel::{sanity_check_frequency, SentinelError, UserOpCancellerMess
 use serde_json::{json, Value as Json};
 
 use crate::{
-    rpc_server::{RpcCall, RpcParams},
+    rpc_server::{RpcCalls, RpcParams},
     type_aliases::UserOpCancellerTx,
 };
 
-impl RpcCall {
+impl RpcCalls {
     pub(crate) async fn handle_set_user_op_canceller_frequency(
         params: RpcParams,
         tx: UserOpCancellerTx,

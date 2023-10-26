@@ -9,11 +9,11 @@ use common_sentinel::{
 use serde_json::json;
 
 use crate::{
-    rpc_server::{RpcCall, RpcParams},
+    rpc_server::{RpcCalls, RpcParams},
     type_aliases::WebSocketTx,
 };
 
-impl RpcCall {
+impl RpcCalls {
     pub(crate) async fn handle_get_challenge_state(
         config: SentinelConfig,
         websocket_tx: WebSocketTx,

@@ -2,13 +2,13 @@ use common_eth::convert_hex_to_eth_address;
 use common_sentinel::{call_core, SentinelError, WebSocketMessagesEncodable, WebSocketMessagesError};
 
 use crate::{
-    rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT},
+    rpc_server::{RpcCalls, RpcParams, STRONGBOX_TIMEOUT},
     type_aliases::WebSocketTx,
 };
 
 // TODO Take whatever other params are required to maybe broadcast this signature too?
 
-impl RpcCall {
+impl RpcCalls {
     pub(crate) async fn handle_get_registration_signature(
         websocket_tx: WebSocketTx,
         params: RpcParams,

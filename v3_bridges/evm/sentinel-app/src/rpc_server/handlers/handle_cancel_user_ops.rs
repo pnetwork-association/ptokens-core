@@ -1,10 +1,10 @@
 use common_sentinel::{SentinelError, UserOpCancellerMessages};
 use serde_json::{json, Value as Json};
 
-use crate::{rpc_server::RpcCall, type_aliases::UserOpCancellerTx};
+use crate::{rpc_server::RpcCalls, type_aliases::UserOpCancellerTx};
 
 // NOTE: This RPC call will attempt to cancel ALL cancellable user ops.
-impl RpcCall {
+impl RpcCalls {
     pub(crate) async fn handle_cancel_user_ops(
         user_op_canceller_tx: UserOpCancellerTx,
         core_cxn: bool,

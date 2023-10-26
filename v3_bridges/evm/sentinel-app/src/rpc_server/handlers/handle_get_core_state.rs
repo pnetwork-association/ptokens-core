@@ -1,11 +1,11 @@
 use common_sentinel::{call_core, NetworkId, SentinelError, WebSocketMessagesEncodable, WebSocketMessagesError};
 
 use crate::{
-    rpc_server::{RpcCall, RpcParams, STRONGBOX_TIMEOUT},
+    rpc_server::{RpcCalls, RpcParams, STRONGBOX_TIMEOUT},
     type_aliases::WebSocketTx,
 };
 
-impl RpcCall {
+impl RpcCalls {
     pub(crate) async fn handle_get_core_state(
         params: RpcParams,
         websocket_tx: WebSocketTx,

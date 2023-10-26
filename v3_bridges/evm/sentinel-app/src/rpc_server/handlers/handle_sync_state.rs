@@ -11,11 +11,11 @@ use common_sentinel::{
 use serde_json::json;
 
 use crate::{
-    rpc_server::{RpcCall, STRONGBOX_TIMEOUT},
+    rpc_server::{RpcCalls, STRONGBOX_TIMEOUT},
     type_aliases::WebSocketTx,
 };
 
-impl RpcCall {
+impl RpcCalls {
     pub(crate) async fn handle_sync_state(
         config: SentinelConfig,
         websocket_tx: WebSocketTx,
