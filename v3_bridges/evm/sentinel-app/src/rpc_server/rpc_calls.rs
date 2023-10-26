@@ -69,6 +69,7 @@ pub(crate) enum RpcCalls {
     LatestBlockInfos(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
+    GetBalances(RpcId, Box<SentinelConfig>, RpcParams, EthRpcSenders),
     SetUserOpCancellerFrequency(RpcId, RpcParams, UserOpCancellerTx),
     SetStatusPublishingFrequency(RpcId, RpcParams, StatusPublisherTx),
     GetCancellableUserOps(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
@@ -125,34 +126,31 @@ impl RpcCalls {
     ) -> Self {
         match r.method().as_ref() {
             "ping" => Self::Ping(*r.id()),
+            "get" => Self::Get(*r.id(), websocket_tx, r.params(), core_cxn),
+            "put" => Self::Put(*r.id(), websocket_tx, r.params(), core_cxn),
             "getUserOps" => Self::GetUserOps(*r.id(), websocket_tx, core_cxn),
-            "get" => Self::Get(*r.id(), websocket_tx, r.params().clone(), core_cxn),
-            "put" => Self::Put(*r.id(), websocket_tx, r.params().clone(), core_cxn),
+            "delete" => Self::Delete(*r.id(), websocket_tx, r.params(), core_cxn),
             "getUserOpList" => Self::GetUserOpList(*r.id(), websocket_tx, core_cxn),
-            "delete" => Self::Delete(*r.id(), websocket_tx, r.params().clone(), core_cxn),
+            "getUserOp" => Self::GetUserOp(*r.id(), r.params(), websocket_tx, core_cxn),
             "getInclusionProof" => Self::GetInclusionProof(*r.id(), websocket_tx, core_cxn),
-            "getUserOp" => Self::GetUserOp(*r.id(), r.params().clone(), websocket_tx, core_cxn),
-            "removeUserOp" => Self::RemoveUserOp(*r.id(), websocket_tx, r.params().clone(), core_cxn),
+            "removeUserOp" => Self::RemoveUserOp(*r.id(), websocket_tx, r.params(), core_cxn),
+            "getChallenge" => Self::GetChallenge(*r.id(), websocket_tx, r.params(), core_cxn),
+            "stopSyncer" => Self::StopSyncer(*r.id(), broadcast_channel_tx, r.params(), core_cxn),
+            "getStatus" | "status" => Self::GetStatus(*r.id(), websocket_tx, r.params(), core_cxn),
+            "startSyncer" => Self::StartSyncer(*r.id(), broadcast_channel_tx, r.params(), core_cxn),
             "getChallangeResponses" => Self::GetUnsolvedChallenges(*r.id(), websocket_tx, core_cxn),
-            "getChallenge" => Self::GetChallenge(*r.id(), websocket_tx, r.params().clone(), core_cxn),
-            "stopSyncer" => Self::StopSyncer(*r.id(), broadcast_channel_tx, r.params().clone(), core_cxn),
-            "getStatus" | "status" => Self::GetStatus(*r.id(), websocket_tx, r.params().clone(), core_cxn),
-            "startSyncer" => Self::StartSyncer(*r.id(), broadcast_channel_tx, r.params().clone(), core_cxn),
+            "getBalances" => Self::GetBalances(*r.id(), Box::new(config), r.params(), eth_rpc_senders),
             "cancel" | "cancelUserOp" => Self::CancelUserOps(*r.id(), user_op_canceller_tx.clone(), core_cxn),
             "startChallengeResponder" => Self::ChallengeResponderStartStop(*r.id(), broadcast_channel_tx, true),
             "stopChallengeResponder" => Self::ChallengeResponderStartStop(*r.id(), broadcast_channel_tx, false),
             "getChallengesList" | "getChallengeList" => Self::GetChallengesList(*r.id(), websocket_tx, core_cxn),
-            "setStatusPublishingFrequency" => {
-                Self::SetStatusPublishingFrequency(*r.id(), r.params().clone(), status_tx)
-            },
-            "removeChallenge" | "rmChallenge" => {
-                Self::RemoveChallenge(*r.id(), websocket_tx, r.params().clone(), core_cxn)
-            },
+            "setStatusPublishingFrequency" => Self::SetStatusPublishingFrequency(*r.id(), r.params(), status_tx),
+            "removeChallenge" | "rmChallenge" => Self::RemoveChallenge(*r.id(), websocket_tx, r.params(), core_cxn),
             "setUserOpCancellerFrequency" => {
-                Self::SetUserOpCancellerFrequency(*r.id(), r.params().clone(), user_op_canceller_tx)
+                Self::SetUserOpCancellerFrequency(*r.id(), r.params(), user_op_canceller_tx)
             },
             "setChallengeResponderFrequency" => {
-                Self::SetChallengeResponderFrequency(*r.id(), r.params().clone(), challenge_responder_tx)
+                Self::SetChallengeResponderFrequency(*r.id(), r.params(), challenge_responder_tx)
             },
             "stopUserOpCanceller" | "stopCanceller" => {
                 Self::UserOpCancellerStartStop(*r.id(), broadcast_channel_tx, core_cxn, false)
@@ -161,7 +159,7 @@ impl RpcCalls {
                 Self::UserOpCancellerStartStop(*r.id(), broadcast_channel_tx, core_cxn, true)
             },
             "getRegistrationSignature" | "getRegSig" => {
-                Self::GetRegistrationSignature(*r.id(), websocket_tx, r.params().clone(), core_cxn)
+                Self::GetRegistrationSignature(*r.id(), websocket_tx, r.params(), core_cxn)
             },
             "stopStatusPublisher" | "stopPublisher" => {
                 Self::StatusPublisherStartStop(*r.id(), broadcast_channel_tx.clone(), false)
@@ -169,15 +167,13 @@ impl RpcCalls {
             "startStatusPublisher" | "startPublisher" => {
                 Self::StatusPublisherStartStop(*r.id(), broadcast_channel_tx.clone(), true)
             },
-            "getLatestBlockInfos" | "latest" => {
-                Self::LatestBlockInfos(*r.id(), r.params().clone(), websocket_tx, core_cxn)
-            },
+            "getLatestBlockInfos" | "latest" => Self::LatestBlockInfos(*r.id(), r.params(), websocket_tx, core_cxn),
             "getCoreState" | "getEnclaveState" | "state" => {
-                Self::GetCoreState(*r.id(), r.params().clone(), websocket_tx, core_cxn)
+                Self::GetCoreState(*r.id(), r.params(), websocket_tx, core_cxn)
             },
             "getChallengeState" => Self::GetChallengeState(
                 *r.id(),
-                r.params().clone(),
+                r.params(),
                 Box::new(config.clone()),
                 eth_rpc_senders,
                 websocket_tx,
@@ -189,18 +185,18 @@ impl RpcCalls {
                 Box::new(config),
                 websocket_tx,
                 eth_rpc_senders,
-                r.params().clone(),
+                r.params(),
                 core_cxn,
             ),
             "getCancellableUserOps" | "getCancellable" => {
-                Self::GetCancellableUserOps(*r.id(), r.params().clone(), websocket_tx, core_cxn)
+                Self::GetCancellableUserOps(*r.id(), r.params(), websocket_tx, core_cxn)
             },
             "reset" | "resetChain" => Self::ResetChain(
                 *r.id(),
                 Box::new(config),
                 eth_rpc_senders,
                 websocket_tx,
-                r.params().clone(),
+                r.params(),
                 core_cxn,
             ),
             "init" => Self::Init(
@@ -208,7 +204,7 @@ impl RpcCalls {
                 Box::new(config),
                 eth_rpc_senders,
                 websocket_tx,
-                r.params().clone(),
+                r.params(),
                 core_cxn,
             ),
             "processBlock" | "process" | "submitBlock" | "submit" => Self::ProcessBlock(
@@ -216,10 +212,10 @@ impl RpcCalls {
                 Box::new(config),
                 eth_rpc_senders,
                 websocket_tx,
-                r.params().clone(),
+                r.params(),
                 core_cxn,
             ),
-            _ => Self::Unknown(*r.id(), r.method().clone()),
+            _ => Self::Unknown(*r.id(), r.method()),
         }
     }
 
@@ -314,6 +310,11 @@ impl RpcCalls {
             ),
             Self::StopSyncer(id, broadcast_channel_tx, params, core_cxn) => {
                 let result = Self::handle_syncer_start_stop(broadcast_channel_tx, params, true, core_cxn).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
+            Self::GetBalances(id, config, params, eth_rpc_senders) => {
+                let result = Self::handle_get_balances(*config, params, eth_rpc_senders).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
