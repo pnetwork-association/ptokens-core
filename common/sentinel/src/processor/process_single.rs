@@ -30,15 +30,23 @@ pub(super) fn process_single<D: DatabaseInterface>(
     let chain_db_utils = ChainDbUtils::new(db);
     let n = sub_mat.get_block_number()?;
 
+    let mut maybe_canon_block = None;
+
     if dry_run {
         warn!("dry running so skipping block chain appending step");
     } else if reprocess {
         warn!("reprocessing so skipping block chain appending step");
+        // NOTE: This is to avoid having to clone the submat in below arm, since reprocessing is much
+        // rarer
+        maybe_canon_block = Some(sub_mat);
     } else {
         chain.insert(&chain_db_utils, sub_mat, validate)?;
     };
 
-    let maybe_canon_block = chain.get_canonical_sub_mat(&chain_db_utils)?;
+    if !reprocess {
+        maybe_canon_block = chain.get_canonical_sub_mat(&chain_db_utils)?
+    };
+
     if maybe_canon_block.is_none() {
         warn!("there is no canonical block on chain {mcid} yet");
         /*
