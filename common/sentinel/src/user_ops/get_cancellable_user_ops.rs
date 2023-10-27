@@ -59,6 +59,7 @@ impl UserOpList {
                     // cancellable.
                     let is_cancellable = latest_block_infos.iter().all(|info| {
                         let latest_block_timestamp = *info.block_timestamp();
+                        debug!("                    op uid: {uid}");
                         debug!("                network id: {}", info.network_id());
                         debug!("    latest block timestamp: {latest_block_timestamp}");
                         debug!("user op enqueued timestamp: {enqueued_timestamp}");
