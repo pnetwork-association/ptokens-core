@@ -50,7 +50,6 @@ pub fn get_cancellable_user_ops(
             .collect::<Vec<LatestBlockInfo>>(),
     );
 
-
     let list = UserOpList::get(&s_db_utils);
     debug!("user op list: {list}");
 

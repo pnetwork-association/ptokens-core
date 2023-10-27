@@ -9,6 +9,9 @@ use crate::{NetworkId, SentinelError};
 
 #[derive(Clone, Error, Debug, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesError {
+    #[error("no inclusion proof in encryted database")]
+    NoInclusionProof,
+
     #[error("need more than {num_args} args")]
     NeedMoreArgs { num_args: usize },
 
