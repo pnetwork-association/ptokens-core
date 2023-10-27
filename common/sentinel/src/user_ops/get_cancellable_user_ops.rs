@@ -64,19 +64,15 @@ impl UserOpList {
                         debug!("user op enqueued timestamp: {enqueued_timestamp}");
                         debug!("                 max delta: {max_delta}");
 
-                        let r = if max_delta > enqueued_timestamp && latest_block_timestamp > 0 {
+                        let r = if max_delta < enqueued_timestamp && latest_block_timestamp > 0 {
                             enqueued_timestamp - max_delta < latest_block_timestamp
                         } else {
                             false
                         };
                         debug!("         op is cancellable: {r}");
+                        debug!(" op destination network id: {d_nid}");
                         r
                     });
-
-                    debug!(
-                        "op uid: {}, max_delta {}, destination: {}, enqueued_timestamp: {}, is_cancellable: {}",
-                        uid, max_delta, d_nid, enqueued_timestamp, is_cancellable,
-                    );
 
                     if is_cancellable {
                         cancellable_ops.push(op.clone())
