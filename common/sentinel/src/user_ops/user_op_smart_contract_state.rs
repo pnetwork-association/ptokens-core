@@ -2,6 +2,7 @@ use std::fmt;
 
 use common::{Byte, Bytes};
 use common_eth::encode_fxn_call;
+use ethereum_types::U256;
 
 use super::{UserOp, UserOpError, UserOpState};
 use crate::SentinelError;
@@ -43,6 +44,20 @@ impl TryFrom<Byte> for UserOpSmartContractState {
     }
 }
 
+impl TryFrom<U256> for UserOpSmartContractState {
+    type Error = UserOpError;
+
+    fn try_from(u: U256) -> Result<Self, Self::Error> {
+        match u.as_u64() {
+            0 => Ok(Self::Null),
+            1 => Ok(Self::Enqueued),
+            2 => Ok(Self::Executed),
+            3 => Ok(Self::Cancelled),
+            _ => Err(UserOpError::UnrecognizedUserOpState(u)),
+        }
+    }
+}
+
 impl TryFrom<Bytes> for UserOpSmartContractState {
     type Error = UserOpError;
 
@@ -56,7 +71,7 @@ impl TryFrom<Bytes> for UserOpSmartContractState {
                 location: name.to_string(),
             })
         } else {
-            Self::try_from(bs[0])
+            Self::try_from(U256::from_big_endian(&bs))
         }
     }
 }

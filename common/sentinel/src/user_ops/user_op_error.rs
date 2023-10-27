@@ -68,6 +68,9 @@ pub enum UserOpError {
     #[error("unrecognized smart-contract user op state: {0}")]
     UnrecognizedSmartContractUserOpState(Byte),
 
+    #[error("unrecognized smart-contract user op state: {0}")]
+    UnrecognizedUserOpState(U256),
+
     #[error("not enough bytes - got: {got}, expected: {expected} in '{location}'")]
     NotEnoughBytes {
         got: usize,

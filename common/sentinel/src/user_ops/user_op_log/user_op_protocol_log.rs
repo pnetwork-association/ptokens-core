@@ -126,7 +126,7 @@ impl TryFrom<&EthLog> for UserOpProtocolLog {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::user_ops::test_utils::{get_sample_log_with_protocol_queue, get_sub_mat_with_protocol_cancellation_log};
+    use crate::user_ops::test_utils::{get_log_with_protocol_cancellation_log, get_sample_log_with_protocol_queue};
 
     #[test]
     fn should_parse_protocol_log_correctly() {
@@ -137,7 +137,7 @@ mod tests {
 
     #[test]
     fn should_parse_protocol_log_from_cancellation_log_correctly() {
-        let l = get_sub_mat_with_protocol_cancellation_log();
+        let l = get_log_with_protocol_cancellation_log();
         let r = UserOpProtocolLog::try_from(&l);
         assert!(r.is_ok());
     }

@@ -55,6 +55,52 @@ impl PartialEq for UserOp {
 }
 
 impl UserOp {
+    #[cfg(test)]
+    pub fn to_tuple_string(&self) -> Result<String, SentinelError> {
+        let ss = vec![
+            format!(
+                "0x{}",
+                hex::encode(&self.user_op_log.origin_block_hash()?.as_bytes().to_vec())
+            ),
+            format!(
+                "0x{}",
+                hex::encode(&self.user_op_log.origin_transaction_hash()?.as_bytes().to_vec())
+            ),
+            format!("0x{}", hex::encode(&self.user_op_log.options_mask.as_bytes().to_vec())),
+            self.user_op_log.nonce.to_string(),
+            self.user_op_log.underlying_asset_decimals.to_string(),
+            self.user_op_log.asset_amount.to_string(),
+            self.user_op_log.protocol_fee_asset_amount.to_string(),
+            self.user_op_log.network_fee_asset_amount.to_string(),
+            self.user_op_log.forward_network_fee_asset_amount.to_string(),
+            format!("0x{}", hex::encode(&self.user_op_log.underlying_asset_token_address)),
+            format!(
+                "0x{}",
+                hex::encode(&self.user_op_log.origin_network_id()?.to_bytes_4()?.to_vec())
+            ),
+            format!(
+                "0x{}",
+                hex::encode(&self.user_op_log.destination_network_id.to_bytes_4()?.to_vec())
+            ),
+            format!(
+                "0x{}",
+                hex::encode(&self.user_op_log.forward_destination_network_id.to_bytes_4()?.to_vec())
+            ),
+            format!(
+                "0x{}",
+                hex::encode(&self.user_op_log.underlying_asset_network_id.to_bytes_4()?.to_vec())
+            ),
+            self.user_op_log.origin_account.to_string(),
+            self.user_op_log.destination_account.to_string(),
+            self.user_op_log.underlying_asset_name.to_string(),
+            self.user_op_log.underlying_asset_symbol.to_string(),
+            format!("0x{}", hex::encode(&self.user_op_log.user_data.clone())),
+            self.user_op_log.is_for_protocol.to_string(),
+        ];
+        println!("here: {ss:?}");
+        Ok("".to_string())
+    }
+
     pub fn enqueued_timestamp(&self) -> Result<u64, UserOpError> {
         let e = UserOpError::HasNotBeenEnqueued;
 
@@ -332,7 +378,11 @@ mod tests {
 
     use super::*;
     use crate::user_ops::{
-        test_utils::{get_sample_submission_material_with_user_send, get_sample_submission_material_with_user_send_2},
+        test_utils::{
+            get_sample_submission_material_with_user_send,
+            get_sample_submission_material_with_user_send_2,
+            get_sub_mat_with_protocol_cancellation_log,
+        },
         UserOps,
     };
 
@@ -364,5 +414,19 @@ mod tests {
         let uid = op.uid_hex().unwrap();
         let expected_uid = "0xd9feb6e60cd73c396cbaeb3e5fa55c774c03a274c54f5bc53a62a59855ec7cc4";
         assert_eq!(uid, expected_uid);
+    }
+
+    #[test]
+    fn should_get_op_from_cancellation_log() {
+        let sub_mat = get_sub_mat_with_protocol_cancellation_log();
+        let origin_network_id = NetworkId::try_from("polygon").unwrap();
+        let pnetwork_hub = convert_hex_to_eth_address("0xf28910cc8f21e9314eD50627c11De36bC0B7338F").unwrap();
+        let ops = UserOps::from_sub_mat(&origin_network_id, &pnetwork_hub, &sub_mat).unwrap();
+        assert_eq!(ops.len(), 1);
+        let op = ops[0].clone();
+        let uid = op.uid_hex().unwrap();
+        let expected_uid = "0x50d0d882be1781e777469cd07322c84fd4652d7ee3cbd323bb3539164a3708e9";
+        assert_eq!(uid, expected_uid);
+        op.to_tuple_string();
     }
 }
