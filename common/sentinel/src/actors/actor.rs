@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{type_aliases::Hash, ActorType};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Constructor, Getters, Serialize, Deserialize)]
+#[derive(Clone, Default, Copy, Debug, Eq, PartialEq, Constructor, Getters, Serialize, Deserialize)]
 pub struct Actor {
     actor_type: ActorType,
     actor_address: EthAddress,

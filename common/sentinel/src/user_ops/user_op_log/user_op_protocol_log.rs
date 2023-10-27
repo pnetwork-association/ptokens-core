@@ -10,6 +10,10 @@ use crate::{
     user_ops::{UserOp, UserOpError},
     NetworkId,
 };
+// NOTE: A protocol cancellation log also includes information pertaining to the actor who
+// performed the cancellation. The actor's address & type are indexed, and so appear in the topic
+// list, meaning the rest of the log is parsable by the same logic below as other protocol logs.
+// The sentinel has no need for this extra information and so we ignore it here.
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct UserOpProtocolLog {
@@ -122,11 +126,18 @@ impl TryFrom<&EthLog> for UserOpProtocolLog {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::user_ops::test_utils::get_sample_log_with_protocol_queue;
+    use crate::user_ops::test_utils::{get_sample_log_with_protocol_queue, get_sub_mat_with_protocol_cancellation_log};
 
     #[test]
     fn should_parse_protocol_log_correctly() {
         let l = get_sample_log_with_protocol_queue();
+        let r = UserOpProtocolLog::try_from(&l);
+        assert!(r.is_ok());
+    }
+
+    #[test]
+    fn should_parse_protocol_log_from_cancellation_log_correctly() {
+        let l = get_sub_mat_with_protocol_cancellation_log();
         let r = UserOpProtocolLog::try_from(&l);
         assert!(r.is_ok());
     }
