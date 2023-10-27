@@ -58,6 +58,7 @@ async fn cancel_user_op(
     debug!("user op state before cancellation: {user_op_smart_contract_state}");
 
     if !user_op_smart_contract_state.is_cancellable() {
+        error!("cannot cancel user op - it's not cancellable!");
         return Err(UserOpError::CannotCancel(Box::new(op)).into());
     }
 

@@ -36,7 +36,7 @@ impl UserOp {
         } else {
             let signer = pk.to_address();
             let uid = UserOpUniqueId::new(self.uid()?);
-            let sig = CancellationSignature::from(pk.sign_hash_and_set_eth_recovery_param(self.uid()?)?);
+            let sig = CancellationSignature::from(pk.hash_and_sign_msg_with_eth_prefix(self.uid()?.as_bytes())?);
             Ok(UserOpCancellationSignature::new(signer, uid, sig, proof))
         }
     }
