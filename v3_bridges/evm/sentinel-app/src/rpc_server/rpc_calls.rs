@@ -140,7 +140,7 @@ impl RpcCalls {
             "startSyncer" => Self::StartSyncer(*r.id(), broadcast_channel_tx, r.params(), core_cxn),
             "getChallangeResponses" => Self::GetUnsolvedChallenges(*r.id(), websocket_tx, core_cxn),
             "getBalances" => Self::GetBalances(*r.id(), Box::new(config), r.params(), eth_rpc_senders),
-            "cancel" | "cancelUserOp" => Self::CancelUserOps(*r.id(), user_op_canceller_tx.clone(), core_cxn),
+            "cancel" | "cancelUserOps" => Self::CancelUserOps(*r.id(), user_op_canceller_tx.clone(), core_cxn),
             "startChallengeResponder" => Self::ChallengeResponderStartStop(*r.id(), broadcast_channel_tx, true),
             "stopChallengeResponder" => Self::ChallengeResponderStartStop(*r.id(), broadcast_channel_tx, false),
             "getChallengesList" | "getChallengeList" => Self::GetChallengesList(*r.id(), websocket_tx, core_cxn),

@@ -1,5 +1,4 @@
-use common_sentinel::{SentinelError, WebSocketMessages, WebSocketMessagesEncodable};
-use tokio::time::{sleep, Duration};
+use common_sentinel::{call_core, SentinelError, WebSocketMessagesEncodable};
 
 use crate::{
     rpc_server::{RpcCalls, RpcParams, STRONGBOX_TIMEOUT},
@@ -13,17 +12,7 @@ impl RpcCalls {
         core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
         Self::check_core_is_connected(core_cxn)?;
-        let encodable_msg = WebSocketMessagesEncodable::try_from(Self::create_args("removeUserOp", params))?;
-        let (msg, rx) = WebSocketMessages::new(encodable_msg);
-        websocket_tx.send(msg).await?;
-
-        tokio::select! {
-            response = rx => response?,
-            _ = sleep(Duration::from_millis(STRONGBOX_TIMEOUT)) => {
-                let m = "removing user op";
-                error!("timed out whilst {m}");
-                Err(SentinelError::Timedout(m.into()))
-            }
-        }
+        let msg = WebSocketMessagesEncodable::try_from(Self::create_args("removeUserOp", params))?;
+        call_core(STRONGBOX_TIMEOUT, websocket_tx.clone(), msg).await
     }
 }

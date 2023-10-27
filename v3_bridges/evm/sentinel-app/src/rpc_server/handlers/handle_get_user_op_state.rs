@@ -48,9 +48,9 @@ impl RpcCalls {
 
         Ok(WebSocketMessagesEncodable::Success(json!({
             "uid": uid,
-            "origigNetworkId": o_id,
+            "origigNetworkId": o_id.to_string(),
             "originState": origin_user_op_state.to_string(),
-            "destinationNetworkId": d_id,
+            "destinationNetworkId": d_id.to_string(),
             "destinationState": destination_user_op_state.to_string(),
         })))
     }
