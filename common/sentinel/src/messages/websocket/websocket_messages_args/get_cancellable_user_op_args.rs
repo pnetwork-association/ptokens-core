@@ -15,8 +15,8 @@ impl TryFrom<Vec<String>> for WebSocketMessagesGetCancellableUserOpArgs {
     type Error = WebSocketMessagesError;
 
     fn try_from(args: Vec<String>) -> Result<Self, WebSocketMessagesError> {
-        // NOTE: We require a max time delta, and at least two chains to check for cancellable user ops
-        let n = 3;
+        // NOTE: We require a max time delta, and at least one chain to check for user op cancellability
+        let n = 2;
         let l = args.len();
 
         if l < n {

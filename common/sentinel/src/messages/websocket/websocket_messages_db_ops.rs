@@ -27,7 +27,7 @@ impl TryFrom<Vec<String>> for WebSocketMessagesEncodableDbOps {
 
         let checked_args = check_num_args(2, args)?;
         let cmd = checked_args[0].as_ref();
-        let k = hex::decode(&strip_hex_prefix(&checked_args[1]))?;
+        let k = hex::decode(strip_hex_prefix(&checked_args[1]))?;
         match cmd {
             "get" => Ok(Self::Get(k)),
             "delete" => Ok(Self::Delete(k)),

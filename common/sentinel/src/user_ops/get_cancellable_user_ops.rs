@@ -54,16 +54,23 @@ impl UserOpList {
                     let enqueued_timestamp = op.enqueued_timestamp()?;
 
                     // NOTE:User ops don't include their origin network IDs, meaning we have to
-                    // ensure _all_ other chains this sentinel works with are withing the max
+                    // ensure _all_ other chains this sentinel works with are within the max
                     // allowable delta in order to conclude whether or not an operation is
                     // cancellable.
                     let is_cancellable = latest_block_infos.iter().all(|info| {
                         let latest_block_timestamp = *info.block_timestamp();
-                        if max_delta > enqueued_timestamp && latest_block_timestamp > 0 {
+                        debug!("                network id: {}", info.network_id());
+                        debug!("    latest block timestamp: {latest_block_timestamp}");
+                        debug!("user op enqueued timestamp: {enqueued_timestamp}");
+                        debug!("                 max delta: {max_delta}");
+
+                        let r = if max_delta > enqueued_timestamp && latest_block_timestamp > 0 {
                             enqueued_timestamp - max_delta < latest_block_timestamp
                         } else {
                             false
-                        }
+                        };
+                        debug!("         op is cancellable: {r}");
+                        r
                     });
 
                     debug!(
