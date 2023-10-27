@@ -35,7 +35,7 @@ pub struct Cli {
 
     /// Start with the syncers disabled (default: false)
     #[arg(long, short)]
-    disable_syncers: Option<bool>,
+    disable_syncers: bool,
 
     // NOTE: These are optional, if no command is passed the sentinel is started proper
     #[command(subcommand)]
