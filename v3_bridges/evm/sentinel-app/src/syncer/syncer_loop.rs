@@ -172,6 +172,7 @@ pub async fn syncer_loop(
     eth_rpc_senders: EthRpcSenders,
     websocket_tx: MpscTx<WebSocketMessages>,
     broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
+    disable_syncer: bool,
 ) -> Result<(), SentinelError> {
     batch.check_endpoint().await?;
     let network_id = *batch.network_id();
@@ -179,7 +180,7 @@ pub async fn syncer_loop(
     let name = format!("{network_id} syncer");
 
     let mut core_is_connected = false;
-    let mut syncer_is_enabled = true;
+    let mut syncer_is_enabled = !disable_syncer;
     let core_time_limit = *config.core().timeout(); // FIXME Make configurable via RPC call
 
     warn!("{name} not syncing yet due to no core connection and being disabled");

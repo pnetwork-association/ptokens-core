@@ -32,7 +32,7 @@ use crate::{
 
 const MAX_CHANNEL_CAPACITY: usize = 1337;
 
-pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelError> {
+pub async fn start_sentinel(config: &SentinelConfig, disable_syncers: Option<bool>) -> Result<String, SentinelError> {
     let network_ids = config.network_ids();
     let eth_rpc_channels = EthRpcChannels::from(network_ids);
 
@@ -110,6 +110,7 @@ pub async fn start_sentinel(config: &SentinelConfig) -> Result<String, SentinelE
                 EthRpcSenders::from(&eth_rpc_channels),
                 websocket_tx.clone(),
                 broadcast_channel_tx.clone(),
+                matches!(disable_syncers, Some(true)),
             )))
         })
         .collect::<Result<Vec<_>, SentinelError>>()?;

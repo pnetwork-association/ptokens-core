@@ -29,9 +29,13 @@ pub struct Cli {
     #[arg(long, short)]
     log_level: Option<LogLevel>,
 
-    /// Configuration toml file path (default `./sentinel-config`)
+    /// Configuration toml file path (default: `./sentinel-config`)
     #[arg(long, short)]
     config_path: Option<String>,
+
+    /// Start with the syncers disabled (default: false)
+    #[arg(long, short)]
+    disable_syncers: Option<bool>,
 
     // NOTE: These are optional, if no command is passed the sentinel is started proper
     #[command(subcommand)]
@@ -60,7 +64,7 @@ async fn start() -> Result<String, SentinelError> {
     if let Some(commands) = cli_args.commands {
         handle_cli(commands).await
     } else {
-        start_sentinel::start_sentinel(&config)
+        start_sentinel::start_sentinel(&config, cli_args.disable_syncers)
             .await
             .map_err(|e| SentinelError::Json(json!({"jsonrpc": "2.0", "error": e.to_string()})))
     }
