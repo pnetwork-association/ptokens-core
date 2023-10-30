@@ -7,7 +7,7 @@ use ethereum_types::{Address as EthAddress, U256};
 use super::{Challenge, ChallengeResponseSignatureInfo, ChallengesError};
 use crate::{ActorType, NetworkId};
 
-const RESPONSE_FXN_ABI: &str = "[{\"internalType\":\"enum IPNetworkHub.ActorTypes\",\"name\":\"actorType\",\"type\":\"uint8\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"name\":\"solveChallenge\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"]";
+const RESPONSE_FXN_ABI: &str = "[{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"actor\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"challenger\",\"type\":\"address\"},{\"internalType\":\"enum IPNetworkHub.ActorTypes\",\"name\":\"actorType\",\"type\":\"uint8\"},{\"internalType\":\"uint64\",\"name\":\"timestamp\",\"type\":\"uint64\"},{\"internalType\":\"bytes4\",\"name\":\"networkId\",\"type\":\"bytes4\"}],\"internalType\":\"struct IPNetworkHub.Challenge\",\"name\":\"challenge\",\"type\":\"tuple\"},{\"internalType\":\"enum IPNetworkHub.ActorTypes\",\"name\":\"actorType\",\"type\":\"uint8\"},{\"internalType\":\"bytes32[]\",\"name\":\"proof\",\"type\":\"bytes32[]\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"name\":\"solveChallenge\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]";
 
 impl Challenge {
     pub fn check_affordability(&self, balance: U256, gas_limit: usize, gas_price: u64) -> Result<(), ChallengesError> {
@@ -30,6 +30,7 @@ impl Challenge {
         &self,
         sig_info: &ChallengeResponseSignatureInfo,
     ) -> Result<Bytes, ChallengesError> {
+        debug!("encoding `solveChallenge` fxn data...");
         let challenge = self.to_eth_abi_token()?;
         let actor_type = EthAbiToken::Uint(ActorType::Sentinel.into());
         let inclusion_proof = EthAbiToken::from(sig_info.proof());
@@ -69,5 +70,19 @@ impl Challenge {
             EthTransaction::new_unsigned(data, nonce, value, *pnetwork_hub, &ecid, gas_limit, gas_price)
                 .sign(broadcaster_pk)?,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::challenges::test_utils::get_sample_challenge;
+
+    #[test]
+    fn should_encode_challenge_data() {
+        let challenge = get_sample_challenge();
+        let sig_info = ChallengeResponseSignatureInfo::default();
+        let result = challenge.encode_solve_challenge_fxn_data(&sig_info);
+        assert!(result.is_ok());
     }
 }

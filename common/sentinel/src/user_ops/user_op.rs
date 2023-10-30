@@ -427,6 +427,7 @@ mod tests {
         let uid = op.uid_hex().unwrap();
         let expected_uid = "0x50d0d882be1781e777469cd07322c84fd4652d7ee3cbd323bb3539164a3708e9";
         assert_eq!(uid, expected_uid);
-        op.to_tuple_string();
+        let r = op.to_tuple_string();
+        assert!(r.is_ok());
     }
 }

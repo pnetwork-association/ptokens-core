@@ -2,6 +2,7 @@
 use std::{fs::read_to_string, str::FromStr};
 
 use common_eth::{EthLog, EthSubmissionMaterial};
+use ethereum_types::Address as EthAddress;
 
 use super::{Challenge, Challenges};
 
@@ -28,4 +29,10 @@ pub fn get_n_random_challenges(n: usize) -> Challenges {
         v.push(Challenge::random())
     }
     Challenges::new(v)
+}
+
+pub fn get_sample_challenge() -> Challenge {
+    let sub_mat = get_sample_sub_mat_with_challenge_pending_event_2();
+    let pnetwork_hub = EthAddress::from_str("0xf28910cc8f21e9314ed50627c11de36bc0b7338f").unwrap();
+    Challenges::from_sub_mat(&sub_mat, &pnetwork_hub).unwrap()[0].clone()
 }

@@ -11,7 +11,7 @@ use serde_json::Value as Json;
 
 use crate::{ActorInclusionProof, ChallengesError, SentinelError, WebSocketMessagesEncodable};
 
-#[derive(Clone, Debug, Serialize, Deserialize, Deref)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, Deref)]
 pub struct ChallengeResponseSignature(Bytes);
 
 impl ChallengeResponseSignature {
@@ -46,7 +46,7 @@ impl fmt::Display for ChallengeResponseSignature {
 #[derive(Clone, Debug, Constructor, Serialize, Deserialize, Deref)]
 pub struct ChallengeResponseSignatureInfos(Vec<ChallengeResponseSignatureInfo>);
 
-#[derive(Clone, Debug, Constructor, Serialize, Deserialize, Getters, Dissolve)]
+#[derive(Clone, Debug, Default, Constructor, Serialize, Deserialize, Getters, Dissolve)]
 pub struct ChallengeResponseSignatureInfo {
     id: EthHash,
     signer: EthAddress,
