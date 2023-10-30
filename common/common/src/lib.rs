@@ -42,6 +42,8 @@ pub mod traits;
 pub mod types;
 pub mod utils;
 
+pub use crypto_utils::{keccak_hash_bytes, sha256_hash_bytes};
+
 #[cfg(test)]
 extern crate simple_logger;
 #[macro_use]

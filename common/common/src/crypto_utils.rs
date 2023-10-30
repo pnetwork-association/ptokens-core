@@ -1,9 +1,14 @@
+use bitcoin::hashes::{sha256, Hash};
 use ethereum_types::H256 as KeccakHash;
 use rand::{thread_rng, RngCore};
 use secp256k1::key::SecretKey;
 use tiny_keccak::{Hasher, Keccak};
 
-use crate::types::{Byte, Result};
+use crate::types::{Byte, Bytes, Result};
+
+pub fn sha256_hash_bytes(bytes: &[Byte]) -> Bytes {
+    sha256::Hash::hash(bytes).to_vec()
+}
 
 pub fn keccak_hash_bytes(bytes: &[Byte]) -> KeccakHash {
     let mut keccak = Keccak::v256();
