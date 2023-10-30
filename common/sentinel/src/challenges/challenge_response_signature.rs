@@ -56,9 +56,9 @@ pub struct ChallengeResponseSignatureInfo {
 
 impl fmt::Display for ChallengeResponseSignatureInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "   sig: 0x{}", self.sig)?;
-        write!(f, "    id: 0x{}", self.id)?;
-        write!(f, "signer: 0x{}", hex::encode(self.signer.as_bytes()))?;
+        write!(f, "     sig: 0x{}", self.sig)?;
+        write!(f, "      id: 0x{}", self.id)?;
+        write!(f, "  signer: 0x{}", hex::encode(self.signer.as_bytes()))?;
         write!(f, "   proof: {}", self.proof)
     }
 }

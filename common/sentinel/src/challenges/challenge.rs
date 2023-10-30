@@ -46,8 +46,8 @@ impl Challenge {
     }
 
     pub fn sign(&self, pk: &EthPrivateKey) -> Result<EthSignature, ChallengesError> {
-        let bs = self.abi_encode()?;
-        Ok(pk.hash_and_sign_msg_with_eth_prefix(&bs)?)
+        let id = self.id()?;
+        Ok(pk.hash_and_sign_msg_with_eth_prefix(id.as_bytes())?)
     }
 
     pub fn get_response_sig_info(
