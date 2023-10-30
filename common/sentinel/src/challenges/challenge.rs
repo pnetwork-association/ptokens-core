@@ -55,9 +55,13 @@ impl Challenge {
         proof: ActorInclusionProof,
         signing_key: &EthPrivateKey,
     ) -> Result<ChallengeResponseSignatureInfo, ChallengesError> {
+        debug!("getting challenge response signature info...");
         let id = self.id()?;
         let sig = self.sign(signing_key)?;
         let signer = signing_key.to_address();
+        debug!("    id: {id}");
+        debug!("   sig: {sig}");
+        debug!("signer: {signer}");
         Ok(ChallengeResponseSignatureInfo::new(id, signer, proof, sig.into()))
     }
 }

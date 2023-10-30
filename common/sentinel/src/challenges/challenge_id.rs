@@ -1,4 +1,4 @@
-use common::crypto_utils::keccak_hash_bytes;
+use common::sha256_hash_bytes;
 use ethabi::{encode as eth_abi_encode, Token as EthAbiToken};
 use ethereum_types::{H256 as EthHash, U256};
 
@@ -24,7 +24,7 @@ impl Challenge {
     }
 
     pub(super) fn hash(&self) -> Result<EthHash, ChallengesError> {
-        Ok(keccak_hash_bytes(&self.abi_encode()?))
+        Ok(EthHash::from_slice(&sha256_hash_bytes(&self.abi_encode()?)))
     }
 
     // NOTE: Just a synonym of the `hash` fxn
