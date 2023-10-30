@@ -137,6 +137,7 @@ impl fmt::Display for ActorInclusionProof {
             .collect::<Vec<String>>();
         let j = json!({
             "proof": proof,
+            "epoch": self.epoch().as_u64(),
             "txHash": format!("0x{}", hex::encode(self.tx_hash())),
             "network_id": self.network_id(),
         });
@@ -227,7 +228,11 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::{actors::test_utils::get_sample_actors, Actor, ActorType};
+    use crate::{
+        actors::test_utils::{get_sample_actors, get_sample_actors_propagated_sub_mat_2},
+        Actor,
+        ActorType,
+    };
 
     fn get_sample_proof() -> ActorInclusionProof {
         get_sample_actors().get_inclusion_proof_for_idx(1).unwrap()
@@ -337,5 +342,30 @@ mod tests {
             Err(ActorsError::CannotCreateProofForActor(a)) => assert_eq!(actor, a),
             Err(e) => panic!("wrong error received {e}"),
         }
+    }
+
+    #[test]
+    fn should_get_inclusion_proof() {
+        let sub_mat = get_sample_actors_propagated_sub_mat_2();
+        let governance_address = EthAddress::from_str("0x94199A50E4DFa680e75C79Ee220E10074E189A95").unwrap();
+        let network_id = NetworkId::from_str("polygon").unwrap();
+        let actors = Actors::from_sub_mat(&sub_mat, governance_address, network_id)
+            .unwrap()
+            .unwrap();
+        let proof = actors.get_inclusion_proof_for_idx(6).unwrap();
+        let expected_proof_json: Json = serde_json::from_str(
+            r#"{
+            "epoch": "0x29",
+            "network_id":{"chain_id":137,"disambiguator":0,"protocol_id":"Ethereum","version":"V1"},
+            "tx_hash":"52d8331beb1dc65f13373d2dd531c54903c12170e619c18ecaf2e5971372f7f6",
+            "proof":[
+                "557f5bca1a37f8d1f3e0d0bf4b6b8d0363f8a8f8cf4f0e02b039057abe54730a",
+                "b5fc7273138782204e413820c77222d74beef58b8befd7d19aa64014877fe95f"
+            ]
+        }"#,
+        )
+        .unwrap();
+        let expected_proof = ActorInclusionProof::try_from(expected_proof_json).unwrap();
+        assert_eq!(proof, expected_proof);
     }
 }

@@ -16,6 +16,13 @@ pub fn get_sample_actors_propagated_sub_mat() -> EthSubmissionMaterial {
     .unwrap()
 }
 
+pub fn get_sample_actors_propagated_sub_mat_2() -> EthSubmissionMaterial {
+    EthSubmissionMaterial::from_str(
+        &read_to_string("src/actors/test_utils/polygon-block-49103205-with-actors-propagated-event.json").unwrap(),
+    )
+    .unwrap()
+}
+
 pub fn get_sample_actors_propagated_log() -> EthLog {
     get_sample_actors_propagated_sub_mat().receipts[0].logs[0].clone()
 }
