@@ -1,50 +1,29 @@
-use std::str::FromStr;
-
-use common_eth::{EthLog, EthLogExt, EthSubmissionMaterial};
+use common_eth::{EthLog, EthLogExt};
 use derive_getters::Getters;
-use derive_more::{Constructor, Deref};
+use derive_more::Constructor;
 use ethabi::{decode as eth_abi_decode, ParamType as EthAbiParamType, Token as EthAbiToken};
-use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
+use ethereum_types::{Address as EthAddress, U256};
 
-use super::ChallengesError;
-use crate::{ActorType, NetworkId};
-
-lazy_static! {
-    pub(super) static ref CHALLENGE_PENDING_EVENT_TOPIC: EthHash =
-        EthHash::from_str("6fd10f30cfab9f88f3ab98604755507ed88159095ce2102e483f2b4f441d6f14")
-            .expect("this not to fail");
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Deref, Constructor)]
-pub(super) struct ChallengePendingEvents(Vec<ChallengePendingEvent>);
-
-impl ChallengePendingEvents {
-    pub(super) fn from_sub_mat(
-        sub_mat: &EthSubmissionMaterial,
-        pnetwork_hub: &EthAddress,
-    ) -> Result<Self, ChallengesError> {
-        let logs = sub_mat
-            .receipts
-            .get_logs_from_address_with_topic(pnetwork_hub, &CHALLENGE_PENDING_EVENT_TOPIC);
-        let events = logs
-            .iter()
-            .map(ChallengePendingEvent::try_from)
-            .collect::<Result<Vec<ChallengePendingEvent>, ChallengesError>>()?;
-        Ok(Self::new(events))
-    }
-}
+use crate::{
+    challenges::{
+        events::{CHALLENGE_PENDING_EVENT_TOPIC, CHALLENGE_SOLVED_EVENT_TOPIC},
+        ChallengesError,
+    },
+    ActorType,
+    NetworkId,
+};
 
 #[derive(Debug, Clone, Eq, PartialEq, Getters, Constructor)]
-pub(super) struct ChallengePendingEvent {
-    nonce: U256,
-    timestamp: u64,
-    network_id: NetworkId,
-    actor_type: ActorType,
-    actor_address: EthAddress,
-    challenger_address: EthAddress,
+pub(in crate::challenges) struct ChallengeEvent {
+    pub(super) nonce: U256,
+    pub(super) timestamp: u64,
+    pub(super) network_id: NetworkId,
+    pub(super) actor_type: ActorType,
+    pub(super) actor_address: EthAddress,
+    pub(super) challenger_address: EthAddress,
 }
 
-impl TryFrom<EthLog> for ChallengePendingEvent {
+impl TryFrom<EthLog> for ChallengeEvent {
     type Error = ChallengesError;
 
     fn try_from(log: EthLog) -> Result<Self, Self::Error> {
@@ -52,7 +31,7 @@ impl TryFrom<EthLog> for ChallengePendingEvent {
     }
 }
 
-impl TryFrom<&EthLog> for ChallengePendingEvent {
+impl TryFrom<&EthLog> for ChallengeEvent {
     type Error = ChallengesError;
 
     fn try_from(log: &EthLog) -> Result<Self, Self::Error> {
@@ -60,7 +39,9 @@ impl TryFrom<&EthLog> for ChallengePendingEvent {
             return Err(Self::Error::NoTopics);
         }
 
-        if log.topics[0] != *CHALLENGE_PENDING_EVENT_TOPIC {
+        let allowed_topics = [*CHALLENGE_PENDING_EVENT_TOPIC, *CHALLENGE_SOLVED_EVENT_TOPIC];
+
+        if !allowed_topics.contains(&log.topics[0]) {
             return Err(Self::Error::WrongTopic);
         }
 
@@ -80,7 +61,7 @@ impl TryFrom<&EthLog> for ChallengePendingEvent {
     }
 }
 
-impl TryFrom<Vec<EthAbiToken>> for ChallengePendingEvent {
+impl TryFrom<Vec<EthAbiToken>> for ChallengeEvent {
     type Error = ChallengesError;
 
     fn try_from(tokens: Vec<EthAbiToken>) -> Result<Self, Self::Error> {
@@ -149,43 +130,5 @@ impl TryFrom<Vec<EthAbiToken>> for ChallengePendingEvent {
             actor_address,
             challenger_address,
         ))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::challenges::test_utils::{
-        get_sample_log_with_challenge_pending_event,
-        get_sample_sub_mat_with_challenge_pending_event,
-    };
-
-    fn get_expected_challenge_pending_event() -> ChallengePendingEvent {
-        ChallengePendingEvent {
-            nonce: U256::from(0),
-            timestamp: 1697147101,
-            actor_type: ActorType::Sentinel,
-            network_id: NetworkId::try_from("polygon").unwrap(),
-            actor_address: EthAddress::from_str("0x73659a0f105905121edbf44fb476b97c785688ec").unwrap(),
-            challenger_address: EthAddress::from_str("0xada2de876567a06ed79b0b29ae6ab2e142129e51").unwrap(),
-        }
-    }
-
-    #[test]
-    fn should_get_challenge_pending_event_from_eth_log() {
-        let log = get_sample_log_with_challenge_pending_event();
-        let event = ChallengePendingEvent::try_from(log).unwrap();
-        let expected_event = get_expected_challenge_pending_event();
-        assert_eq!(event, expected_event);
-    }
-
-    #[test]
-    fn should_get_challenge_pending_events_from_sub_mat() {
-        let sub_mat = get_sample_sub_mat_with_challenge_pending_event();
-        let pnetwork_hub = EthAddress::from_str("0x6153ec976A5B3886caF3A88D8d994c4CEC24203E").unwrap();
-        let events = ChallengePendingEvents::from_sub_mat(&sub_mat, &pnetwork_hub).unwrap();
-        assert_eq!(events.len(), 1);
-        let expected_event = get_expected_challenge_pending_event();
-        assert_eq!(events[0], expected_event);
     }
 }

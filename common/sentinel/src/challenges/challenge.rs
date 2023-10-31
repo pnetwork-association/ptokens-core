@@ -6,7 +6,7 @@ use ethereum_types::{Address as EthAddress, U256};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 
-use super::{ChallengePendingEvent, ChallengeResponseSignatureInfo, ChallengesError};
+use super::{ChallengeEvent, ChallengeResponseSignatureInfo, ChallengesError};
 use crate::{Actor, ActorInclusionProof, DbKey, DbUtilsT, NetworkId, SentinelError, WebSocketMessagesEncodable};
 
 /* Reference:
@@ -66,8 +66,8 @@ impl Challenge {
     }
 }
 
-impl From<&ChallengePendingEvent> for Challenge {
-    fn from(event: &ChallengePendingEvent) -> Self {
+impl From<&ChallengeEvent> for Challenge {
+    fn from(event: &ChallengeEvent) -> Self {
         Self {
             nonce: *event.nonce(),
             timestamp: *event.timestamp(),

@@ -2,13 +2,13 @@ mod challenge;
 mod challenge_and_response_info;
 mod challenge_id;
 mod challenge_list_entry;
-mod challenge_pending_event;
 mod challenge_response_signature;
 mod challenge_response_tx;
 mod challenge_state;
 mod challenges;
 mod challenges_error;
 mod challenges_list;
+mod events;
 mod test_utils;
 
 pub use self::{
@@ -22,5 +22,5 @@ pub use self::{
 };
 use self::{
     challenge_list_entry::ChallengesListEntry,
-    challenge_pending_event::{ChallengePendingEvent, ChallengePendingEvents},
+    events::{ChallengeEvent, ChallengePendingEvents},
 };
