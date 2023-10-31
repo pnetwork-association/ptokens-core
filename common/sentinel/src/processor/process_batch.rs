@@ -4,7 +4,12 @@ use common::DatabaseInterface;
 use common_eth::{Chain, ChainDbUtils, EthSubmissionMaterials};
 use ethereum_types::Address as EthAddress;
 
-use super::{maybe_handle_actors_propagated_events, maybe_handle_challenge_pending_events, process_single};
+use super::{
+    maybe_handle_actors_propagated_events,
+    maybe_handle_challenge_pending_events,
+    maybe_handle_challenge_solved_events,
+    process_single,
+};
 use crate::{NetworkId, ProcessorOutput, SentinelDbUtils, SentinelError, UserOps};
 
 pub fn process_batch<D: DatabaseInterface>(
@@ -46,6 +51,10 @@ pub fn process_batch<D: DatabaseInterface>(
     batch
         .iter()
         .try_for_each(|m| maybe_handle_challenge_pending_events(&s_db_utils, pnetwork_hub, m, &sentinel_address))?;
+
+    batch
+        .iter()
+        .try_for_each(|m| maybe_handle_challenge_solved_events(&s_db_utils, pnetwork_hub, m, &sentinel_address))?;
 
     let processed_user_ops = UserOps::from(
         batch

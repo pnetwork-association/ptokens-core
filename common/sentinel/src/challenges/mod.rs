@@ -11,6 +11,7 @@ mod challenges_list;
 mod events;
 mod test_utils;
 
+pub(crate) use self::events::ChallengeSolvedEvents;
 pub use self::{
     challenge::Challenge,
     challenge_and_response_info::{ChallengeAndResponseInfo, ChallengeAndResponseInfos},

@@ -28,7 +28,6 @@ mod test_utils;
 mod user_ops;
 mod utils;
 
-use self::db_utils::SentinelDbKeys;
 pub use self::{
     actors::{Actor, ActorInclusionProof, ActorType, Actors, ActorsError},
     batching::Batch,
@@ -116,6 +115,7 @@ pub use self::{
     },
     utils::{get_utc_timestamp, run_timer},
 };
+use self::{challenges::ChallengeSolvedEvents, db_utils::SentinelDbKeys};
 
 #[macro_use]
 extern crate log;
