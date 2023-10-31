@@ -1,4 +1,5 @@
 use common_sentinel::{
+    Env,
     EthRpcSenders,
     SentinelConfig,
     SentinelError,
@@ -76,6 +77,7 @@ pub(crate) enum RpcCalls {
     SetChallengeResponderFrequency(RpcId, RpcParams, ChallengeResponderTx),
     GetRegistrationSignature(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     UserOpCancellerStartStop(RpcId, BroadcastChannelTx, CoreCxnStatus, bool),
+    GetRegistrationExtensionTx(RpcId, Box<SentinelConfig>, RpcParams, EthRpcSenders),
     GetChallengeState(
         RpcId,
         RpcParams,
@@ -146,6 +148,9 @@ impl RpcCalls {
             "getChallengesList" | "getChallengeList" => Self::GetChallengesList(*r.id(), websocket_tx, core_cxn),
             "setStatusPublishingFrequency" => Self::SetStatusPublishingFrequency(*r.id(), r.params(), status_tx),
             "removeChallenge" | "rmChallenge" => Self::RemoveChallenge(*r.id(), websocket_tx, r.params(), core_cxn),
+            "getRegistrationExtensionTx" => {
+                Self::GetRegistrationExtensionTx(*r.id(), Box::new(config.clone()), r.params(), eth_rpc_senders.clone())
+            },
             "setUserOpCancellerFrequency" => {
                 Self::SetUserOpCancellerFrequency(*r.id(), r.params(), user_op_canceller_tx)
             },
@@ -271,6 +276,25 @@ impl RpcCalls {
                 id,
                 Self::handle_get_registration_signature(websocket_tx, params, core_cxn).await,
             ),
+            Self::GetRegistrationExtensionTx(id, config, params, eth_rpc_senders) => {
+                let err_msg = "could not get private key from environment!";
+                if let Err(e) = Env::init() {
+                    error!("{e}");
+                    return Ok(warp::reply::json(&create_json_rpc_error(id, 1337, err_msg)));
+                };
+
+                let pk = match Env::get_private_key() {
+                    Ok(k) => k,
+                    Err(e) => {
+                        error!("{e}");
+                        return Ok(warp::reply::json(&create_json_rpc_error(id, 1337, err_msg)));
+                    },
+                };
+
+                let result = Self::handle_get_registration_extension_tx(*config, params, pk, eth_rpc_senders).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
             Self::Get(id, websocket_tx, params, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get(websocket_tx, params, core_cxn).await)
             },

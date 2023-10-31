@@ -54,7 +54,7 @@ async fn respond_to_challenge(
     eth_rpc_tx.send(msg).await?;
     let tx_hash = rx.await??;
 
-    info!("tx hash: {tx_hash}");
+    info!("tx hash: 0x{}", hex::encode(tx_hash));
 
     call_core(
         *config.core().timeout(),

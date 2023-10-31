@@ -8,6 +8,7 @@ mod handle_get_challenge_state;
 mod handle_get_challenges_list;
 mod handle_get_core_state;
 mod handle_get_inclusion_proof;
+mod handle_get_registration_extension_tx;
 mod handle_get_registration_signature;
 mod handle_get_status;
 mod handle_get_unsolved_challenges;
