@@ -29,15 +29,12 @@ use crate::type_aliases::{
 async fn respond_to_challenge(
     info: &ChallengeAndResponseInfo,
     nonce: u64,
-    //balance: U256, // FIXME Make this optional. Race the getter. If it's none skip the balance check
     gas_price: u64,
     gas_limit: usize,
     config: &SentinelConfig,
     broadcaster_pk: &EthPrivateKey,
     eth_rpc_tx: EthRpcTx,
-    websocket_tx: WebSocketTx,
 ) -> Result<(), SentinelError> {
-    let id = info.challenge().id()?;
     let c_network_id = *info.challenge().network_id();
     let hub = config.pnetwork_hub(&c_network_id)?;
     let signed_tx = info.challenge().to_solve_challenge_tx(
@@ -55,13 +52,6 @@ async fn respond_to_challenge(
     let tx_hash = rx.await??;
 
     info!("tx hash: 0x{}", hex::encode(tx_hash));
-
-    call_core(
-        *config.core().timeout(),
-        websocket_tx.clone(),
-        WebSocketMessagesEncodable::SetChallengesToSolved(vec![id]),
-    )
-    .await?;
 
     Ok(())
 }
@@ -133,7 +123,6 @@ async fn respond_to_challenges(
             config,
             pk,
             eth_rpc_tx.clone(),
-            websocket_tx.clone(),
         )
         .await?;
 
