@@ -11,9 +11,20 @@ use crate::WebSocketMessagesEncodable;
 pub struct Challenges(Vec<Challenge>);
 
 impl Challenges {
-    pub fn from_sub_mat(sub_mat: &EthSubmissionMaterial, pnetwork_hub: &EthAddress) -> Result<Self, ChallengesError> {
+    pub fn from_sub_mat(
+        sub_mat: &EthSubmissionMaterial,
+        pnetwork_hub: &EthAddress,
+        sentinel_address: &EthAddress,
+    ) -> Result<Self, ChallengesError> {
+        debug!("parsing challenges from sub mat...");
         ChallengePendingEvents::from_sub_mat(sub_mat, pnetwork_hub)
-            .map(|events| events.iter().map(Challenge::from).collect())
+            .map(|events| {
+                events
+                    .iter()
+                    .map(Challenge::from)
+                    .filter(|c| c.actor().actor_address() == sentinel_address)
+                    .collect()
+            })
             .map(Self::new)
     }
 }
@@ -60,8 +71,9 @@ mod tests {
     #[test]
     fn should_get_challenges_from_sub_mat() {
         let sub_mat = get_sample_sub_mat_with_challenge_pending_event();
+        let sentinel_address = EthAddress::from_str("0x73659A0f105905121EDbF44Fb476B97c785688EC").unwrap();
         let pnetwork_hub = EthAddress::from_str("0x6153ec976A5B3886caF3A88D8d994c4CEC24203E").unwrap();
-        let events = Challenges::from_sub_mat(&sub_mat, &pnetwork_hub).unwrap();
+        let events = Challenges::from_sub_mat(&sub_mat, &pnetwork_hub, &sentinel_address).unwrap();
         assert_eq!(events.len(), 1);
         let expected_challenge = get_expected_challenge();
         assert_eq!(events[0], expected_challenge);
@@ -71,7 +83,8 @@ mod tests {
     fn should_get_challenges_from_sub_mat_2() {
         let sub_mat = get_sample_sub_mat_with_challenge_pending_event_2();
         let pnetwork_hub = EthAddress::from_str("0xf28910cc8f21e9314ed50627c11de36bc0b7338f").unwrap();
-        let challenges = Challenges::from_sub_mat(&sub_mat, &pnetwork_hub).unwrap();
+        let sentinel_address = EthAddress::from_str("0x73659A0f105905121EDbF44Fb476B97c785688EC").unwrap();
+        let challenges = Challenges::from_sub_mat(&sub_mat, &pnetwork_hub, &sentinel_address).unwrap();
         assert_eq!(challenges.len(), 1);
         let challenge = challenges[0].clone();
         let expected_challenge = Challenge::new(

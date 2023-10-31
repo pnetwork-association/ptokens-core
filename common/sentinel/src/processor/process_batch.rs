@@ -45,7 +45,7 @@ pub fn process_batch<D: DatabaseInterface>(
 
     batch
         .iter()
-        .try_for_each(|m| maybe_handle_challenge_pending_events(&s_db_utils, pnetwork_hub, m))?;
+        .try_for_each(|m| maybe_handle_challenge_pending_events(&s_db_utils, pnetwork_hub, m, &sentinel_address))?;
 
     let processed_user_ops = UserOps::from(
         batch
