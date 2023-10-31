@@ -59,7 +59,7 @@ mod tests {
         assert_eq!(encoding, expected_encoding);
         let id = c.id().unwrap();
         let expected_id =
-            EthHash::from_str("0x45430ea5312431d78303dd4f9a95cb73f66795d4f1427804d24dbc985e7206c8").unwrap();
+            EthHash::from_str("0xf72c377f5b10c3f1d09aa0bf1de4df8f5446155656ed5bd43cda1e64ac7302d9").unwrap();
         assert_eq!(id, expected_id);
     }
 }
