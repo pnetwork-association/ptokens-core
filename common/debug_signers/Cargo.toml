@@ -9,6 +9,11 @@ name = "debug_signers"
 keywords = ["defi", "crypto"]
 authors = ["Greg Kapka <gregkapka@gmail.com>"]
 
+[features]
+# NOTE: This disables the use of a hard-coded address being used to validate a command that adds a FIRST debug signer.
+# This means that any address(es) can be added as the FIRST debug signer(s) without requiring validation.
+no-safe-debug-signers = []
+
 [dependencies]
 hex = { workspace = true }
 log = { workspace = true }

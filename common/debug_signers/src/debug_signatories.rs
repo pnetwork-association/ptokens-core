@@ -15,6 +15,10 @@ use crate::DebugSignatory;
 
 lazy_static! {
     pub static ref DEBUG_SIGNATORIES_DB_KEY: [u8; 32] = common::utils::get_prefixed_db_key("debug_signatories_db_key");
+}
+
+#[cfg(not(feature = "no-safe-debug-signers"))]
+lazy_static! {
     pub static ref SAFE_DEBUG_SIGNATORIES: DebugSignatories =
         DebugSignatories::new(vec![DebugSignatory::new("safe_address", &SAFE_ETH_ADDRESS)]);
 }
@@ -84,10 +88,12 @@ impl DebugSignatories {
         });
 
         let error_key = "error".to_string();
-        let error_value = if maybe_signature.is_some() && maybe_signature != Some(&EthSignature::empty()) {
-            JsonValue::String("Could not validate signature!".to_string())
+        let error_value = if self.is_empty() {
+            JsonValue::String("no debug signers to validate signature - please add one".to_string())
+        } else if maybe_signature.is_some() && maybe_signature != Some(&EthSignature::empty()) {
+            JsonValue::String("could not validate signature".to_string())
         } else {
-            JsonValue::String("A signature is required to run this function!".to_string())
+            JsonValue::String("a signature is required to run this function".to_string())
         };
 
         let core_type_key = "coreType".to_string();
