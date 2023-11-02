@@ -7,13 +7,13 @@ type Bytes = Vec<u8>;
 use common::strip_hex_prefix;
 
 use super::websocket_messages_utils::check_num_args;
-use crate::WebSocketMessagesError;
+use crate::{DebugSignature, WebSocketMessagesError};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesEncodableDbOps {
-    Get(Bytes),
-    Delete(Bytes),
-    Put(Bytes, Bytes),
+    Get(Bytes, DebugSignature),
+    Delete(Bytes, DebugSignature),
+    Put(Bytes, Bytes, DebugSignature),
 }
 
 impl TryFrom<Vec<String>> for WebSocketMessagesEncodableDbOps {
@@ -25,16 +25,19 @@ impl TryFrom<Vec<String>> for WebSocketMessagesEncodableDbOps {
             return Err(WebSocketMessagesError::CannotCreate(args));
         };
 
-        let checked_args = check_num_args(2, args)?;
+        const MIN_NUM_ARGS: usize = 2;
+        let checked_args = check_num_args(MIN_NUM_ARGS, args)?;
         let cmd = checked_args[0].as_ref();
         let k = hex::decode(strip_hex_prefix(&checked_args[1]))?;
+
         match cmd {
-            "get" => Ok(Self::Get(k)),
-            "delete" => Ok(Self::Delete(k)),
+            "get" => Ok(Self::Get(k, checked_args.last().into())),
+            "delete" => Ok(Self::Delete(k, checked_args.last().into())),
             "put" => {
                 let final_args = check_num_args(3, checked_args)?;
                 let v = hex::decode(&final_args[2])?;
-                Ok(Self::Put(k, v))
+                let maybe_sig = final_args.last().into();
+                Ok(Self::Put(k, v, maybe_sig))
             },
             _ => {
                 warn!("cannot create WebSocketMessagesEncodableDbOps from args {checked_args:?}");
