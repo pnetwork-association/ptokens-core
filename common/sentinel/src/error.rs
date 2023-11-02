@@ -252,6 +252,7 @@ impl From<crate::user_ops::UserOpError> for SentinelError {
 impl From<common::AppError> for SentinelError {
     fn from(e: common::AppError) -> Self {
         match e {
+            common::AppError::Json(j) => Self::Json(j),
             common::AppError::NoParentError(e) => Self::NoParent(e),
             common::AppError::BlockAlreadyInDbError(e) => Self::BlockAlreadyInDb(e),
             _ => Self::Common(e),

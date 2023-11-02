@@ -3,6 +3,7 @@ use common_chain_ids::EthChainId;
 use common_eth::{ChainError, NoParentError};
 use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
+use serde_json::Value as Json;
 use thiserror::Error;
 
 use crate::{NetworkId, SentinelError};
@@ -70,6 +71,9 @@ pub enum WebSocketMessagesError {
     #[error("sentinel error: {0}")]
     SentinelError(String),
 
+    #[error("{0}")]
+    Json(Json),
+
     #[error("java database error: {0}")]
     JavaDb(String),
 
@@ -104,13 +108,19 @@ pub enum WebSocketMessagesError {
 
 impl From<CommonError> for WebSocketMessagesError {
     fn from(e: CommonError) -> Self {
-        Self::CommonError(format!("{e}"))
+        match e {
+            CommonError::Json(j) => Self::Json(j),
+            other => Self::CommonError(format!("{other}")),
+        }
     }
 }
 
 impl From<SentinelError> for WebSocketMessagesError {
     fn from(e: SentinelError) -> Self {
-        Self::SentinelError(format!("{e}"))
+        match e {
+            SentinelError::Json(j) => Self::Json(j),
+            other => Self::SentinelError(format!("{other}")),
+        }
     }
 }
 

@@ -1,4 +1,5 @@
 use common::{
+    AppError,
     constants::MIN_DATA_SENSITIVITY_LEVEL,
     core_type::CoreType,
     traits::DatabaseInterface,
@@ -161,9 +162,13 @@ impl DebugSignatories {
             .cloned()
             .collect::<Vec<DebugSignatory>>();
         if signatories.is_empty() {
-            Err(format!("Could not find debug signatory with address: '{}'!", eth_address).into())
+            let e = format!("Could not find debug signatory with address: '{}'!", eth_address);
+            error!("{e}");
+            Err(e.into())
         } else if signatories.len() > 1 {
-            Err(format!("> 1 entry found with address: '{}'!", eth_address).into())
+            let e = format!("> 1 entry found with address: '{}'!", eth_address);
+            error!("{e}");
+            Err(e.into())
         } else {
             Ok(signatories[0].clone())
         }
@@ -250,9 +255,9 @@ impl DebugSignatories {
             .next()
             .is_none()
         {
-            Err(self
-                .to_signature_info_json(core_type, debug_command_hash, Some(signature))?
-                .into())
+            let info = self .to_signature_info_json(core_type, debug_command_hash, Some(signature))?;
+            error!("{info}");
+            Err(AppError::Json(info))
         } else {
             Ok(())
         }

@@ -13,8 +13,7 @@ impl RpcCalls {
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
         debug!("handling db delete...");
         Self::check_core_is_connected(core_cxn)?;
-        let checked_params = Self::check_params(params, 1)?;
-        let msg = WebSocketMessagesEncodable::try_from(Self::create_args("delete", checked_params))?;
+        let msg = WebSocketMessagesEncodable::try_from(Self::create_args("delete", params))?;
         call_core(STRONGBOX_TIMEOUT, websocket_tx.clone(), msg).await
     }
 
@@ -25,8 +24,7 @@ impl RpcCalls {
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
         debug!("handling db get...");
         Self::check_core_is_connected(core_cxn)?;
-        let checked_params = Self::check_params(params, 1)?;
-        let msg = WebSocketMessagesEncodable::try_from(Self::create_args("get", checked_params))?;
+        let msg = WebSocketMessagesEncodable::try_from(Self::create_args("get", params))?;
         call_core(STRONGBOX_TIMEOUT, websocket_tx.clone(), msg).await
     }
 
@@ -37,8 +35,7 @@ impl RpcCalls {
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
         debug!("handling db put...");
         Self::check_core_is_connected(core_cxn)?;
-        let checked_params = Self::check_params(params, 2)?;
-        let msg = WebSocketMessagesEncodable::try_from(Self::create_args("put", checked_params))?;
+        let msg = WebSocketMessagesEncodable::try_from(Self::create_args("put", params))?;
         call_core(STRONGBOX_TIMEOUT, websocket_tx.clone(), msg).await
     }
 }
