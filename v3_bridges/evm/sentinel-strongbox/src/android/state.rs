@@ -1,10 +1,10 @@
 use common_sentinel::{SentinelError, WebSocketMessagesEncodable};
 use derive_getters::Getters;
-use serde::Serialize;
 use jni::{
     objects::{JObject, JString},
     JNIEnv,
 };
+use serde::Serialize;
 
 use super::{type_aliases::JavaPointer, Database};
 

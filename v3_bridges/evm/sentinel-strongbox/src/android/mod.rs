@@ -1,4 +1,5 @@
 use std::panic;
+mod constants;
 mod database;
 mod handle_websocket_message;
 mod handlers;
@@ -16,6 +17,7 @@ use jni::{
 use log::LevelFilter;
 
 use self::{
+    constants::CORE_TYPE,
     database::Database,
     handle_websocket_message::handle_websocket_message,
     state::State,

@@ -52,10 +52,14 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
         MSG::GetUserOpCancellationSignature(args) => {
             super::handlers::get_user_op_cancellation_signature(*args.clone(), state)
         },
-        MSG::DbOps(WebSocketMessagesEncodableDbOps::Get(k)) => super::handlers::get(k.clone(), state),
-        MSG::DbOps(WebSocketMessagesEncodableDbOps::Delete(k)) => super::handlers::delete(k.clone(), state),
         MSG::GetCancellableUserOps(args) => super::handlers::get_cancellable_user_ops(*args.clone(), state),
-        MSG::DbOps(WebSocketMessagesEncodableDbOps::Put(k, v)) => super::handlers::put(k.clone(), v.clone(), state),
+        MSG::DbOps(WebSocketMessagesEncodableDbOps::Get(k, sig)) => super::handlers::get(k.clone(), sig.clone(), state),
+        MSG::DbOps(WebSocketMessagesEncodableDbOps::Delete(k, sig)) => {
+            super::handlers::delete(k.clone(), sig.clone(), state)
+        },
+        MSG::DbOps(WebSocketMessagesEncodableDbOps::Put(k, v, sig)) => {
+            super::handlers::put(k.clone(), v.clone(), sig.clone(), state)
+        },
         m => Err(WebSocketMessagesError::Unhandled(m.to_string()).into()),
     }?;
 

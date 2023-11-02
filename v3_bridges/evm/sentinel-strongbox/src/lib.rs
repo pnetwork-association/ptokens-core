@@ -1,9 +1,11 @@
-#[cfg(target_os = "android")]
+#![cfg(target_os = "android")]
+
 #[macro_use]
 extern crate log;
 
-#[cfg(target_os = "android")]
+#[macro_use]
+extern crate common;
+
 mod android;
 
-#[cfg(target_os = "android")]
 pub use self::android::Java_com_ptokenssentinelandroidapp_RustBridge_callCore;
