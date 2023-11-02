@@ -27,8 +27,11 @@ pub fn debug_add_debug_signer<D: DatabaseInterface>(
 ) -> Result<String> {
     info!("✔ Adding debug signer to list...");
     let eth_address = convert_hex_to_eth_address(eth_address_str)?;
-    db.start_transaction()
-        .and_then(|_| DebugSignatories::get_from_db(db))
+    if !cfg!(feature = "skip-db-transaction") {
+        db.start_transaction()?
+    };
+
+    DebugSignatories::get_from_db(db)
         .and_then(|debug_signatories| {
             let debug_command_hash = convert_hex_to_h256(&get_debug_command_hash!(
                 function_name!(),
@@ -51,7 +54,13 @@ pub fn debug_add_debug_signer<D: DatabaseInterface>(
                     .and_then(|debug_signatories| debug_signatories.add_and_update_in_db(db, &debug_signatory_to_add))
             }
         })
-        .and_then(|_| db.end_transaction())
+        .and_then(|_| {
+            if !cfg!(feature = "skip-db-transaction") {
+                db.end_transaction()
+            } else {
+                Ok(())
+            }
+        })
         .map(|_| json!({"debug_add_signatory_success":true, "eth_address": eth_address_str}).to_string())
 }
 
@@ -73,8 +82,11 @@ pub fn debug_add_debug_signer<D: DatabaseInterface>(
 ) -> Result<String> {
     info!("✔ Adding debug signer to list...");
     let eth_address = convert_hex_to_eth_address(eth_address_str)?;
-    db.start_transaction()
-        .and_then(|_| DebugSignatories::get_from_db(db))
+    if !cfg!(feature = "skip-db-transaction") {
+        db.start_transaction()?
+    };
+
+    DebugSignatories::get_from_db(db)
         .and_then(|debug_signatories| {
             let debug_command_hash = convert_hex_to_h256(&get_debug_command_hash!(
                 function_name!(),
@@ -95,6 +107,12 @@ pub fn debug_add_debug_signer<D: DatabaseInterface>(
                     .and_then(|debug_signatories| debug_signatories.add_and_update_in_db(db, &debug_signatory_to_add))
             }
         })
-        .and_then(|_| db.end_transaction())
+        .and_then(|_| {
+            if !cfg!(feature = "skip-db-transaction") {
+                db.end_transaction()
+            } else {
+                Ok(())
+            }
+        })
         .map(|_| json!({"debug_add_signatory_success":true, "eth_address": eth_address_str}).to_string())
 }

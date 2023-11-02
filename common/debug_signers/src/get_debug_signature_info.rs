@@ -17,19 +17,23 @@ pub fn get_debug_signature_info<D: DatabaseInterface>(
     core_type: &CoreType,
     debug_command_hash_str: &str,
 ) -> Result<JsonValue> {
-    db.start_transaction()
-        .and_then(|_| DebugSignatories::get_from_db(db))
-        .and_then(|debug_signatories| {
-            db.end_transaction()?;
-            let debug_command_hash = convert_hex_to_h256(debug_command_hash_str)?;
-            if debug_signatories.is_empty() {
-                // NOTE: If there are no signers yet, we show the safe address signing info, since
-                // with that, new debug signers can be added.
-                SAFE_DEBUG_SIGNATORIES.to_signature_info_json(core_type, &debug_command_hash, None)
-            } else {
-                debug_signatories.to_signature_info_json(core_type, &debug_command_hash, None)
-            }
-        })
+    if !cfg!(feature = "skip-db-transaction") {
+        db.start_transaction()?
+    };
+
+    DebugSignatories::get_from_db(db).and_then(|debug_signatories| {
+        if !cfg!(feature = "skip-db-transaction") {
+            db.end_transaction()?
+        };
+        let debug_command_hash = convert_hex_to_h256(debug_command_hash_str)?;
+        if debug_signatories.is_empty() {
+            // NOTE: If there are no signers yet, we show the safe address signing info, since
+            // with that, new debug signers can be added.
+            SAFE_DEBUG_SIGNATORIES.to_signature_info_json(core_type, &debug_command_hash, None)
+        } else {
+            debug_signatories.to_signature_info_json(core_type, &debug_command_hash, None)
+        }
+    })
 }
 
 /// Get Debug Signature Info
@@ -43,17 +47,20 @@ pub fn get_debug_signature_info<D: DatabaseInterface>(
     core_type: &CoreType,
     debug_command_hash_str: &str,
 ) -> Result<JsonValue> {
-    db.start_transaction()
-        .and_then(|_| DebugSignatories::get_from_db(db))
-        .and_then(|debug_signatories| {
-            db.end_transaction()?;
-            let debug_command_hash = convert_hex_to_h256(debug_command_hash_str)?;
-            if debug_signatories.is_empty() {
-                // NOTE: If there are no signers yet we return the info from an emptry set of
-                // signers. This includes a message telling the user to add a debug signer.
-                DebugSignatories::default().to_signature_info_json(core_type, &debug_command_hash, None)
-            } else {
-                debug_signatories.to_signature_info_json(core_type, &debug_command_hash, None)
-            }
-        })
+    if !cfg!(feature = "skip-db-transaction") {
+        db.start_transaction()?
+    };
+    DebugSignatories::get_from_db(db).and_then(|debug_signatories| {
+        if !cfg!(feature = "skip-db-transaction") {
+            db.end_transaction()?
+        };
+        let debug_command_hash = convert_hex_to_h256(debug_command_hash_str)?;
+        if debug_signatories.is_empty() {
+            // NOTE: If there are no signers yet we return the info from an emptry set of
+            // signers. This includes a message telling the user to add a debug signer.
+            DebugSignatories::default().to_signature_info_json(core_type, &debug_command_hash, None)
+        } else {
+            debug_signatories.to_signature_info_json(core_type, &debug_command_hash, None)
+        }
+    })
 }

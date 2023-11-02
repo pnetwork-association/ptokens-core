@@ -66,8 +66,11 @@ pub fn debug_add_multiple_debug_signers<D: DatabaseInterface>(
     info!("✔ Adding debug signer to list...");
     let debug_signatories_to_add = DebugSignersJson::from_str(debug_signers_json)?.to_debug_signatories()?;
 
-    db.start_transaction()
-        .and_then(|_| DebugSignatories::get_from_db(db))
+    if !cfg!(feature = "skip-db-transaction") {
+        db.start_transaction()?
+    };
+
+    DebugSignatories::get_from_db(db)
         .and_then(|debug_signatories| {
             let debug_command_hash = convert_hex_to_h256(&get_debug_command_hash!(
                 function_name!(),
@@ -90,7 +93,13 @@ pub fn debug_add_multiple_debug_signers<D: DatabaseInterface>(
                     })
             }
         })
-        .and_then(|_| db.end_transaction())
+        .and_then(|_| {
+            if !cfg!(feature = "skip-db-transaction") {
+                db.end_transaction()
+            } else {
+                Ok(())
+            }
+        })
         .map(|_| {
             json!({
                 "debug_add_multi_debug_signers_success":true,
@@ -118,8 +127,11 @@ pub fn debug_add_multiple_debug_signers<D: DatabaseInterface>(
     info!("✔ Adding debug signer to list...");
     let debug_signatories_to_add = DebugSignersJson::from_str(debug_signers_json)?.to_debug_signatories()?;
 
-    db.start_transaction()
-        .and_then(|_| DebugSignatories::get_from_db(db))
+    if !cfg!(feature = "skip-db-transaction") {
+        db.start_transaction()?
+    };
+
+    DebugSignatories::get_from_db(db)
         .and_then(|debug_signatories| {
             let debug_command_hash = convert_hex_to_h256(&get_debug_command_hash!(
                 function_name!(),
@@ -140,7 +152,13 @@ pub fn debug_add_multiple_debug_signers<D: DatabaseInterface>(
                     })
             }
         })
-        .and_then(|_| db.end_transaction())
+        .and_then(|_| {
+            if !cfg!(feature = "skip-db-transaction") {
+                db.end_transaction()
+            } else {
+                Ok(())
+            }
+        })
         .map(|_| {
             json!({
                 "debug_add_multi_debug_signers_success":true,

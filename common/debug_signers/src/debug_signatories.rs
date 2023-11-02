@@ -1,9 +1,9 @@
 use common::{
-    AppError,
     constants::MIN_DATA_SENSITIVITY_LEVEL,
     core_type::CoreType,
     traits::DatabaseInterface,
     types::{Byte, Bytes, Result},
+    AppError,
 };
 use common_eth::EthSignature;
 use common_safe_addresses::SAFE_ETH_ADDRESS;
@@ -255,7 +255,7 @@ impl DebugSignatories {
             .next()
             .is_none()
         {
-            let info = self .to_signature_info_json(core_type, debug_command_hash, Some(signature))?;
+            let info = self.to_signature_info_json(core_type, debug_command_hash, Some(signature))?;
             error!("{info}");
             Err(AppError::Json(info))
         } else {

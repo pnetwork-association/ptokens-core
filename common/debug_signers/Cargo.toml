@@ -14,6 +14,9 @@ authors = ["Greg Kapka <gregkapka@gmail.com>"]
 # This means that any address(es) can be added as the FIRST debug signer(s) without requiring validation.
 no-safe-debug-signers = []
 
+# NOTE: This is to allow a sentinel to use this library with fxns in this library causing issues w/r/t db transactions.
+skip-db-transactions = []
+
 [dependencies]
 hex = { workspace = true }
 log = { workspace = true }

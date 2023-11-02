@@ -19,8 +19,11 @@ pub fn debug_remove_debug_signer<D: DatabaseInterface>(
     core_type: &CoreType,
     signature_str: &str,
 ) -> Result<String> {
-    db.start_transaction()
-        .and_then(|_| DebugSignatories::get_from_db(db))
+    if !cfg!(feature = "skip-db-transaction") {
+        db.start_transaction()?
+    };
+
+    DebugSignatories::get_from_db(db)
         .and_then(|debug_signatories| {
             let signature = EthSignature::from_str(signature_str)?;
             let eth_address = convert_hex_to_eth_address(eth_address_str)?;
@@ -31,6 +34,12 @@ pub fn debug_remove_debug_signer<D: DatabaseInterface>(
                 .and_then(|_| DebugSignatories::get_from_db(db))
                 .and_then(|debug_signatories| debug_signatories.remove_and_update_in_db(db, &eth_address))
         })
-        .and_then(|_| db.end_transaction())
+        .and_then(|_| {
+            if !cfg!(feature = "skip-db-transaction") {
+                db.end_transaction()
+            } else {
+                Ok(())
+            }
+        })
         .map(|_| json!({"debug_remove_signatory_success":true, "eth_address": eth_address_str}).to_string())
 }
