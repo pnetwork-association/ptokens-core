@@ -29,4 +29,4 @@ common = { workspace = true }
 common_eth = { workspace = true }
 common_sentinel = { workspace = true }
 common_metadata = { workspace = true }
-common_debug_signers = { workspace = true }
+common_debug_signers = { package = "debug_signers", path = "../../../common/debug_signers", features = [ "no-safe-debug-signers", "skip-db-transactions" ] }

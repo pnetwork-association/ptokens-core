@@ -1,3 +1,4 @@
+mod handle_add_debug_signers;
 mod handle_cancel_user_ops;
 mod handle_challenge_responder_start_stop;
 mod handle_db_ops;

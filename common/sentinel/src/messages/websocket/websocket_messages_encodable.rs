@@ -7,6 +7,7 @@ use serde_json::Value as Json;
 
 use super::WebSocketMessagesEncodableDbOps;
 use crate::{
+    DebugSignature,
     NetworkId,
     SentinelError,
     UserOpUniqueId,
@@ -41,6 +42,7 @@ pub enum WebSocketMessagesEncodable {
     Initialize(Box<WebSocketMessagesInitArgs>),
     ResetChain(Box<WebSocketMessagesResetChainArgs>),
     ProcessBatch(Box<WebSocketMessagesProcessBatchArgs>),
+    AddDebugSigners(Vec<(String, EthAddress)>, DebugSignature),
     GetCancellableUserOps(Box<WebSocketMessagesGetCancellableUserOpArgs>),
     GetUserOpCancellationSignature(Box<WebSocketMessagesCancelUserOpArgs>),
 }
@@ -87,6 +89,7 @@ impl fmt::Display for WebSocketMessagesEncodable {
             Self::GetCoreState(..) => "GetCoreState".to_string(),
             Self::ProcessBatch(..) => "ProcessBatch".to_string(),
             Self::GetChallenge(..) => "GetChallenge".to_string(),
+            Self::AddDebugSigners(..) => "AddDebugSigners".to_string(),
             Self::GetChallengesList => "GetChallengesList".to_string(),
             Self::RemoveChallenge(..) => "RemoveChallenge".to_string(),
             Self::GetInclusionProof => "GetInclusionProof".to_string(),

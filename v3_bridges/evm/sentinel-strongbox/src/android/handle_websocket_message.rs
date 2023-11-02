@@ -46,6 +46,7 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
         MSG::GetCoreState(nids) => super::handlers::get_core_state(nids.clone(), state),
         MSG::GetLatestBlockInfos(nids) => super::handlers::get_latest_block_infos(nids.clone(), state),
         MSG::SetChallengesToSolved(ids) => super::handlers::set_challenges_to_solved(ids.clone(), state),
+        MSG::AddDebugSigners(signers, sig) => super::handlers::add_debug_signers(signers.clone(), sig.clone(), state),
         MSG::GetRegistrationSignature(owner, nonce) => {
             super::handlers::get_registration_signature(*owner, *nonce, state)
         },

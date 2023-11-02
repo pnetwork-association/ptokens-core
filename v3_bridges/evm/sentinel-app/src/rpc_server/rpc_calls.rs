@@ -66,6 +66,7 @@ pub(crate) enum RpcCalls {
     GetChallenge(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetCoreState(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     ChallengeResponderStartStop(RpcId, BroadcastChannelTx, bool),
+    AddDebugSigners(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     RemoveChallenge(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     LatestBlockInfos(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
@@ -148,6 +149,7 @@ impl RpcCalls {
             "getChallengesList" | "getChallengeList" => Self::GetChallengesList(*r.id(), websocket_tx, core_cxn),
             "setStatusPublishingFrequency" => Self::SetStatusPublishingFrequency(*r.id(), r.params(), status_tx),
             "removeChallenge" | "rmChallenge" => Self::RemoveChallenge(*r.id(), websocket_tx, r.params(), core_cxn),
+            "addDebugSigners" | "addDebugSigner" => Self::AddDebugSigners(*r.id(), r.params(), websocket_tx, core_cxn),
             "getRegistrationExtensionTx" => {
                 Self::GetRegistrationExtensionTx(*r.id(), Box::new(config.clone()), r.params(), eth_rpc_senders.clone())
             },
@@ -272,6 +274,9 @@ impl RpcCalls {
                 id,
                 Self::handle_sync_state(*config, websocket_tx, eth_rpc_senders, core_cxn).await,
             ),
+            Self::AddDebugSigners(id, params, websocket_tx, core_cxn) => {
+                Self::handle_ws_result(id, Self::handle_add_debug_signers(params, websocket_tx, core_cxn).await)
+            },
             Self::GetRegistrationSignature(id, websocket_tx, params, core_cxn) => Self::handle_ws_result(
                 id,
                 Self::handle_get_registration_signature(websocket_tx, params, core_cxn).await,

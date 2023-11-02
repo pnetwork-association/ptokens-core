@@ -15,7 +15,7 @@ fn to_prefixed_hex_string(bs: &[u8]) -> String {
 
 #[named]
 pub fn get(k: Bytes, sig: DebugSignature, state: State) -> Result<State, SentinelError> {
-    let h = get_debug_command_hash!(function_name!(), &k, &state)()?;
+    let h = get_debug_command_hash!(function_name!(), &k)()?;
     validate_debug_command_signature(state.db(), &CORE_TYPE, &sig.to_string(), &h, cfg!(test))?;
 
     let v = state.db().get(&k, MIN_DATA_SENSITIVITY_LEVEL)?;
@@ -29,7 +29,7 @@ pub fn get(k: Bytes, sig: DebugSignature, state: State) -> Result<State, Sentine
 
 #[named]
 pub fn put(k: Bytes, v: Bytes, sig: DebugSignature, state: State) -> Result<State, SentinelError> {
-    let h = get_debug_command_hash!(function_name!(), &k, &state)()?;
+    let h = get_debug_command_hash!(function_name!(), &k, &v)()?;
     validate_debug_command_signature(state.db(), &CORE_TYPE, &sig.to_string(), &h, cfg!(test))?;
 
     let r = state.db().put(&k, &v, MIN_DATA_SENSITIVITY_LEVEL);
@@ -44,7 +44,7 @@ pub fn put(k: Bytes, v: Bytes, sig: DebugSignature, state: State) -> Result<Stat
 
 #[named]
 pub fn delete(k: Bytes, sig: DebugSignature, state: State) -> Result<State, SentinelError> {
-    let h = get_debug_command_hash!(function_name!(), &k, &state)()?;
+    let h = get_debug_command_hash!(function_name!(), &k)()?;
     validate_debug_command_signature(state.db(), &CORE_TYPE, &sig.to_string(), &h, cfg!(test))?;
 
     let r = state.db().delete(&k);

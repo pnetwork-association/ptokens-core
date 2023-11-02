@@ -31,12 +31,12 @@ impl TryFrom<Vec<String>> for WebSocketMessagesEncodableDbOps {
         let k = hex::decode(strip_hex_prefix(&checked_args[1]))?;
 
         match cmd {
-            "get" => Ok(Self::Get(k, checked_args.get(MIN_NUM_ARGS + 1).into())),
-            "delete" => Ok(Self::Delete(k, checked_args.get(MIN_NUM_ARGS + 1).into())),
+            "get" => Ok(Self::Get(k, checked_args.get(MIN_NUM_ARGS).into())),
+            "delete" => Ok(Self::Delete(k, checked_args.get(MIN_NUM_ARGS).into())),
             "put" => {
                 let final_args = check_num_args(3, checked_args)?;
                 let v = hex::decode(&final_args[2])?;
-                let maybe_sig = final_args.get(MIN_NUM_ARGS + 2).into();
+                let maybe_sig = final_args.get(MIN_NUM_ARGS + 1).into();
                 Ok(Self::Put(k, v, maybe_sig))
             },
             _ => {
