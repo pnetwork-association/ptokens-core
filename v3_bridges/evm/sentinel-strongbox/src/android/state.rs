@@ -1,5 +1,6 @@
 use common_sentinel::{SentinelError, WebSocketMessagesEncodable};
 use derive_getters::Getters;
+use serde::Serialize;
 use jni::{
     objects::{JObject, JString},
     JNIEnv,
@@ -7,12 +8,21 @@ use jni::{
 
 use super::{type_aliases::JavaPointer, Database};
 
-#[derive(Getters)]
+#[derive(Serialize, Getters)]
 pub struct State<'a> {
+    #[serde(skip_serializing)]
     db: Database<'a>,
+
+    #[serde(skip_serializing)]
     env: &'a JNIEnv<'a>,
-    msg: WebSocketMessagesEncodable,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     res: Option<WebSocketMessagesEncodable>,
+
+    // NOTE: We need the state struct serializable to work with debug signature macros, however we
+    // definitely don't need the db pointer nor JNI env nor empty return values serialized, hence the
+    // above skips.
+    msg: WebSocketMessagesEncodable,
 }
 
 impl<'a> State<'a> {
