@@ -4517,10 +4517,12 @@ version = "0.1.0"
 dependencies = [
  "android_logger",
  "common",
+ "debug_signers",
  "derive-getters",
  "derive_more",
  "ethereum",
  "ethereum-types 0.12.1",
+ "function_name",
  "hex",
  "jni",
  "log",
@@ -4529,6 +4531,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+ "tiny-keccak 2.0.2",
 ]
 
 [[package]]
