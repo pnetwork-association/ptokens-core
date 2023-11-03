@@ -1,13 +1,13 @@
 use std::{fmt, str::FromStr};
 
 use base64::{engine::general_purpose, Engine};
+use common_debug_signers::DebugSignature;
 use ethereum_types::{Address as EthAddress, H256 as EthHash};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 
 use super::WebSocketMessagesEncodableDbOps;
 use crate::{
-    DebugSignature,
     NetworkId,
     SentinelError,
     UserOpUniqueId,
@@ -38,10 +38,10 @@ pub enum WebSocketMessagesEncodable {
     SetChallengesToSolved(Vec<EthHash>),
     GetLatestBlockInfos(Vec<NetworkId>),
     DbOps(WebSocketMessagesEncodableDbOps),
-    GetRegistrationSignature(EthAddress, u64),
     Initialize(Box<WebSocketMessagesInitArgs>),
     ResetChain(Box<WebSocketMessagesResetChainArgs>),
     ProcessBatch(Box<WebSocketMessagesProcessBatchArgs>),
+    GetRegistrationSignature(EthAddress, u64, DebugSignature),
     AddDebugSigners(Vec<(String, EthAddress)>, DebugSignature),
     GetCancellableUserOps(Box<WebSocketMessagesGetCancellableUserOpArgs>),
     GetUserOpCancellationSignature(Box<WebSocketMessagesCancelUserOpArgs>),

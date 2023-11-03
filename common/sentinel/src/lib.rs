@@ -7,7 +7,6 @@ mod config;
 mod constants;
 mod core_state;
 mod db_utils;
-mod debug_signature;
 mod endpoints;
 mod env;
 mod error;
@@ -53,7 +52,6 @@ pub use self::{
     },
     core_state::CoreState,
     db_utils::{DbKey, DbUtilsT, SentinelDbUtils},
-    debug_signature::DebugSignature,
     endpoints::{EndpointError, Endpoints},
     env::Env,
     error::SentinelError,

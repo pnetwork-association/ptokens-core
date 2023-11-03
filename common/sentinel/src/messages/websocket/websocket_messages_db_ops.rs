@@ -5,9 +5,10 @@ use serde::{Deserialize, Serialize};
 type Bytes = Vec<u8>;
 
 use common::strip_hex_prefix;
+use common_debug_signers::DebugSignature;
 
 use super::websocket_messages_utils::check_num_args;
-use crate::{DebugSignature, WebSocketMessagesError};
+use crate::WebSocketMessagesError;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesEncodableDbOps {

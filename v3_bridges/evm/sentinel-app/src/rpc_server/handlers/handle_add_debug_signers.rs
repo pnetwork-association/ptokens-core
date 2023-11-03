@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
-use common_sentinel::{call_core, DebugSignature, SentinelError, WebSocketMessagesEncodable};
+use common_debug_signers::DebugSignature;
+use common_sentinel::{call_core, SentinelError, WebSocketMessagesEncodable};
 use ethereum_types::Address as EthAddress;
 
 use crate::{

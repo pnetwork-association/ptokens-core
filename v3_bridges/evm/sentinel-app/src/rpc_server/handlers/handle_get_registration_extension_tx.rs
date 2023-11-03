@@ -16,6 +16,9 @@ use crate::rpc_server::{RpcCalls, RpcParams};
 
 // TODO Take whatever other params are required to maybe broadcast this signature too?
 
+// NOTE: The registration extension tx is handled soley by the owner of the sentinel and does not
+// require and input from the sentinel's TEE protected signing key.
+
 impl RpcCalls {
     pub(crate) async fn handle_get_registration_extension_tx(
         _config: SentinelConfig,

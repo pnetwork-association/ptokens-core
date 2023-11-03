@@ -1,5 +1,10 @@
-use common_debug_signers::{debug_add_multiple_debug_signers, validate_debug_command_signature, DebugSignatories};
-use common_sentinel::{DebugSignature, SentinelError, WebSocketMessagesEncodable};
+use common_debug_signers::{
+    debug_add_multiple_debug_signers,
+    validate_debug_command_signature,
+    DebugSignatories,
+    DebugSignature,
+};
+use common_sentinel::{SentinelError, WebSocketMessagesEncodable};
 use ethereum_types::Address as EthAddress;
 use function_name::named;
 use serde_json::{json, Value as Json};

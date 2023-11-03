@@ -59,6 +59,7 @@ common_metadata = { workspace = true }
 common_chain_ids = { workspace = true }
 common_eth_debug = { workspace = true }
 common_enclave_info = { workspace = true }
+common_debug_signers = { workspace = true }
 
 # NOTE: Rev is my PR to get a long commit hash. If merged we can update this import.
 rbtag = { git = "https://github.com/LivingInSyn/rbtag.git", rev = "feee7c0" }

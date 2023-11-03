@@ -1,6 +1,6 @@
 use common::MIN_DATA_SENSITIVITY_LEVEL;
-use common_debug_signers::validate_debug_command_signature;
-use common_sentinel::{DebugSignature, SentinelError, WebSocketMessagesEncodable};
+use common_debug_signers::{validate_debug_command_signature, DebugSignature};
+use common_sentinel::{SentinelError, WebSocketMessagesEncodable};
 use function_name::named;
 use serde_json::json;
 
