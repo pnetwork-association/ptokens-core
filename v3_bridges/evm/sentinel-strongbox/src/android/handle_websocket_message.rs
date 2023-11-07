@@ -32,6 +32,7 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
     let final_state = match msg {
         MSG::GetUserOps => super::handlers::get_user_ops(state),
         MSG::GetUserOpList => super::handlers::get_user_op_list(state),
+        MSG::GetAttestation => super::handlers::get_attestation(state),
         MSG::Initialize(args) => super::handlers::init(*args.clone(), state),
         MSG::GetChallengesList => super::handlers::get_challenges_list(state),
         MSG::GetInclusionProof => super::handlers::get_inclusion_proof(state),

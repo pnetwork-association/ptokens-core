@@ -1,5 +1,6 @@
 mod add_debug_signers;
 mod db_ops;
+mod get_attestation;
 mod get_cancellable_user_ops;
 mod get_challenge;
 mod get_challenges_list;
@@ -23,6 +24,7 @@ mod set_challenges_to_solved;
 pub(crate) use self::{
     add_debug_signers::add_debug_signers,
     db_ops::{delete, get, put},
+    get_attestation::get_attestation,
     get_cancellable_user_ops::get_cancellable_user_ops,
     get_challenge::get_challenge,
     get_challenges_list::get_challenges_list,

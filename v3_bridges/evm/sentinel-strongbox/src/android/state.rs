@@ -6,7 +6,7 @@ use jni::{
 };
 use serde::Serialize;
 
-use super::{type_aliases::JavaPointer, Database};
+use super::{strongbox::Strongbox, type_aliases::JavaPointer, Database};
 
 #[derive(Serialize, Getters)]
 pub struct State<'a> {
@@ -15,6 +15,9 @@ pub struct State<'a> {
 
     #[serde(skip_serializing)]
     env: &'a JNIEnv<'a>,
+
+    #[serde(skip_serializing)]
+    strongbox: Strongbox<'a>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     res: Option<WebSocketMessagesEncodable>,
@@ -31,15 +34,17 @@ impl<'a> State<'a> {
         self
     }
 
-    pub fn new(env: &'a JNIEnv<'a>, db_java_class: JObject<'a>, input: JString) -> Result<Self, SentinelError> {
+    pub fn new(env: &'a JNIEnv<'a>, strongbox_java_class: JObject<'a>, db_java_class: JObject<'a>, input: JString) -> Result<Self, SentinelError> {
         let db = Database::new(env, db_java_class);
         let input_string: String = env.get_string(input)?.into();
         let msg = WebSocketMessagesEncodable::try_from(input_string)?;
+        let strongbox = Strongbox::new(env, strongbox_java_class);
         Ok(State {
             env,
             msg,
             db,
             res: None,
+            strongbox,
         })
     }
 

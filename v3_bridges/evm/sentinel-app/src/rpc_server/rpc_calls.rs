@@ -51,6 +51,7 @@ pub(crate) enum RpcCalls {
     Ping(RpcId),
     Unknown(RpcId, String),
     GetUserOps(RpcId, WebSocketTx, CoreCxnStatus),
+    GetAttestion(RpcId, WebSocketTx, CoreCxnStatus),
     GetUserOpList(RpcId, WebSocketTx, CoreCxnStatus),
     Get(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     Put(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
@@ -133,6 +134,7 @@ impl RpcCalls {
             "put" => Self::Put(*r.id(), websocket_tx, r.params(), core_cxn),
             "getUserOps" => Self::GetUserOps(*r.id(), websocket_tx, core_cxn),
             "delete" => Self::Delete(*r.id(), websocket_tx, r.params(), core_cxn),
+            "getAttestation" => Self::GetAttestion(*r.id(), websocket_tx, core_cxn),
             "getUserOpList" => Self::GetUserOpList(*r.id(), websocket_tx, core_cxn),
             "getUserOp" => Self::GetUserOp(*r.id(), r.params(), websocket_tx, core_cxn),
             "getInclusionProof" => Self::GetInclusionProof(*r.id(), websocket_tx, core_cxn),
@@ -386,6 +388,9 @@ impl RpcCalls {
             },
             Self::GetUserOps(id, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_user_ops(websocket_tx, core_cxn).await)
+            },
+            Self::GetAttestion(id, websocket_tx, core_cxn) => {
+                Self::handle_ws_result(id, Self::handle_get_attestation(websocket_tx, core_cxn).await)
             },
             Self::GetUserOp(id, params, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_user_op(params, websocket_tx, core_cxn).await)

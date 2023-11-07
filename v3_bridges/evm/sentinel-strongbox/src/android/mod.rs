@@ -4,6 +4,7 @@ mod database;
 mod handle_websocket_message;
 mod handlers;
 mod state;
+mod strongbox;
 mod type_aliases;
 
 use android_logger::Config;
@@ -21,15 +22,17 @@ use self::{
     database::Database,
     handle_websocket_message::handle_websocket_message,
     state::State,
+    strongbox::Strongbox,
     type_aliases::JavaPointer,
 };
 
 fn call_core_inner(
     env: &JNIEnv<'_>,
+    strongbox_java_class: JObject,
     db_java_class: JObject,
     input: JString,
 ) -> Result<*mut JavaPointer, SentinelError> {
-    State::new(env, db_java_class, input)
+    State::new(env, strongbox_java_class, db_java_class, input)
         .and_then(handle_websocket_message)
         .and_then(|state| state.to_response())
 }
@@ -52,11 +55,12 @@ pub extern "system" fn JNI_OnLoad(_vm: JavaVM) -> jint {
 pub extern "C" fn Java_com_ptokenssentinelandroidapp_RustBridge_callCore(
     env: JNIEnv,
     _class: JClass,
+    strongbox_java_class: JObject,
     db_java_class: JObject,
     input: JString,
 ) -> jstring {
     let result = panic::catch_unwind(|| {
-        match call_core_inner(&env, db_java_class, input) {
+        match call_core_inner(&env, strongbox_java_class, db_java_class, input) {
             Ok(r) => r,
             Err(e) => {
                 error!("{e}");
