@@ -2,7 +2,7 @@
 license = "MIT"
 publish = false
 edition = "2021"
-version = "1.4.0"
+version = "1.5.0"
 name = "int_on_eos"
 readme = "README.md"
 rust-version = "1.56"

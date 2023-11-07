@@ -106,6 +106,7 @@ impl IntOnEosIntTxInfo {
                 let (token, cid): (&str, MetadataChainId) = match eos_address {
                     "wmbt.ptokens" => ("pWOMBAT", MetadataChainId::EthereumMainnet),
                     "btc.ptokens" => ("pBTC", MetadataChainId::BitcoinMainnet),
+                    "eth.ptokens" => ("PETH", MetadataChainId::EthereumMainnet),
                     _ => return Err(format!("cannot handle EOS v1 redeem action from address: {eos_address}").into()),
                 };
                 warn!("{token} on EOS v1 redeem action detected, using {cid} as destination chain ID");
