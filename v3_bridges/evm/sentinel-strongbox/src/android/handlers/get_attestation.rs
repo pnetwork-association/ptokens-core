@@ -1,10 +1,10 @@
-use common_sentinel::{SentinelDbUtils, SentinelError, UserOpList, WebSocketMessagesEncodable};
+use common_sentinel::{SentinelError, WebSocketMessagesEncodable};
 use serde_json::json;
 
-use crate::android::{strongbox::Strongbox, State};
+use crate::android::State;
 
 pub fn get_attestation(state: State) -> Result<State, SentinelError> {
-    let j = json!({"success": state.strongbox().check_keystore_is_initialized()? });
+    let j = json!({"attestionCertificate": state.strongbox().get_attestation_certificate()? });
 
     let r = WebSocketMessagesEncodable::Success(j);
     Ok(state.add_response(r))

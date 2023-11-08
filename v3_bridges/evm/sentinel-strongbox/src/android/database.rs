@@ -6,7 +6,10 @@ use jni::{
     JNIEnv,
 };
 
-use super::type_aliases::{ByteArray, DataSensitivity};
+use super::{
+    check_and_handle_java_exceptions,
+    type_aliases::{ByteArray, DataSensitivity},
+};
 
 #[derive(Constructor)]
 pub struct Database<'a> {
@@ -44,7 +47,7 @@ impl<'a> Database<'a> {
     pub fn start_transaction(&self) -> Result<(), SentinelError> {
         let print_exceptions = true;
         match self.env.call_method(self.db_java_class, "startTransaction", "()V", &[]) {
-            Ok(_) => self.check_and_handle_java_exceptions(print_exceptions),
+            Ok(_) => check_and_handle_java_exceptions(self.env, print_exceptions),
             Err(e) => self.handle_error(Err(e), print_exceptions),
         }
     }
@@ -52,7 +55,7 @@ impl<'a> Database<'a> {
     pub fn end_transaction(&self) -> Result<(), SentinelError> {
         let print_exceptions = true;
         match self.env.call_method(self.db_java_class, "endTransaction", "()V", &[]) {
-            Ok(_) => self.check_and_handle_java_exceptions(print_exceptions),
+            Ok(_) => check_and_handle_java_exceptions(self.env, print_exceptions),
             Err(e) => self.handle_error(Err(e), print_exceptions),
         }
     }
@@ -63,7 +66,7 @@ impl<'a> Database<'a> {
             .env
             .call_method(self.db_java_class, "delete", "([B)V", &[self.to_java_byte_array(k)?])
         {
-            Ok(_) => self.check_and_handle_java_exceptions(print_exceptions),
+            Ok(_) => check_and_handle_java_exceptions(self.env, print_exceptions),
             Err(e) => self.handle_error(Err(e), print_exceptions),
         }
     }
@@ -84,7 +87,7 @@ impl<'a> Database<'a> {
             .and_then(|ret| ret.l())
             .and_then(|j_value| self.env.convert_byte_array(j_value.into_inner()))
         {
-            Ok(r) => self.check_and_handle_java_exceptions(print_exceptions).map(|_| r),
+            Ok(r) => check_and_handle_java_exceptions(self.env, print_exceptions).map(|_| r),
             Err(e) => self.handle_error(Err(e), print_exceptions),
         }
     }
@@ -97,7 +100,7 @@ impl<'a> Database<'a> {
             JValue::from(sensitivity.unwrap_or_default()),
         ];
         match self.env.call_method(self.db_java_class, "put", "([B[BB)V", &args) {
-            Ok(_) => self.check_and_handle_java_exceptions(print_exceptions),
+            Ok(_) => check_and_handle_java_exceptions(self.env, print_exceptions),
             Err(e) => self.handle_error(Err(e), print_exceptions),
         }
     }
@@ -116,18 +119,6 @@ impl<'a> Database<'a> {
             Err(e.into())
         } else {
             r.map_err(|e| e.into())
-        }
-    }
-
-    fn check_and_handle_java_exceptions(&self, print_exceptions: bool) -> Result<(), SentinelError> {
-        if matches!(self.env.exception_check(), Ok(true)) {
-            if print_exceptions {
-                self.env.exception_describe()?;
-            };
-            self.env.exception_clear()?;
-            Err(SentinelError::JavaExceptionOccurred)
-        } else {
-            Ok(())
         }
     }
 }

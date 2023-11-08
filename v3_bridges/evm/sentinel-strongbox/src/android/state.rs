@@ -34,7 +34,12 @@ impl<'a> State<'a> {
         self
     }
 
-    pub fn new(env: &'a JNIEnv<'a>, strongbox_java_class: JObject<'a>, db_java_class: JObject<'a>, input: JString) -> Result<Self, SentinelError> {
+    pub fn new(
+        env: &'a JNIEnv<'a>,
+        strongbox_java_class: JObject<'a>,
+        db_java_class: JObject<'a>,
+        input: JString,
+    ) -> Result<Self, SentinelError> {
         let db = Database::new(env, db_java_class);
         let input_string: String = env.get_string(input)?.into();
         let msg = WebSocketMessagesEncodable::try_from(input_string)?;

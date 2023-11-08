@@ -1,13 +1,14 @@
+use common_sentinel::SentinelError;
 use derive_getters::Getters;
 use derive_more::Constructor;
-use common_sentinel::SentinelError;
-use thiserror::Error;
-
-use super::State;
 use jni::{
-    objects::{JObject, JValue},
+    objects::{JObject, JString},
     JNIEnv,
 };
+
+use super::check_and_handle_java_exceptions;
+
+const PRINT_JAVA_ERRORS: bool = true;
 
 #[derive(Constructor, Getters)]
 pub struct Strongbox<'a> {
@@ -16,12 +17,14 @@ pub struct Strongbox<'a> {
 }
 
 impl<'a> Strongbox<'a> {
-    pub fn check_keystore_is_initialized(&self) -> Result<bool, SentinelError> {
+    fn check_keystore_is_initialized(&self) -> Result<bool, SentinelError> {
         debug!("checking strongbox keystore is initialized...");
-        match self.env().call_method(self.strongbox_java_class, "keystoreIsInitialized", "()Z", &[]) {
+        match self
+            .env()
+            .call_method(self.strongbox_java_class, "keystoreIsInitialized", "()Z", &[])
+        {
             Ok(r) => {
-                self.env().exception_describe().expect("this not to fail");
-                self.env().exception_clear().expect("this not to fail");
+                check_and_handle_java_exceptions(self.env, PRINT_JAVA_ERRORS)?;
                 // NOTE: This following obscenity is getting the return value (a bool) from the function call
                 // via jni. `z` here being the encoded return value. See here for more info:
                 // https://docs.oracle.com/javase/7/docs/technotes/guides/jni/spec/types.html#wp276
@@ -34,16 +37,55 @@ impl<'a> Strongbox<'a> {
         }
     }
 
-    pub fn sign_with_attestation_key(&self) -> Result<Vec<u8>, SentinelError> {
-        todo!("this");
+    fn sign_with_attestation_key(&self) -> Result<Vec<u8>, SentinelError> {
+        unimplemented!("signing with attestation key is not yet implemented");
     }
 
     pub fn get_attestation_certificate(&self) -> Result<String, SentinelError> {
-        todo!("this");
+        debug!("getting attestation certificate...");
+
+        if !matches!(self.check_keystore_is_initialized(), Ok(true)) {
+            self.initialize_keystore()?;
+        };
+
+        match self.env().call_method(
+            self.strongbox_java_class,
+            "getCertificateAttestation",
+            "()Ljava/lang/String;",
+            &[],
+        ) {
+            Ok(r) => {
+                check_and_handle_java_exceptions(self.env, PRINT_JAVA_ERRORS)?;
+                let jstring: JString = r.l()?.into(); // NOTE: See above for the strange fxn call stuff
+                let s: String = self.env.get_string(jstring)?.into();
+                Ok(s)
+            },
+            Err(e) => {
+                error!("{e}");
+                Err(e.into())
+            },
+        }
     }
 
-    pub fn initialize_keystore(&self) -> Result<(), SentinelError> {
-        todo!("this");
+    fn initialize_keystore(&self) -> Result<(), SentinelError> {
+        if matches!(self.check_keystore_is_initialized(), Ok(true)) {
+            debug!("keystore already initialized!");
+            Ok(())
+        } else {
+            debug!("initializing keystore...");
+            match self
+                .env()
+                .call_method(self.strongbox_java_class, "initializeKeystore", "()V", &[])
+            {
+                Ok(_) => {
+                    check_and_handle_java_exceptions(self.env, PRINT_JAVA_ERRORS)?;
+                    Ok(())
+                },
+                Err(e) => {
+                    error!("{e}");
+                    Err(e.into())
+                },
+            }
+        }
     }
-
 }
