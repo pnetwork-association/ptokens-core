@@ -6,7 +6,7 @@ use crate::{
 };
 
 impl RpcCalls {
-    pub(crate) async fn handle_get_attestation(
+    pub(crate) async fn handle_get_attestation_certificate(
         websocket_tx: WebSocketTx,
         core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
@@ -15,7 +15,7 @@ impl RpcCalls {
         call_core(
             STRONGBOX_TIMEOUT,
             websocket_tx.clone(),
-            WebSocketMessagesEncodable::GetAttestation,
+            WebSocketMessagesEncodable::GetAttestationCertificate,
         )
         .await
     }

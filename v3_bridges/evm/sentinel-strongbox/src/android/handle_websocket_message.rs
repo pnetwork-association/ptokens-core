@@ -32,7 +32,6 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
     let final_state = match msg {
         MSG::GetUserOps => super::handlers::get_user_ops(state),
         MSG::GetUserOpList => super::handlers::get_user_op_list(state),
-        MSG::GetAttestation => super::handlers::get_attestation(state),
         MSG::Initialize(args) => super::handlers::init(*args.clone(), state),
         MSG::GetChallengesList => super::handlers::get_challenges_list(state),
         MSG::GetInclusionProof => super::handlers::get_inclusion_proof(state),
@@ -45,8 +44,10 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
         MSG::RemoveUserOp(uid) => super::handlers::remove_user_op(uid.clone(), state),
         MSG::ProcessBatch(args) => super::handlers::process_batch(*args.clone(), state),
         MSG::GetCoreState(nids) => super::handlers::get_core_state(nids.clone(), state),
+        MSG::GetAttestationCertificate => super::handlers::get_attestation_certificate(state),
         MSG::GetLatestBlockInfos(nids) => super::handlers::get_latest_block_infos(nids.clone(), state),
         MSG::SetChallengesToSolved(ids) => super::handlers::set_challenges_to_solved(ids.clone(), state),
+        MSG::GetAttestationSignature(bytes) => super::handlers::get_attestation_signature(bytes.clone(), state),
         MSG::AddDebugSigners(signers, sig) => super::handlers::add_debug_signers(signers.clone(), sig.clone(), state),
         MSG::GetRegistrationSignature(owner, nonce, sig) => {
             super::handlers::get_registration_signature(*owner, *nonce, sig.clone(), state)

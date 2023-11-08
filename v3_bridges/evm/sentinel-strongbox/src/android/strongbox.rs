@@ -2,7 +2,7 @@ use common_sentinel::SentinelError;
 use derive_getters::Getters;
 use derive_more::Constructor;
 use jni::{
-    objects::{JObject, JString},
+    objects::{JObject, JString, JValue},
     JNIEnv,
 };
 
@@ -37,8 +37,31 @@ impl<'a> Strongbox<'a> {
         }
     }
 
-    fn sign_with_attestation_key(&self) -> Result<Vec<u8>, SentinelError> {
-        unimplemented!("signing with attestation key is not yet implemented");
+    pub fn get_attestation_signature(&self, bytes: Vec<u8>) -> Result<Vec<u8>, SentinelError> {
+        debug!("getting attestation signature...");
+
+        if !matches!(self.check_keystore_is_initialized(), Ok(true)) {
+            self.initialize_keystore()?;
+        };
+
+        let bytes_java_param = JValue::from(JObject::from(self.env.byte_array_from_slice(&bytes)?));
+
+        match self
+            .env()
+            .call_method(self.strongbox_java_class, "signWithAttestationKey", "([B)[B", &[
+                bytes_java_param,
+            ]) {
+            Ok(r) => {
+                check_and_handle_java_exceptions(self.env, PRINT_JAVA_ERRORS)?;
+                let jobject = r.l()?; // NOTE: See above for the strange fxn call stuff
+                let s: Vec<u8> = self.env.convert_byte_array(*jobject)?;
+                Ok(s)
+            },
+            Err(e) => {
+                error!("{e}");
+                Err(e.into())
+            },
+        }
     }
 
     pub fn get_attestation_certificate(&self) -> Result<String, SentinelError> {

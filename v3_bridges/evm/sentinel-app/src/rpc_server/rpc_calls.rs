@@ -51,7 +51,6 @@ pub(crate) enum RpcCalls {
     Ping(RpcId),
     Unknown(RpcId, String),
     GetUserOps(RpcId, WebSocketTx, CoreCxnStatus),
-    GetAttestion(RpcId, WebSocketTx, CoreCxnStatus),
     GetUserOpList(RpcId, WebSocketTx, CoreCxnStatus),
     Get(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     Put(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
@@ -66,15 +65,17 @@ pub(crate) enum RpcCalls {
     RemoveUserOp(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetChallenge(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetCoreState(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
+    GetAttestionCertificate(RpcId, WebSocketTx, CoreCxnStatus),
     ChallengeResponderStartStop(RpcId, BroadcastChannelTx, bool),
     AddDebugSigners(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     RemoveChallenge(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     LatestBlockInfos(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
-    GetBalances(RpcId, Box<SentinelConfig>, RpcParams, EthRpcSenders),
     SetUserOpCancellerFrequency(RpcId, RpcParams, UserOpCancellerTx),
+    GetBalances(RpcId, Box<SentinelConfig>, RpcParams, EthRpcSenders),
     SetStatusPublishingFrequency(RpcId, RpcParams, StatusPublisherTx),
+    GetAttestionSignature(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     GetCancellableUserOps(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     SetChallengeResponderFrequency(RpcId, RpcParams, ChallengeResponderTx),
     GetRegistrationSignature(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
@@ -134,7 +135,6 @@ impl RpcCalls {
             "put" => Self::Put(*r.id(), websocket_tx, r.params(), core_cxn),
             "getUserOps" => Self::GetUserOps(*r.id(), websocket_tx, core_cxn),
             "delete" => Self::Delete(*r.id(), websocket_tx, r.params(), core_cxn),
-            "getAttestation" => Self::GetAttestion(*r.id(), websocket_tx, core_cxn),
             "getUserOpList" => Self::GetUserOpList(*r.id(), websocket_tx, core_cxn),
             "getUserOp" => Self::GetUserOp(*r.id(), r.params(), websocket_tx, core_cxn),
             "getInclusionProof" => Self::GetInclusionProof(*r.id(), websocket_tx, core_cxn),
@@ -145,11 +145,13 @@ impl RpcCalls {
             "startSyncer" => Self::StartSyncer(*r.id(), broadcast_channel_tx, r.params(), core_cxn),
             "getChallangeResponses" => Self::GetUnsolvedChallenges(*r.id(), websocket_tx, core_cxn),
             "getBalances" => Self::GetBalances(*r.id(), Box::new(config), r.params(), eth_rpc_senders),
+            "getAttestationCertificate" => Self::GetAttestionCertificate(*r.id(), websocket_tx, core_cxn),
             "cancel" | "cancelUserOps" => Self::CancelUserOps(*r.id(), user_op_canceller_tx.clone(), core_cxn),
             "startChallengeResponder" => Self::ChallengeResponderStartStop(*r.id(), broadcast_channel_tx, true),
             "stopChallengeResponder" => Self::ChallengeResponderStartStop(*r.id(), broadcast_channel_tx, false),
             "getChallengesList" | "getChallengeList" => Self::GetChallengesList(*r.id(), websocket_tx, core_cxn),
             "setStatusPublishingFrequency" => Self::SetStatusPublishingFrequency(*r.id(), r.params(), status_tx),
+            "getAttestationSignature" => Self::GetAttestionSignature(*r.id(), r.params(), websocket_tx, core_cxn),
             "removeChallenge" | "rmChallenge" => Self::RemoveChallenge(*r.id(), websocket_tx, r.params(), core_cxn),
             "addDebugSigners" | "addDebugSigner" => Self::AddDebugSigners(*r.id(), r.params(), websocket_tx, core_cxn),
             "getRegistrationExtensionTx" => {
@@ -389,9 +391,14 @@ impl RpcCalls {
             Self::GetUserOps(id, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_user_ops(websocket_tx, core_cxn).await)
             },
-            Self::GetAttestion(id, websocket_tx, core_cxn) => {
-                Self::handle_ws_result(id, Self::handle_get_attestation(websocket_tx, core_cxn).await)
-            },
+            Self::GetAttestionCertificate(id, websocket_tx, core_cxn) => Self::handle_ws_result(
+                id,
+                Self::handle_get_attestation_certificate(websocket_tx, core_cxn).await,
+            ),
+            Self::GetAttestionSignature(id, params, websocket_tx, core_cxn) => Self::handle_ws_result(
+                id,
+                Self::handle_get_attestation_signature(websocket_tx, params, core_cxn).await,
+            ),
             Self::GetUserOp(id, params, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_user_op(params, websocket_tx, core_cxn).await)
             },
