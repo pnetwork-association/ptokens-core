@@ -25,7 +25,7 @@ use crate::{
     eth_rpc::eth_rpc_loop,
     rpc_server::rpc_server_loop,
     status_publisher::status_publisher_loop,
-    syncer::syncer_loop,
+    syncer::syncer,
     user_op_canceller::user_op_canceller_loop,
     ws_server::ws_server_loop,
 };
@@ -104,7 +104,7 @@ pub async fn start_sentinel(config: &SentinelConfig, disable_syncers: bool) -> R
         .network_ids()
         .iter()
         .map(|id| {
-            Ok(tokio::spawn(syncer_loop(
+            Ok(tokio::spawn(syncer(
                 Batch::new_from_config(*id, config)?,
                 config.clone(),
                 EthRpcSenders::from(&eth_rpc_channels),

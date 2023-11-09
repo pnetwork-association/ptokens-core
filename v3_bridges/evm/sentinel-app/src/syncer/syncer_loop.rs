@@ -1,36 +1,26 @@
-use std::result::Result;
-
 use common_sentinel::{
     call_core,
     Batch,
-    BroadcastChannelMessages,
     EthRpcMessages,
-    EthRpcSenders,
     LatestBlockInfos,
-    NetworkId,
     SentinelConfig,
     SentinelError,
-    SyncerBroadcastChannelMessages,
     WebSocketMessages,
     WebSocketMessagesEncodable,
     WebSocketMessagesError,
     WebSocketMessagesProcessBatchArgs,
 };
-use tokio::{
-    sync::{
-        broadcast::{Receiver as MpMcRx, Sender as MpMcTx},
-        mpsc::Sender as MpscTx,
-    },
-    time::{sleep, Duration},
-};
+use tokio::time::{sleep, Duration};
+
+use crate::type_aliases::{EthRpcTx, WebSocketTx};
 
 const SLEEP_TIME: u64 = 10; // FIXME make configurable
 
-async fn main_loop(
+pub(super) async fn syncer_loop(
     mut batch: Batch,
     config: SentinelConfig,
-    eth_rpc_tx: MpscTx<EthRpcMessages>,
-    websocket_tx: MpscTx<WebSocketMessages>,
+    eth_rpc_tx: EthRpcTx,
+    websocket_tx: WebSocketTx,
     core_is_connected: &bool,
     core_time_limit: &u64,
 ) -> Result<(), SentinelError> {
@@ -136,122 +126,6 @@ async fn main_loop(
                 continue 'main_loop;
             },
             Err(e) => break 'main_loop Err(e),
-        }
-    }
-}
-
-async fn broadcast_channel_loop(
-    network_id: NetworkId,
-    mut broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
-) -> Result<SyncerBroadcastChannelMessages, SentinelError> {
-    // NOTE: This loops continuously listening to the broadcasting channel, and only returns if we
-    // receive a pertinent message. This way, other messages won't cause early returns in the main
-    // tokios::select, so then the main_loop can continue doing its work.
-    'broadcast_channel_loop: loop {
-        match broadcast_channel_rx.recv().await {
-            Ok(BroadcastChannelMessages::Syncer(nid, msg)) => {
-                // NOTE: We have a syncer message...
-                if network_id == nid {
-                    // ...and it's for this syncer so we return it
-                    break 'broadcast_channel_loop Ok(msg);
-                } else {
-                    // ...but it's not for this syncer so we go back to listening on the receiver
-                    debug!("syncer message: '{msg}' for network id: '{network_id}' ignored");
-                    continue 'broadcast_channel_loop;
-                }
-            },
-            Ok(_) => continue 'broadcast_channel_loop, // NOTE: The message wasn't for the syncer
-            Err(e) => break 'broadcast_channel_loop Err(e.into()),
-        }
-    }
-}
-
-pub async fn syncer_loop(
-    batch: Batch,
-    config: SentinelConfig,
-    eth_rpc_senders: EthRpcSenders,
-    websocket_tx: MpscTx<WebSocketMessages>,
-    broadcast_channel_tx: MpMcTx<BroadcastChannelMessages>,
-    disable_syncer: bool,
-) -> Result<(), SentinelError> {
-    batch.check_endpoint().await?;
-    let network_id = *batch.network_id();
-    let eth_rpc_tx = eth_rpc_senders.sender(&network_id)?;
-    let name = format!("{network_id} syncer");
-
-    let mut core_is_connected = false;
-    let mut syncer_is_enabled = !disable_syncer;
-    let core_time_limit = *config.core().timeout(); // FIXME Make configurable via RPC call
-
-    warn!("{name} not syncing yet due to no core connection and being disabled");
-
-    'syncer_loop: loop {
-        tokio::select! {
-            r = broadcast_channel_loop(network_id, broadcast_channel_tx.subscribe()) => {
-                match r {
-                    Ok(msg) => {
-                        let note = format!("(core is currently {}connected)", if core_is_connected { "" } else { "not "});
-                        match msg {
-                            SyncerBroadcastChannelMessages::Stop => {
-                                debug!("msg received to stop the {name} {note}");
-                                syncer_is_enabled = false;
-                                continue 'syncer_loop
-                            },
-                            SyncerBroadcastChannelMessages::Start => {
-                                debug!("msg received to start the {name} {note}");
-                                syncer_is_enabled = true;
-                                continue 'syncer_loop
-                            },
-                            SyncerBroadcastChannelMessages::CoreConnected => {
-                                debug!("core connected message received in {name} {note}");
-                                core_is_connected = true;
-                                continue 'syncer_loop
-                            },
-                            SyncerBroadcastChannelMessages::CoreDisconnected => {
-                                debug!("core disconnected message received in {name} {note}");
-                                core_is_connected = false;
-                                continue 'syncer_loop
-                            },
-                        }
-                    },
-                    Err(e) => break 'syncer_loop Err(e),
-                }
-            },
-            r = main_loop(
-                batch.clone(),
-                config.clone(),
-                eth_rpc_tx.clone(),
-                websocket_tx.clone(),
-                &core_is_connected,
-                &core_time_limit,
-            ), if core_is_connected && syncer_is_enabled => {
-                match r {
-                    Ok(_)  => {
-                        warn!("{name} returned, restarting {name} now...");
-                        continue 'syncer_loop
-                    },
-                    Err(SentinelError::Timedout(e)) => {
-                        warn!("{name} timedout: {e}, restarting {name} now...");
-                        continue 'syncer_loop
-                    },
-                    Err(SentinelError::NoCore) => {
-                        warn!("core disconnected in {name}, restarting now...");
-                        continue 'syncer_loop
-                    }
-                    Err(e) => {
-                        warn!("{name} errored: {e}");
-                        break 'syncer_loop Err(e)
-                    }
-                }
-            },
-            _ = tokio::signal::ctrl_c() => {
-                warn!("{name} shutting down...");
-                break 'syncer_loop Err(SentinelError::SigInt(name))
-            },
-            else => {
-                warn!("in {name} `else` branch, {name} is currently {}abled", if syncer_is_enabled { "en" } else { "dis" });
-                continue 'syncer_loop
-            },
         }
     }
 }
