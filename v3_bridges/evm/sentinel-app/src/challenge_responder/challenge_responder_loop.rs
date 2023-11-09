@@ -187,11 +187,12 @@ pub async fn challenge_responder_loop(
     broadcast_channel_tx: BroadcastChannelTx,
     websocket_tx: WebSocketTx,
     eth_rpc_senders: EthRpcSenders,
+    disable: bool,
 ) -> Result<(), SentinelError> {
     let name = "challenge responder loop";
 
     let mut core_is_connected = false;
-    let mut challenge_responder_is_enabled = true;
+    let mut challenge_responder_is_enabled = !disable;
     let core_timeout = *config.core().timeout(); // TODO Make updateable via rpc call
     let mut frequency = *config.core().challenge_response_frequency();
 

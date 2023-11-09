@@ -98,6 +98,7 @@ pub async fn status_publisher_loop(
     status_tx: StatusPublisherTx,
     broadcast_channel_tx: BroadcastChannelTx,
     websocket_tx: WebSocketTx,
+    disable: bool,
 ) -> Result<(), SentinelError> {
     let name = "status publisher loop";
 
@@ -106,7 +107,7 @@ pub async fn status_publisher_loop(
 
     let mut core_is_connected = false;
     let network_ids = config.network_ids();
-    let mut status_publisher_is_enabled = true;
+    let mut status_publisher_is_enabled = !disable;
     let core_timeout = *config.core().timeout(); // TODO Make updateable via rpc call
     let mut status_update_frequency = *config.ipfs().status_update_frequency();
 

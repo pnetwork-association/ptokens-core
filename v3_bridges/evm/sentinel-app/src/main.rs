@@ -33,9 +33,9 @@ pub struct Cli {
     #[arg(long, short)]
     config_path: Option<String>,
 
-    /// Start with the syncers disabled (default: false)
+    /// Start with the various components disables so you can choose which to enable during runtime
     #[arg(long, short)]
-    disable_syncers: bool,
+    disable: bool,
 
     // NOTE: These are optional, if no command is passed the sentinel is started proper
     #[command(subcommand)]
@@ -64,7 +64,7 @@ async fn start() -> Result<String, SentinelError> {
     if let Some(commands) = cli_args.commands {
         handle_cli(commands).await
     } else {
-        start_sentinel::start_sentinel(&config, cli_args.disable_syncers)
+        start_sentinel::start_sentinel(&config, cli_args.disable)
             .await
             .map_err(|e| SentinelError::Json(json!({"jsonrpc": "2.0", "error": e.to_string()})))
     }

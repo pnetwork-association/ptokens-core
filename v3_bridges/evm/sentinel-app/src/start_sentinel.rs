@@ -32,7 +32,7 @@ use crate::{
 
 const MAX_CHANNEL_CAPACITY: usize = 1337;
 
-pub async fn start_sentinel(config: &SentinelConfig, disable_syncers: bool) -> Result<String, SentinelError> {
+pub async fn start_sentinel(config: &SentinelConfig, disable: bool) -> Result<String, SentinelError> {
     let network_ids = config.network_ids();
     let eth_rpc_channels = EthRpcChannels::from(network_ids);
 
@@ -60,6 +60,7 @@ pub async fn start_sentinel(config: &SentinelConfig, disable_syncers: bool) -> R
         status_tx.clone(),
         broadcast_channel_tx.clone(),
         websocket_tx.clone(),
+        disable,
     ));
 
     let challenge_responder_thread = tokio::spawn(challenge_responder_loop(
@@ -69,6 +70,7 @@ pub async fn start_sentinel(config: &SentinelConfig, disable_syncers: bool) -> R
         broadcast_channel_tx.clone(),
         websocket_tx.clone(),
         EthRpcSenders::from(&eth_rpc_channels),
+        disable,
     ));
 
     let user_op_canceller_thread = tokio::spawn(user_op_canceller_loop(
@@ -78,6 +80,7 @@ pub async fn start_sentinel(config: &SentinelConfig, disable_syncers: bool) -> R
         broadcast_channel_tx.clone(),
         websocket_tx.clone(),
         user_op_canceller_tx.clone(),
+        disable,
     ));
 
     let rpc_server_thread = tokio::spawn(rpc_server_loop(
@@ -110,7 +113,7 @@ pub async fn start_sentinel(config: &SentinelConfig, disable_syncers: bool) -> R
                 EthRpcSenders::from(&eth_rpc_channels),
                 websocket_tx.clone(),
                 broadcast_channel_tx.clone(),
-                disable_syncers,
+                disable,
             )))
         })
         .collect::<Result<Vec<_>, SentinelError>>()?;
