@@ -41,6 +41,7 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
         MSG::ResetChain(args) => super::handlers::reset_chain(*args.clone(), state),
         MSG::GetUnsolvedChallenges => super::handlers::get_unsolved_challenges(state),
         MSG::RemoveChallenge(hash) => super::handlers::remove_challenge(*hash, state),
+        MSG::CheckInit(network_id) => super::handlers::check_init(*network_id, state),
         MSG::RemoveUserOp(uid) => super::handlers::remove_user_op(uid.clone(), state),
         MSG::ProcessBatch(args) => super::handlers::process_batch(*args.clone(), state),
         MSG::GetCoreState(nids) => super::handlers::get_core_state(nids.clone(), state),

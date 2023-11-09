@@ -1,5 +1,4 @@
 use common::AppError as CommonError;
-use common_chain_ids::EthChainId;
 use common_eth::{ChainError, NoParentError};
 use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
@@ -10,6 +9,9 @@ use crate::{NetworkId, SentinelError};
 
 #[derive(Clone, Error, Debug, PartialEq, Serialize, Deserialize)]
 pub enum WebSocketMessagesError {
+    #[error("{0} core not initialized")]
+    NotInitialized(NetworkId),
+
     #[error("no inclusion proof in encryted database")]
     NoInclusionProof,
 
@@ -33,12 +35,6 @@ pub enum WebSocketMessagesError {
 
     #[error("from hex error: {0}")]
     Hex(String),
-
-    #[error("core not initialized for chain id: {0}")]
-    Uninitialized(EthChainId),
-
-    #[error("core already initialized for chain id: {0}")]
-    AlreadyInitialized(EthChainId),
 
     #[error("cannot create websocket message encodable from args: {0:?}")]
     CannotCreate(Vec<String>),

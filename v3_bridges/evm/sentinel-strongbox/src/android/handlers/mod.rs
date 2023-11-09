@@ -1,4 +1,5 @@
 mod add_debug_signers;
+mod check_init;
 mod db_ops;
 mod get_attestation_certificate;
 mod get_attestation_signature;
@@ -24,6 +25,7 @@ mod set_challenges_to_solved;
 
 pub(crate) use self::{
     add_debug_signers::add_debug_signers,
+    check_init::check_init,
     db_ops::{delete, get, put},
     get_attestation_certificate::get_attestation_certificate,
     get_attestation_signature::get_attestation_signature,
