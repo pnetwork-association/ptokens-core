@@ -12,6 +12,8 @@ pub async fn syncer(
     disable_syncer: bool,
 ) -> Result<(), SentinelError> {
     batch.check_endpoint().await?;
+
+    let core_time_limit = *config.core().timeout(); // FIXME Make configurable via RPC call
     let network_id = *batch.network_id();
     let eth_rpc_tx = eth_rpc_senders.sender(&network_id)?;
     let name = format!("{network_id} syncer");
@@ -21,10 +23,8 @@ pub async fn syncer(
 
     let mut syncer_is_enabled = !disable_syncer;
     if !syncer_is_enabled {
-        warn!("{name} not syncer is disabled - you can enable it via an RPC call");
+        warn!("{name} not sycning is disabled - you can enable it via an RPC call");
     };
-
-    let core_time_limit = *config.core().timeout(); // FIXME Make configurable via RPC call
 
     'syncer_loop: loop {
         tokio::select! {

@@ -38,14 +38,20 @@ pub(super) async fn syncer_loop(
         // NOTE: Get the core's latest block numbers for this chain
         let msg = WebSocketMessagesEncodable::GetLatestBlockInfos(vec![network_id]);
 
-        match LatestBlockInfos::try_from(call_core(*core_time_limit, websocket_tx.clone(), msg).await?) {
-            Ok(x) => break 'latest_block_getter_loop x,
-            Err(e) => {
-                warn!("error when getting latest block numbers in {log_prefix}: {e}, retrying in {SLEEP_TIME}ms...");
+        let r = match call_core(*core_time_limit, websocket_tx.clone(), msg).await {
+            Ok(WebSocketMessagesEncodable::Error(WebSocketMessagesError::NotInitialized(nid))) => {
+                warn!("{nid} not intialized, you can initialize it via RPC call - rechecking in {SLEEP_TIME}s...");
                 sleep(Duration::from_secs(SLEEP_TIME)).await;
                 continue 'latest_block_getter_loop;
             },
-        }
+            Ok(x) => x,
+            Err(e) => {
+                error!("{e}");
+                return Err(e);
+            },
+        };
+
+        break 'latest_block_getter_loop LatestBlockInfos::try_from(r)?;
     };
 
     // NOTE: Set block number to start syncing from in the batch
