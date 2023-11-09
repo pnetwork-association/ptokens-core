@@ -142,6 +142,17 @@ impl Chain {
         })
     }
 
+    pub fn is_initialized<D: DatabaseInterface>(db_utils: &ChainDbUtils<D>, mcid: MetadataChainId) -> bool {
+        debug!("checking {mcid} chain is initialized...");
+
+        if let Err(e) = Self::get(db_utils, mcid) {
+            error!("{e}");
+            false
+        } else {
+            true
+        }
+    }
+
     // TODO factor out the pruning and the saving of the block since it's used in the insert fxn
     // too.
     pub fn init<D: DatabaseInterface>(
