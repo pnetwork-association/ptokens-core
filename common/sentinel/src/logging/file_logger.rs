@@ -25,6 +25,6 @@ pub fn initialize_file_logger(config: &LogConfig, cli_log_level: Option<Level>) 
             .append()
             .start()
     })?;
-    debug!("File logger initialized!");
+    debug!("file logger initialized!");
     Ok(())
 }
