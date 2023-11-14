@@ -5,11 +5,15 @@ mod handle_java_exceptions;
 mod handle_websocket_message;
 mod handlers;
 mod jni_on_load;
+mod rust_java_log;
 mod state;
 mod strongbox;
 mod type_aliases;
 
-pub use self::call_core::Java_com_ptokenssentinelandroidapp_RustBridge_callCore;
+pub use self::{
+    call_core::Java_com_ptokenssentinelandroidapp_RustBridge_callCore,
+    rust_java_log::Java_com_ptokenssentinelandroidapp_rustlogger_RustLogger_log,
+};
 use self::{
     constants::CORE_TYPE,
     database::Database,

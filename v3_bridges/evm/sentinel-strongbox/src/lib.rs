@@ -8,4 +8,7 @@ extern crate common;
 
 mod android;
 
-pub use self::android::Java_com_ptokenssentinelandroidapp_RustBridge_callCore;
+pub use self::android::{
+    Java_com_ptokenssentinelandroidapp_RustBridge_callCore,
+    Java_com_ptokenssentinelandroidapp_rustlogger_RustLogger_log,
+};
