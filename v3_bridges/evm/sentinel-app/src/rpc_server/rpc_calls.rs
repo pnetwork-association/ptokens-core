@@ -439,9 +439,23 @@ impl RpcCalls {
         r: Result<WebSocketMessagesEncodable, SentinelError>,
     ) -> Result<warp::reply::Json, Rejection> {
         debug!("handling websocket encodable result: {r:?}");
+        let error_code = 1337; // FIXME
         let j = match r {
             Ok(WebSocketMessagesEncodable::Success(j)) => create_json_rpc_response(id, j),
-            other => create_json_rpc_response_from_result(id, other, 1337),
+            Ok(WebSocketMessagesEncodable::Error(e)) => {
+                let s = e.to_string();
+                // NOTE: We can't actually _get_ the exceptions from JNI on the core side of
+                // things, we can only ask the JNI env to print them to console for us. So alas we
+                // can't really do much. We can't even get a string to manually parse for common
+                // errors etc. As such, this is literally the best we can do.
+                let err_msg = if s.contains("Java exception was thrown") {
+                    "a java exception was thrown - please see core logs for details".to_string()
+                } else {
+                    s
+                };
+                create_json_rpc_error(id, error_code, &err_msg)
+            },
+            other => create_json_rpc_response_from_result(id, other, error_code),
         };
         Ok(warp::reply::json(&j))
     }
