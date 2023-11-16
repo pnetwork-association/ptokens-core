@@ -1,6 +1,6 @@
 mod call_core;
 mod constants;
-mod database;
+mod db;
 mod handle_java_exceptions;
 mod handle_websocket_message;
 mod handlers;
@@ -16,7 +16,7 @@ pub use self::{
 };
 use self::{
     constants::CORE_TYPE,
-    database::Database,
+    db::Database,
     handle_java_exceptions::check_and_handle_java_exceptions,
     handle_websocket_message::handle_websocket_message,
     state::State,

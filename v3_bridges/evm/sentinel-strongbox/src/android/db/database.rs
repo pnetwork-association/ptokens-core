@@ -1,4 +1,4 @@
-use common::{AppError as CommonError, Bytes, DatabaseInterface};
+use common::Bytes;
 use common_sentinel::SentinelError;
 use derive_more::Constructor;
 use jni::{
@@ -6,7 +6,7 @@ use jni::{
     JNIEnv,
 };
 
-use super::{
+use crate::android::{
     check_and_handle_java_exceptions,
     type_aliases::{ByteArray, DataSensitivity},
 };
@@ -15,28 +15,6 @@ use super::{
 pub struct Database<'a> {
     env: &'a JNIEnv<'a>,
     db_java_class: JObject<'a>,
-}
-
-impl DatabaseInterface for Database<'_> {
-    fn end_transaction(&self) -> Result<(), CommonError> {
-        self.end_transaction().map_err(|e| e.into())
-    }
-
-    fn start_transaction(&self) -> Result<(), CommonError> {
-        self.start_transaction().map_err(|e| e.into())
-    }
-
-    fn delete(&self, key: Bytes) -> Result<(), CommonError> {
-        self.delete(&key).map_err(|e| e.into())
-    }
-
-    fn get(&self, key: Bytes, data_sensitivity: DataSensitivity) -> Result<Bytes, CommonError> {
-        self.get(&key, data_sensitivity).map_err(|e| e.into())
-    }
-
-    fn put(&self, key: Bytes, value: Bytes, data_sensitivity: DataSensitivity) -> Result<(), CommonError> {
-        self.put(&key, &value, data_sensitivity).map_err(|e| e.into())
-    }
 }
 
 impl<'a> Database<'a> {
