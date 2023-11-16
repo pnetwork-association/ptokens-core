@@ -23,6 +23,9 @@ impl From<SentinelError> for CommonError {
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("{0}")]
+    DbIntegrity(#[from] crate::DbIntegrityError),
+
     #[error("utf8 error: {0}")]
     Utf8Error(#[from] std::str::Utf8Error),
 

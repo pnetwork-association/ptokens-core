@@ -6,6 +6,7 @@ mod challenges;
 mod config;
 mod constants;
 mod core_state;
+mod db_integrity;
 mod db_utils;
 mod endpoints;
 mod env;
@@ -51,6 +52,7 @@ pub use self::{
         NATIVE_PROTOCOL_ID,
     },
     core_state::CoreState,
+    db_integrity::{DbIntegrity, DbIntegrityError},
     db_utils::{DbKey, DbUtilsT, SentinelDbUtils},
     endpoints::{EndpointError, Endpoints},
     env::Env,
