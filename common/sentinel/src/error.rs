@@ -6,6 +6,7 @@ use thiserror::Error;
 use crate::{
     BroadcastChannelMessages,
     ChallengeResponderMessages,
+    DbIntegrity,
     DbKey,
     EthRpcMessages,
     NetworkId,
@@ -23,6 +24,9 @@ impl From<SentinelError> for CommonError {
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("database integrity is not valid - db integrity state: {0}")]
+    InvalidDbIntegrity(DbIntegrity),
+
     #[error("{0}")]
     DbIntegrity(#[from] crate::DbIntegrityError),
 
