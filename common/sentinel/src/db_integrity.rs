@@ -8,6 +8,7 @@ pub enum DbIntegrityError {
     FromStr(String),
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum DbIntegrity {
     Valid        = 0,
     Invalid      = 1,
@@ -17,6 +18,12 @@ pub enum DbIntegrity {
     Unverifiable = 5,
     HashWritten  = 6,
     NoSignature  = 7,
+}
+
+impl DbIntegrity {
+    pub fn is_valid(&self) -> bool {
+        matches!(self, Self::Valid) || matches!(self, Self::FirstRun)
+    }
 }
 
 impl Default for DbIntegrity {
