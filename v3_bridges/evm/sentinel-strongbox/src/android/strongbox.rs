@@ -6,9 +6,7 @@ use jni::{
     JNIEnv,
 };
 
-use super::check_and_handle_java_exceptions;
-
-const PRINT_JAVA_ERRORS: bool = true;
+use crate::android::{check_and_handle_java_exceptions, constants::PRINT_JAVA_ERRORS};
 
 #[derive(Constructor, Getters)]
 pub struct Strongbox<'a> {

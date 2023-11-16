@@ -5,6 +5,10 @@ use derive_getters::Getters;
 use serde::Deserialize;
 use serde_json::Value as Json;
 
+// NOTE: Some `dead_code` lint suppression is used because we don't need all the fields in these
+// jsons (eg, in the success case, just successfully parsing the json is enough for us to continue
+// execution elsewhere). The fields remain however in case we need them in future.
+
 pub(super) enum DbJsonResponse {
     Error(DbJsonErrorResponse),
     Success(DbJsonSuccessResponse),
@@ -36,6 +40,7 @@ impl TryFrom<DbJsonResponse> for DbIntegrity {
 }
 
 #[derive(Debug, Default, Deserialize, Getters)]
+#[allow(dead_code)]
 pub(super) struct DbJsonSuccessResponse {
     id: String,
     jsonrpc: String,
@@ -44,13 +49,16 @@ pub(super) struct DbJsonSuccessResponse {
 
 #[derive(Debug, Default, Deserialize, Getters)]
 pub(super) struct DbJsonErrorResponse {
+    #[allow(dead_code)]
     id: String,
+    #[allow(dead_code)]
     jsonrpc: String,
     error: DbJsonError,
 }
 
 #[derive(Debug, Default, Deserialize, Getters)]
 pub(super) struct DbJsonError {
+    #[allow(dead_code)]
     code: String,
     message: ErrorObject,
 }
@@ -58,6 +66,7 @@ pub(super) struct DbJsonError {
 #[derive(Debug, Default, Deserialize, Getters)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct ErrorObject {
+    #[allow(dead_code)]
     msg: String,
     db_integrity: String,
 }
