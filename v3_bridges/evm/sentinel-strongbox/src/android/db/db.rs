@@ -1,5 +1,6 @@
 use common::Bytes;
 use common_sentinel::SentinelError;
+use derive_getters::Getters;
 use derive_more::Constructor;
 use jni::{
     objects::{JObject, JValue},
@@ -11,7 +12,7 @@ use crate::android::{
     type_aliases::{ByteArray, DataSensitivity},
 };
 
-#[derive(Constructor)]
+#[derive(Constructor, Getters)]
 pub struct Database<'a> {
     env: &'a JNIEnv<'a>,
     db_java_class: JObject<'a>,
@@ -20,22 +21,6 @@ pub struct Database<'a> {
 impl<'a> Database<'a> {
     fn to_java_byte_array(&self, bs: &ByteArray) -> Result<JValue, SentinelError> {
         Ok(JValue::from(JObject::from(self.env.byte_array_from_slice(bs)?)))
-    }
-
-    pub fn start_transaction(&self) -> Result<(), SentinelError> {
-        let print_exceptions = true;
-        match self.env.call_method(self.db_java_class, "startTransaction", "()V", &[]) {
-            Ok(_) => check_and_handle_java_exceptions(self.env, print_exceptions),
-            Err(e) => self.handle_error(Err(e), print_exceptions),
-        }
-    }
-
-    pub fn end_transaction(&self) -> Result<(), SentinelError> {
-        let print_exceptions = true;
-        match self.env.call_method(self.db_java_class, "endTransaction", "()V", &[]) {
-            Ok(_) => check_and_handle_java_exceptions(self.env, print_exceptions),
-            Err(e) => self.handle_error(Err(e), print_exceptions),
-        }
     }
 
     pub fn delete(&self, k: &ByteArray) -> Result<(), SentinelError> {
@@ -83,7 +68,7 @@ impl<'a> Database<'a> {
         }
     }
 
-    fn handle_error<T, E: Into<SentinelError> + std::fmt::Display>(
+    pub(super) fn handle_error<T, E: Into<SentinelError> + std::fmt::Display>(
         &self,
         r: Result<T, E>,
         print_exceptions: bool,

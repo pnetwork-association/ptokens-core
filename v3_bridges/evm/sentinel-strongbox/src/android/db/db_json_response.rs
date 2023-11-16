@@ -5,6 +5,36 @@ use derive_getters::Getters;
 use serde::Deserialize;
 use serde_json::Value as Json;
 
+pub(super) enum DbJsonResponse {
+    Error(DbJsonErrorResponse),
+    Success(DbJsonSuccessResponse),
+}
+
+impl TryFrom<&str> for DbJsonResponse {
+    type Error = SentinelError;
+
+    fn try_from(s: &str) -> Result<Self, SentinelError> {
+        match serde_json::from_str::<DbJsonSuccessResponse>(s) {
+            Ok(r) => Ok(Self::Success(r)),
+            Err(_) => match serde_json::from_str::<DbJsonErrorResponse>(s) {
+                Ok(r) => Ok(Self::Error(r)),
+                Err(e) => Err(e.into()),
+            },
+        }
+    }
+}
+
+impl TryFrom<DbJsonResponse> for DbIntegrity {
+    type Error = SentinelError;
+
+    fn try_from(r: DbJsonResponse) -> Result<Self, Self::Error> {
+        match r {
+            DbJsonResponse::Error(j) => Self::try_from(j),
+            DbJsonResponse::Success(j) => Ok(Self::from(j)),
+        }
+    }
+}
+
 #[derive(Debug, Default, Deserialize, Getters)]
 pub(super) struct DbJsonSuccessResponse {
     id: String,
