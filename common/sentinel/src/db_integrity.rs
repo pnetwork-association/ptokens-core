@@ -38,9 +38,9 @@ impl fmt::Display for DbIntegrity {
             Self::Valid => "Valid",
             Self::NoHash => "NoHash",
             Self::NoState => "NoState",
-            Self::Invalid => "invalid",
+            Self::Invalid => "Invalid",
             Self::FirstRun => "FirstRun",
-            Self::NoSignature => "NoState",
+            Self::NoSignature => "NoSignature",
             Self::HashWritten => "HashWritten",
             Self::Unverifiable => "Unverifiable",
         };
