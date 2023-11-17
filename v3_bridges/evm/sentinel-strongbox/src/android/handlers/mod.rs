@@ -16,6 +16,7 @@ mod get_user_op;
 mod get_user_op_cancellation_signature;
 mod get_user_op_list;
 mod get_user_ops;
+mod hard_reset;
 mod init;
 mod process_batch;
 mod remove_challenge;
@@ -42,6 +43,7 @@ pub(crate) use self::{
     get_user_op_cancellation_signature::get_user_op_cancellation_signature,
     get_user_op_list::get_user_op_list,
     get_user_ops::get_user_ops,
+    hard_reset::hard_reset,
     init::init,
     process_batch::process_batch,
     remove_challenge::remove_challenge,
