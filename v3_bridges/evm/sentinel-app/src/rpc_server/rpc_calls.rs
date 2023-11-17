@@ -60,6 +60,7 @@ pub(crate) enum RpcCalls {
     CancelUserOps(RpcId, UserOpCancellerTx, CoreCxnStatus),
     GetUserOp(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     GetStatus(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
+    HardReset(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     GetUnsolvedChallenges(RpcId, WebSocketTx, CoreCxnStatus),
     StatusPublisherStartStop(RpcId, BroadcastChannelTx, bool),
     RemoveUserOp(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
@@ -140,6 +141,7 @@ impl RpcCalls {
             "getInclusionProof" => Self::GetInclusionProof(*r.id(), websocket_tx, core_cxn),
             "removeUserOp" => Self::RemoveUserOp(*r.id(), websocket_tx, r.params(), core_cxn),
             "getChallenge" => Self::GetChallenge(*r.id(), websocket_tx, r.params(), core_cxn),
+            "hardReset" => Self::HardReset(*r.id(), r.params(), websocket_tx.clone(), core_cxn),
             "stopSyncer" => Self::StopSyncer(*r.id(), broadcast_channel_tx, r.params(), core_cxn),
             "getStatus" | "status" => Self::GetStatus(*r.id(), websocket_tx, r.params(), core_cxn),
             "startSyncer" => Self::StartSyncer(*r.id(), broadcast_channel_tx, r.params(), core_cxn),
@@ -280,6 +282,9 @@ impl RpcCalls {
             ),
             Self::AddDebugSigners(id, params, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_add_debug_signers(params, websocket_tx, core_cxn).await)
+            },
+            Self::HardReset(id, params, websocket_tx, core_cxn) => {
+                Self::handle_ws_result(id, Self::handle_hard_reset(params, websocket_tx, core_cxn).await)
             },
             Self::GetRegistrationSignature(id, websocket_tx, params, core_cxn) => Self::handle_ws_result(
                 id,

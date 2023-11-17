@@ -19,6 +19,7 @@ mod handle_get_user_op;
 mod handle_get_user_op_list;
 mod handle_get_user_op_state;
 mod handle_get_user_ops;
+mod handle_hard_reset;
 mod handle_init;
 mod handle_latest_block_infos;
 mod handle_process_block;
