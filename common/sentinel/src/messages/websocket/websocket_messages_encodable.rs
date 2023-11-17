@@ -31,6 +31,7 @@ pub enum WebSocketMessagesEncodable {
     GetChallenge(EthHash),
     GetUnsolvedChallenges,
     RemoveChallenge(EthHash),
+    HardReset(DebugSignature),
     GetStatus(Vec<NetworkId>),
     GetAttestationCertificate,
     GetUserOp(UserOpUniqueId),
@@ -65,6 +66,10 @@ impl TryFrom<WebSocketMessagesEncodable> for Json {
 }
 
 impl WebSocketMessagesEncodable {
+    pub fn is_hard_reset(&self) -> bool {
+        matches!(self, Self::HardReset(_))
+    }
+
     pub fn is_success(&self) -> bool {
         matches!(self, Self::Success(_))
     }
@@ -86,6 +91,7 @@ impl fmt::Display for WebSocketMessagesEncodable {
             Self::GetUserOp(_) => "GetUserOp".to_string(),
             Self::CheckInit(..) => "CheckIni".to_string(),
             Self::GetStatus(..) => "GetStatus".to_string(),
+            Self::HardReset(..) => "HardReset".to_string(),
             Self::Initialize(_) => "Initialize".to_string(),
             Self::ResetChain(_) => "ResetChain".to_string(),
             Self::GetUserOpList => "GetUserOpList".to_string(),
