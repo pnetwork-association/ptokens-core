@@ -18,6 +18,8 @@ impl TryFrom<&str> for DbJsonResponse {
     type Error = SentinelError;
 
     fn try_from(s: &str) -> Result<Self, SentinelError> {
+        debug!("attempting to parse `DbJsonResponse` from str {s}");
+
         match serde_json::from_str::<DbJsonSuccessResponse>(s) {
             Ok(r) => Ok(Self::Success(r)),
             Err(_) => match serde_json::from_str::<DbJsonErrorResponse>(s) {
@@ -42,7 +44,7 @@ impl TryFrom<DbJsonResponse> for DbIntegrity {
 #[derive(Debug, Default, Deserialize, Getters)]
 #[allow(dead_code)]
 pub(super) struct DbJsonSuccessResponse {
-    id: String,
+    id: u64,
     jsonrpc: String,
     result: Json,
 }
@@ -50,7 +52,7 @@ pub(super) struct DbJsonSuccessResponse {
 #[derive(Debug, Default, Deserialize, Getters)]
 pub(super) struct DbJsonErrorResponse {
     #[allow(dead_code)]
-    id: String,
+    id: u64,
     #[allow(dead_code)]
     jsonrpc: String,
     error: DbJsonError,
@@ -59,7 +61,7 @@ pub(super) struct DbJsonErrorResponse {
 #[derive(Debug, Default, Deserialize, Getters)]
 pub(super) struct DbJsonError {
     #[allow(dead_code)]
-    code: String,
+    code: u64,
     message: ErrorObject,
 }
 
