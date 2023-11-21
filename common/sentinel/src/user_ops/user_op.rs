@@ -8,7 +8,7 @@ use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use super::{UserOpError, UserOpFlag, UserOpLog, UserOpState};
+use super::{UserOpError, UserOpFlag, UserOpLog, UserOpState, UserOpVersion};
 use crate::{DbKey, DbUtilsT, NetworkId, SentinelError};
 
 impl DbUtilsT for UserOp {
@@ -41,6 +41,7 @@ pub struct UserOp {
     pub(super) state: UserOpState,
     pub(super) block_hash: EthHash,
     pub(super) block_timestamp: u64,
+    pub(super) version: UserOpVersion,
     pub(super) user_op_log: UserOpLog,
     pub(super) witnessed_timestamp: u64,
     pub(super) origin_network_id: NetworkId,
@@ -166,6 +167,7 @@ impl UserOp {
             witnessed_timestamp,
             uid: EthHash::zero(),
             previous_states: vec![],
+            version: UserOpVersion::latest(),
             origin_network_id: *origin_network_id,
             state: UserOpState::try_from_log(*origin_network_id, tx_hash, log, block_timestamp)?,
         };

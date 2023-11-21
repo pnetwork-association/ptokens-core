@@ -33,10 +33,16 @@ impl ChallengePendingEvents {
 
 #[cfg(test)]
 mod tests {
+    use ethereum_types::U256;
+
     use super::*;
-    use crate::challenges::test_utils::{
-        get_sample_log_with_challenge_pending_event,
-        get_sample_sub_mat_with_challenge_pending_event,
+    use crate::{
+        challenges::test_utils::{
+            get_sample_log_with_challenge_pending_event,
+            get_sample_sub_mat_with_challenge_pending_event,
+        },
+        ActorType,
+        NetworkId,
     };
 
     fn get_expected_challenge_event() -> ChallengeEvent {

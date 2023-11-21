@@ -7,6 +7,9 @@ use super::{UserOp, UserOpState};
 
 #[derive(Error, Debug)]
 pub enum UserOpError {
+    #[error("unrecognized user op version '{0}'")]
+    UnrecognizedVersion(String),
+
     #[error("destination unknown for user op: {0}")]
     DestinationUnknown(Box<UserOp>),
 

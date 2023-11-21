@@ -12,6 +12,7 @@ mod user_op_log;
 mod user_op_smart_contract_state;
 mod user_op_state;
 mod user_op_uid;
+mod user_op_version;
 mod user_ops;
 
 pub use self::{
@@ -35,4 +36,5 @@ use self::{
     user_op_flag::UserOpFlag,
     user_op_log::{UserOpLog, UserOpProtocolLog, UserSendLog},
     user_op_state::UserOpState,
+    user_op_version::UserOpVersion,
 };
