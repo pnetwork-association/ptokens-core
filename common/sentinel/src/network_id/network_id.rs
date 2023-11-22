@@ -109,6 +109,7 @@ impl TryFrom<&str> for NetworkId {
             "arb" | "arbitrum" | "0xfc8ebb2b" | "fc8ebb2b" => Ok(Self::new_v1_for_evm(EthChainId::ArbitrumMainnet)),
             "lux" | "luxochain" | "0x58920253" | "58920253" => Ok(Self::new_v1_for_evm(EthChainId::LuxochainMainnet)),
             "gno" | "gnosis" | "xdai" | "0xd41b1c5b" | "d41b1c5b" => Ok(Self::new_v1_for_evm(EthChainId::XDaiMainnet)),
+            "00000000" | "0x00000000" | "unknown" => Ok(Self::new_v1_for_evm(EthChainId::Unknown(0))),
             other => Err(NetworkIdError::InvalidNetworkId(other.to_string())),
         }
     }
@@ -135,9 +136,11 @@ impl NetworkId {
             version: NetworkIdVersion::V1,
         }
     }
-}
 
-impl NetworkId {
+    fn is_zero(&self) -> bool {
+        self == &Self::default()
+    }
+
     fn abi_encode(&self) -> Bytes {
         ethabi_encode(&[
             Token::FixedBytes([<NetworkIdVersion as Into<u8>>::into(self.version)].to_vec()),
@@ -148,9 +151,13 @@ impl NetworkId {
     }
 
     pub fn to_bytes(&self) -> Bytes {
-        let mut hasher = Sha256::new();
-        hasher.update(self.abi_encode());
-        hasher.finalize().to_vec()
+        if self.is_zero() {
+            [0u8; 4].into()
+        } else {
+            let mut hasher = Sha256::new();
+            hasher.update(self.abi_encode());
+            hasher.finalize().to_vec()
+        }
     }
 
     pub fn to_bytes_4(&self) -> Result<Bytes4, NetworkIdError> {
@@ -215,27 +222,10 @@ impl fmt::Display for NetworkId {
                     "fc8ebb2b" => "ArbitrumMainnet".to_string(),
                     "58920253" => "LuxochainMainnet".to_string(),
                     "d41b1c5b" => "GnosisMainnet".to_string(),
+                    "00000000" => "Eth Unknown".to_string(),
                     other => format!("unknown: {other}"),
                 };
                 write!(f, "{x}")
-                /*
-                #[derive(Clone, Debug, Serialize, Deserialize, Constructor)]
-                struct Temp {
-                    bytes: String,
-                    chain_id: u64,
-                    disambiguator: String,
-                    protocol_id: ProtocolId,
-                    version: NetworkIdVersion,
-                }
-                let t = Temp::new(
-                    b4.to_string(),
-                    self.chain_id,
-                    format!("0x{:x}", self.disambiguator),
-                    self.protocol_id,
-                    self.version,
-                );
-                write!(f, "{}", json!(t))
-                */
             },
         }
     }
@@ -315,6 +305,21 @@ mod tests {
         let network_id = NetworkId::new(chain_id.to_u64(), protocol_id);
         let result = network_id.to_bytes_4().unwrap();
         let expected_result = Bytes4([212, 27, 28, 91]);
+        assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    fn should_get_empty_network_id_correctly() {
+        let s = "00000000";
+        let r = NetworkId::from_str(s);
+        assert!(r.is_ok());
+    }
+
+    #[test]
+    fn should_encode_zero_network_id_correctly() {
+        let z = NetworkId::default();
+        let result = hex::encode(z.to_bytes());
+        let expected_result = "00000000";
         assert_eq!(result, expected_result);
     }
 }
