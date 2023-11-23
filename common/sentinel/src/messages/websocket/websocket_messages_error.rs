@@ -39,7 +39,7 @@ pub enum WebSocketMessagesError {
     #[error("cannot create websocket message encodable from args: {0:?}")]
     CannotCreate(Vec<String>),
 
-    #[error("cannot create websocket message encodable from {got} args, expected {expected}: {args:?}")]
+    #[error("cannot create websocket message encodable from {got} args, expected at least {expected}: {args:?}")]
     NotEnoughArgs {
         got: usize,
         expected: usize,

@@ -250,12 +250,12 @@ impl RpcCalls {
 
     pub(crate) fn check_params(
         params: RpcParams,
-        required_num_params: usize,
+        min_required_num_params: usize,
     ) -> Result<RpcParams, WebSocketMessagesError> {
-        if params.len() != required_num_params {
+        if params.len() < min_required_num_params {
             Err(WebSocketMessagesError::NotEnoughArgs {
                 got: params.len(),
-                expected: required_num_params,
+                expected: min_required_num_params,
                 args: params,
             })
         } else {
