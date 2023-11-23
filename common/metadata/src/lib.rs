@@ -27,7 +27,7 @@ pub use self::{
 /// [
 ///     uint8 versionByte,
 ///     bytes userData,
-///     bytes4 originProtocol <bytes1 originProtocolId + bytes3 keccak256(originChainId)[:3]>,
+///     bytes4 originProtocol <bytes1 originProtocolId + bytes3 keccak256(originChainId)\[:3\]>,
 ///     origin sender
 /// ]
 ///
