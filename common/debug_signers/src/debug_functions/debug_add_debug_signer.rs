@@ -27,7 +27,7 @@ pub fn debug_add_debug_signer<D: DatabaseInterface>(
 ) -> Result<String> {
     info!("✔ Adding debug signer to list...");
     let eth_address = convert_hex_to_eth_address(eth_address_str)?;
-    if !cfg!(feature = "skip-db-transaction") {
+    if !cfg!(feature = "skip-db-transactions") {
         db.start_transaction()?
     };
 
@@ -55,7 +55,7 @@ pub fn debug_add_debug_signer<D: DatabaseInterface>(
             }
         })
         .and_then(|_| {
-            if !cfg!(feature = "skip-db-transaction") {
+            if !cfg!(feature = "skip-db-transactions") {
                 db.end_transaction()
             } else {
                 Ok(())
@@ -82,7 +82,7 @@ pub fn debug_add_debug_signer<D: DatabaseInterface>(
 ) -> Result<String> {
     info!("✔ Adding debug signer to list...");
     let eth_address = convert_hex_to_eth_address(eth_address_str)?;
-    if !cfg!(feature = "skip-db-transaction") {
+    if !cfg!(feature = "skip-db-transactions") {
         db.start_transaction()?
     };
 
@@ -108,7 +108,7 @@ pub fn debug_add_debug_signer<D: DatabaseInterface>(
             }
         })
         .and_then(|_| {
-            if !cfg!(feature = "skip-db-transaction") {
+            if !cfg!(feature = "skip-db-transactions") {
                 db.end_transaction()
             } else {
                 Ok(())

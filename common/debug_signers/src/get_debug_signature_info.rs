@@ -17,12 +17,12 @@ pub fn get_debug_signature_info<D: DatabaseInterface>(
     core_type: &CoreType,
     debug_command_hash_str: &str,
 ) -> Result<JsonValue> {
-    if !cfg!(feature = "skip-db-transaction") {
+    if !cfg!(feature = "skip-db-transactions") {
         db.start_transaction()?
     };
 
     DebugSignatories::get_from_db(db).and_then(|debug_signatories| {
-        if !cfg!(feature = "skip-db-transaction") {
+        if !cfg!(feature = "skip-db-transactions") {
             db.end_transaction()?
         };
         let debug_command_hash = convert_hex_to_h256(debug_command_hash_str)?;
@@ -47,11 +47,11 @@ pub fn get_debug_signature_info<D: DatabaseInterface>(
     core_type: &CoreType,
     debug_command_hash_str: &str,
 ) -> Result<JsonValue> {
-    if !cfg!(feature = "skip-db-transaction") {
+    if !cfg!(feature = "skip-db-transactions") {
         db.start_transaction()?
     };
     DebugSignatories::get_from_db(db).and_then(|debug_signatories| {
-        if !cfg!(feature = "skip-db-transaction") {
+        if !cfg!(feature = "skip-db-transactions") {
             db.end_transaction()?
         };
         let debug_command_hash = convert_hex_to_h256(debug_command_hash_str)?;

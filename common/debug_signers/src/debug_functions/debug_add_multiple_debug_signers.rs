@@ -66,7 +66,7 @@ pub fn debug_add_multiple_debug_signers<D: DatabaseInterface>(
     info!("✔ Adding debug signer to list...");
     let debug_signatories_to_add = DebugSignersJson::from_str(debug_signers_json)?.to_debug_signatories()?;
 
-    if !cfg!(feature = "skip-db-transaction") {
+    if !cfg!(feature = "skip-db-transactions") {
         db.start_transaction()?
     };
 
@@ -94,7 +94,7 @@ pub fn debug_add_multiple_debug_signers<D: DatabaseInterface>(
             }
         })
         .and_then(|_| {
-            if !cfg!(feature = "skip-db-transaction") {
+            if !cfg!(feature = "skip-db-transactions") {
                 db.end_transaction()
             } else {
                 Ok(())
@@ -127,7 +127,7 @@ pub fn debug_add_multiple_debug_signers<D: DatabaseInterface>(
     info!("✔ Adding debug signer to list...");
     let debug_signatories_to_add = DebugSignersJson::from_str(debug_signers_json)?.to_debug_signatories()?;
 
-    if !cfg!(feature = "skip-db-transaction") {
+    if !cfg!(feature = "skip-db-transactions") {
         db.start_transaction()?
     };
 
@@ -153,7 +153,7 @@ pub fn debug_add_multiple_debug_signers<D: DatabaseInterface>(
             }
         })
         .and_then(|_| {
-            if !cfg!(feature = "skip-db-transaction") {
+            if !cfg!(feature = "skip-db-transactions") {
                 db.end_transaction()
             } else {
                 Ok(())

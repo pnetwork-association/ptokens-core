@@ -19,7 +19,7 @@ pub fn debug_remove_debug_signer<D: DatabaseInterface>(
     core_type: &CoreType,
     signature_str: &str,
 ) -> Result<String> {
-    if !cfg!(feature = "skip-db-transaction") {
+    if !cfg!(feature = "skip-db-transactions") {
         db.start_transaction()?
     };
 
@@ -35,7 +35,7 @@ pub fn debug_remove_debug_signer<D: DatabaseInterface>(
                 .and_then(|debug_signatories| debug_signatories.remove_and_update_in_db(db, &eth_address))
         })
         .and_then(|_| {
-            if !cfg!(feature = "skip-db-transaction") {
+            if !cfg!(feature = "skip-db-transactions") {
                 db.end_transaction()
             } else {
                 Ok(())
