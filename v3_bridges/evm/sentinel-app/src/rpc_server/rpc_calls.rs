@@ -36,6 +36,10 @@ fn create_json_rpc_error(id: RpcId, code: u64, msg: &str) -> Json {
     json!({ "id": id, "error": { "code": code, "message": msg, }, "jsonrpc": "2.0" })
 }
 
+fn create_json_rpc_error_with_json<T: Serialize>(id: RpcId, code: u64, msg: &T) -> Json {
+    json!({ "id": id, "error": { "code": code, "message": msg, }, "jsonrpc": "2.0" })
+}
+
 // FIXME make a type for error code
 fn create_json_rpc_response_from_result<T: Serialize>(id: RpcId, r: Result<T, SentinelError>, error_code: u64) -> Json {
     match r {
@@ -447,6 +451,10 @@ impl RpcCalls {
         let error_code = 1337; // FIXME
         let j = match r {
             Ok(WebSocketMessagesEncodable::Success(j)) => create_json_rpc_response(id, j),
+            Ok(WebSocketMessagesEncodable::Error(WebSocketMessagesError::Json(ref j))) => {
+                // NOTE: Otherwise we end up double stringifying the json
+                create_json_rpc_error_with_json(id, error_code, j)
+            },
             Ok(WebSocketMessagesEncodable::Error(e)) => {
                 let s = e.to_string();
                 // NOTE: We can't actually _get_ the exceptions from JNI on the core side of
@@ -463,5 +471,21 @@ impl RpcCalls {
             other => create_json_rpc_response_from_result(id, other, error_code),
         };
         Ok(warp::reply::json(&j))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn json_rpc_error_messages_should_not_be_double_stringified() {
+        let error_code = 666;
+        let id = Some(1337);
+        let j = json!({"some": "string"});
+        let r = create_json_rpc_error(id, error_code, &j.to_string());
+        let x = create_json_rpc_error_with_json(id, error_code, &j);
+        assert!(r.to_string().contains("\\\""));
+        assert!(!x.to_string().contains("\\\""));
     }
 }
