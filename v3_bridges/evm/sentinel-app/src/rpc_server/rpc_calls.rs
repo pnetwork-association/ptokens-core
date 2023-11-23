@@ -44,16 +44,15 @@ fn create_json_rpc_error_with_json<T: Serialize>(id: RpcId, code: u64, msg: &T) 
 fn create_json_rpc_response_from_result<T: Serialize>(id: RpcId, r: Result<T, SentinelError>, error_code: u64) -> Json {
     match r {
         Ok(r) => create_json_rpc_response(id, r),
-        Err(e) => {
-            warn!("creating json rpc error response: {e}");
-            create_json_rpc_error(id, error_code, &e.to_string())
-        },
+        Err(SentinelError::Json(ref j)) => create_json_rpc_error_with_json(id, error_code, j),
+        Err(e) => create_json_rpc_error(id, error_code, &e.to_string()),
     }
 }
 
 pub(crate) enum RpcCalls {
     Ping(RpcId),
     Unknown(RpcId, String),
+    SignMessage(RpcId, RpcParams),
     GetUserOps(RpcId, WebSocketTx, CoreCxnStatus),
     GetUserOpList(RpcId, WebSocketTx, CoreCxnStatus),
     Get(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
@@ -138,6 +137,7 @@ impl RpcCalls {
             "ping" => Self::Ping(*r.id()),
             "get" => Self::Get(*r.id(), websocket_tx, r.params(), core_cxn),
             "put" => Self::Put(*r.id(), websocket_tx, r.params(), core_cxn),
+            "signMessage" | "sign" => Self::SignMessage(*r.id(), r.params()),
             "getUserOps" => Self::GetUserOps(*r.id(), websocket_tx, core_cxn),
             "delete" => Self::Delete(*r.id(), websocket_tx, r.params(), core_cxn),
             "getUserOpList" => Self::GetUserOpList(*r.id(), websocket_tx, core_cxn),
@@ -326,6 +326,11 @@ impl RpcCalls {
             },
             Self::UserOpCancellerStartStop(id, broadcast_channel_tx, core_cxn, start) => {
                 let result = Self::handle_user_op_canceller_start_stop(broadcast_channel_tx, core_cxn, start).await;
+                let json = create_json_rpc_response_from_result(id, result, 1337);
+                Ok(warp::reply::json(&json))
+            },
+            Self::SignMessage(id, params) => {
+                let result = Self::handle_sign_message(params).await;
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },

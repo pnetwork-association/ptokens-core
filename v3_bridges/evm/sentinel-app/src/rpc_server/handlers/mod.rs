@@ -29,6 +29,7 @@ mod handle_reset_chain;
 mod handle_set_challenge_responder_frequency;
 mod handle_set_status_publishing_frequency;
 mod handle_set_user_op_canceller_frequency;
+mod handle_sign_message;
 mod handle_status_publisher_start_stop;
 mod handle_sync_state;
 mod handle_syncer_start_stop;
