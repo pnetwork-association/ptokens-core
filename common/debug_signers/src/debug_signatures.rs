@@ -40,6 +40,24 @@ impl DebugSignatory {
             .map(|bytes| H256::from_slice(&bytes))
     }
 
+    fn recover_signer_addresses_using_correct_eth_prefixing_scheme(
+        &self,
+        signature: &EthSignature,
+        debug_command_hash: &H256,
+    ) -> Result<Vec<EthAddress>> {
+        // NOTE: Prior versions of the ethereum crate in this workspace had a bug in how it handled
+        // the eth prefix when signing messages. This function works to recover correct addresses
+        // from signatures made with the non-bugged version of ths signer...
+        info!("recovering addresses using correct ETH prefixed signature scheme...");
+        let bs = debug_command_hash.as_bytes();
+        let eth_msg_prefix = b"\x19Ethereum Signed Message:\n";
+        let msg = [eth_msg_prefix, format!("{}", bs.len()).as_bytes(), bs].concat();
+        let hash = keccak_hash_bytes(&msg);
+        let addresses = signature.recover_both_signer_addresses(&hash)?;
+        debug!("recovered addresses: {:?}", addresses);
+        Ok(addresses)
+    }
+
     fn recover_signer_addresses(
         &self,
         signature: &EthSignature,
@@ -113,13 +131,16 @@ impl DebugSignatory {
 
     #[allow(clippy::if_same_then_else)]
     pub fn validate(&self, signature: &EthSignature, core_type: &CoreType, debug_command_hash: &H256) -> Result<()> {
+        debug!("validating debug signature over debug command hash: 0x{debug_command_hash}");
         let needle = self.eth_address;
         let haystack = [
             self.recover_signer_addresses(signature, core_type, debug_command_hash)?,
+            self.recover_signer_addresses_using_correct_eth_prefixing_scheme(signature, debug_command_hash)?,
             self.recover_signer_addresses_using_eth_prefix_and_hex_prefix(signature, core_type, debug_command_hash)?,
             self.recover_signer_addresses_using_eth_prefix_and_no_hex_prefix(signature, core_type, debug_command_hash)?,
         ]
         .concat();
+
         if haystack.contains(&needle) {
             Ok(())
         } else if self
@@ -163,6 +184,7 @@ mod tests {
 
     use common::errors::AppError;
     use common_eth::convert_hex_to_eth_address;
+    use ethereum_types::H256 as EthHash;
 
     use super::*;
     use crate::test_utils::{get_sample_debug_command_hash, get_sample_debug_signatory, get_sample_private_key};
@@ -301,5 +323,23 @@ mod tests {
         let mycrypto_signature = EthSignature::from_str("0xce752850af5f3e2c9fbe58586581d25fc410d1dd4f5734538c91e632ed5879c77563b9d3e4d28feec585b8d359cf47c17088818c0220b6ddf3ca97c666e84dec01").unwrap(); //mycrypto
         let mycrypto_result = debug_signatory.validate(&mycrypto_signature, &core_type, &debug_command_hash);
         assert!(mycrypto_result.is_ok());
+    }
+
+    #[test]
+    fn should_validate_v3_signature() {
+        use simple_logger;
+        simple_logger::init().unwrap();
+        let core_type = CoreType::V3Strongbox;
+        let debug_command_hash =
+            EthHash::from_str("0x29bc8048453c48ed8e3a4826a7a1a2b0de8b6c0faaa19052b2d0a183a834b4cc").unwrap();
+        let eth_address = EthAddress::from_str("0xdeb1e28d9f05543c03b1685ca248f236fc783a26").unwrap();
+        let debug_signatory = DebugSignatory {
+            name: "user".to_string(),
+            eth_address,
+            nonce: 0,
+        };
+        let signature = EthSignature::from_str("e4667602615ae06ea3159aa6ccff43fb26a66ec59852c38896a7acc138714f1209a860eef6a0474a93623103fc211ecef3c4fbe61084381a7ed7f93d943fdd1d1b").unwrap();
+        let r = debug_signatory.validate(&signature, &core_type, &debug_command_hash);
+        assert!(r.is_ok());
     }
 }

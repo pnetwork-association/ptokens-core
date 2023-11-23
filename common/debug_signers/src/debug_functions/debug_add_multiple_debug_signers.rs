@@ -141,7 +141,7 @@ pub fn debug_add_multiple_debug_signers<D: DatabaseInterface>(
             let signature = EthSignature::from_str(signature_str)?;
 
             if debug_signatories.is_empty() {
-                info!("adding multiple debug signers to empty list with validating command signature...");
+                info!("adding multiple debug signers to empty list without validating command signature...");
                 debug_signatories.add_multi_and_update_in_db(db, &debug_signatories_to_add)
             } else {
                 debug_signatories
