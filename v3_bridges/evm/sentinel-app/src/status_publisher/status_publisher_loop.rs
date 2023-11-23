@@ -101,13 +101,18 @@ pub async fn status_publisher_loop(
     disable: bool,
 ) -> Result<(), SentinelError> {
     let name = "status publisher loop";
-
     let ipfs_bin_path = config.ipfs().ipfs_bin_path();
-    check_ipfs_daemon_is_running(ipfs_bin_path)?;
-
     let mut core_is_connected = false;
     let network_ids = config.network_ids();
     let mut status_publisher_is_enabled = !disable;
+
+    if status_publisher_is_enabled {
+        // NOTE: this will actually _error_ and exit the program if the check fails. Whereas later
+        // checks in the loop will simply print an error to the console imploring the user to check
+        // and start their IPFS daemon.
+        check_ipfs_daemon_is_running(ipfs_bin_path)?;
+    };
+
     let core_timeout = *config.core().timeout(); // TODO Make updateable via rpc call
     let mut status_update_frequency = *config.ipfs().status_update_frequency();
 
