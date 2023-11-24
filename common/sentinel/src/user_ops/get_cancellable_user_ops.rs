@@ -52,11 +52,18 @@ impl UserOpList {
                     let uid = op.uid_hex()?;
                     let d_nid = op.destination_network_id();
                     let enqueued_timestamp = op.enqueued_timestamp()?;
-
-                    // NOTE:User ops don't include their origin network IDs, meaning we have to
-                    // ensure _all_ other chains this sentinel works with are within the max
-                    // allowable delta in order to conclude whether or not an operation is
-                    // cancellable.
+                    // NOTE:User ops don't include/commit to their originating network IDs. User ops also go through
+                    // an interim chain. So a movement from chain X to chain Y is acually two distinct user ops:
+                    // `chain X -> interim chain` then `interim chain -> chain Y`.
+                    //
+                    // The second user ops' `underlyingAssetNetworkId` maintains a pointer to chain X, but the user
+                    // op the sentinel needs to have witnessed for this second user op is on the _interim chain_.
+                    // The op does _not_ track this network ID.
+                    //
+                    // As such, in order to determine if a user op is cancellable, we have to ensure that ALL the
+                    // chains this sentinel is tracking are up to date to within  some allowable time delta. This
+                    // condition met means we've have every chance to see the origin user op event, and thus we
+                    // haven't seen it, so it can't be a valid op and thus is cancellable.
                     let is_cancellable = latest_block_infos.iter().all(|info| {
                         let latest_block_timestamp = *info.block_timestamp();
                         debug!("                    op uid: {uid}");
