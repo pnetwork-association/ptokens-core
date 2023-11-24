@@ -24,6 +24,7 @@ mod handle_init;
 mod handle_latest_block_infos;
 mod handle_process_block;
 mod handle_remove_challenge;
+mod handle_remove_debug_signer;
 mod handle_remove_user_op;
 mod handle_reset_chain;
 mod handle_set_challenge_responder_frequency;

@@ -75,6 +75,7 @@ pub(crate) enum RpcCalls {
     RemoveChallenge(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     LatestBlockInfos(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
+    RemoveDebugSigner(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     SetUserOpCancellerFrequency(RpcId, RpcParams, UserOpCancellerTx),
     GetBalances(RpcId, Box<SentinelConfig>, RpcParams, EthRpcSenders),
@@ -151,6 +152,7 @@ impl RpcCalls {
             "startSyncer" => Self::StartSyncer(*r.id(), broadcast_channel_tx, r.params(), core_cxn),
             "getChallangeResponses" => Self::GetUnsolvedChallenges(*r.id(), websocket_tx, core_cxn),
             "getBalances" => Self::GetBalances(*r.id(), Box::new(config), r.params(), eth_rpc_senders),
+            "removeDebugSigner" => Self::RemoveDebugSigner(*r.id(), r.params(), websocket_tx, core_cxn),
             "getAttestationCertificate" => Self::GetAttestionCertificate(*r.id(), websocket_tx, core_cxn),
             "cancel" | "cancelUserOps" => Self::CancelUserOps(*r.id(), user_op_canceller_tx.clone(), core_cxn),
             "startChallengeResponder" => Self::ChallengeResponderStartStop(*r.id(), broadcast_channel_tx, true),
@@ -287,6 +289,10 @@ impl RpcCalls {
             Self::AddDebugSigners(id, params, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_add_debug_signers(params, websocket_tx, core_cxn).await)
             },
+            Self::RemoveDebugSigner(id, params, websocket_tx, core_cxn) => Self::handle_ws_result(
+                id,
+                Self::handle_remove_debug_signer(params, websocket_tx, core_cxn).await,
+            ),
             Self::HardReset(id, params, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_hard_reset(params, websocket_tx, core_cxn).await)
             },

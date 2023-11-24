@@ -20,6 +20,7 @@ mod hard_reset;
 mod init;
 mod process_batch;
 mod remove_challenge;
+mod remove_debug_signer;
 mod remove_user_op;
 mod reset_chain;
 mod set_challenges_to_solved;
@@ -47,6 +48,7 @@ pub(crate) use self::{
     init::init,
     process_batch::process_batch,
     remove_challenge::remove_challenge,
+    remove_debug_signer::remove_debug_signer,
     remove_user_op::remove_user_op,
     reset_chain::reset_chain,
     set_challenges_to_solved::set_challenges_to_solved,
