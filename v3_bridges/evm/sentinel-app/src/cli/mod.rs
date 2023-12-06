@@ -4,11 +4,12 @@ use common_sentinel::SentinelError;
 use serde_json::json;
 
 pub(crate) use self::commands::Commands;
-use self::handle_commands::handle_test_endpoint;
+use self::handle_commands::{handle_get_sub_mat, handle_test_endpoint};
 
 pub async fn handle_cli(cmds: Commands) -> Result<String, SentinelError> {
     let result = match cmds {
         Commands::TestEndpoint { endpoint } => handle_test_endpoint(endpoint).await,
+        Commands::GetSubMat { block_num, endpoint } => handle_get_sub_mat(block_num, endpoint).await,
     };
 
     result

@@ -5,4 +5,7 @@ use clap::Subcommand;
 pub enum Commands {
     /// Test an endpoint
     TestEndpoint { endpoint: String },
+
+    /// Get submission materail for given block number from given endpoint
+    GetSubMat { block_num: u64, endpoint: String },
 }
