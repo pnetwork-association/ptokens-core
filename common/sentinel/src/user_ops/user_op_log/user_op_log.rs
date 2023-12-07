@@ -41,12 +41,11 @@ pub struct UserOpLog {
     pub(crate) nonce: U256,
     pub(crate) underlying_asset_decimals: U256,
     pub(crate) asset_amount: U256,
-    pub(crate) protocol_fee_asset_amount: U256,
+    pub(crate) user_data_protocol_fee_asset_amount: U256,
     pub(crate) network_fee_asset_amount: U256,
     pub(crate) forward_network_fee_asset_amount: U256,
     pub(crate) underlying_asset_token_address: EthAddress,
-    #[getter(skip)]
-    pub(crate) origin_network_id: Option<NetworkId>,
+    pub(crate) origin_network_id: NetworkId,
     pub(crate) destination_network_id: NetworkId,
     pub(crate) forward_destination_network_id: NetworkId,
     pub(crate) underlying_asset_network_id: NetworkId,
@@ -71,17 +70,17 @@ impl Default for UserOpLog {
             options_mask: EthHash::default(),
             origin_account: String::default(),
             destination_account: String::default(),
+            origin_network_id: NetworkId::default(),
             underlying_asset_name: String::default(),
             origin_block_hash: Some(EthHash::zero()),
             network_fee_asset_amount: U256::default(),
             underlying_asset_decimals: U256::default(),
             underlying_asset_symbol: String::default(),
-            protocol_fee_asset_amount: U256::default(),
             destination_network_id: NetworkId::default(),
-            origin_network_id: Some(NetworkId::default()),
             origin_transaction_hash: Some(EthHash::zero()),
             forward_network_fee_asset_amount: U256::default(),
             underlying_asset_network_id: NetworkId::default(),
+            user_data_protocol_fee_asset_amount: U256::default(),
             forward_destination_network_id: NetworkId::default(),
             underlying_asset_token_address: EthAddress::default(),
         }
@@ -89,12 +88,7 @@ impl Default for UserOpLog {
 }
 
 impl UserOpLog {
-    pub fn maybe_update_fields(
-        &mut self,
-        origin_block_hash: EthHash,
-        origin_transaction_hash: EthHash,
-        origin_network_id: NetworkId,
-    ) {
+    pub fn maybe_update_fields(&mut self, origin_block_hash: EthHash, origin_transaction_hash: EthHash) {
         // NOTE: A witnessed user op needs these fields from the block it was witnessed in. All
         // other states will include the full log, with these fields already included.
         if self.origin_block_hash.is_none() {
@@ -106,11 +100,6 @@ impl UserOpLog {
             debug!("updating `origin_transaction_hash` in `UserOpLog`");
             self.origin_transaction_hash = Some(origin_transaction_hash)
         };
-
-        if self.origin_network_id.is_none() {
-            debug!("updating `origin_network_id` in `UserOpLog`");
-            self.origin_network_id = Some(origin_network_id)
-        };
     }
 
     pub fn origin_block_hash(&self) -> Result<EthHash, UserOpError> {
@@ -121,11 +110,6 @@ impl UserOpLog {
     pub fn origin_transaction_hash(&self) -> Result<EthHash, UserOpError> {
         self.origin_transaction_hash
             .ok_or_else(|| UserOpError::MissingField("origin_transaction_hash".into()))
-    }
-
-    pub fn origin_network_id(&self) -> Result<NetworkId, UserOpError> {
-        self.origin_network_id
-            .ok_or_else(|| UserOpError::MissingField("origin_network_id".into()))
     }
 }
 
@@ -162,20 +146,20 @@ impl From<UserOpProtocolLog> for UserOpLog {
             options_mask: l.options_mask,
             origin_account: l.origin_account,
             is_for_protocol: l.is_for_protocol,
+            origin_network_id: l.origin_network_id,
             destination_account: l.destination_account,
-            origin_network_id: Some(l.origin_network_id),
             origin_block_hash: Some(l.origin_block_hash),
             underlying_asset_name: l.underlying_asset_name,
             destination_network_id: l.destination_network_id,
             underlying_asset_symbol: l.underlying_asset_symbol,
             network_fee_asset_amount: l.network_fee_asset_amount,
             underlying_asset_decimals: l.underlying_asset_decimals,
-            protocol_fee_asset_amount: l.protocol_fee_asset_amount,
             origin_transaction_hash: Some(l.origin_transaction_hash),
             underlying_asset_network_id: l.underlying_asset_network_id,
             forward_destination_network_id: l.forward_destination_network_id,
             underlying_asset_token_address: l.underlying_asset_token_address,
             forward_network_fee_asset_amount: l.forward_network_fee_asset_amount,
+            user_data_protocol_fee_asset_amount: l.user_data_protocol_fee_asset_amount,
         }
     }
 }
@@ -185,24 +169,24 @@ impl From<UserSendLog> for UserOpLog {
         Self {
             nonce: l.nonce,
             user_data: l.user_data,
-            origin_network_id: None,
             origin_block_hash: None,
             asset_amount: l.asset_amount,
             options_mask: l.options_mask,
             origin_transaction_hash: None,
             origin_account: l.origin_account,
             is_for_protocol: l.is_for_protocol,
+            origin_network_id: l.origin_network_id,
             destination_account: l.destination_account,
             underlying_asset_name: l.underlying_asset_name,
             destination_network_id: l.destination_network_id,
             underlying_asset_symbol: l.underlying_asset_symbol,
             network_fee_asset_amount: l.network_fee_asset_amount,
             underlying_asset_decimals: l.underlying_asset_decimals,
-            protocol_fee_asset_amount: l.protocol_fee_asset_amount,
             underlying_asset_network_id: l.underlying_asset_network_id,
             forward_destination_network_id: l.forward_destination_network_id,
             underlying_asset_token_address: l.underlying_asset_token_address,
             forward_network_fee_asset_amount: l.forward_network_fee_asset_amount,
+            user_data_protocol_fee_asset_amount: l.user_data_protocol_fee_asset_amount,
         }
     }
 }

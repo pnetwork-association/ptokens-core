@@ -71,13 +71,13 @@ impl UserOp {
             self.user_op_log.nonce.to_string(),
             self.user_op_log.underlying_asset_decimals.to_string(),
             self.user_op_log.asset_amount.to_string(),
-            self.user_op_log.protocol_fee_asset_amount.to_string(),
+            self.user_op_log.user_data_protocol_fee_asset_amount.to_string(),
             self.user_op_log.network_fee_asset_amount.to_string(),
             self.user_op_log.forward_network_fee_asset_amount.to_string(),
             format!("0x{}", hex::encode(&self.user_op_log.underlying_asset_token_address)),
             format!(
                 "0x{}",
-                hex::encode(&self.user_op_log.origin_network_id()?.to_bytes_4()?.to_vec())
+                hex::encode(&self.user_op_log.origin_network_id.to_bytes_4()?.to_vec())
             ),
             format!(
                 "0x{}",
@@ -154,22 +154,23 @@ impl UserOp {
         let mut user_op_log = UserOpLog::try_from(log)?;
 
         let asset_amount = user_op_log.asset_amount.as_u64();
+
         // NOTE: A witnessed user op needs these fields from the block it was witnessed in. All
         // other states will include the full log, with these fields already included.
-        user_op_log.maybe_update_fields(block_hash, tx_hash, *origin_network_id);
+        user_op_log.maybe_update_fields(block_hash, tx_hash);
 
         let mut op = Self {
             tx_hash,
             block_hash,
-            user_op_log,
             asset_amount,
             block_timestamp,
             witnessed_timestamp,
             uid: EthHash::zero(),
             previous_states: vec![],
             version: UserOpVersion::latest(),
-            origin_network_id: *origin_network_id,
+            origin_network_id: *user_op_log.origin_network_id(),
             state: UserOpState::try_from_log(*origin_network_id, tx_hash, log, block_timestamp)?,
+            user_op_log,
         };
 
         let uid = op.uid()?;
@@ -259,11 +260,11 @@ impl UserOp {
             EthAbiToken::Uint(self.user_op_log.nonce),
             EthAbiToken::Uint(self.user_op_log.underlying_asset_decimals),
             EthAbiToken::Uint(self.user_op_log.asset_amount),
-            EthAbiToken::Uint(self.user_op_log.protocol_fee_asset_amount),
+            EthAbiToken::Uint(self.user_op_log.user_data_protocol_fee_asset_amount),
             EthAbiToken::Uint(self.user_op_log.network_fee_asset_amount),
             EthAbiToken::Uint(self.user_op_log.forward_network_fee_asset_amount),
             EthAbiToken::Address(self.user_op_log.underlying_asset_token_address),
-            EthAbiToken::FixedBytes(self.user_op_log.origin_network_id()?.to_bytes_4()?.to_vec()),
+            EthAbiToken::FixedBytes(self.user_op_log.origin_network_id.to_bytes_4()?.to_vec()),
             EthAbiToken::FixedBytes(self.user_op_log.destination_network_id.to_bytes_4()?.to_vec()),
             EthAbiToken::FixedBytes(self.user_op_log.forward_destination_network_id.to_bytes_4()?.to_vec()),
             EthAbiToken::FixedBytes(self.user_op_log.underlying_asset_network_id.to_bytes_4()?.to_vec()),
@@ -376,45 +377,31 @@ impl fmt::Display for UserOp {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use common_eth::convert_hex_to_eth_address;
 
     use super::*;
     use crate::user_ops::{
-        test_utils::{
-            get_sample_submission_material_with_user_send,
-            get_sample_submission_material_with_user_send_2,
-            get_sub_mat_with_protocol_cancellation_log,
-        },
+        test_utils::{get_sample_submission_material_with_user_send, get_sub_mat_with_protocol_cancellation_log},
+        UserOpUniqueId,
         UserOps,
     };
 
     #[test]
     fn should_get_user_op_from_user_send() {
         let origin_network_id = NetworkId::try_from("binance").unwrap();
-        let pnetwork_hub = convert_hex_to_eth_address("0x22BeC08c2241Ef915ed72bd876F4e4Bc4336d055").unwrap();
+        let pnetwork_hub = convert_hex_to_eth_address("0x26b9EF42c92c41667A8688e61C44818Ca620986F").unwrap();
         let sub_mat = get_sample_submission_material_with_user_send();
         let ops = UserOps::from_sub_mat(&origin_network_id, &pnetwork_hub, &sub_mat).unwrap();
         assert_eq!(ops.len(), 1);
         println!("{}", ops[0]);
         let op = ops[0].clone();
         let bytes = hex::encode(op.abi_encode().unwrap());
-        let expected_bytes = "0000000000000000000000000000000000000000000000000000000000000020a64cb6297de82bf16aca0b38760991cc0eec7b3ca5ae2e93d8754902eb927744eadd7dcd6beae94fceac5322937fb9994ee32e25cc12a54959eadc0d5b36e7ca0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001d2d700000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000002710000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000640000000000000000000000000000000000000000000000000000000000000064000000000000000000000000daacb0ab6fb34d24e8a67bfa14bf4d95d4c7af925aca268b00000000000000000000000000000000000000000000000000000000f9b459a1000000000000000000000000000000000000000000000000000000005aca268b000000000000000000000000000000000000000000000000000000005aca268b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000028000000000000000000000000000000000000000000000000000000000000002e00000000000000000000000000000000000000000000000000000000000000340000000000000000000000000000000000000000000000000000000000000038000000000000000000000000000000000000000000000000000000000000003c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a30786464623566343533353132336461613561653334336332343030366634303735616261663566376200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a30786444623566343533353132334441613561453334336332343030364634303735614241463546374200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e704e6574776f726b20546f6b656e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003504e5400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+        let expected_bytes = "000000000000000000000000000000000000000000000000000000000000002036302fa87ff33c74b5af176332fa2f761af281f48e7c04e4cbfb3171728913b41b245f033511dd60a5d50094c92c3d023ae81cb5d261a8824adff8429debf756000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000193310000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000174876e800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000640000000000000000000000000000000000000000000000000000000000000064000000000000000000000000daacb0ab6fb34d24e8a67bfa14bf4d95d4c7af925aca268b00000000000000000000000000000000000000000000000000000000d41b1c5b00000000000000000000000000000000000000000000000000000000d41b1c5b000000000000000000000000000000000000000000000000000000005aca268b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000028000000000000000000000000000000000000000000000000000000000000002e00000000000000000000000000000000000000000000000000000000000000340000000000000000000000000000000000000000000000000000000000000038000000000000000000000000000000000000000000000000000000000000003c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a30786134313635376266323235663865633765323031306338396333663038343137323934383236346400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a30786134313635376266323235463845633745323031304338396333463038343137323934383236344400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e704e6574776f726b20546f6b656e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003504e5400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
         assert_eq!(bytes, expected_bytes);
         let uid = op.uid_hex().unwrap();
-        let expected_uid = "0x724820e71f874192a9c41ea55b36a2a4f3b98be0b8cfb617295cdf21010bfeb3";
-        assert_eq!(uid, expected_uid);
-    }
-
-    #[test]
-    fn should_get_user_op_from_user_send_2() {
-        let sub_mat = get_sample_submission_material_with_user_send_2();
-        let origin_network_id = NetworkId::try_from("binance").unwrap();
-        let pnetwork_hub = convert_hex_to_eth_address("0x02878021ba5472F7F1e2bfb223ee6cf4b1eadA07").unwrap();
-        let ops = UserOps::from_sub_mat(&origin_network_id, &pnetwork_hub, &sub_mat).unwrap();
-        assert_eq!(ops.len(), 1);
-        let op = ops[0].clone();
-        let uid = op.uid_hex().unwrap();
-        let expected_uid = "0xd9feb6e60cd73c396cbaeb3e5fa55c774c03a274c54f5bc53a62a59855ec7cc4";
+        let expected_uid = "0xc333ca6de1882261d3b4b00584cc6af7d140664c5d5cb2cb300342459c49bf12";
         assert_eq!(uid, expected_uid);
     }
 
@@ -431,5 +418,18 @@ mod tests {
         assert_eq!(uid, expected_uid);
         let r = op.to_tuple_string();
         assert!(r.is_ok());
+    }
+
+    #[test]
+    fn should_parse_user_send_correctly() {
+        let origin_network_id = NetworkId::try_from("bsc").unwrap();
+        let pnetwork_hub = EthAddress::from_str("0x26b9ef42c92c41667a8688e61c44818ca620986f").unwrap();
+        let sub_mat = get_sample_submission_material_with_user_send();
+        let ops = UserOps::from_sub_mat(&origin_network_id, &pnetwork_hub, &sub_mat).unwrap();
+        assert_eq!(ops.len(), 1);
+        let expected_uid =
+            UserOpUniqueId::from_str("0xc333ca6de1882261d3b4b00584cc6af7d140664c5d5cb2cb300342459c49bf12").unwrap();
+        let uid = ops[0].uid().unwrap();
+        assert_eq!(uid, *expected_uid);
     }
 }

@@ -23,7 +23,7 @@ pub struct UserOpProtocolLog {
     pub(super) nonce: U256,
     pub(super) underlying_asset_decimals: U256,
     pub(super) asset_amount: U256,
-    pub(super) protocol_fee_asset_amount: U256,
+    pub(super) user_data_protocol_fee_asset_amount: U256,
     pub(super) network_fee_asset_amount: U256,
     pub(super) forward_network_fee_asset_amount: U256,
     pub(super) underlying_asset_token_address: EthAddress,
@@ -83,7 +83,7 @@ impl TryFrom<&EthLog> for UserOpProtocolLog {
         let nonce = UserOp::get_u256_from_token(&tokens[3])?;
         let underlying_asset_decimals = UserOp::get_u256_from_token(&tokens[4])?;
         let asset_amount = UserOp::get_u256_from_token(&tokens[5])?;
-        let protocol_fee_asset_amount = UserOp::get_u256_from_token(&tokens[6])?;
+        let user_data_protocol_fee_asset_amount = UserOp::get_u256_from_token(&tokens[6])?;
         let network_fee_asset_amount = UserOp::get_u256_from_token(&tokens[7])?;
         let forward_network_fee_asset_amount = UserOp::get_u256_from_token(&tokens[8])?;
         let underlying_asset_token_address = UserOp::get_address_from_token(&tokens[9])?;
@@ -113,12 +113,12 @@ impl TryFrom<&EthLog> for UserOpProtocolLog {
             underlying_asset_symbol,
             origin_transaction_hash,
             network_fee_asset_amount,
-            protocol_fee_asset_amount,
             underlying_asset_decimals,
             underlying_asset_network_id,
             underlying_asset_token_address,
             forward_destination_network_id,
             forward_network_fee_asset_amount,
+            user_data_protocol_fee_asset_amount,
         })
     }
 }

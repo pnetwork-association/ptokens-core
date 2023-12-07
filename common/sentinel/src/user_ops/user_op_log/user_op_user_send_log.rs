@@ -12,7 +12,7 @@ use crate::{
     NetworkId,
 };
 
-// NOTE: See example here: https://bscscan.com/tx/0xeadd7dcd6beae94fceac5322937fb9994ee32e25cc12a54959eadc0d5b36e7ca#eventlog
+// NOTE: See example here: https://bscscan.com/tx/0x1b245f033511dd60a5d50094c92c3d023ae81cb5d261a8824adff8429debf756
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Getters, Dissolve)]
 pub struct UserSendLog {
@@ -27,11 +27,11 @@ pub struct UserSendLog {
     pub(crate) underlying_asset_network_id: NetworkId,
     pub(crate) asset_token_address: EthAddress,
     pub(crate) asset_amount: U256,
-    pub(crate) protocol_fee_asset_token_address: EthAddress,
-    pub(crate) protocol_fee_asset_amount: U256,
+    pub(crate) user_data_protocol_fee_asset_amount: U256,
     pub(crate) network_fee_asset_amount: U256,
     pub(crate) forward_network_fee_asset_amount: U256,
     pub(crate) forward_destination_network_id: NetworkId,
+    pub(crate) origin_network_id: NetworkId,
     pub(crate) user_data: Bytes,
     pub(crate) options_mask: EthHash,
     pub(crate) is_for_protocol: bool,
@@ -42,7 +42,6 @@ impl TryFrom<&EthLog> for UserSendLog {
 
     fn try_from(l: &EthLog) -> Result<Self, Self::Error> {
         debug!("decoding `UserSendLog` from `EthLog`...");
-
         let tokens = eth_abi_decode(
             &[
                 EthAbiParamType::Uint(256),
@@ -56,10 +55,10 @@ impl TryFrom<&EthLog> for UserSendLog {
                 EthAbiParamType::FixedBytes(4),
                 EthAbiParamType::Address,
                 EthAbiParamType::Uint(256),
-                EthAbiParamType::Address,
                 EthAbiParamType::Uint(256),
                 EthAbiParamType::Uint(256),
                 EthAbiParamType::Uint(256),
+                EthAbiParamType::FixedBytes(4),
                 EthAbiParamType::FixedBytes(4),
                 EthAbiParamType::Bytes,
                 EthAbiParamType::FixedBytes(32),
@@ -81,11 +80,11 @@ impl TryFrom<&EthLog> for UserSendLog {
         let underlying_asset_network_id = NetworkId::try_from(UserOp::get_fixed_bytes_from_token(&tokens[8])?)?;
         let asset_token_address = UserOp::get_address_from_token(&tokens[9])?;
         let asset_amount = UserOp::get_u256_from_token(&tokens[10])?;
-        let protocol_fee_asset_token_address = UserOp::get_address_from_token(&tokens[11])?;
-        let protocol_fee_asset_amount = UserOp::get_u256_from_token(&tokens[12])?;
-        let network_fee_asset_amount = UserOp::get_u256_from_token(&tokens[13])?;
-        let forward_network_fee_asset_amount = UserOp::get_u256_from_token(&tokens[14])?;
-        let forward_destination_network_id = NetworkId::try_from(UserOp::get_fixed_bytes_from_token(&tokens[15])?)?;
+        let user_data_protocol_fee_asset_amount = UserOp::get_u256_from_token(&tokens[11])?;
+        let network_fee_asset_amount = UserOp::get_u256_from_token(&tokens[12])?;
+        let forward_network_fee_asset_amount = UserOp::get_u256_from_token(&tokens[13])?;
+        let forward_destination_network_id = NetworkId::try_from(UserOp::get_fixed_bytes_from_token(&tokens[14])?)?;
+        let origin_network_id = NetworkId::try_from(UserOp::get_fixed_bytes_from_token(&tokens[15])?)?;
         let user_data = UserOp::get_bytes_from_token(&tokens[16])?;
         let options_mask = UserOp::get_eth_hash_from_token(&tokens[17])?;
         let is_for_protocol = UserOp::get_bool_from_token(&tokens[18])?;
@@ -97,19 +96,19 @@ impl TryFrom<&EthLog> for UserSendLog {
             options_mask,
             origin_account,
             is_for_protocol,
+            origin_network_id,
             asset_token_address,
             destination_account,
             underlying_asset_name,
             destination_network_id,
             underlying_asset_symbol,
             network_fee_asset_amount,
-            protocol_fee_asset_amount,
             underlying_asset_decimals,
             underlying_asset_network_id,
             underlying_asset_token_address,
             forward_destination_network_id,
-            protocol_fee_asset_token_address,
             forward_network_fee_asset_amount,
+            user_data_protocol_fee_asset_amount,
         })
     }
 }
