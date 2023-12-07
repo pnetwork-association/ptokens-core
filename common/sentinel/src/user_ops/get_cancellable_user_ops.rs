@@ -50,24 +50,16 @@ impl UserOpList {
 
                 for op in potentially_cancellable_ops.iter() {
                     let uid = op.uid_hex()?;
+                    let o_nid = op.origin_network_id();
                     let d_nid = op.destination_network_id();
                     let enqueued_timestamp = op.enqueued_timestamp()?;
-                    // NOTE:User ops don't include/commit to their originating network IDs. User ops also go through
-                    // an interim chain. So a movement from chain X to chain Y is acually two distinct user ops:
-                    // `chain X -> interim chain` then `interim chain -> chain Y`.
-                    //
-                    // The second user ops' `underlyingAssetNetworkId` maintains a pointer to chain X, but the user
-                    // op the sentinel needs to have witnessed for this second user op is on the _interim chain_.
-                    // The op does _not_ track this network ID.
-                    //
-                    // As such, in order to determine if a user op is cancellable, we have to ensure that ALL the
-                    // chains this sentinel is tracking are up to date to within  some allowable time delta. This
-                    // condition met means we've have every chance to see the origin user op event, and thus we
-                    // haven't seen it, so it can't be a valid op and thus is cancellable.
-                    let is_cancellable = latest_block_infos.iter().all(|info| {
+
+                    let is_cancellable = if let Ok(info) = latest_block_infos.get_for(o_nid) {
                         let latest_block_timestamp = *info.block_timestamp();
                         debug!("                    op uid: {uid}");
-                        debug!("                network id: {}", info.network_id());
+                        debug!("           info network id: {}", info.network_id());
+                        debug!("         origin network id: {o_nid}",);
+                        debug!(" op destination network id: {d_nid}");
                         debug!("    latest block timestamp: {latest_block_timestamp}");
                         debug!("user op enqueued timestamp: {enqueued_timestamp}");
                         debug!("                 max delta: {max_delta}");
@@ -78,9 +70,11 @@ impl UserOpList {
                             false
                         };
                         debug!("         op is cancellable: {r}");
-                        debug!(" op destination network id: {d_nid}");
                         r
-                    });
+                    } else {
+                        warn!("cannot cancel user op due to no chain data for its origin network: {o_nid}");
+                        false
+                    };
 
                     if is_cancellable {
                         cancellable_ops.push(op.clone())
