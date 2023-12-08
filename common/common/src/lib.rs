@@ -17,7 +17,7 @@ pub use crate::{
     bridge_side::BridgeSide,
     constants::{MAX_DATA_SENSITIVITY_LEVEL, MIN_DATA_SENSITIVITY_LEVEL},
     core_type::{CoreType, V3CoreType},
-    errors::AppError,
+    errors::{AppError, AppError as CommonError},
     no_parent_error::NoParentError,
     test_utils::get_test_database,
     traits::DatabaseInterface,
