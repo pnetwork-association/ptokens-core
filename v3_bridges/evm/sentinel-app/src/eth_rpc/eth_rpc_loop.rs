@@ -41,6 +41,7 @@ pub async fn eth_rpc_loop(
     _broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
 ) -> Result<(), SentinelError> {
     let mut endpoints = config.endpoints(&network_id)?;
+    let use_quicknode = endpoints.use_quicknode();
     let sleep_duration = *endpoints.sleep_time();
     let mut ws_client = endpoints.get_first_ws_client().await?;
 
@@ -219,6 +220,7 @@ pub async fn eth_rpc_loop(
                                     block_num,
                                     sleep_duration,
                                     &network_id,
+                                    use_quicknode,
                                 ).await;
                                 match r {
                                     Ok(r) => {
