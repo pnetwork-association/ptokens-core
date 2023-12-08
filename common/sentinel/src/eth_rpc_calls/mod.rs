@@ -7,6 +7,7 @@ mod get_eth_balance;
 mod get_gas_price;
 mod get_latest_block_num;
 mod get_nonce;
+mod get_quicknode_sub_mat;
 mod get_receipts;
 mod get_sub_mat;
 mod get_user_op_state;
