@@ -69,4 +69,16 @@ impl Endpoints {
     pub fn is_empty(&self) -> bool {
         self.endpoints.is_empty()
     }
+
+    pub fn use_quicknode(&self) -> bool {
+        // NOTE: TODO: Make more granular on a per endpoint basis. We use the `ws_client` directly
+        // in a lot of places so we need to be able to get the URL from that (cannot as of yet) so
+        // for now this quick and dirty method will have to do. It means we can only use quicknode
+        // rpc calls if ALL endpoints strings are quicknode, so it's not ideal like this.
+        // The other option was to ALWAYS try quicknode style RPC call first, but that's
+        // inefficient too if interacting with a local node or a different service.
+        self.endpoints
+            .iter()
+            .all(|s| s.contains("quiknode") || s.contains("quicknode"))
+    }
 }
