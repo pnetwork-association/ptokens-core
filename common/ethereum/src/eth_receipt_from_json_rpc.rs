@@ -1,12 +1,12 @@
 use std::str::FromStr;
 
-use common::types::Result;
+use common::{types::Result, CommonError};
 use ethereum_types::{Address as EthAddress, H160, U256};
 use serde::Deserialize;
 
 use crate::{
     eth_log::{EthLog, EthLogJson, EthLogs},
-    eth_receipt::EthReceipt,
+    eth_receipt::{EthReceipt, EthReceipts},
     eth_receipt_type::EthReceiptType,
     eth_utils::{convert_hex_to_eth_address, convert_hex_to_h256},
 };
@@ -28,6 +28,26 @@ pub struct EthReceiptFromJsonRpc {
     #[serde(rename = "type")]
     pub receipt_type: Option<String>,
     pub contract_address: Option<String>, // NOTE: Because it could be null if not a contract creation tx.
+}
+
+impl TryFrom<Vec<EthReceiptFromJsonRpc>> for EthReceipts {
+    type Error = CommonError;
+
+    fn try_from(v: Vec<EthReceiptFromJsonRpc>) -> std::result::Result<Self, Self::Error> {
+        Ok(EthReceipts::new(
+            v.iter()
+                .map(EthReceipt::try_from)
+                .collect::<std::result::Result<Vec<EthReceipt>, Self::Error>>()?,
+        ))
+    }
+}
+
+impl TryFrom<&EthReceiptFromJsonRpc> for EthReceipt {
+    type Error = CommonError;
+
+    fn try_from(json: &EthReceiptFromJsonRpc) -> std::result::Result<Self, Self::Error> {
+        EthReceipt::from_json_rpc(json)
+    }
 }
 
 impl EthReceipt {

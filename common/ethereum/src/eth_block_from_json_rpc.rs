@@ -1,4 +1,5 @@
 use common::{types::Result, utils::strip_hex_prefix};
+use derive_getters::Getters;
 use ethereum_types::{Bloom, U256};
 use serde::{Deserialize, Serialize};
 
@@ -94,9 +95,9 @@ impl EthBlock {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Getters)]
 #[serde(rename_all = "camelCase")]
-struct EthReceiptJsonFromRpc {
+pub struct EthReceiptJsonFromRpc {
     v: String,
     r: String,
     s: String,
