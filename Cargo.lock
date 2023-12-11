@@ -4438,6 +4438,7 @@ dependencies = [
  "futures-retry",
  "headers",
  "hex",
+ "jsonrpsee",
  "lazy_static",
  "log",
  "metadata",

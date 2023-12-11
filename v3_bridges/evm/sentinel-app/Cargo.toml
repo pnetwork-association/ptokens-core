@@ -28,6 +28,7 @@ base64 = { workspace = true }
 futures = { workspace = true }
 reqwest = { workspace = true }
 headers = { workspace = true }
+jsonrpsee = { workspace = true }
 thiserror = { workspace = true }
 tower-http = { workspace = true }
 serde_json = { workspace = true }

@@ -11,11 +11,13 @@ use common_sentinel::{
     get_user_op_state,
     push_tx,
     BroadcastChannelMessages,
+    Endpoints,
     EthRpcMessages,
     NetworkId,
     SentinelConfig,
     SentinelError,
 };
+use jsonrpsee::ws_client::WsClient;
 use tokio::{
     sync::{
         broadcast::{Receiver as MpMcRx, Sender as MpMcTx},
@@ -28,10 +30,20 @@ use tokio::{
 // immediately return with an error. That error is handled in each of the arms below, via rotating the endpoint to get a
 // new socket.
 
-// TODO DRY out the repeat code below, though it's not trivial due to having to replace the mutable websocket clients
-// upon endpoint rotation.
-
 const ENDPOINT_ROTATION_SLEEP_TIME: u64 = 20;
+
+async fn rotate_endpoint(
+    network_id: &NetworkId,
+    endpoints: &mut Endpoints,
+    ws_client: &mut WsClient,
+    use_quicknode: &mut bool,
+) -> Result<(), SentinelError> {
+    warn!("sleeping for {ENDPOINT_ROTATION_SLEEP_TIME} then rotating {network_id} endpoint");
+    sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
+    *ws_client = endpoints.rotate().await?;
+    *use_quicknode = endpoints.use_quicknode();
+    Ok(())
+}
 
 pub async fn eth_rpc_loop(
     mut eth_rpc_rx: MpscRx<EthRpcMessages>,
@@ -41,7 +53,7 @@ pub async fn eth_rpc_loop(
     _broadcast_channel_rx: MpMcRx<BroadcastChannelMessages>,
 ) -> Result<(), SentinelError> {
     let mut endpoints = config.endpoints(&network_id)?;
-    let use_quicknode = endpoints.use_quicknode();
+    let mut use_quicknode = endpoints.use_quicknode();
     let sleep_duration = *endpoints.sleep_time();
     let mut ws_client = endpoints.get_first_ws_client().await?;
 
@@ -66,9 +78,7 @@ pub async fn eth_rpc_loop(
                                     },
                                     Err(e) => {
                                         error!("{network_id} eth rpc error: {e}");
-                                        warn!("rotating {network_id} endpoint");
-                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        ws_client = endpoints.rotate().await?;
+                                        rotate_endpoint(&network_id, &mut endpoints, &mut ws_client, &mut use_quicknode).await?;
                                         continue 'inner
                                     },
                                 }
@@ -90,9 +100,7 @@ pub async fn eth_rpc_loop(
                                     },
                                     Err(e) => {
                                         error!("{network_id} eth rpc error: {e}");
-                                        warn!("rotating {network_id} endpoint");
-                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        ws_client = endpoints.rotate().await?;
+                                        rotate_endpoint(&network_id, &mut endpoints, &mut ws_client, &mut use_quicknode).await?;
                                         continue 'inner
                                     },
                                 }
@@ -112,9 +120,7 @@ pub async fn eth_rpc_loop(
                                     },
                                     Err(e) => {
                                         error!("{network_id} eth rpc error: {e}");
-                                        warn!("rotating {network_id} endpoint");
-                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        ws_client = endpoints.rotate().await?;
+                                        rotate_endpoint(&network_id, &mut endpoints, &mut ws_client, &mut use_quicknode).await?;
                                         continue 'inner
                                     },
                                 }
@@ -134,9 +140,7 @@ pub async fn eth_rpc_loop(
                                     },
                                     Err(e) => {
                                         error!("{network_id} eth rpc error: {e}");
-                                        warn!("rotating {network_id} endpoint");
-                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        ws_client = endpoints.rotate().await?;
+                                        rotate_endpoint(&network_id, &mut endpoints, &mut ws_client, &mut use_quicknode).await?;
                                         continue 'inner
                                     },
                                 }
@@ -157,9 +161,7 @@ pub async fn eth_rpc_loop(
                                     },
                                     Err(e) => {
                                         error!("{network_id} eth rpc error: {e}");
-                                        warn!("rotating {network_id} endpoint");
-                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        ws_client = endpoints.rotate().await?;
+                                        rotate_endpoint(&network_id, &mut endpoints, &mut ws_client, &mut use_quicknode).await?;
                                         continue 'inner
                                     },
                                 }
@@ -180,9 +182,7 @@ pub async fn eth_rpc_loop(
                                     },
                                     Err(e) => {
                                         error!("{network_id} eth rpc error: {e}");
-                                        warn!("rotating {network_id} endpoint");
-                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        ws_client = endpoints.rotate().await?;
+                                        rotate_endpoint(&network_id, &mut endpoints, &mut ws_client, &mut use_quicknode).await?;
                                         continue 'inner
                                     },
                                 }
@@ -205,9 +205,7 @@ pub async fn eth_rpc_loop(
                                     },
                                     Err(e) => {
                                         error!("{network_id} eth rpc error: {e}");
-                                        warn!("rotating {network_id} endpoint");
-                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        ws_client = endpoints.rotate().await?;
+                                        rotate_endpoint(&network_id, &mut endpoints, &mut ws_client, &mut use_quicknode).await?;
                                         continue 'inner
                                     },
                                 }
@@ -229,9 +227,7 @@ pub async fn eth_rpc_loop(
                                     }
                                     Err(e) => {
                                         error!("{network_id} eth rpc error: {e}");
-                                        warn!("rotating {network_id} endpoint");
-                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        ws_client = endpoints.rotate().await?;
+                                        rotate_endpoint(&network_id, &mut endpoints, &mut ws_client, &mut use_quicknode).await?;
                                         continue 'inner
                                     },
                                 }
@@ -252,9 +248,7 @@ pub async fn eth_rpc_loop(
                                     }
                                     Err(e) => {
                                         error!("{network_id} eth rpc error: {e}");
-                                        warn!("rotating {network_id} endpoint");
-                                        sleep(Duration::from_secs(ENDPOINT_ROTATION_SLEEP_TIME)).await;
-                                        ws_client = endpoints.rotate().await?;
+                                        rotate_endpoint(&network_id, &mut endpoints, &mut ws_client, &mut use_quicknode).await?;
                                         continue 'inner
                                     },
                                 }
