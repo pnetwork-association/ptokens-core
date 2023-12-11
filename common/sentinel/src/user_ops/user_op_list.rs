@@ -218,6 +218,16 @@ impl UserOpList {
             Err(UserOpError::NoUserOp(h).into())
         }
     }
+
+    pub fn purge<D: DatabaseInterface>(&mut self, db_utils: &SentinelDbUtils<D>) -> Result<(), UserOpError> {
+        debug!("purging all user ops...");
+        let uids = self.iter().map(|e| e.uid()).collect::<Vec<_>>();
+        for uid in uids.iter() {
+            self.remove_entry(db_utils, uid)?;
+        }
+        info!("purged {} user ops", uids.len());
+        Ok(())
+    }
 }
 
 #[cfg(test)]
