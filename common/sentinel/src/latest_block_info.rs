@@ -2,17 +2,20 @@ use derive_getters::Getters;
 use derive_more::{Constructor, Deref};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
+use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{get_utc_timestamp, NetworkId, SentinelError, WebSocketMessagesEncodable};
 
 #[derive(Clone, Debug, Deref, Constructor, Serialize, Deserialize)]
 pub struct LatestBlockInfos(Vec<LatestBlockInfo>);
 
-#[derive(Clone, Debug, Serialize, Deserialize, Getters)]
+#[serde_as]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Getters)]
 pub struct LatestBlockInfo {
     block_number: u64,
     delta_from_now: u64,
     block_timestamp: u64,
+    #[serde_as(as = "DisplayFromStr")]
     network_id: NetworkId,
 }
 
@@ -57,5 +60,25 @@ impl TryFrom<WebSocketMessagesEncodable> for LatestBlockInfos {
         debug!("trying to get `LatestBlockInfos` from `WebSocketMessagesEncodable`...");
         let j = Json::try_from(m)?;
         Ok(serde_json::from_value(j)?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use super::*;
+
+    #[test]
+    fn should_make_serde_json_roundtrip_correctly() {
+        let n = 5;
+        let t = get_utc_timestamp().unwrap();
+        let binance_str = "binance";
+        let nid = NetworkId::from_str(binance_str).unwrap();
+        let l = LatestBlockInfo::new(n, t, nid);
+        let j = serde_json::json!(l);
+        assert!(j.to_string().contains(binance_str)); // NOTE: We're testing the derived `DisplayFromStr` thing
+        let r: LatestBlockInfo = serde_json::from_value(j).unwrap();
+        assert_eq!(r, l);
     }
 }
