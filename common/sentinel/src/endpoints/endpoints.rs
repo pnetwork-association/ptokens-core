@@ -16,6 +16,11 @@ pub struct Endpoints {
 }
 
 impl Endpoints {
+    pub fn use_quicknode(&self) -> bool {
+        let ce = self.current_endpoint();
+        ce.contains("quiknode") || ce.contains("quicknode")
+    }
+
     pub fn new(sleep_time: u64, network_id: NetworkId, endpoints: Vec<String>) -> Self {
         Self {
             endpoints,
@@ -40,10 +45,14 @@ impl Endpoints {
         Ok(rpc_client)
     }
 
+    fn current_endpoint(&self) -> &str {
+        &self.endpoints[self.current]
+    }
+
     pub async fn rotate(&mut self) -> Result<WsClient, SentinelError> {
         self.increment_current_endpoint_index()?;
         info!("getting next endpoint @ index: {}", self.current);
-        get_rpc_client(&self.endpoints[self.current]).await
+        get_rpc_client(self.current_endpoint()).await
     }
 
     fn increment_current_endpoint_index(&mut self) -> Result<(), EndpointError> {
@@ -68,17 +77,5 @@ impl Endpoints {
 
     pub fn is_empty(&self) -> bool {
         self.endpoints.is_empty()
-    }
-
-    pub fn use_quicknode(&self) -> bool {
-        // NOTE: TODO: Make more granular on a per endpoint basis. We use the `ws_client` directly
-        // in a lot of places so we need to be able to get the URL from that (cannot as of yet) so
-        // for now this quick and dirty method will have to do. It means we can only use quicknode
-        // rpc calls if ALL endpoints strings are quicknode, so it's not ideal like this.
-        // The other option was to ALWAYS try quicknode style RPC call first, but that's
-        // inefficient too if interacting with a local node or a different service.
-        self.endpoints
-            .iter()
-            .all(|s| s.contains("quiknode") || s.contains("quicknode"))
     }
 }
