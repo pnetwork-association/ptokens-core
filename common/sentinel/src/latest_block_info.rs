@@ -3,16 +3,36 @@ use derive_more::{Constructor, Deref};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 
-use crate::{NetworkId, SentinelError, WebSocketMessagesEncodable};
+use crate::{get_utc_timestamp, NetworkId, SentinelError, WebSocketMessagesEncodable};
 
 #[derive(Clone, Debug, Deref, Constructor, Serialize, Deserialize)]
 pub struct LatestBlockInfos(Vec<LatestBlockInfo>);
 
-#[derive(Clone, Debug, Constructor, Serialize, Deserialize, Getters)]
+#[derive(Clone, Debug, Serialize, Deserialize, Getters)]
 pub struct LatestBlockInfo {
     block_number: u64,
+    delta_from_now: u64,
     block_timestamp: u64,
     network_id: NetworkId,
+}
+
+impl LatestBlockInfo {
+    pub fn new(block_number: u64, block_timestamp: u64, network_id: NetworkId) -> Self {
+        let now = get_utc_timestamp().unwrap_or_default();
+        let delta_from_now = if now > block_timestamp {
+            now - block_timestamp
+        } else {
+            warn!("latest block timestamp appears to be ahead of now - defaulting to zero......");
+            0
+        };
+
+        Self {
+            network_id,
+            block_number,
+            delta_from_now,
+            block_timestamp,
+        }
+    }
 }
 
 impl LatestBlockInfos {
