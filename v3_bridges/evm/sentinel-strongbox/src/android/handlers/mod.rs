@@ -19,6 +19,7 @@ mod get_user_ops;
 mod hard_reset;
 mod init;
 mod process_batch;
+mod purge_user_ops;
 mod remove_challenge;
 mod remove_debug_signer;
 mod remove_user_op;
@@ -47,6 +48,7 @@ pub(crate) use self::{
     hard_reset::hard_reset,
     init::init,
     process_batch::process_batch,
+    purge_user_ops::purge_user_ops,
     remove_challenge::remove_challenge,
     remove_debug_signer::remove_debug_signer,
     remove_user_op::remove_user_op,

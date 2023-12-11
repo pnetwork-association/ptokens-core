@@ -66,6 +66,7 @@ pub(crate) enum RpcCalls {
     HardReset(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     GetUnsolvedChallenges(RpcId, WebSocketTx, CoreCxnStatus),
     StatusPublisherStartStop(RpcId, BroadcastChannelTx, bool),
+    PurgeUserOps(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     RemoveUserOp(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetChallenge(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     GetCoreState(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
@@ -144,6 +145,7 @@ impl RpcCalls {
             "getUserOpList" => Self::GetUserOpList(*r.id(), websocket_tx, core_cxn),
             "getUserOp" => Self::GetUserOp(*r.id(), r.params(), websocket_tx, core_cxn),
             "getInclusionProof" => Self::GetInclusionProof(*r.id(), websocket_tx, core_cxn),
+            "purgeUserOps" => Self::PurgeUserOps(*r.id(), r.params(), websocket_tx, core_cxn),
             "removeUserOp" => Self::RemoveUserOp(*r.id(), websocket_tx, r.params(), core_cxn),
             "getChallenge" => Self::GetChallenge(*r.id(), websocket_tx, r.params(), core_cxn),
             "hardReset" => Self::HardReset(*r.id(), r.params(), websocket_tx.clone(), core_cxn),
@@ -443,6 +445,9 @@ impl RpcCalls {
             ),
             Self::RemoveUserOp(id, websocket_tx, params, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_remove_user_op(websocket_tx, params, core_cxn).await)
+            },
+            Self::PurgeUserOps(id, params, websocket_tx, core_cxn) => {
+                Self::handle_ws_result(id, Self::handle_purge_user_ops(websocket_tx, params, core_cxn).await)
             },
             Self::Unknown(id, method) => Ok(warp::reply::json(&create_json_rpc_error(
                 id,

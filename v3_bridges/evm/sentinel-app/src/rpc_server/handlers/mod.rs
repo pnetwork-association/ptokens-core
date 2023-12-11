@@ -23,6 +23,7 @@ mod handle_hard_reset;
 mod handle_init;
 mod handle_latest_block_infos;
 mod handle_process_block;
+mod handle_purge_user_ops;
 mod handle_remove_challenge;
 mod handle_remove_debug_signer;
 mod handle_remove_user_op;
