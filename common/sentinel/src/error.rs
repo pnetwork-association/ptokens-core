@@ -24,6 +24,9 @@ impl From<SentinelError> for CommonError {
 
 #[derive(Error, Debug)]
 pub enum SentinelError {
+    #[error("quicknode rpc methods not available")]
+    QuicknodeNotAvailable,
+
     #[error("database integrity is not valid - db integrity state: {0}")]
     InvalidDbIntegrity(DbIntegrity),
 

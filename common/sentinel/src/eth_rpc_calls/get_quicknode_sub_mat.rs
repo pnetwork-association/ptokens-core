@@ -148,15 +148,23 @@ pub async fn get_quicknode_sub_mat(
                     warn!("{network_id} {RPC_CMD} failed due to web socket dropping");
                     break Err(e);
                 },
-                _ => {
-                    if attempt < MAX_RPC_CALL_ATTEMPTS {
+                other_error => {
+                    error!("{other_error}");
+                    if other_error
+                        .to_string()
+                        .contains("the method qn_getBlockWithReceipts does not exist")
+                    {
+                        debug!("quicknode rpc methods not available");
+                        // NOTE: No point retrying if the method isn't available, so we fail fast instead.
+                        break Err(SentinelError::QuicknodeNotAvailable);
+                    } else if attempt < MAX_RPC_CALL_ATTEMPTS {
                         attempt += 1;
                         warn!("{network_id} sleeping for {sleep_time}s before retrying...");
                         sleep(Duration::from_secs(sleep_time)).await;
                         continue;
                     } else {
                         warn!("{network_id} {RPC_CMD} failed after {attempt} attempts");
-                        break Err(e);
+                        break Err(other_error);
                     }
                 },
             },
