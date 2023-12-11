@@ -90,7 +90,12 @@ impl TryFrom<QuicknodeBlockAndReceiptsJson> for EthSubmissionMaterial {
 
     fn try_from(json: QuicknodeBlockAndReceiptsJson) -> Result<Self, Self::Error> {
         let block = EthBlock::try_from(json.block)?;
-        let receipts = EthReceipts::try_from(json.receipts)?;
+
+        let receipts = match json.receipts {
+            None => EthReceipts::default(),
+            Some(r) => EthReceipts::try_from(r)?,
+        };
+
         EthSubmissionMaterial::default()
             .add_block(block)
             .and_then(|sub_mat| sub_mat.add_receipts(receipts))
@@ -100,7 +105,7 @@ impl TryFrom<QuicknodeBlockAndReceiptsJson> for EthSubmissionMaterial {
 #[derive(Debug, Default, Deserialize)]
 pub struct QuicknodeBlockAndReceiptsJson {
     block: QuicknodeBlockFromRpc,
-    receipts: Vec<EthReceiptFromJsonRpc>,
+    receipts: Option<Vec<EthReceiptFromJsonRpc>>, // NOTE: The qn rpc call can return null if no receipts.
 }
 
 async fn get_quicknode_sub_mat_inner(
