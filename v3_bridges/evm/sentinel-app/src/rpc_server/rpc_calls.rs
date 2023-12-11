@@ -74,7 +74,6 @@ pub(crate) enum RpcCalls {
     ChallengeResponderStartStop(RpcId, BroadcastChannelTx, bool),
     AddDebugSigners(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     RemoveChallenge(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
-    LatestBlockInfos(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     RemoveDebugSigner(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
@@ -87,6 +86,7 @@ pub(crate) enum RpcCalls {
     GetRegistrationSignature(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     UserOpCancellerStartStop(RpcId, BroadcastChannelTx, CoreCxnStatus, bool),
     GetRegistrationExtensionTx(RpcId, Box<SentinelConfig>, RpcParams, EthRpcSenders),
+    LatestBlockInfos(RpcId, Box<SentinelConfig>, WebSocketTx, CoreCxnStatus),
     GetChallengeState(
         RpcId,
         RpcParams,
@@ -188,7 +188,9 @@ impl RpcCalls {
             "startStatusPublisher" | "startPublisher" => {
                 Self::StatusPublisherStartStop(*r.id(), broadcast_channel_tx.clone(), true)
             },
-            "getLatestBlockInfos" | "latest" => Self::LatestBlockInfos(*r.id(), r.params(), websocket_tx, core_cxn),
+            "getLatestBlockInfos" | "latest" => {
+                Self::LatestBlockInfos(*r.id(), Box::new(config.clone()), websocket_tx, core_cxn)
+            },
             "getCoreState" | "getEnclaveState" | "state" => {
                 Self::GetCoreState(*r.id(), r.params(), websocket_tx, core_cxn)
             },
@@ -394,9 +396,9 @@ impl RpcCalls {
                 let json = create_json_rpc_response_from_result(id, result, 1337);
                 Ok(warp::reply::json(&json))
             },
-            Self::LatestBlockInfos(id, params, websocket_tx, core_cxn) => Self::handle_ws_result(
+            Self::LatestBlockInfos(id, config, websocket_tx, core_cxn) => Self::handle_ws_result(
                 id,
-                Self::handle_get_latest_block_infos(websocket_tx, params, core_cxn).await,
+                Self::handle_get_latest_block_infos(*config, websocket_tx, core_cxn).await,
             ),
             Self::ProcessBlock(id, config, eth_rpc_senders, websocket_tx, params, core_cxn) => Self::handle_ws_result(
                 id,
