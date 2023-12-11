@@ -208,21 +208,23 @@ impl TryFrom<MetadataChainId> for NetworkId {
 impl fmt::Display for NetworkId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.to_bytes_4() {
+            // NOTE: Since we're using serde as to use the FromStr & Display impls for serde_json
+            // encoding elsewhere, they need to match up so that serde roundtrips can work.
             Err(e) => write!(f, "error converting network id to bytes: {e}"),
             Ok(b4) => {
                 let s = hex::encode(b4.to_vec());
                 let x = match s.to_lowercase().as_ref() {
-                    "b9286154" => "Goerli".to_string(),
-                    "e15503e4" => "Sepolia".to_string(),
-                    "60ef5904" => "EthMainnet".to_string(),
-                    "5aca268b" => "BscMainnet".to_string(),
-                    "57791abb" => "InterimChain".to_string(),
-                    "14ffc6a2" => "FantomMainnet".to_string(),
-                    "f9b459a1" => "PolygonMainnet".to_string(),
-                    "fc8ebb2b" => "ArbitrumMainnet".to_string(),
-                    "58920253" => "LuxochainMainnet".to_string(),
-                    "d41b1c5b" => "GnosisMainnet".to_string(),
-                    "00000000" => "Eth Unknown".to_string(),
+                    "b9286154" => "goerli".to_string(),
+                    "e15503e4" => "sepolia".to_string(),
+                    "60ef5904" => "eth".to_string(),
+                    "5aca268b" => "binance".to_string(),
+                    "57791abb" => "interim".to_string(),
+                    "14ffc6a2" => "fantom".to_string(),
+                    "f9b459a1" => "polygon".to_string(),
+                    "fc8ebb2b" => "arbitrum".to_string(),
+                    "58920253" => "luxochain".to_string(),
+                    "d41b1c5b" => "gnosis".to_string(),
+                    "00000000" => "ethUnknown".to_string(),
                     other => format!("unknown: {other}"),
                 };
                 write!(f, "{x}")
