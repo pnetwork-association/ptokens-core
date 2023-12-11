@@ -6,6 +6,7 @@ use derive_getters::Getters;
 use ethabi::{encode as eth_abi_encode, Token as EthAbiToken};
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
 use sha2::{Digest, Sha256};
 
 use super::{UserOpError, UserOpFlag, UserOpLog, UserOpState, UserOpVersion};
@@ -32,6 +33,7 @@ impl UserOp {
     }
 }
 
+#[serde_as]
 #[derive(Clone, Debug, Default, Eq, Serialize, Deserialize, Getters)]
 pub struct UserOp {
     #[getter(skip)]
@@ -44,6 +46,7 @@ pub struct UserOp {
     pub(super) version: UserOpVersion,
     pub(super) user_op_log: UserOpLog,
     pub(super) witnessed_timestamp: u64,
+    #[serde_as(as = "DisplayFromStr")]
     pub(super) origin_network_id: NetworkId,
     pub(super) previous_states: Vec<UserOpState>,
 }
@@ -132,13 +135,6 @@ impl UserOp {
         self.into()
     }
 
-    pub fn origin_nid(&self) -> Result<NetworkId, UserOpError> {
-        match self.state {
-            UserOpState::Witnessed(nid, ..) => Ok(nid),
-            _ => Err(UserOpError::NotWitnessed(Box::new(self.clone()))),
-        }
-    }
-
     pub fn destination_network_id(&self) -> NetworkId {
         *self.user_op_log().destination_network_id()
     }
@@ -169,7 +165,7 @@ impl UserOp {
             previous_states: vec![],
             version: UserOpVersion::latest(),
             origin_network_id: *user_op_log.origin_network_id(),
-            state: UserOpState::try_from_log(*origin_network_id, tx_hash, log, block_timestamp)?,
+            state: UserOpState::try_from_log(*origin_network_id, tx_hash, log)?,
             user_op_log,
         };
 
@@ -431,5 +427,6 @@ mod tests {
             UserOpUniqueId::from_str("0xc333ca6de1882261d3b4b00584cc6af7d140664c5d5cb2cb300342459c49bf12").unwrap();
         let uid = ops[0].uid().unwrap();
         assert_eq!(uid, *expected_uid);
+        println!("here: {}", ops[0])
     }
 }

@@ -2,11 +2,9 @@ use std::fmt;
 
 use common::Byte;
 use derive_more::{Constructor, Deref};
-use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 
-use super::{UserOp, UserOpState};
-use crate::NetworkId;
+use super::{UserOp, UserOpState, UserOpStateInfo};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default, PartialOrd, Deref, Constructor, Serialize, Deserialize)]
 pub struct UserOpFlag(Byte);
@@ -47,18 +45,17 @@ impl From<&UserOpState> for UserOpFlag {
 impl From<&UserOpFlag> for UserOpState {
     fn from(flag: &UserOpFlag) -> Self {
         let n: u8 = **flag;
-        let nid = NetworkId::default();
-        let zero_hash = EthHash::default();
+        let state = UserOpStateInfo::default();
 
         let max_witnessed: u8 = 0b0000_0001;
         let max_enqueued: u8 = 0b0000_0011;
         let max_executed: u8 = 0b0000_0111;
 
         match n {
-            _x if n <= max_witnessed => Self::Witnessed(nid, zero_hash, <u64>::default()),
-            _x if n <= max_enqueued => Self::Enqueued(nid, zero_hash, <u64>::default()),
-            _x if n <= max_executed => Self::Executed(nid, zero_hash, <u64>::default()),
-            _ => Self::Cancelled(nid, zero_hash, <u64>::default()),
+            _x if n <= max_witnessed => Self::Witnessed(state),
+            _x if n <= max_enqueued => Self::Enqueued(state),
+            _x if n <= max_executed => Self::Executed(state),
+            _ => Self::Cancelled(state),
         }
     }
 }
@@ -126,6 +123,7 @@ mod tests {
     use strum::IntoEnumIterator;
 
     use super::*;
+    use crate::NetworkId;
 
     #[test]
     fn default_should_have_no_flag_set() {

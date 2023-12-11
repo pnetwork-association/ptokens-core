@@ -35,6 +35,6 @@ use self::{
     },
     user_op_flag::UserOpFlag,
     user_op_log::{UserOpLog, UserOpProtocolLog, UserSendLog},
-    user_op_state::UserOpState,
+    user_op_state::{UserOpState, UserOpStateInfo},
     user_op_version::UserOpVersion,
 };

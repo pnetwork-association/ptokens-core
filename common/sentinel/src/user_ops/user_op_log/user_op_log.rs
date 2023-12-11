@@ -3,7 +3,7 @@ use common_eth::EthLog;
 use derive_getters::Getters;
 use ethereum_types::{Address as EthAddress, H256 as EthHash, U256};
 use serde::{Deserialize, Serialize};
-use serde_with::serde_as;
+use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
     user_ops::{
@@ -45,9 +45,13 @@ pub struct UserOpLog {
     pub(crate) network_fee_asset_amount: U256,
     pub(crate) forward_network_fee_asset_amount: U256,
     pub(crate) underlying_asset_token_address: EthAddress,
+    #[serde_as(as = "DisplayFromStr")]
     pub(crate) origin_network_id: NetworkId,
+    #[serde_as(as = "DisplayFromStr")]
     pub(crate) destination_network_id: NetworkId,
+    #[serde_as(as = "DisplayFromStr")]
     pub(crate) forward_destination_network_id: NetworkId,
+    #[serde_as(as = "DisplayFromStr")]
     pub(crate) underlying_asset_network_id: NetworkId,
     pub(crate) origin_account: String,
     pub(crate) destination_account: String,

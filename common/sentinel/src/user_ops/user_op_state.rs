@@ -1,8 +1,10 @@
 use std::{cmp, fmt};
 
 use common_eth::EthLog;
+use derive_getters::Getters;
 use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
 use strum_macros::EnumIter;
 
 use super::{
@@ -14,13 +16,39 @@ use super::{
 };
 use crate::{get_utc_timestamp, NetworkId};
 
+#[serde_as]
+#[derive(Debug, Default, Copy, Clone, Eq, Getters, Serialize, Deserialize)]
+pub struct UserOpStateInfo {
+    tx_hash: EthHash,
+    #[serde_as(as = "DisplayFromStr")]
+    network_id: NetworkId,
+    sentinel_timestamp: u64,
+}
+
+impl UserOpStateInfo {
+    pub fn new(tx_hash: EthHash, network_id: NetworkId) -> Self {
+        Self {
+            tx_hash,
+            network_id,
+            sentinel_timestamp: get_utc_timestamp().unwrap_or_default(),
+        }
+    }
+}
+
+impl PartialEq for UserOpStateInfo {
+    fn eq(&self, other: &Self) -> bool {
+        // NOTE: We don't care about the timestamps when comparing these...
+        self.tx_hash == other.tx_hash && self.network_id == other.network_id
+    }
+}
+
 #[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, Serialize, Deserialize, EnumIter)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, EnumIter)]
 pub enum UserOpState {
-    Witnessed(NetworkId, EthHash, u64) = 1,
-    Enqueued(NetworkId, EthHash, u64) = 2,
-    Executed(NetworkId, EthHash, u64) = 3,
-    Cancelled(NetworkId, EthHash, u64) = 4,
+    Witnessed(UserOpStateInfo) = 1,
+    Enqueued(UserOpStateInfo) = 2,
+    Executed(UserOpStateInfo) = 3,
+    Cancelled(UserOpStateInfo) = 4,
 }
 
 impl From<&UserOpState> for u8 {
@@ -48,86 +76,85 @@ impl Ord for UserOpState {
     }
 }
 
-impl PartialEq for UserOpState {
-    fn eq(&self, other: &Self) -> bool {
-        // NOTE: We don't care about the timestamps when comparing these...
-        match (self, other) {
-            (Self::Enqueued(nid_a, h_a, _), Self::Enqueued(nid_b, h_b, _))
-            | (Self::Executed(nid_a, h_a, _), Self::Executed(nid_b, h_b, _))
-            | (Self::Witnessed(nid_a, h_a, _), Self::Witnessed(nid_b, h_b, _))
-            | (Self::Cancelled(nid_a, h_a, _), Self::Cancelled(nid_b, h_b, _)) => nid_a == nid_b && h_a == h_b,
-            _ => false,
-        }
-    }
-}
-
 #[cfg(test)]
 impl UserOpState {
     pub fn witnessed(nid: NetworkId, h: EthHash) -> Self {
-        Self::Witnessed(nid, h, get_utc_timestamp().unwrap_or_default())
+        Self::Witnessed(UserOpStateInfo::new(h, nid))
     }
 
     pub fn enqueued(nid: NetworkId, h: EthHash) -> Self {
-        Self::Enqueued(nid, h, get_utc_timestamp().unwrap_or_default())
+        Self::Enqueued(UserOpStateInfo::new(h, nid))
     }
 
     pub fn executed(nid: NetworkId, h: EthHash) -> Self {
-        Self::Executed(nid, h, get_utc_timestamp().unwrap_or_default())
+        Self::Executed(UserOpStateInfo::new(h, nid))
     }
 
     pub fn cancelled(nid: NetworkId, h: EthHash) -> Self {
-        Self::Cancelled(nid, h, get_utc_timestamp().unwrap_or_default())
+        Self::Cancelled(UserOpStateInfo::new(h, nid))
     }
 }
 
 impl fmt::Display for UserOpState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Enqueued(ref nid, ref hash, ref timestamp) => {
-                write!(f, "enqueued @ tx 0x{hash:x} @ time {timestamp}, nid: {nid}")
-            },
-            Self::Executed(ref nid, ref hash, ref timestamp) => {
-                write!(f, "executed @ tx 0x{hash:x} @ time {timestamp}, nid: {nid}")
-            },
-            Self::Witnessed(ref nid, ref hash, ref timestamp) => {
-                write!(f, "witnessed @ tx 0x{hash:x} @ time {timestamp}, nid: {nid}")
-            },
-            Self::Cancelled(ref nid, ref hash, ref timestamp) => {
-                write!(f, "cancelled @ tx 0x{hash:x} @ time {timestamp}, nid: {nid}")
-            },
-        }
+        let x = match self {
+            Self::Enqueued(..) => "enqueued",
+            Self::Executed(..) => "executed",
+            Self::Witnessed(..) => "witnessed",
+            Self::Cancelled(..) => "cancelled",
+        };
+        let UserOpStateInfo {
+            network_id,
+            tx_hash,
+            sentinel_timestamp,
+        } = self.state();
+        write!(
+            f,
+            "{x} @ tx 0x{tx_hash:x} @ time {sentinel_timestamp}, nid: {network_id}"
+        )
     }
 }
 
 impl Default for UserOpState {
     fn default() -> Self {
-        Self::Witnessed(NetworkId::default(), EthHash::default(), <u64>::default())
+        Self::Witnessed(UserOpStateInfo::default())
     }
 }
 
 impl UserOpState {
-    pub(super) fn timestamp(&self) -> u64 {
+    fn state(&self) -> UserOpStateInfo {
         match self {
-            Self::Witnessed(_, _, timestamp) => *timestamp,
-            Self::Enqueued(_, _, timestamp) => *timestamp,
-            Self::Executed(_, _, timestamp) => *timestamp,
-            Self::Cancelled(_, _, timestamp) => *timestamp,
+            Self::Witnessed(ref state) => *state,
+            Self::Enqueued(ref state) => *state,
+            Self::Executed(ref state) => *state,
+            Self::Cancelled(ref state) => *state,
         }
     }
 
-    pub fn try_from_log(nid: NetworkId, tx_hash: EthHash, log: &EthLog, timestamp: u64) -> Result<Self, UserOpError> {
+    pub(super) fn timestamp(&self) -> u64 {
+        match self {
+            Self::Witnessed(UserOpStateInfo { sentinel_timestamp, .. }) => *sentinel_timestamp,
+            Self::Enqueued(UserOpStateInfo { sentinel_timestamp, .. }) => *sentinel_timestamp,
+            Self::Executed(UserOpStateInfo { sentinel_timestamp, .. }) => *sentinel_timestamp,
+            Self::Cancelled(UserOpStateInfo { sentinel_timestamp, .. }) => *sentinel_timestamp,
+        }
+    }
+
+    pub fn try_from_log(nid: NetworkId, tx_hash: EthHash, log: &EthLog) -> Result<Self, UserOpError> {
         if log.topics.is_empty() {
             return Err(UserOpError::NoTopics);
         };
 
+        let state = UserOpStateInfo::new(tx_hash, nid);
+
         if log.topics[0] == *WITNESSED_USER_OP_TOPIC {
-            Ok(Self::Witnessed(nid, tx_hash, timestamp))
+            Ok(Self::Witnessed(state))
         } else if log.topics[0] == *ENQUEUED_USER_OP_TOPIC {
-            Ok(Self::Enqueued(nid, tx_hash, timestamp))
+            Ok(Self::Enqueued(state))
         } else if log.topics[0] == *EXECUTED_USER_OP_TOPIC {
-            Ok(Self::Executed(nid, tx_hash, timestamp))
+            Ok(Self::Executed(state))
         } else if log.topics[0] == *CANCELLED_USER_OP_TOPIC {
-            Ok(Self::Cancelled(nid, tx_hash, timestamp))
+            Ok(Self::Cancelled(state))
         } else {
             Err(UserOpError::UnrecognizedTopic(log.topics[0]))
         }
@@ -136,7 +163,7 @@ impl UserOpState {
     #[rustfmt::skip]
     pub fn is_same_state_as(&self, other: Self) -> bool {
         // NOTE: The derived == allows for a strict equality, whereas this method allows us to
-        // check equality of the state and nothing else.
+        // check equality of the enum state and nothing else.
         matches!(
             (self, other),
             (Self::Witnessed(..), Self::Witnessed(..)) |
@@ -146,31 +173,39 @@ impl UserOpState {
         )
     }
 
-    pub fn update(self, tx_hash: EthHash, timestamp: u64) -> Result<(Self, Self), UserOpError> {
+    pub fn update(self, tx_hash: EthHash) -> Result<(Self, Self), UserOpError> {
         match self {
-            Self::Witnessed(nid, ..) => Ok((self, Self::Enqueued(nid, tx_hash, timestamp))),
-            Self::Enqueued(nid, ..) => Ok((self, Self::Executed(nid, tx_hash, timestamp))),
+            Self::Witnessed(UserOpStateInfo { network_id, .. }) => {
+                Ok((self, Self::Enqueued(UserOpStateInfo::new(tx_hash, network_id))))
+            },
+            Self::Enqueued(UserOpStateInfo { network_id, .. }) => {
+                Ok((self, Self::Executed(UserOpStateInfo::new(tx_hash, network_id))))
+            },
             op_state => Err(UserOpError::CannotUpdate {
                 from: Box::new(op_state),
-                to: Box::new(UserOpState::Cancelled(op_state.nid(), tx_hash, timestamp)),
+                to: Box::new(UserOpState::Cancelled(UserOpStateInfo::new(tx_hash, op_state.nid()))),
             }),
         }
     }
 
     pub fn cancel(self, tx_hash: EthHash) -> Result<(Self, Self), UserOpError> {
         match self {
-            Self::Witnessed(nid, ..) => Ok((self, Self::Cancelled(nid, tx_hash, get_utc_timestamp()?))),
-            Self::Enqueued(nid, ..) => Ok((self, Self::Cancelled(nid, tx_hash, get_utc_timestamp()?))),
+            Self::Witnessed(UserOpStateInfo { network_id, .. }) => {
+                Ok((self, Self::Cancelled(UserOpStateInfo::new(tx_hash, network_id))))
+            },
+            Self::Enqueued(UserOpStateInfo { network_id, .. }) => {
+                Ok((self, Self::Cancelled(UserOpStateInfo::new(tx_hash, network_id))))
+            },
             op_state => Err(UserOpError::CannotCancelOpInState(op_state)),
         }
     }
 
     pub fn nid(&self) -> NetworkId {
         match self {
-            Self::Witnessed(nid, ..) => *nid,
-            Self::Enqueued(nid, ..) => *nid,
-            Self::Executed(nid, ..) => *nid,
-            Self::Cancelled(nid, ..) => *nid,
+            Self::Witnessed(UserOpStateInfo { network_id, .. }) => *network_id,
+            Self::Enqueued(UserOpStateInfo { network_id, .. }) => *network_id,
+            Self::Executed(UserOpStateInfo { network_id, .. }) => *network_id,
+            Self::Cancelled(UserOpStateInfo { network_id, .. }) => *network_id,
         }
     }
 
@@ -220,7 +255,7 @@ mod tests {
         let hash_1 = EthHash::random();
         let user_op_state = UserOpState::witnessed(nid, hash_1);
         let hash_2 = EthHash::random();
-        let (prev, result) = user_op_state.update(hash_2, 1).unwrap();
+        let (prev, result) = user_op_state.update(hash_2).unwrap();
         assert_eq!(prev, user_op_state);
         let expected_result = UserOpState::enqueued(nid, hash_2);
         assert_eq!(result, expected_result);
@@ -232,11 +267,11 @@ mod tests {
         let hash_1 = EthHash::random();
         let user_op_state = UserOpState::executed(nid, hash_1);
         let hash_2 = EthHash::random();
-        match user_op_state.update(hash_2, 1) {
+        match user_op_state.update(hash_2) {
             Ok(_) => panic!("should not have succeeded!"),
             Err(UserOpError::CannotUpdate { from, to }) => {
                 assert_eq!(from, Box::new(user_op_state));
-                assert_eq!(to, Box::new(UserOpState::Cancelled(nid, hash_2, 1)));
+                assert_eq!(to, Box::new(UserOpState::Cancelled(UserOpStateInfo::new(hash_2, nid))));
             },
             Err(e) => panic!("wrong error received: {e}"),
         }
