@@ -129,9 +129,8 @@ impl UserOpList {
                 .position(|entry| &entry.uid == uid)
                 .expect("this should exist");
             let entry = self[idx];
-            let op = UserOp::get_from_db(db_utils, &entry.uid.into())?;
             debug!("removing entry from list {entry} @ idx {idx}");
-            op.delete(db_utils)?;
+            db_utils.db().delete(uid.as_bytes().to_vec())?;
             self.remove(idx);
             self.update_in_db(db_utils)?;
             Ok(true)
