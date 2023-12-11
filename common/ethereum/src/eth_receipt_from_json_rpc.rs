@@ -17,7 +17,8 @@ pub struct EthReceiptFromJsonRpc {
     pub from: String,
     pub status: String,
     pub gas_used: String,
-    pub to: Option<String>, // NOTE: Because it could be null if it's a contract creation tx.
+    pub to: Option<String>, /* NOTE: Because it could be null if it's a contract creation tx. (Sometimes it can be
+                             * an Ok("") too) */
     pub block_hash: String,
     pub logs_bloom: String,
     pub logs: Vec<EthLogJson>,
@@ -70,7 +71,13 @@ impl EthReceipt {
             cumulative_gas_used: U256::from_str_radix(&json.cumulative_gas_used, radix)?,
             to: match json.to {
                 None => H160::zero(),
-                Some(ref s) => convert_hex_to_eth_address(s)?,
+                Some(ref s) => {
+                    if s.is_empty() {
+                        H160::zero()
+                    } else {
+                        convert_hex_to_eth_address(s)?
+                    }
+                },
             },
             contract_address: match json.contract_address {
                 None => EthAddress::zero(),
