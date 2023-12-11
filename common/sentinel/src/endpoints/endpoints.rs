@@ -18,7 +18,13 @@ pub struct Endpoints {
 impl Endpoints {
     pub fn use_quicknode(&self) -> bool {
         let ce = self.current_endpoint();
-        ce.contains("quiknode") || ce.contains("quicknode")
+        if ce.contains("goerli") || ce.contains("sepolia") {
+            // NOTE: Quicknode does not offer their single flight endpoints for testnet chains.
+            // https://marketplace.quicknode.com/add-on/single-flight-rpc
+            false
+        } else {
+            ce.contains("quiknode") || ce.contains("quicknode")
+        }
     }
 
     pub fn new(sleep_time: u64, network_id: NetworkId, endpoints: Vec<String>) -> Self {
