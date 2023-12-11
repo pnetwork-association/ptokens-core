@@ -176,8 +176,6 @@ pub async fn get_quicknode_sub_mat(
 mod tests {
     use std::str::FromStr;
 
-    use common_chain_ids::EthChainId;
-
     use super::*;
     use crate::{get_latest_block_num, test_utils::get_test_ws_client, DEFAULT_SLEEP_TIME};
 
@@ -186,7 +184,6 @@ mod tests {
     async fn should_get_sub_mat_via_quicknode() {
         let ws_client = get_test_ws_client().await;
         let network_id = NetworkId::from_str("polygon").unwrap();
-        let eth_chain_id = EthChainId::try_from(network_id).unwrap();
         let block_num = get_latest_block_num(&ws_client, DEFAULT_SLEEP_TIME, &network_id)
             .await
             .unwrap()

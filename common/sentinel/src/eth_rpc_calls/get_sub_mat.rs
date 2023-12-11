@@ -54,10 +54,10 @@ mod tests {
         let ws_client = get_test_ws_client().await;
         let network_id = NetworkId::default();
         let use_quicknode = false;
-        let block_num = get_latest_block_num(&ws_client, DEFAULT_SLEEP_TIME, &network_id, use_quicknode)
+        let block_num = get_latest_block_num(&ws_client, DEFAULT_SLEEP_TIME, &network_id)
             .await
             .unwrap();
-        let result = get_sub_mat(&ws_client, block_num, DEFAULT_SLEEP_TIME, &network_id).await;
+        let result = get_sub_mat(&ws_client, block_num, DEFAULT_SLEEP_TIME, &network_id, use_quicknode).await;
         assert!(result.is_ok())
     }
 }
