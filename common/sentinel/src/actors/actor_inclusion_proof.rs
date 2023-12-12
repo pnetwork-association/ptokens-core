@@ -110,7 +110,11 @@ impl ActorInclusionProof {
     pub fn update_proof_in_db<D: DatabaseInterface>(&self, db_utils: &SentinelDbUtils<D>) -> Result<(), SentinelError> {
         debug!("maybe updating sentinel inclusion proof in db");
         let existing = Self::get(db_utils);
-        if self.epoch() > existing.epoch() {
+        let this_epoch = self.epoch();
+        let existing_epoch = existing.epoch();
+        debug!("this proof's epoch: {this_epoch}");
+        debug!("    existing epoch: {existing_epoch}");
+        if existing_epoch == &U256::zero() || this_epoch > existing_epoch {
             self.update_in_db(db_utils)
         } else {
             warn!("not updating actors inclusion proof because the epoch is not greater than the existing one");
