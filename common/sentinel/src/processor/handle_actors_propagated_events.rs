@@ -18,6 +18,7 @@ pub(super) fn maybe_handle_actors_propagated_events<D: DatabaseInterface>(
         return Ok(());
     }
 
+    debug!("checking receipts for actors propagated events...");
     match Actors::from_sub_mat(sub_mat, *governance_address, *network_id)? {
         None => Ok(()),
         Some(actors) => match actors.get_inclusion_proof_for_actor(&Actor::from(sentinel_address)) {

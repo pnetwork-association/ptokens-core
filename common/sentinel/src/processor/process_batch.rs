@@ -33,6 +33,7 @@ pub fn process_batch<D: DatabaseInterface>(
     let use_db_tx = !dry_run;
 
     if let Some(ref governance_address) = maybe_governance_address {
+        debug!("checking for events from governance address {governance_address}");
         // NOTE: If we find a governance address, it means we're on the governance chain, meaning
         // we need to watch out for `ActorsPropagated` events which are fired after epoch changes.
         // This changes this sentinel's `ActorInclusionProof` which is required to successfully

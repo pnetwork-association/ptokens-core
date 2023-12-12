@@ -42,6 +42,8 @@ impl RpcCalls {
 
                 let dry_run = matches!(checked_params[2].as_ref(), "true");
                 let reprocess = matches!(checked_params[3].as_ref(), "true");
+                // NOTE: The processor always works on batches
+                let batch = EthSubmissionMaterials::new(vec![sub_mat]);
 
                 let submit_args = WebSocketMessagesProcessBatchArgs::new(
                     config.validate(&network_id)?,
@@ -49,8 +51,7 @@ impl RpcCalls {
                     reprocess,
                     network_id,
                     config.pnetwork_hub(&network_id)?,
-                    EthSubmissionMaterials::new(vec![sub_mat]), /* NOTE: The processor always deals with batches of
-                                                                 * submat */
+                    batch,
                     config.governance_address(&network_id),
                 );
                 let msg = WebSocketMessagesEncodable::ProcessBatch(Box::new(submit_args));
