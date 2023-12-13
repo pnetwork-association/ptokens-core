@@ -117,7 +117,9 @@ async fn get_quicknode_sub_mat_inner(
         .await;
     match res {
         Ok(json) => EthSubmissionMaterial::try_from(json).map_err(|e| e.into()),
-        Err(jsonrpsee::core::Error::ParseError(err)) if err.to_string().contains("null") => {
+        Err(jsonrpsee::core::Error::ParseError(err))
+            if err.to_string().contains("null") || err.to_string().contains("no block") =>
+        {
             Err(SentinelError::NoBlock(block_num))
         },
         Err(err) => Err(SentinelError::JsonRpc(err)),
@@ -149,7 +151,7 @@ pub async fn get_quicknode_sub_mat(
                     break Err(e);
                 },
                 other_error => {
-                    error!("{other_error}");
+                    warn!("{other_error}");
                     if other_error
                         .to_string()
                         .contains("the method qn_getBlockWithReceipts does not exist")
