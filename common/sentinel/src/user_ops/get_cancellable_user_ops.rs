@@ -43,7 +43,7 @@ impl UserOpList {
             .map(|ops| ops.get_enqueued_but_neither_witnessed_nor_cancelled())
             .and_then(|potentially_cancellable_ops| {
                 debug!(
-                    "num ops queued but not witnessed: {}",
+                    "ops that have been enqueued but neither witnessed nor cancelled: {}",
                     potentially_cancellable_ops.len()
                 );
                 let mut cancellable_ops: Vec<UserOp> = vec![];
