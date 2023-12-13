@@ -2,7 +2,7 @@ use std::{cmp, fmt};
 
 use common_eth::EthLog;
 use derive_getters::Getters;
-use ethereum_types::H256 as EthHash;
+use ethereum_types::{Address as EthAddress, H256 as EthHash};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use strum_macros::EnumIter;
@@ -14,7 +14,14 @@ use super::{
     EXECUTED_USER_OP_TOPIC,
     WITNESSED_USER_OP_TOPIC,
 };
-use crate::{get_utc_timestamp, NetworkId};
+use crate::{get_utc_timestamp, Actor, ActorType, NetworkId};
+
+lazy_static! {
+    // NOTE: The zero address is a standin for _this_ sentinel, since we don't easily
+    // have access to that key at runtime. Later the sentinel will witness the mining
+    // of it's own cancellation tx which will contain the correct address.
+    static ref SENTINEL_ACTOR: Actor = Actor::new(ActorType::Sentinel, EthAddress::zero());
+}
 
 #[serde_as]
 #[derive(Debug, Default, Copy, Clone, Eq, Getters, Serialize, Deserialize)]
@@ -48,7 +55,7 @@ pub enum UserOpState {
     Witnessed(UserOpStateInfo) = 1,
     Enqueued(UserOpStateInfo) = 2,
     Executed(UserOpStateInfo) = 3,
-    Cancelled(UserOpStateInfo) = 4,
+    Cancelled(UserOpStateInfo, Actor) = 4,
 }
 
 impl From<&UserOpState> for u8 {
@@ -91,7 +98,8 @@ impl UserOpState {
     }
 
     pub fn cancelled(nid: NetworkId, h: EthHash) -> Self {
-        Self::Cancelled(UserOpStateInfo::new(h, nid))
+        let actor = Actor::new(ActorType::Sentinel, EthAddress::zero());
+        Self::Cancelled(UserOpStateInfo::new(h, nid), actor)
     }
 }
 
@@ -127,7 +135,7 @@ impl UserOpState {
             Self::Witnessed(ref state) => *state,
             Self::Enqueued(ref state) => *state,
             Self::Executed(ref state) => *state,
-            Self::Cancelled(ref state) => *state,
+            Self::Cancelled(ref state, _) => *state,
         }
     }
 
@@ -136,7 +144,7 @@ impl UserOpState {
             Self::Witnessed(UserOpStateInfo { sentinel_timestamp, .. }) => *sentinel_timestamp,
             Self::Enqueued(UserOpStateInfo { sentinel_timestamp, .. }) => *sentinel_timestamp,
             Self::Executed(UserOpStateInfo { sentinel_timestamp, .. }) => *sentinel_timestamp,
-            Self::Cancelled(UserOpStateInfo { sentinel_timestamp, .. }) => *sentinel_timestamp,
+            Self::Cancelled(UserOpStateInfo { sentinel_timestamp, .. }, _) => *sentinel_timestamp,
         }
     }
 
@@ -154,7 +162,8 @@ impl UserOpState {
         } else if log.topics[0] == *EXECUTED_USER_OP_TOPIC {
             Ok(Self::Executed(state))
         } else if log.topics[0] == *CANCELLED_USER_OP_TOPIC {
-            Ok(Self::Cancelled(state))
+            let actor = Actor::try_from(log)?;
+            Ok(Self::Cancelled(state, actor))
         } else {
             Err(UserOpError::UnrecognizedTopic(log.topics[0]))
         }
@@ -183,19 +192,21 @@ impl UserOpState {
             },
             op_state => Err(UserOpError::CannotUpdate {
                 from: Box::new(op_state),
-                to: Box::new(UserOpState::Cancelled(UserOpStateInfo::new(tx_hash, op_state.nid()))),
+                to: Box::new(UserOpState::Cancelled(
+                    UserOpStateInfo::new(tx_hash, op_state.nid()),
+                    *SENTINEL_ACTOR,
+                )),
             }),
         }
     }
 
     pub fn cancel(self, tx_hash: EthHash) -> Result<(Self, Self), UserOpError> {
         match self {
-            Self::Witnessed(UserOpStateInfo { network_id, .. }) => {
-                Ok((self, Self::Cancelled(UserOpStateInfo::new(tx_hash, network_id))))
-            },
-            Self::Enqueued(UserOpStateInfo { network_id, .. }) => {
-                Ok((self, Self::Cancelled(UserOpStateInfo::new(tx_hash, network_id))))
-            },
+            Self::Witnessed(UserOpStateInfo { network_id, .. })
+            | Self::Enqueued(UserOpStateInfo { network_id, .. }) => Ok((
+                self,
+                Self::Cancelled(UserOpStateInfo::new(tx_hash, network_id), *SENTINEL_ACTOR),
+            )),
             op_state => Err(UserOpError::CannotCancelOpInState(op_state)),
         }
     }
@@ -205,7 +216,7 @@ impl UserOpState {
             Self::Witnessed(UserOpStateInfo { network_id, .. }) => *network_id,
             Self::Enqueued(UserOpStateInfo { network_id, .. }) => *network_id,
             Self::Executed(UserOpStateInfo { network_id, .. }) => *network_id,
-            Self::Cancelled(UserOpStateInfo { network_id, .. }) => *network_id,
+            Self::Cancelled(UserOpStateInfo { network_id, .. }, _) => *network_id,
         }
     }
 
@@ -267,11 +278,15 @@ mod tests {
         let hash_1 = EthHash::random();
         let user_op_state = UserOpState::executed(nid, hash_1);
         let hash_2 = EthHash::random();
+        let actor = Actor::new(ActorType::Sentinel, EthAddress::zero());
         match user_op_state.update(hash_2) {
             Ok(_) => panic!("should not have succeeded!"),
             Err(UserOpError::CannotUpdate { from, to }) => {
                 assert_eq!(from, Box::new(user_op_state));
-                assert_eq!(to, Box::new(UserOpState::Cancelled(UserOpStateInfo::new(hash_2, nid))));
+                assert_eq!(
+                    to,
+                    Box::new(UserOpState::Cancelled(UserOpStateInfo::new(hash_2, nid), actor))
+                );
             },
             Err(e) => panic!("wrong error received: {e}"),
         }

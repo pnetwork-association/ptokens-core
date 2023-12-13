@@ -1,7 +1,7 @@
 mod cancel_user_op;
 mod cancellation_gas_limit;
 mod get_cancellable_user_ops;
-mod test_utils;
+pub(crate) mod test_utils;
 mod user_op;
 mod user_op_cancellation_signature;
 mod user_op_constants;
@@ -15,6 +15,7 @@ mod user_op_uid;
 mod user_op_version;
 mod user_ops;
 
+pub(crate) use self::user_op_constants::CANCELLED_USER_OP_TOPIC;
 pub use self::{
     user_op::UserOp,
     user_op_cancellation_signature::UserOpCancellationSignature,
@@ -27,7 +28,6 @@ pub use self::{
 use self::{
     user_op_cancellation_signature::CancellationSignature,
     user_op_constants::{
-        CANCELLED_USER_OP_TOPIC,
         ENQUEUED_USER_OP_TOPIC,
         EXECUTED_USER_OP_TOPIC,
         USER_OP_CANCEL_TX_GAS_LIMIT,

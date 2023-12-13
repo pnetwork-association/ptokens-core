@@ -5,6 +5,7 @@ use derive_more::{Constructor, Deref};
 use serde::{Deserialize, Serialize};
 
 use super::{UserOp, UserOpState, UserOpStateInfo};
+use crate::Actor;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default, PartialOrd, Deref, Constructor, Serialize, Deserialize)]
 pub struct UserOpFlag(Byte);
@@ -45,6 +46,7 @@ impl From<&UserOpState> for UserOpFlag {
 impl From<&UserOpFlag> for UserOpState {
     fn from(flag: &UserOpFlag) -> Self {
         let n: u8 = **flag;
+        let actor = Actor::default();
         let state = UserOpStateInfo::default();
 
         let max_witnessed: u8 = 0b0000_0001;
@@ -55,7 +57,7 @@ impl From<&UserOpFlag> for UserOpState {
             _x if n <= max_witnessed => Self::Witnessed(state),
             _x if n <= max_enqueued => Self::Enqueued(state),
             _x if n <= max_executed => Self::Executed(state),
-            _ => Self::Cancelled(state),
+            _ => Self::Cancelled(state, actor),
         }
     }
 }

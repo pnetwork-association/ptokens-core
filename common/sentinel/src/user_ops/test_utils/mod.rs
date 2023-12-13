@@ -35,7 +35,7 @@ pub fn get_sub_mat_with_enqueued_user_op() -> EthSubmissionMaterial {
     get_sample_sub_mat_n(4)
 }
 
-pub fn get_log_with_protocol_cancellation_log() -> EthLog {
+pub(crate) fn get_log_with_protocol_cancellation_log() -> EthLog {
     get_sub_mat_with_protocol_cancellation_log().receipts[60].logs[0].clone()
 }
 

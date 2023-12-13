@@ -7,6 +7,9 @@ use super::{UserOp, UserOpState};
 
 #[derive(Error, Debug)]
 pub enum UserOpError {
+    #[error("{0}")]
+    Actors(#[from] crate::actors::ActorsError),
+
     #[error("unrecognized user op version '{0}'")]
     UnrecognizedVersion(String),
 

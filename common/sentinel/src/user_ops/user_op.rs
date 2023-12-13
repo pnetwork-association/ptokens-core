@@ -60,6 +60,7 @@ impl PartialEq for UserOp {
 
 impl UserOp {
     #[cfg(test)]
+    #[allow(unused)]
     pub fn to_tuple_string(&self) -> Result<String, SentinelError> {
         let ss = vec![
             format!(
