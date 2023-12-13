@@ -52,9 +52,6 @@ async fn cancel_user_op(
     let pnetwork_hub = config.pnetwork_hub(&destination_network_id)?;
     debug!("cancelling user op on network: {destination_network_id} nonce: {nonce} gas price: {gas_price}");
 
-    /*
-    // NOTE: This should be re-instated. However there is currently a bug in the smart-contract where it returns a state of
-    // cancelled for a user op even if only one actor type has called to cancel it.
     let (msg, rx) = EthRpcMessages::get_user_op_state_msg(destination_network_id, op.clone(), pnetwork_hub);
     eth_rpc_tx.send(msg).await?;
     let user_op_smart_contract_state = rx.await??;
@@ -64,7 +61,6 @@ async fn cancel_user_op(
         error!("cannot cancel user op - it's not cancellable!");
         return Err(UserOpError::CannotCancel(Box::new(op)).into());
     }
-    */
 
     let msg = WebSocketMessagesEncodable::GetUserOpCancellationSignature(Box::new(
         WebSocketMessagesCancelUserOpArgs::new(config.network_ids(), op.clone()),

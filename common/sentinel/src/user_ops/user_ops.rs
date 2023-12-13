@@ -91,7 +91,12 @@ impl UserOps {
     pub(super) fn get_enqueued_but_neither_witnessed_nor_cancelled_nor_executed(&self) -> Self {
         UserOps::new(
             self.iter()
-                .filter(|op| op.has_been_enqueued() && op.has_not_been_witnessed() && op.has_not_been_cancelled() && op.has_not_been_executed())
+                .filter(|op| {
+                    op.has_been_enqueued()
+                        && op.has_not_been_witnessed()
+                        && op.has_not_been_cancelled()
+                        && op.has_not_been_executed()
+                })
                 .cloned()
                 .collect::<Vec<UserOp>>(),
         )

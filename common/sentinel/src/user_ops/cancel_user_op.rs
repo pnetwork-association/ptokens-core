@@ -31,7 +31,8 @@ impl UserOp {
         pk: &EthPrivateKey,
         proof: ActorInclusionProof,
     ) -> Result<UserOpCancellationSignature, UserOpError> {
-        if self.state().is_cancelled() || self.state().is_executed() {
+        if self.state().is_executed() {
+            warn!("cannot cancel user op because it's already been executed");
             Err(UserOpError::CannotCancel(Box::new(self.clone())))
         } else {
             let signer = pk.to_address();
@@ -73,7 +74,8 @@ impl UserOp {
         broadcaster_pk: &EthPrivateKey,
         cancellation_sig: &UserOpCancellationSignature,
     ) -> Result<EthTransaction, UserOpError> {
-        if self.state().is_cancelled() || self.state().is_executed() {
+        if self.state().is_executed() {
+            warn!("cannot cancel user op because it's already been executed");
             Err(UserOpError::CannotCancel(Box::new(self.clone())))
         } else {
             let value = 0;
