@@ -109,7 +109,7 @@ impl TryFrom<&str> for NetworkId {
             "arb" | "arbitrum" | "0xfc8ebb2b" | "fc8ebb2b" => Ok(Self::new_v1_for_evm(EthChainId::ArbitrumMainnet)),
             "lux" | "luxochain" | "0x58920253" | "58920253" => Ok(Self::new_v1_for_evm(EthChainId::LuxochainMainnet)),
             "gno" | "gnosis" | "xdai" | "0xd41b1c5b" | "d41b1c5b" => Ok(Self::new_v1_for_evm(EthChainId::XDaiMainnet)),
-            "00000000" | "0x00000000" | "unknown" => Ok(Self::new_v1_for_evm(EthChainId::Unknown(0))),
+            "00000000" | "0x00000000" | "unknown" | "ethunknown" => Ok(Self::new_v1_for_evm(EthChainId::Unknown(0))),
             other => Err(NetworkIdError::InvalidNetworkId(other.to_string())),
         }
     }
