@@ -40,10 +40,10 @@ impl UserOpList {
         };
 
         self.get_up_to_last_x_ops(db_utils, NUM_PAST_OPS_TO_CHECK_FOR_CANCELLABILITY)
-            .map(|ops| ops.get_enqueued_but_neither_witnessed_nor_cancelled())
+            .map(|ops| ops.get_enqueued_but_neither_witnessed_nor_cancelled_nor_executed())
             .and_then(|potentially_cancellable_ops| {
                 debug!(
-                    "ops that have been enqueued but neither witnessed nor cancelled: {}",
+                    "ops that have been enqueued but neither witnessed nor cancelled nor executed: {}",
                     potentially_cancellable_ops.len()
                 );
                 let mut cancellable_ops: Vec<UserOp> = vec![];

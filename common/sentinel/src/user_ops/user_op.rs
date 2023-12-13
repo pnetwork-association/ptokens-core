@@ -131,6 +131,18 @@ impl UserOp {
         Ok(enqueued_state.timestamp())
     }
 
+    fn has_been_executed(&self) -> bool {
+        if self.state.is_executed() {
+            true
+        } else {
+            self.previous_states.iter().any(|s| s.is_executed())
+        }
+    }
+
+    pub fn has_not_been_executed(&self) -> bool {
+        !self.has_been_executed()
+    }
+
     pub fn to_flag(&self) -> UserOpFlag {
         self.into()
     }
