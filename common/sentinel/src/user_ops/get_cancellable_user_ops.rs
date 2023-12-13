@@ -40,7 +40,7 @@ impl UserOpList {
         };
 
         self.get_up_to_last_x_ops(db_utils, NUM_PAST_OPS_TO_CHECK_FOR_CANCELLABILITY)
-            .map(|ops| ops.get_enqueued_but_not_witnessed())
+            .map(|ops| ops.get_enqueued_but_neither_witnessed_nor_cancelled())
             .and_then(|potentially_cancellable_ops| {
                 debug!(
                     "num ops queued but not witnessed: {}",

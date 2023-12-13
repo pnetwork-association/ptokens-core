@@ -10,7 +10,7 @@ use serde_with::{serde_as, DisplayFromStr};
 use sha2::{Digest, Sha256};
 
 use super::{UserOpError, UserOpFlag, UserOpLog, UserOpState, UserOpVersion};
-use crate::{DbKey, DbUtilsT, NetworkId, SentinelError};
+use crate::{ActorType, DbKey, DbUtilsT, NetworkId, SentinelError};
 
 impl DbUtilsT for UserOp {
     fn key(&self) -> Result<DbKey, SentinelError> {
@@ -188,6 +188,53 @@ impl UserOp {
         } else {
             Ok(())
         }
+    }
+
+    pub fn has_been_cancelled(&self) -> bool {
+        // NOTE: For a user op to have been cancelled, it needs to have had a call to cancel the
+        // user op from at least two different actor types in the pnetwork protocol.
+        let mut cancelled_states = vec![];
+        if self.state.is_cancelled() {
+            cancelled_states.push(self.state);
+        };
+        cancelled_states.append(
+            &mut self
+                .previous_states
+                .iter()
+                .filter(|s| s.is_cancelled())
+                .cloned()
+                .collect::<Vec<_>>(),
+        );
+        let mut n = cancelled_states.len();
+
+        debug!("user op has {n} cancelled states {:?}", cancelled_states);
+        if n < 2 {
+            // NOTE In this case there can never have been two different actor types who've called for a
+            // cancellation.
+            return false;
+        };
+
+        let mut actor_types = cancelled_states
+            .iter()
+            .filter_map(|s| s.actor_type())
+            .collect::<Vec<ActorType>>();
+        debug!("actor types before sorting & deduplicating: {:?}", actor_types);
+        actor_types.sort_unstable();
+        actor_types.dedup();
+        n = actor_types.len();
+        debug!("{n} different actors types have called to cancel this user op");
+
+        let has_been_cancelled = n >= 2;
+        if has_been_cancelled {
+            debug!("this user op is ineligible for cancellation");
+        } else {
+            debug!("this user op is eligible for cancellation");
+        }
+        has_been_cancelled
+    }
+
+    pub fn has_not_been_cancelled(&self) -> bool {
+        !self.has_been_cancelled()
     }
 
     pub fn has_been_enqueued(&self) -> bool {

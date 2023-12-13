@@ -130,6 +130,13 @@ impl Default for UserOpState {
 }
 
 impl UserOpState {
+    pub(crate) fn actor_type(&self) -> Option<ActorType> {
+        match self {
+            Self::Cancelled(_, actor) => Some(*actor.actor_type()),
+            _ => None,
+        }
+    }
+
     fn state(&self) -> UserOpStateInfo {
         match self {
             Self::Witnessed(ref state) => *state,

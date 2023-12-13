@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use super::{type_aliases::Hash, ActorType, ActorsError};
 use crate::user_ops::CANCELLED_USER_OP_TOPIC;
 
-#[derive(Clone, Default, Copy, Debug, Eq, PartialEq, Constructor, Getters, Serialize, Deserialize)]
+#[derive(Clone, Default, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Constructor, Getters, Serialize, Deserialize)]
 pub struct Actor {
     actor_type: ActorType,
     actor_address: EthAddress,
