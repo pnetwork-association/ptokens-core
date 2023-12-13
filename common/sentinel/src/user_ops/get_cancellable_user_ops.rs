@@ -54,26 +54,33 @@ impl UserOpList {
                     let d_nid = op.destination_network_id();
                     let enqueued_timestamp = op.enqueued_timestamp()?;
 
-                    let is_cancellable = if let Ok(info) = latest_block_infos.get_for(o_nid) {
-                        let latest_block_timestamp = *info.block_timestamp();
-                        debug!("                    op uid: {uid}");
-                        debug!("           info network id: {}", info.network_id());
-                        debug!("         origin network id: {o_nid}",);
-                        debug!(" op destination network id: {d_nid}");
-                        debug!("    latest block timestamp: {latest_block_timestamp}");
-                        debug!("user op enqueued timestamp: {enqueued_timestamp}");
-                        debug!("                 max delta: {max_delta}");
-
-                        let r = if max_delta < enqueued_timestamp && latest_block_timestamp > 0 {
-                            enqueued_timestamp - max_delta < latest_block_timestamp
-                        } else {
+                    let is_cancellable = match latest_block_infos.get_for(o_nid) {
+                        Err(_) => {
+                            warn!("cannot cancel user op due to no chain data for its origin network: {o_nid}");
                             false
-                        };
-                        debug!("         op is cancellable: {r}");
-                        r
-                    } else {
-                        warn!("cannot cancel user op due to no chain data for its origin network: {o_nid}");
-                        false
+                        },
+                        Ok(info) => {
+                            let origin_chain_latest_block_timestamp = *info.block_timestamp();
+                            debug!("                             op uid: {uid}");
+                            debug!("            origin chain network id: {}", info.network_id());
+                            debug!("     user op destination network id: {d_nid}");
+                            debug!("origin chain latest block timestamp: {origin_chain_latest_block_timestamp}");
+                            debug!("         user op enqueued timestamp: {enqueued_timestamp}");
+                            debug!("                          max delta: {max_delta}");
+
+                            let op_is_cancellable = if max_delta < enqueued_timestamp && origin_chain_latest_block_timestamp > 0 {
+                                let can_cancel = enqueued_timestamp - max_delta < origin_chain_latest_block_timestamp;
+                                if !can_cancel {
+                                    warn!("cannot cancel user op because its origin chain is not synced to within max delta of {max_delta}s");
+                                }
+                                can_cancel
+                            } else {
+                                debug!("cannot peform user op cancellability calculation due to over/underflows");
+                                false
+                            };
+                            info!("op is cancellable: {op_is_cancellable}");
+                            op_is_cancellable
+                        },
                     };
 
                     if is_cancellable {
