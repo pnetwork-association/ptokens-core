@@ -21,7 +21,7 @@ use common_sentinel::{
     WebSocketMessagesEncodable,
     WebSocketMessagesGetCancellableUserOpArgs,
 };
-use ethereum_types::H256 as EthHash;
+use ethereum_types::{H256 as EthHash, U256};
 use tokio::time::{sleep, Duration};
 
 use crate::type_aliases::{
@@ -36,17 +36,16 @@ use crate::type_aliases::{
 async fn cancel_user_op(
     op: UserOp,
     nonce: u64,
-    //balance: U256, // FIXME Make this optional. Race the getter. If it's none skip the balance check
+    balance: U256,
     gas_price: u64,
     gas_limit: usize,
     config: &SentinelConfig,
-    broadcaster_pk: &EthPrivateKey,
+    broadcasting_pk: &EthPrivateKey,
     eth_rpc_tx: EthRpcTx,
     websocket_tx: WebSocketTx,
 ) -> Result<EthHash, SentinelError> {
-    // FIXME re-instate the balance checks
-    // NOTE: First we check we can afford the tx
-    //op.check_affordability(balance, gas_limit, gas_price)?;
+    // NOTE: Check we can afford the tx
+    op.check_affordability(balance, gas_limit, gas_price)?;
 
     let destination_network_id = op.destination_network_id();
     let pnetwork_hub = config.pnetwork_hub(&destination_network_id)?;
@@ -76,7 +75,7 @@ async fn cancel_user_op(
         gas_limit,
         &pnetwork_hub,
         &ecid,
-        broadcaster_pk,
+        broadcasting_pk,
         &cancellation_sig,
     )?;
 
@@ -112,7 +111,7 @@ async fn cancel_user_ops(
     config: &SentinelConfig,
     websocket_tx: WebSocketTx,
     eth_rpc_senders: EthRpcSenders,
-    pk: &EthPrivateKey,
+    broadcasting_pk: &EthPrivateKey,
 ) -> Result<(), SentinelError> {
     info!("handling user op cancellation request...");
 
@@ -133,25 +132,19 @@ async fn cancel_user_ops(
         return Ok(());
     }
 
-    let address = pk.to_address();
-
-    /*
-    let (host_balance_msg, host_balance_rx) = EthRpcMessages::get_eth_balance_msg(BridgeSide::Host, host_address);
-    let (native_balance_msg, native_balance_rx) =
-        EthRpcMessages::get_eth_balance_msg(BridgeSide::Native, native_address);
-    eth_rpc_tx.send(native_balance_msg).await?;
-    let mut host_balance = host_balance_rx.await??;
-    eth_rpc_tx.send(host_balance_msg).await?;
-    let mut native_balance = native_balance_rx.await??;
-
-    */
+    let broadcasting_address = broadcasting_pk.to_address();
     let err_msg = "error cancelling user op ";
 
     for op in cancellable_user_ops.iter() {
         let destination_network_id = op.destination_network_id();
         let sender = eth_rpc_senders.sender(&destination_network_id)?;
 
-        let (msg, rx) = EthRpcMessages::get_nonce_msg(destination_network_id, address);
+        let (balance_msg, balance_rx) =
+            EthRpcMessages::get_eth_balance_msg(destination_network_id, broadcasting_address);
+        sender.send(balance_msg).await?;
+        let balance = balance_rx.await??;
+
+        let (msg, rx) = EthRpcMessages::get_nonce_msg(destination_network_id, broadcasting_address);
         sender.send(msg).await?;
         let nonce = rx.await??;
 
@@ -161,11 +154,11 @@ async fn cancel_user_ops(
         match cancel_user_op(
             op.clone(),
             nonce,
-            //native_balance,
+            balance,
             gas_price,
             gas_limit,
             config,
-            pk,
+            broadcasting_pk,
             sender.clone(),
             websocket_tx.clone(),
         )
@@ -232,7 +225,7 @@ pub async fn user_op_canceller_loop(
     warn!("{name} not active yet due to no core connection");
 
     Env::init()?;
-    let pk = Env::get_private_key()?;
+    let broadcasting_pk = Env::get_private_key()?;
 
     'user_op_canceller_loop: loop {
         tokio::select! {
@@ -294,7 +287,7 @@ pub async fn user_op_canceller_loop(
                         &config,
                         websocket_tx.clone(),
                         eth_rpc_senders.clone(),
-                        &pk,
+                        &broadcasting_pk,
                     ).await {
                         Ok(_) => {
                             info!("finished handling user op cancellation request");
