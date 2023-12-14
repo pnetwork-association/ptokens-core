@@ -14,6 +14,7 @@ use common_sentinel::{
     SentinelError,
     WebSocketMessagesEncodable,
 };
+use ethereum_types::U256;
 use tokio::time::{sleep, Duration};
 
 use crate::type_aliases::{
@@ -34,7 +35,11 @@ async fn respond_to_challenge(
     config: &SentinelConfig,
     broadcaster_pk: &EthPrivateKey,
     eth_rpc_tx: EthRpcTx,
+    balance: U256,
 ) -> Result<(), SentinelError> {
+    // NOTE: Check we can afford the tx
+    info.challenge().check_affordability(balance, gas_limit, gas_price)?;
+
     let c_network_id = *info.challenge().network_id();
     let hub = config.pnetwork_hub(&c_network_id)?;
     let signed_tx = info.challenge().to_solve_challenge_tx(
@@ -105,6 +110,10 @@ async fn respond_to_challenges(
         let network_id = *challenge_info.challenge().network_id();
         let eth_rpc_tx = eth_rpc_senders.sender(&network_id)?;
 
+        let (balance_msg, balance_rx) = EthRpcMessages::get_eth_balance_msg(network_id, address);
+        eth_rpc_tx.send(balance_msg).await?;
+        let balance = balance_rx.await??;
+
         if gas_price.is_none() {
             gas_price = Some(get_gas_price(config, &network_id, eth_rpc_tx.clone()).await?)
         };
@@ -123,6 +132,7 @@ async fn respond_to_challenges(
             config,
             pk,
             eth_rpc_tx.clone(),
+            balance,
         )
         .await?;
 
