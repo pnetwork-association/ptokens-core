@@ -20,7 +20,7 @@ impl RpcCalls {
         call_core(
             STRONGBOX_TIMEOUT,
             websocket_tx.clone(),
-            WebSocketMessagesEncodable::RemoveChallenge(hash),
+            WebSocketMessagesEncodable::RemoveChallenge(hash, checked_params.get(1).into()),
         )
         .await
     }

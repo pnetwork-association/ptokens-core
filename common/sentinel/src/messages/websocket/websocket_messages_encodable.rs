@@ -30,21 +30,21 @@ pub enum WebSocketMessagesEncodable {
     CheckInit(NetworkId),
     GetChallenge(EthHash),
     GetUnsolvedChallenges,
-    RemoveChallenge(EthHash),
     HardReset(DebugSignature),
     GetStatus(Vec<NetworkId>),
     GetAttestationCertificate,
     GetUserOp(UserOpUniqueId),
     GetCoreState(Vec<NetworkId>),
-    RemoveUserOp(UserOpUniqueId),
     Error(WebSocketMessagesError),
     GetAttestationSignature(Vec<u8>),
     PurgeUserOps(usize, DebugSignature),
     SetChallengesToSolved(Vec<EthHash>),
     GetLatestBlockInfos(Vec<NetworkId>),
     DbOps(WebSocketMessagesEncodableDbOps),
+    RemoveChallenge(EthHash, DebugSignature),
     RemoveDebugSigner(String, DebugSignature),
     Initialize(Box<WebSocketMessagesInitArgs>),
+    RemoveUserOp(UserOpUniqueId, DebugSignature),
     ResetChain(Box<WebSocketMessagesResetChainArgs>),
     ProcessBatch(Box<WebSocketMessagesProcessBatchArgs>),
     GetRegistrationSignature(EthAddress, u64, DebugSignature),
@@ -97,7 +97,7 @@ impl fmt::Display for WebSocketMessagesEncodable {
             Self::Initialize(_) => "Initialize".to_string(),
             Self::ResetChain(_) => "ResetChain".to_string(),
             Self::GetUserOpList => "GetUserOpList".to_string(),
-            Self::RemoveUserOp(_) => "RemoveUserOp".to_string(),
+            Self::RemoveUserOp(..) => "RemoveUserOp".to_string(),
             Self::PurgeUserOps(..) => "PurgeUserOps".to_string(),
             Self::GetCoreState(..) => "GetCoreState".to_string(),
             Self::ProcessBatch(..) => "ProcessBatch".to_string(),
@@ -164,7 +164,7 @@ impl TryFrom<Vec<String>> for WebSocketMessagesEncodable {
             )?))),
             "removeUserOp" => {
                 let uid = UserOpUniqueId::from_str(&args[1])?;
-                Ok(Self::RemoveUserOp(uid))
+                Ok(Self::RemoveUserOp(uid, args.get(2).into()))
             },
             "get" | "put" | "delete" => Ok(Self::DbOps(WebSocketMessagesEncodableDbOps::try_from(args)?)),
             _ => {
