@@ -16,6 +16,9 @@ pub enum SentinelConfigError {
     #[error("batch duration of {size} is greater than max of {max}")]
     BatchDuration { size: u64, max: u64 },
 
+    #[error("base challenge period duration of {size} is not between min of {min} and max of {max}")]
+    BaseChallengePeriodDuration { size: u64, min: u64, max: u64 },
+
     #[error("batch size of {size} is not between min of {min} and max of {max}")]
     BatchSize { size: u64, min: u64, max: u64 },
 

@@ -1,6 +1,5 @@
 [core]
 timeout = 30 # How long in seconds to wait before giving up when making core calls
-max_cancellable_time_delta = 15 # How far out of a sync a chain can be before we no longer allow cancelling of user ops on it
 challenge_response_frequency = 60 # Frequency to check for any open challenges that require respondes
 
 [log]
@@ -30,6 +29,7 @@ gas_price = 2 # NOTE: If this is omitted, and rpc call will be made to determine
 batch_size = 500 # Max number of blocks to batch together before submitting to core
 batch_duration = 60 # Max amount of time (in seconds) between batch submissions
 pre_filter_receipts = true # Pre filter receipts in app before submitting to the core
+base_challenge_period_duration = 600 # Smart-contract enforced minimum time before a queued operation becomes executable
 
 [networks.polygon]
 pnetwork_hub = "0x578E916A4064c32F2eF44614Ff9B04B6D2546A13"
@@ -42,3 +42,4 @@ gas_price = 2 # NOTE: If this is omitted, and rpc call will be made to determine
 pre_filter_receipts = true # Pre filter receipts in app before submitting to the core
 batch_size = 500 # Max number of host blocks to batch together before submission
 batch_duration = 60 # Max amount of time between batch submission in seconds
+base_challenge_period_duration = 600 # Smart-contract enforced minimum time before a queued operation becomes executable
