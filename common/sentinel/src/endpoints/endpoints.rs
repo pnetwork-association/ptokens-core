@@ -4,8 +4,8 @@ use derive_getters::Getters;
 use jsonrpsee::ws_client::WsClient;
 use serde::{Deserialize, Serialize};
 
-use super::EndpointError;
-use crate::{get_rpc_client, NetworkId, SentinelConfigError, SentinelError};
+use super::{get_rpc_client, EndpointError};
+use crate::{NetworkId, SentinelConfigError, SentinelError};
 
 #[derive(Debug, Default, Clone, Getters, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Endpoints {

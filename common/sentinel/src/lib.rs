@@ -14,7 +14,6 @@ mod error;
 mod eth_rpc_calls;
 mod eth_rpc_channels;
 mod flatten_join_handle;
-mod get_rpc_client;
 mod ipfs;
 mod latest_block_info;
 mod logging;
@@ -73,7 +72,6 @@ pub use self::{
     },
     eth_rpc_channels::{EthRpcChannels, EthRpcSenders},
     flatten_join_handle::flatten_join_handle,
-    get_rpc_client::get_rpc_client,
     ipfs::{check_ipfs_daemon_is_running, publish_status, IpfsError},
     latest_block_info::{LatestBlockInfo, LatestBlockInfos},
     logging::{init_logger, LogLevel},

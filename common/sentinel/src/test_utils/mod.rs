@@ -5,7 +5,7 @@ use common_eth::EthSubmissionMaterial;
 use dotenv::dotenv;
 use jsonrpsee::ws_client::WsClient;
 
-use crate::{get_rpc_client, Batch, Endpoints, NetworkId, SentinelError};
+use crate::{endpoints::get_rpc_client, Batch, Endpoints, NetworkId, SentinelError};
 
 const ENV_VAR: &str = "TEST_ENDPOINT";
 
