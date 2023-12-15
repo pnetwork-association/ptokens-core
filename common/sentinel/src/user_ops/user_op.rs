@@ -177,7 +177,7 @@ impl UserOp {
             previous_states: vec![],
             version: UserOpVersion::latest(),
             origin_network_id: *user_op_log.origin_network_id(),
-            state: UserOpState::try_from_log(*origin_network_id, tx_hash, log)?,
+            state: UserOpState::try_from_log(*origin_network_id, tx_hash, block_timestamp, log)?,
             user_op_log,
         };
 

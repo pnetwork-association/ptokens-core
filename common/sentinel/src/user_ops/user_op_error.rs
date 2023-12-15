@@ -7,6 +7,9 @@ use super::{UserOp, UserOpState};
 
 #[derive(Error, Debug)]
 pub enum UserOpError {
+    #[error("no block timestamp in user op state (it must be an old user op)")]
+    NoBlockTimestampInUserOpState,
+
     #[error("{0}")]
     Actors(#[from] crate::actors::ActorsError),
 

@@ -30,16 +30,24 @@ pub struct UserOpStateInfo {
     #[serde_as(as = "DisplayFromStr")]
     network_id: NetworkId,
     sentinel_timestamp: u64,
+    #[getter(skip)]
+    block_timestamp: Option<u64>,
 }
 
 impl UserOpStateInfo {
-    pub fn new(tx_hash: EthHash, network_id: NetworkId) -> Self {
+    pub fn new(tx_hash: EthHash, network_id: NetworkId, block_timestamp: u64) -> Self {
         Self {
             tx_hash,
             network_id,
+            block_timestamp: Some(block_timestamp),
             sentinel_timestamp: get_utc_timestamp().unwrap_or_default(),
         }
     }
+
+    pub fn block_timestamp(&self) -> Result<u64, UserOpError> {
+        self.block_timestamp.ok_or(UserOpError::NoBlockTimestampInUserOpState)
+    }
+
 }
 
 impl PartialEq for UserOpStateInfo {
@@ -115,10 +123,15 @@ impl fmt::Display for UserOpState {
             network_id,
             tx_hash,
             sentinel_timestamp,
+            block_timestamp,
         } = self.state();
         write!(
             f,
-            "{x} @ tx 0x{tx_hash:x} @ time {sentinel_timestamp}, nid: {network_id}"
+            "{x} @ tx 0x{:x} @ sentinel time {}, w/ block timestamp {}, nid: {}",
+            tx_hash,
+            sentinel_timestamp,
+            block_timestamp.unwrap_or_default(),
+            network_id,
         )
     }
 }
@@ -130,6 +143,15 @@ impl Default for UserOpState {
 }
 
 impl UserOpState {
+    pub fn block_timestamp(&self) -> Result<u64, UserOpError> {
+        match self {
+            Self::Enqueued(state, ..) => state.block_timestamp(),
+            Self::Executed(state, ..) => state.block_timestamp(),
+            Self::Witnessed(state, ..) => state.block_timestamp(),
+            Self::Cancelled(state, ..) => state.block_timestamp(),
+        }
+    }
+
     pub(crate) fn actor_type(&self) -> Option<ActorType> {
         match self {
             Self::Cancelled(_, actor) => Some(*actor.actor_type()),
@@ -155,12 +177,12 @@ impl UserOpState {
         }
     }
 
-    pub fn try_from_log(nid: NetworkId, tx_hash: EthHash, log: &EthLog) -> Result<Self, UserOpError> {
+    pub fn try_from_log(nid: NetworkId, tx_hash: EthHash, block_timestamp: u64, log: &EthLog) -> Result<Self, UserOpError> {
         if log.topics.is_empty() {
             return Err(UserOpError::NoTopics);
         };
 
-        let state = UserOpStateInfo::new(tx_hash, nid);
+        let state = UserOpStateInfo::new(tx_hash, nid, block_timestamp);
 
         if log.topics[0] == *WITNESSED_USER_OP_TOPIC {
             Ok(Self::Witnessed(state))
@@ -189,30 +211,30 @@ impl UserOpState {
         )
     }
 
-    pub fn update(self, tx_hash: EthHash) -> Result<(Self, Self), UserOpError> {
+    pub fn update(self, tx_hash: EthHash, block_timestamp: u64) -> Result<(Self, Self), UserOpError> {
         match self {
             Self::Witnessed(UserOpStateInfo { network_id, .. }) => {
-                Ok((self, Self::Enqueued(UserOpStateInfo::new(tx_hash, network_id))))
+                Ok((self, Self::Enqueued(UserOpStateInfo::new(tx_hash, network_id, block_timestamp))))
             },
             Self::Enqueued(UserOpStateInfo { network_id, .. }) => {
-                Ok((self, Self::Executed(UserOpStateInfo::new(tx_hash, network_id))))
+                Ok((self, Self::Executed(UserOpStateInfo::new(tx_hash, network_id, block_timestamp))))
             },
             op_state => Err(UserOpError::CannotUpdate {
                 from: Box::new(op_state),
                 to: Box::new(UserOpState::Cancelled(
-                    UserOpStateInfo::new(tx_hash, op_state.nid()),
+                    UserOpStateInfo::new(tx_hash, op_state.nid(), block_timestamp),
                     *SENTINEL_ACTOR,
                 )),
             }),
         }
     }
 
-    pub fn cancel(self, tx_hash: EthHash) -> Result<(Self, Self), UserOpError> {
+    pub fn cancel(self, tx_hash: EthHash, block_timestamp: u64) -> Result<(Self, Self), UserOpError> {
         match self {
             Self::Witnessed(UserOpStateInfo { network_id, .. })
             | Self::Enqueued(UserOpStateInfo { network_id, .. }) => Ok((
                 self,
-                Self::Cancelled(UserOpStateInfo::new(tx_hash, network_id), *SENTINEL_ACTOR),
+                Self::Cancelled(UserOpStateInfo::new(tx_hash, network_id, block_timestamp), *SENTINEL_ACTOR),
             )),
             op_state => Err(UserOpError::CannotCancelOpInState(op_state)),
         }
