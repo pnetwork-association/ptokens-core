@@ -1,7 +1,7 @@
 use common::DatabaseInterface;
 
 use super::{UserOp, UserOpList, UserOps};
-use crate::{DbUtilsT, LatestBlockInfos, SentinelDbUtils, SentinelError};
+use crate::{DbUtilsT, LatestBlockInfos, SentinelConfig, SentinelDbUtils, SentinelError};
 
 const NUM_PAST_OPS_TO_CHECK_FOR_CANCELLABILITY: usize = 10; // TODO make configurable?
 
@@ -31,7 +31,7 @@ impl UserOpList {
 
     pub fn get_cancellable_ops<D: DatabaseInterface>(
         &self,
-        max_delta: u64,
+        config: &SentinelConfig,
         db_utils: &SentinelDbUtils<D>,
         latest_block_infos: LatestBlockInfos,
     ) -> Result<UserOps, SentinelError> {
@@ -39,31 +39,38 @@ impl UserOpList {
             return Ok(UserOps::empty());
         };
 
+        let max_delta = 0; // FIXME use config to get specific for each chain
+
         self.get_up_to_last_x_ops(db_utils, NUM_PAST_OPS_TO_CHECK_FOR_CANCELLABILITY)
             .map(|ops| ops.get_enqueued_but_neither_witnessed_nor_cancelled_nor_executed())
             .and_then(|potentially_cancellable_ops| {
                 debug!(
-                    "ops that have been enqueued but neither witnessed nor cancelled nor executed: {}",
+                    "ops that have been enqueued but neither witnessed, cancelled nor executed: {}",
                     potentially_cancellable_ops.len()
                 );
                 let mut cancellable_ops: Vec<UserOp> = vec![];
 
                 for op in potentially_cancellable_ops.iter() {
                     let uid = op.uid_hex()?;
-                    let o_nid = op.origin_network_id();
-                    let d_nid = op.destination_network_id();
+                    let origin_network_id = op.origin_network_id();
+                    let destination_network_id = op.destination_network_id();
                     let enqueued_timestamp = op.enqueued_timestamp()?;
 
-                    let is_cancellable = match latest_block_infos.get_for(o_nid) {
+                    let is_cancellable = match latest_block_infos.get_for(origin_network_id) {
                         Err(_) => {
-                            warn!("cannot cancel user op due to no chain data for its origin network: {o_nid}");
+                            warn!("cannot cancel user op due to no chain data for its origin network: {origin_network_id}");
                             false
                         },
                         Ok(info) => {
+                            // NOTE: So user ops, once enqueued on a chain, are executable
+                            // some `baseChallengePeriodDuration` later. It is during this
+                            // window that we have time to see the as yet unseen original
+                            // `userSend` event on the origin chain.
                             let origin_chain_latest_block_timestamp = *info.block_timestamp();
+
                             debug!("                             op uid: {uid}");
                             debug!("            origin chain network id: {}", info.network_id());
-                            debug!("     user op destination network id: {d_nid}");
+                            debug!("     user op destination network id: {destination_network_id}");
                             debug!("origin chain latest block timestamp: {origin_chain_latest_block_timestamp}");
                             debug!("         user op enqueued timestamp: {enqueued_timestamp}");
                             debug!("                          max delta: {max_delta}");

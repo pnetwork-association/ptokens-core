@@ -4,22 +4,20 @@ use common_sentinel::{
     LatestBlockInfo,
     LatestBlockInfos,
     NetworkIdError,
+    SentinelConfig,
     SentinelDbUtils,
     SentinelError,
     UserOpList,
     WebSocketMessagesEncodable,
-    WebSocketMessagesGetCancellableUserOpArgs,
 };
 use serde_json::json;
 
 use crate::android::State;
 
-pub fn get_cancellable_user_ops(
-    args: WebSocketMessagesGetCancellableUserOpArgs,
-    state: State,
-) -> Result<State, SentinelError> {
+pub fn get_cancellable_user_ops(config: SentinelConfig, state: State) -> Result<State, SentinelError> {
     debug!("handling cancellable user ops in core...");
-    let (max_delta, network_ids) = args.dissolve();
+
+    let network_ids = config.network_ids();
 
     let mcids = network_ids
         .iter()
@@ -53,7 +51,7 @@ pub fn get_cancellable_user_ops(
     let list = UserOpList::get(&s_db_utils);
     debug!("user op list: {list}");
 
-    let cancellable_ops = list.get_cancellable_ops(max_delta, &s_db_utils, infos)?;
+    let cancellable_ops = list.get_cancellable_ops(&config, &s_db_utils, infos)?;
     debug!("cancellable ops: {cancellable_ops}");
 
     let response = WebSocketMessagesEncodable::Success(json!(cancellable_ops));

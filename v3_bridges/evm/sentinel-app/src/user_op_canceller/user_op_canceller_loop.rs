@@ -19,7 +19,6 @@ use common_sentinel::{
     UserOps,
     WebSocketMessagesCancelUserOpArgs,
     WebSocketMessagesEncodable,
-    WebSocketMessagesGetCancellableUserOpArgs,
 };
 use ethereum_types::{H256 as EthHash, U256};
 use tokio::time::{sleep, Duration};
@@ -114,15 +113,11 @@ async fn cancel_user_ops(
     broadcasting_pk: &EthPrivateKey,
 ) -> Result<(), SentinelError> {
     info!("handling user op cancellation request...");
-
-    let max_delta = config.core().max_cancellable_time_delta();
-    let args = WebSocketMessagesGetCancellableUserOpArgs::new(*max_delta, config.network_ids());
-
     let cancellable_user_ops = UserOps::try_from(
         call_core(
             *config.core().timeout(),
             websocket_tx.clone(),
-            WebSocketMessagesEncodable::GetCancellableUserOps(Box::new(args)),
+            WebSocketMessagesEncodable::GetCancellableUserOps(Box::new(config.clone())),
         )
         .await?,
     )?;

@@ -28,7 +28,6 @@ pub use self::{
         WebSocketMessagesEncodable,
         WebSocketMessagesEncodableDbOps,
         WebSocketMessagesError,
-        WebSocketMessagesGetCancellableUserOpArgs,
         WebSocketMessagesInitArgs,
         WebSocketMessagesProcessBatchArgs,
         WebSocketMessagesResetChainArgs,

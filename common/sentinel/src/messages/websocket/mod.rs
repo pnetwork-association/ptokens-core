@@ -9,7 +9,6 @@ pub use self::{
     websocket_messages::WebSocketMessages,
     websocket_messages_args::{
         WebSocketMessagesCancelUserOpArgs,
-        WebSocketMessagesGetCancellableUserOpArgs,
         WebSocketMessagesInitArgs,
         WebSocketMessagesProcessBatchArgs,
         WebSocketMessagesResetChainArgs,

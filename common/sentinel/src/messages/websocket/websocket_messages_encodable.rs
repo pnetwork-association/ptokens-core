@@ -9,11 +9,11 @@ use serde_json::Value as Json;
 use super::WebSocketMessagesEncodableDbOps;
 use crate::{
     NetworkId,
+    SentinelConfig,
     SentinelError,
     UserOpUniqueId,
     WebSocketMessagesCancelUserOpArgs,
     WebSocketMessagesError,
-    WebSocketMessagesGetCancellableUserOpArgs,
     WebSocketMessagesInitArgs,
     WebSocketMessagesProcessBatchArgs,
     WebSocketMessagesResetChainArgs,
@@ -44,12 +44,12 @@ pub enum WebSocketMessagesEncodable {
     RemoveChallenge(EthHash, DebugSignature),
     RemoveDebugSigner(String, DebugSignature),
     Initialize(Box<WebSocketMessagesInitArgs>),
+    GetCancellableUserOps(Box<SentinelConfig>),
     RemoveUserOp(UserOpUniqueId, DebugSignature),
     ResetChain(Box<WebSocketMessagesResetChainArgs>),
     ProcessBatch(Box<WebSocketMessagesProcessBatchArgs>),
     GetRegistrationSignature(EthAddress, u64, DebugSignature),
     AddDebugSigners(Vec<(String, EthAddress)>, DebugSignature),
-    GetCancellableUserOps(Box<WebSocketMessagesGetCancellableUserOpArgs>),
     GetUserOpCancellationSignature(Box<WebSocketMessagesCancelUserOpArgs>),
 }
 
@@ -156,9 +156,6 @@ impl TryFrom<Vec<String>> for WebSocketMessagesEncodable {
             "init" | "initialize" => Ok(Self::Initialize(Box::new(WebSocketMessagesInitArgs::try_from(
                 args[1..].to_vec(),
             )?))),
-            "getCancellableUserOps" => Ok(Self::GetCancellableUserOps(Box::new(
-                WebSocketMessagesGetCancellableUserOpArgs::try_from(args[1..].to_vec())?,
-            ))),
             "reset" | "resetChain" => Ok(Self::ResetChain(Box::new(WebSocketMessagesResetChainArgs::try_from(
                 args[1..].to_vec(),
             )?))),
