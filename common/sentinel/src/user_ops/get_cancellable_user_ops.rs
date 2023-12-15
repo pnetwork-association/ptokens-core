@@ -64,7 +64,7 @@ impl UserOpList {
                             let origin_chain_latest_block_timestamp = *info.block_timestamp();
                             let uid = op.uid_hex()?;
                             let destination_network_id = op.destination_network_id();
-                            let enqueued_timestamp = op.enqueued_timestamp()?;
+                            let enqueued_timestamp = op.enqueued_block_timestamp()?;
                             let base_challenge_period_duration = config.base_challenge_period_duration(&destination_network_id)?;
 
                             debug!("                             op uid: {uid}");

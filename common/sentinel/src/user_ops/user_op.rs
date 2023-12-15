@@ -105,7 +105,7 @@ impl UserOp {
         Ok("".to_string())
     }
 
-    pub fn enqueued_timestamp(&self) -> Result<u64, UserOpError> {
+    pub fn enqueued_block_timestamp(&self) -> Result<u64, UserOpError> {
         let e = UserOpError::HasNotBeenEnqueued;
 
         if self.has_not_been_enqueued() {
@@ -128,7 +128,7 @@ impl UserOp {
             }
         };
 
-        Ok(enqueued_state.timestamp())
+        enqueued_state.block_timestamp()
     }
 
     fn has_been_executed(&self) -> bool {
