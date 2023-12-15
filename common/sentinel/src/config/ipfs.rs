@@ -1,12 +1,12 @@
 use derive_getters::Getters;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     constants::{MAX_FREQUENCY, MIN_FREQUENCY},
     SentinelError,
 };
 
-#[derive(Debug, Default, Clone, Getters, Deserialize)]
+#[derive(Debug, Default, Clone, Getters, Deserialize, Eq, PartialEq, Serialize)]
 pub struct IpfsConfig {
     ipfs_bin_path: String,
     status_update_frequency: u64,

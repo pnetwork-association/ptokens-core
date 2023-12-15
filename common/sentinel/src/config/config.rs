@@ -3,7 +3,7 @@ use std::{collections::HashMap, result::Result};
 use derive_getters::Getters;
 use ethereum_types::Address as EthAddress;
 use log::Level as LogLevel;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     config::{
@@ -40,7 +40,7 @@ impl SentinelConfigToml {
     }
 }
 
-#[derive(Debug, Clone, Getters)]
+#[derive(Debug, Clone, Getters, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SentinelConfig {
     log: LogConfig,
     ipfs: IpfsConfig,
@@ -74,7 +74,7 @@ impl SentinelConfig {
     }
 
     pub fn log_level(&self) -> LogLevel {
-        self.log.level
+        self.log.level()
     }
 
     pub fn endpoints(&self, nid: &NetworkId) -> Result<Endpoints, SentinelConfigError> {

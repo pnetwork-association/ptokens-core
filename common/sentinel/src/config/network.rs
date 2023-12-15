@@ -1,7 +1,7 @@
 use common_eth::convert_hex_to_eth_address;
 use derive_getters::Getters;
 use ethereum_types::Address as EthAddress;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::SentinelConfigError;
 use crate::{Endpoints, NetworkId, SentinelError};
@@ -20,7 +20,7 @@ pub struct NetworkToml {
     base_challenge_period_duration: u64,
 }
 
-#[derive(Debug, Clone, Default, Getters)]
+#[derive(Debug, Clone, Default, Getters, Eq, PartialEq, Serialize, Deserialize)]
 pub struct NetworkConfig {
     validate: bool,
     batch_size: u64,

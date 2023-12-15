@@ -1,7 +1,8 @@
 use std::result::Result;
 
+use derive_getters::Getters;
 use log::Level as LogLevel;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use super::SentinelConfigError;
 use crate::SentinelError;
@@ -16,11 +17,12 @@ pub struct LogToml {
     pub use_file_logging: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Getters)]
 pub struct LogConfig {
     enabled: bool,
     pub path: String,
-    pub level: LogLevel,
+    #[getter(skip)]
+    pub level: String,
     pub max_log_size: u64,
     pub max_num_logs: usize,
     pub use_file_logging: bool,
@@ -31,16 +33,22 @@ impl LogConfig {
         Ok(Self {
             enabled: toml.enabled,
             path: toml.path.clone(),
+            level: toml.level.clone(),
             use_file_logging: toml.use_file_logging,
             max_num_logs: Self::sanity_check_max_num_logs(toml.max_num_logs)?,
             max_log_size: Self::sanity_check_max_log_size(toml.max_log_size)?,
-            level: match toml.level.to_lowercase().as_str() {
-                "warn" => LogLevel::Warn,
-                "debug" => LogLevel::Debug,
-                "trace" => LogLevel::Trace,
-                _ => LogLevel::Info,
-            },
         })
+    }
+
+    pub(super) fn level(&self) -> LogLevel {
+        let v = self.level.to_lowercase();
+        debug!("getting log level from config value: {v}");
+        match v.as_ref() {
+            "warn" => LogLevel::Warn,
+            "debug" => LogLevel::Debug,
+            "trace" => LogLevel::Trace,
+            _ => LogLevel::Info,
+        }
     }
 
     fn sanity_check_max_num_logs(n: usize) -> Result<usize, SentinelError> {

@@ -2,7 +2,7 @@ use std::{result::Result, str::FromStr};
 
 use derive_getters::Getters;
 use ethereum_types::Address as EthAddress;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{NetworkId, SentinelError};
 
@@ -12,7 +12,7 @@ pub struct GovernanceToml {
     network_id: String,
 }
 
-#[derive(Debug, Clone, Default, Getters)]
+#[derive(Debug, Clone, Default, Getters, Eq, PartialEq, Serialize, Deserialize)]
 pub struct GovernanceConfig {
     network_id: NetworkId,
     governance_address: EthAddress,
