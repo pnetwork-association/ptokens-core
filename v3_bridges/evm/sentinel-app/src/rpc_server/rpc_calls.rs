@@ -81,12 +81,12 @@ pub(crate) enum RpcCalls {
     GetBalances(RpcId, Box<SentinelConfig>, RpcParams, EthRpcSenders),
     SetStatusPublishingFrequency(RpcId, RpcParams, StatusPublisherTx),
     GetAttestionSignature(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
-    GetCancellableUserOps(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     SetChallengeResponderFrequency(RpcId, RpcParams, ChallengeResponderTx),
     GetRegistrationSignature(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
     UserOpCancellerStartStop(RpcId, BroadcastChannelTx, CoreCxnStatus, bool),
-    GetRegistrationExtensionTx(RpcId, Box<SentinelConfig>, RpcParams, EthRpcSenders),
     LatestBlockInfos(RpcId, Box<SentinelConfig>, WebSocketTx, CoreCxnStatus),
+    GetCancellableUserOps(RpcId, Box<SentinelConfig>, WebSocketTx, CoreCxnStatus),
+    GetRegistrationExtensionTx(RpcId, Box<SentinelConfig>, RpcParams, EthRpcSenders),
     GetChallengeState(
         RpcId,
         RpcParams,
@@ -212,7 +212,7 @@ impl RpcCalls {
                 core_cxn,
             ),
             "getCancellableUserOps" | "getCancellable" => {
-                Self::GetCancellableUserOps(*r.id(), r.params(), websocket_tx, core_cxn)
+                Self::GetCancellableUserOps(*r.id(), Box::new(config), websocket_tx, core_cxn)
             },
             "reset" | "resetChain" => Self::ResetChain(
                 *r.id(),
@@ -441,9 +441,9 @@ impl RpcCalls {
             Self::GetInclusionProof(id, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_inclusion_proof(websocket_tx, core_cxn).await)
             },
-            Self::GetCancellableUserOps(id, params, websocket_tx, core_cxn) => Self::handle_ws_result(
+            Self::GetCancellableUserOps(id, config, websocket_tx, core_cxn) => Self::handle_ws_result(
                 id,
-                Self::handle_get_cancellable_user_ops(websocket_tx, params, core_cxn).await,
+                Self::handle_get_cancellable_user_ops(websocket_tx, config, core_cxn).await,
             ),
             Self::RemoveUserOp(id, websocket_tx, params, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_remove_user_op(websocket_tx, params, core_cxn).await)
