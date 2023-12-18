@@ -35,7 +35,7 @@ pub async fn get_sub_mat(
         match get_quicknode_sub_mat(ws_client, block_num, sleep_time, network_id).await {
             Ok(s) => Ok(s),
             Err(e) => {
-                error!("error getting sub mat via quicknode: {e}");
+                error!("error getting {network_id} sub mat via quicknode rpc methods: {e}");
                 warn!("attempting to get sub mat via ETH json rpc calls");
                 get_sub_mat_inner(ws_client, block_num, sleep_time, network_id).await
             },
