@@ -39,7 +39,7 @@ pub struct UserOp {
     #[getter(skip)]
     pub(super) uid: EthHash,
     pub(super) tx_hash: EthHash,
-    pub(super) asset_amount: u64,
+    pub(super) asset_amount: U256,
     pub(super) state: UserOpState,
     pub(super) block_hash: EthHash,
     pub(super) block_timestamp: u64,
@@ -161,7 +161,7 @@ impl UserOp {
     ) -> Result<Self, UserOpError> {
         let mut user_op_log = UserOpLog::try_from(log)?;
 
-        let asset_amount = user_op_log.asset_amount.as_u64();
+        debug!("parsed user op log: {user_op_log:?}");
 
         // NOTE: A witnessed user op needs these fields from the block it was witnessed in. All
         // other states will include the full log, with these fields already included.
@@ -170,12 +170,12 @@ impl UserOp {
         let mut op = Self {
             tx_hash,
             block_hash,
-            asset_amount,
             block_timestamp,
             witnessed_timestamp,
             uid: EthHash::zero(),
             previous_states: vec![],
             version: UserOpVersion::latest(),
+            asset_amount: user_op_log.asset_amount,
             origin_network_id: *user_op_log.origin_network_id(),
             state: UserOpState::try_from_log(*origin_network_id, tx_hash, block_timestamp, log)?,
             user_op_log,
@@ -438,7 +438,11 @@ mod tests {
 
     use super::*;
     use crate::user_ops::{
-        test_utils::{get_sample_submission_material_with_user_send, get_sub_mat_with_protocol_cancellation_log},
+        test_utils::{
+            get_sample_submission_material_with_protocol_queue_2,
+            get_sample_submission_material_with_user_send,
+            get_sub_mat_with_protocol_cancellation_log,
+        },
         UserOpUniqueId,
         UserOps,
     };
@@ -483,6 +487,19 @@ mod tests {
         assert_eq!(ops.len(), 1);
         let expected_uid =
             UserOpUniqueId::from_str("0xc333ca6de1882261d3b4b00584cc6af7d140664c5d5cb2cb300342459c49bf12").unwrap();
+        let uid = ops[0].uid().unwrap();
+        assert_eq!(uid, *expected_uid);
+    }
+
+    #[test]
+    fn should_get_protocol_queue_operation_from_sub_mat_correctly() {
+        let sub_mat = get_sample_submission_material_with_protocol_queue_2();
+        let origin_network_id = NetworkId::try_from("bsc").unwrap();
+        let pnetwork_hub = EthAddress::from_str("0x26b9EF42c92c41667A8688e61C44818Ca620986F").unwrap();
+        let ops = UserOps::from_sub_mat(&origin_network_id, &pnetwork_hub, &sub_mat).unwrap();
+        assert_eq!(ops.len(), 1);
+        let expected_uid =
+            UserOpUniqueId::from_str("0x6aaa705f2df60c3da5fce7ebda54152d39b0c7395b14e595372c06a18c269b53").unwrap();
         let uid = ops[0].uid().unwrap();
         assert_eq!(uid, *expected_uid);
     }

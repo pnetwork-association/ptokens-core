@@ -32,8 +32,11 @@ pub fn get_sample_log_with_protocol_queue() -> EthLog {
     get_sample_submission_material_with_protocol_queue().receipts[3].logs[0].clone()
 }
 
+pub fn get_sample_submission_material_with_protocol_queue_2() -> EthSubmissionMaterial {
+    get_sample_sub_mat_n(7)
+}
 pub fn get_sample_log_with_protocol_queue_2() -> EthLog {
-    get_sample_sub_mat_n(7).receipts[18].logs[0].clone()
+    get_sample_submission_material_with_protocol_queue_2().receipts[18].logs[0].clone()
 }
 
 pub fn get_sub_mat_with_enqueued_user_op() -> EthSubmissionMaterial {

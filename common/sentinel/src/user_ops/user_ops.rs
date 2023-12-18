@@ -59,11 +59,8 @@ impl UserOps {
             *EXECUTED_USER_OP_TOPIC,
             *WITNESSED_USER_OP_TOPIC,
         ];
-
         let addresses = [pnetwork_hub];
-
         let mut user_ops: Vec<UserOp> = vec![];
-
         for receipt in sub_mat.receipts.iter() {
             let tx_hash = receipt.transaction_hash;
             for log in receipt.logs.iter() {
@@ -84,7 +81,6 @@ impl UserOps {
                 }
             }
         }
-
         Ok(Self::new(user_ops))
     }
 
