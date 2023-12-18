@@ -12,10 +12,11 @@ impl RpcCalls {
         core_cxn: bool,
     ) -> Result<WebSocketMessagesEncodable, SentinelError> {
         Self::check_core_is_connected(core_cxn)?;
+        let nids = config.clone().network_ids();
         call_core(
             STRONGBOX_TIMEOUT,
             websocket_tx.clone(),
-            WebSocketMessagesEncodable::GetCancellableUserOps(config),
+            WebSocketMessagesEncodable::GetCancellableUserOps(nids),
         )
         .await
     }

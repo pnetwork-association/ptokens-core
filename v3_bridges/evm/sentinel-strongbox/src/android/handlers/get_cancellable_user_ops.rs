@@ -3,8 +3,8 @@ use common_metadata::MetadataChainId;
 use common_sentinel::{
     LatestBlockInfo,
     LatestBlockInfos,
+    NetworkId,
     NetworkIdError,
-    SentinelConfig,
     SentinelDbUtils,
     SentinelError,
     UserOpList,
@@ -14,10 +14,8 @@ use serde_json::json;
 
 use crate::android::State;
 
-pub fn get_cancellable_user_ops(config: SentinelConfig, state: State) -> Result<State, SentinelError> {
+pub fn get_cancellable_user_ops(network_ids: Vec<NetworkId>, state: State) -> Result<State, SentinelError> {
     debug!("handling cancellable user ops in core...");
-
-    let network_ids = config.network_ids();
 
     let mcids = network_ids
         .iter()

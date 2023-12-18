@@ -53,6 +53,7 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
         Msg::RemoveUserOp(uid, sig) => super::handlers::remove_user_op(uid.clone(), sig.clone(), state),
         Msg::RemoveChallenge(hash, sig) => super::handlers::remove_challenge(*hash, sig.clone(), state),
         Msg::SetChallengesToSolved(ids) => super::handlers::set_challenges_to_solved(ids.clone(), state),
+        Msg::GetCancellableUserOps(nids) => super::handlers::get_cancellable_user_ops(nids.clone(), state),
         Msg::GetAttestationSignature(bytes) => super::handlers::get_attestation_signature(bytes.clone(), state),
         Msg::AddDebugSigners(signers, sig) => super::handlers::add_debug_signers(signers.clone(), sig.clone(), state),
         Msg::RemoveDebugSigner(signer, sig) => super::handlers::remove_debug_signer(signer.clone(), sig.clone(), state),
@@ -62,7 +63,6 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
         Msg::GetUserOpCancellationSignature(args) => {
             super::handlers::get_user_op_cancellation_signature(*args.clone(), state)
         },
-        Msg::GetCancellableUserOps(config) => super::handlers::get_cancellable_user_ops(*config.clone(), state),
         Msg::DbOps(WebSocketMessagesEncodableDbOps::Get(k, sig)) => super::handlers::get(k.clone(), sig.clone(), state),
         Msg::DbOps(WebSocketMessagesEncodableDbOps::Delete(k, sig)) => {
             super::handlers::delete(k.clone(), sig.clone(), state)

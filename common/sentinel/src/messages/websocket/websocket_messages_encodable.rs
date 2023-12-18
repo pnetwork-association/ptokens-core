@@ -9,7 +9,6 @@ use serde_json::Value as Json;
 use super::WebSocketMessagesEncodableDbOps;
 use crate::{
     NetworkId,
-    SentinelConfig,
     SentinelError,
     UserOpUniqueId,
     WebSocketMessagesCancelUserOpArgs,
@@ -40,11 +39,11 @@ pub enum WebSocketMessagesEncodable {
     PurgeUserOps(usize, DebugSignature),
     SetChallengesToSolved(Vec<EthHash>),
     GetLatestBlockInfos(Vec<NetworkId>),
+    GetCancellableUserOps(Vec<NetworkId>),
     DbOps(WebSocketMessagesEncodableDbOps),
     RemoveChallenge(EthHash, DebugSignature),
     RemoveDebugSigner(String, DebugSignature),
     Initialize(Box<WebSocketMessagesInitArgs>),
-    GetCancellableUserOps(Box<SentinelConfig>),
     RemoveUserOp(UserOpUniqueId, DebugSignature),
     ResetChain(Box<WebSocketMessagesResetChainArgs>),
     ProcessBatch(Box<WebSocketMessagesProcessBatchArgs>),

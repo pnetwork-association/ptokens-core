@@ -117,7 +117,7 @@ async fn cancel_user_ops(
         call_core(
             *config.core().timeout(),
             websocket_tx.clone(),
-            WebSocketMessagesEncodable::GetCancellableUserOps(Box::new(config.clone())),
+            WebSocketMessagesEncodable::GetCancellableUserOps(config.network_ids()),
         )
         .await?,
     )?;
