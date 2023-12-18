@@ -160,8 +160,9 @@ mod tests {
         let mut user_op_flag = UserOpFlag::default();
         let nid = NetworkId::default();
         let hash = EthHash::random();
-        let s1 = UserOpState::witnessed(nid, hash);
-        let s2 = UserOpState::enqueued(nid, hash);
+        let block_timestamp = 0;
+        let s1 = UserOpState::witnessed(nid, hash, block_timestamp);
+        let s2 = UserOpState::enqueued(nid, hash, block_timestamp);
         user_op_flag.set_flag(&s1);
         assert!(user_op_flag.is_set(&s1));
         user_op_flag.set_flag(&s2);

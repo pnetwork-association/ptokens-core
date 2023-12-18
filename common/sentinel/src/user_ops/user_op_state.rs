@@ -92,21 +92,21 @@ impl Ord for UserOpState {
 
 #[cfg(test)]
 impl UserOpState {
-    pub fn witnessed(nid: NetworkId, h: EthHash) -> Self {
-        Self::Witnessed(UserOpStateInfo::new(h, nid))
+    pub fn witnessed(nid: NetworkId, h: EthHash, block_timestamp: u64) -> Self {
+        Self::Witnessed(UserOpStateInfo::new(h, nid, block_timestamp))
     }
 
-    pub fn enqueued(nid: NetworkId, h: EthHash) -> Self {
-        Self::Enqueued(UserOpStateInfo::new(h, nid))
+    pub fn enqueued(nid: NetworkId, h: EthHash, block_timestamp: u64) -> Self {
+        Self::Enqueued(UserOpStateInfo::new(h, nid, block_timestamp))
     }
 
-    pub fn executed(nid: NetworkId, h: EthHash) -> Self {
-        Self::Executed(UserOpStateInfo::new(h, nid))
+    pub fn executed(nid: NetworkId, h: EthHash, block_timestamp: u64) -> Self {
+        Self::Executed(UserOpStateInfo::new(h, nid, block_timestamp))
     }
 
-    pub fn cancelled(nid: NetworkId, h: EthHash) -> Self {
+    pub fn cancelled(nid: NetworkId, h: EthHash, block_timestamp: u64) -> Self {
         let actor = Actor::new(ActorType::Sentinel, EthAddress::zero());
-        Self::Cancelled(UserOpStateInfo::new(h, nid), actor)
+        Self::Cancelled(UserOpStateInfo::new(h, nid, block_timestamp), actor)
     }
 }
 
@@ -291,40 +291,46 @@ mod tests {
 
     #[test]
     fn user_op_state_should_be_ordered() {
+        let block_timestamp = 0;
         let h = EthHash::default();
         let nid = NetworkId::default();
-        assert!(UserOpState::witnessed(nid, h) == UserOpState::witnessed(nid, h));
-        assert!(UserOpState::witnessed(nid, h) < UserOpState::enqueued(nid, h));
-        assert!(UserOpState::enqueued(nid, h) < UserOpState::executed(nid, h));
-        assert!(UserOpState::executed(nid, h) < UserOpState::cancelled(nid, h));
+        assert!(UserOpState::witnessed(nid, h, block_timestamp) == UserOpState::witnessed(nid, h, block_timestamp));
+        assert!(UserOpState::witnessed(nid, h, block_timestamp) < UserOpState::enqueued(nid, h, block_timestamp));
+        assert!(UserOpState::enqueued(nid, h, block_timestamp) < UserOpState::executed(nid, h, block_timestamp));
+        assert!(UserOpState::executed(nid, h, block_timestamp) < UserOpState::cancelled(nid, h, block_timestamp));
     }
 
     #[test]
     fn should_update_user_op_state() {
+        let block_timestamp = 0;
         let nid = NetworkId::default();
         let hash_1 = EthHash::random();
-        let user_op_state = UserOpState::witnessed(nid, hash_1);
+        let user_op_state = UserOpState::witnessed(nid, hash_1, block_timestamp);
         let hash_2 = EthHash::random();
-        let (prev, result) = user_op_state.update(hash_2).unwrap();
+        let (prev, result) = user_op_state.update(hash_2, block_timestamp).unwrap();
         assert_eq!(prev, user_op_state);
-        let expected_result = UserOpState::enqueued(nid, hash_2);
+        let expected_result = UserOpState::enqueued(nid, hash_2, block_timestamp);
         assert_eq!(result, expected_result);
     }
 
     #[test]
     fn should_fail_to_update_user_op_state() {
+        let block_timestamp = 0;
         let nid = NetworkId::default();
         let hash_1 = EthHash::random();
-        let user_op_state = UserOpState::executed(nid, hash_1);
+        let user_op_state = UserOpState::executed(nid, hash_1, block_timestamp);
         let hash_2 = EthHash::random();
         let actor = Actor::new(ActorType::Sentinel, EthAddress::zero());
-        match user_op_state.update(hash_2) {
+        match user_op_state.update(hash_2, block_timestamp) {
             Ok(_) => panic!("should not have succeeded!"),
             Err(UserOpError::CannotUpdate { from, to }) => {
                 assert_eq!(from, Box::new(user_op_state));
                 assert_eq!(
                     to,
-                    Box::new(UserOpState::Cancelled(UserOpStateInfo::new(hash_2, nid), actor))
+                    Box::new(UserOpState::Cancelled(
+                        UserOpStateInfo::new(hash_2, nid, block_timestamp),
+                        actor
+                    ))
                 );
             },
             Err(e) => panic!("wrong error received: {e}"),
@@ -333,23 +339,25 @@ mod tests {
 
     #[test]
     fn should_cancel_user_op_state() {
+        let block_timestamp = 0;
         let nid = NetworkId::default();
         let hash_1 = EthHash::random();
-        let user_op_state = UserOpState::witnessed(nid, hash_1);
+        let user_op_state = UserOpState::witnessed(nid, hash_1, block_timestamp);
         let hash_2 = EthHash::random();
-        let (prev, result) = user_op_state.cancel(hash_2).unwrap();
+        let (prev, result) = user_op_state.cancel(hash_2, block_timestamp).unwrap();
         assert_eq!(prev, user_op_state);
-        let expected_result = UserOpState::cancelled(nid, hash_2);
+        let expected_result = UserOpState::cancelled(nid, hash_2, block_timestamp);
         assert_eq!(result, expected_result);
     }
 
     #[test]
     fn should_fail_to_cancel_user_op_state() {
+        let block_timestamp = 0;
         let nid = NetworkId::default();
         let hash_1 = EthHash::random();
-        let user_op_state = UserOpState::executed(nid, hash_1);
+        let user_op_state = UserOpState::executed(nid, hash_1, block_timestamp);
         let hash_2 = EthHash::random();
-        match user_op_state.cancel(hash_2) {
+        match user_op_state.cancel(hash_2, block_timestamp) {
             Ok(_) => panic!("should not have succeeded!"),
             Err(UserOpError::CannotCancelOpInState(e)) => assert_eq!(e, user_op_state),
             Err(e) => panic!("wrong error received: {e}"),
@@ -358,12 +366,13 @@ mod tests {
 
     #[test]
     fn should_have_stateful_equality() {
+        let block_timestamp = 0;
         let h_1 = EthHash::random();
         let h_2 = EthHash::random();
         let b_1 = NetworkId::default();
         let b_2 = NetworkId::default();
-        let a = UserOpState::witnessed(b_1, h_1);
-        let b = UserOpState::witnessed(b_2, h_2);
+        let a = UserOpState::witnessed(b_1, h_1, block_timestamp);
+        let b = UserOpState::witnessed(b_2, h_2, block_timestamp);
         assert_ne!(a, b);
         assert!(a.is_same_state_as(b));
         assert!(a <= b);
