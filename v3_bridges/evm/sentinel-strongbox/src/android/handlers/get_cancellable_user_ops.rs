@@ -51,7 +51,7 @@ pub fn get_cancellable_user_ops(config: SentinelConfig, state: State) -> Result<
     let list = UserOpList::get(&s_db_utils);
     debug!("user op list: {list}");
 
-    let cancellable_ops = list.get_cancellable_ops(&config, &s_db_utils, infos)?;
+    let cancellable_ops = list.get_cancellable_ops(&s_db_utils, infos)?;
     debug!("cancellable ops: {cancellable_ops}");
 
     let response = WebSocketMessagesEncodable::Success(json!(cancellable_ops));
