@@ -153,13 +153,6 @@ impl SentinelConfig {
             .map(|c| *c.batch_size())
             .ok_or_else(|| SentinelConfigError::NoConfig(*nid))
     }
-
-    pub fn base_challenge_period_duration(&self, nid: &NetworkId) -> Result<u64, SentinelConfigError> {
-        self.networks
-            .get(nid)
-            .map(|c| *c.base_challenge_period_duration())
-            .ok_or_else(|| SentinelConfigError::NoConfig(*nid))
-    }
 }
 
 #[cfg(test)]
