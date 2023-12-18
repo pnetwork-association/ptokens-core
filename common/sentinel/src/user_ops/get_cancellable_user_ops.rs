@@ -1,7 +1,7 @@
 use common::DatabaseInterface;
 
 use super::{UserOp, UserOpList, UserOps};
-use crate::{DbUtilsT, LatestBlockInfos, SentinelConfig, SentinelDbUtils, SentinelError};
+use crate::{get_utc_timestamp, DbUtilsT, LatestBlockInfos, NetworkId, SentinelDbUtils, SentinelError};
 
 const NUM_PAST_OPS_TO_CHECK_FOR_CANCELLABILITY: usize = 20; // TODO make configurable?
 
@@ -29,9 +29,41 @@ impl UserOpList {
         ))
     }
 
+    fn op_is_cancellable(latest_block_infos: &LatestBlockInfos, origin_network_id: &NetworkId, e_t: u64) -> bool {
+        info!("checking if user op is cancellable...");
+        const LEEWAY: u64 = 10; // NOTE: To account for block timestamps not being entirely reliable
+        let c_t = get_utc_timestamp().unwrap_or_default();
+
+        let o_t = match latest_block_infos.get_for(origin_network_id) {
+            Ok(info) => *info.block_timestamp(),
+            _ => {
+                warn!("cannot cancel user op due to no chain data for its origin network: {origin_network_id}");
+                return false;
+            },
+        };
+
+        debug!("     origin time: {o_t}");
+        debug!("    current time: {c_t}");
+        debug!("   enqueued time: {e_t}");
+
+        let origin_chain_is_beyond_enqueued_time = o_t > LEEWAY && o_t - LEEWAY >= e_t;
+        if origin_chain_is_beyond_enqueued_time {
+            info!("origin chain is beyond enqueued time and we've not seen a user send so op is cancellable");
+            return true;
+        }
+
+        let origin_chain_is_in_sync = c_t != 0 && o_t + LEEWAY <= c_t;
+        if origin_chain_is_in_sync {
+            info!("origin chain is in sync and we've not seen a user send so op is cancellable");
+            true
+        } else {
+            info!("origin chain is not in sync so we don't know if there was a user send or not, so op is not cancellable");
+            false
+        }
+    }
+
     pub fn get_cancellable_ops<D: DatabaseInterface>(
         &self,
-        config: &SentinelConfig,
         db_utils: &SentinelDbUtils<D>,
         latest_block_infos: LatestBlockInfos,
     ) -> Result<UserOps, SentinelError> {
@@ -41,59 +73,19 @@ impl UserOpList {
 
         self.get_up_to_last_x_ops(db_utils, NUM_PAST_OPS_TO_CHECK_FOR_CANCELLABILITY)
             .map(|ops| ops.get_enqueued_but_neither_witnessed_nor_cancelled_nor_executed())
-            .and_then(|potentially_cancellable_ops| {
+            .and_then(|ops| {
                 debug!(
-                    "ops that have been enqueued but neither witnessed, cancelled nor executed: {}",
-                    potentially_cancellable_ops.len()
+                    "ops that are enqueued but neither witnessed, cancelled nor executed: {}",
+                    ops.len()
                 );
                 let mut cancellable_ops: Vec<UserOp> = vec![];
-
-                for op in potentially_cancellable_ops.iter() {
-                    let origin_network_id = op.origin_network_id();
-
-                    let is_cancellable = match latest_block_infos.get_for(origin_network_id) {
-                        Err(_) => {
-                            warn!("cannot cancel user op due to no chain data for its origin network: {origin_network_id}");
-                            false
-                        },
-                        Ok(info) => {
-                            // NOTE: So user ops, once enqueued on a chain, are executable
-                            // some `baseChallengePeriodDuration` later. It is during this
-                            // window that we have time to see the as yet unseen original
-                            // `userSend` event on the origin chain.
-                            let origin_chain_latest_block_timestamp = *info.block_timestamp();
-                            let uid = op.uid_hex()?;
-                            let destination_network_id = op.destination_network_id();
-                            let enqueued_timestamp = op.enqueued_block_timestamp()?;
-                            let base_challenge_period_duration = config.base_challenge_period_duration(&destination_network_id)?;
-
-                            debug!("                             op uid: {uid}");
-                            debug!("            origin chain network id: {}", info.network_id());
-                            debug!("     user op destination network id: {destination_network_id}");
-                            debug!("origin chain latest block timestamp: {origin_chain_latest_block_timestamp}");
-                            debug!("         user op enqueued timestamp: {enqueued_timestamp}");
-                            debug!("     base challenge period duration: {base_challenge_period_duration}");
-
-                            let op_is_cancellable = if base_challenge_period_duration < enqueued_timestamp && origin_chain_latest_block_timestamp > 0 {
-                                let can_cancel = enqueued_timestamp - base_challenge_period_duration < origin_chain_latest_block_timestamp;
-                                if !can_cancel {
-                                    warn!("cannot cancel user op because its origin chain is not synced to within max delta of {base_challenge_period_duration}s");
-                                }
-                                can_cancel
-                            } else {
-                                debug!("cannot peform user op cancellability calculation due to over/underflows");
-                                false
-                            };
-                            info!("op is cancellable: {op_is_cancellable}");
-                            op_is_cancellable
-                        },
-                    };
-
-                    if is_cancellable {
+                for op in ops.iter() {
+                    let origin_time = op.origin_network_id();
+                    let enqueued_time = op.enqueued_block_timestamp()?;
+                    if Self::op_is_cancellable(&latest_block_infos, origin_time, enqueued_time) {
                         cancellable_ops.push(op.clone())
-                    }
+                    };
                 }
-
                 let r = UserOps::new(cancellable_ops);
                 debug!("num cancellable ops: {}", r.len());
                 Ok(r)
