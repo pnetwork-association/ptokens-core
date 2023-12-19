@@ -46,11 +46,13 @@ async fn cancel_user_op(
     // NOTE: Check we can afford the tx
     op.check_affordability(balance, gas_limit, gas_price)?;
 
-    let destination_network_id = op.destination_network_id();
-    let pnetwork_hub = config.pnetwork_hub(&destination_network_id)?;
-    debug!("cancelling user op on network: {destination_network_id} nonce: {nonce} gas price: {gas_price}");
+    let enqueued_network_id = op.enqueued_network_id()?;
 
-    let (msg, rx) = EthRpcMessages::get_user_op_state_msg(destination_network_id, op.clone(), pnetwork_hub);
+    let pnetwork_hub = config.pnetwork_hub(&enqueued_network_id)?;
+
+    debug!("cancelling user op on enqueued network: {enqueued_network_id} nonce: {nonce} gas price: {gas_price}");
+
+    let (msg, rx) = EthRpcMessages::get_user_op_state_msg(enqueued_network_id, op.clone(), pnetwork_hub);
     eth_rpc_tx.send(msg).await?;
     let user_op_smart_contract_state = rx.await??;
     debug!("user op state before cancellation: {user_op_smart_contract_state}");
@@ -67,7 +69,8 @@ async fn cancel_user_op(
     let cancellation_sig =
         UserOpCancellationSignature::try_from(call_core(*config.core().timeout(), websocket_tx.clone(), msg).await?)?;
 
-    let ecid: EthChainId = EthChainId::try_from(destination_network_id)?;
+    let ecid: EthChainId = EthChainId::try_from(enqueued_network_id)?;
+
     let signed_tx = op.get_cancellation_tx(
         nonce,
         gas_price,
@@ -80,7 +83,7 @@ async fn cancel_user_op(
 
     debug!("signed tx: {}", signed_tx.serialize_hex());
 
-    let (msg, rx) = EthRpcMessages::get_push_tx_msg(signed_tx, destination_network_id);
+    let (msg, rx) = EthRpcMessages::get_push_tx_msg(signed_tx, enqueued_network_id);
     eth_rpc_tx.send(msg).await?;
     let tx_hash = rx.await??;
 
@@ -131,20 +134,20 @@ async fn cancel_user_ops(
     let err_msg = "error cancelling user op ";
 
     for op in cancellable_user_ops.iter() {
-        let destination_network_id = op.destination_network_id();
-        let sender = eth_rpc_senders.sender(&destination_network_id)?;
+        let enqueued_network_id = op.enqueued_network_id()?;
+        let sender = eth_rpc_senders.sender(&enqueued_network_id)?;
 
         let (balance_msg, balance_rx) =
-            EthRpcMessages::get_eth_balance_msg(destination_network_id, broadcasting_address);
+            EthRpcMessages::get_eth_balance_msg(enqueued_network_id, broadcasting_address);
         sender.send(balance_msg).await?;
         let balance = balance_rx.await??;
 
-        let (msg, rx) = EthRpcMessages::get_nonce_msg(destination_network_id, broadcasting_address);
+        let (msg, rx) = EthRpcMessages::get_nonce_msg(enqueued_network_id, broadcasting_address);
         sender.send(msg).await?;
         let nonce = rx.await??;
 
-        let gas_price = get_gas_price(config, &destination_network_id, sender.clone()).await?;
-        let gas_limit = config.gas_limit(&destination_network_id)?;
+        let gas_price = get_gas_price(config, &enqueued_network_id, sender.clone()).await?;
+        let gas_limit = config.gas_limit(&enqueued_network_id)?;
         let uid = op.uid()?;
         match cancel_user_op(
             op.clone(),
@@ -164,7 +167,7 @@ async fn cancel_user_ops(
             },
             Ok(tx_hash) => {
                 info!(
-                    "user op {uid} cancelled successfully @ tx {}",
+                    "user op {uid} cancelled successfully @ tx {} on {enqueued_network_id}",
                     hex::encode(tx_hash.as_bytes())
                 );
             },
