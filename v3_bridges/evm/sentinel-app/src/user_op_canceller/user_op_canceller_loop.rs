@@ -58,7 +58,10 @@ async fn cancel_user_op(
     debug!("user op state before cancellation: {user_op_smart_contract_state}");
 
     if !user_op_smart_contract_state.is_cancellable() {
-        error!("cannot cancel user op - it's not cancellable!");
+        error!(
+            "cannot cancel user op - smart contract state of {} means it's not cancellable!",
+            user_op_smart_contract_state
+        );
         return Err(UserOpError::CannotCancel(Box::new(op)).into());
     }
 
@@ -137,8 +140,7 @@ async fn cancel_user_ops(
         let enqueued_network_id = op.enqueued_network_id()?;
         let sender = eth_rpc_senders.sender(&enqueued_network_id)?;
 
-        let (balance_msg, balance_rx) =
-            EthRpcMessages::get_eth_balance_msg(enqueued_network_id, broadcasting_address);
+        let (balance_msg, balance_rx) = EthRpcMessages::get_eth_balance_msg(enqueued_network_id, broadcasting_address);
         sender.send(balance_msg).await?;
         let balance = balance_rx.await??;
 
