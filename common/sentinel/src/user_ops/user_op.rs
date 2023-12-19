@@ -105,30 +105,40 @@ impl UserOp {
         Ok("".to_string())
     }
 
-    pub fn enqueued_block_timestamp(&self) -> Result<u64, UserOpError> {
+    fn get_enqueued_state(&self) -> Result<UserOpState, UserOpError> {
         let e = UserOpError::HasNotBeenEnqueued;
 
         if self.has_not_been_enqueued() {
             return Err(e);
         };
 
-        let enqueued_state = if self.state.is_enqueued() {
-            self.state
-        } else {
-            let x = self
-                .previous_states
-                .iter()
-                .filter(|state| state.is_enqueued())
-                .cloned()
-                .collect::<Vec<UserOpState>>();
-            if x.is_empty() {
-                return Err(e);
-            } else {
-                x[0]
-            }
+        if self.state.is_enqueued() {
+            return Ok(self.state);
         };
 
-        enqueued_state.block_timestamp()
+        let enqueued_states = self
+            .previous_states
+            .iter()
+            .filter(|state| state.is_enqueued())
+            .cloned()
+            .collect::<Vec<UserOpState>>();
+
+        match enqueued_states.len() {
+            0 => Err(e),
+            1 => Ok(enqueued_states[0]),
+            _ => Err(UserOpError::EnqueuedOnMultipleChains {
+                uid: self.uid()?,
+                state_infos: enqueued_states.into(),
+            }),
+        }
+    }
+
+    pub fn enqueued_block_timestamp(&self) -> Result<u64, UserOpError> {
+        self.get_enqueued_state().and_then(|s| s.block_timestamp())
+    }
+
+    pub fn enqueued_network_id(&self) -> Result<NetworkId, UserOpError> {
+        self.get_enqueued_state().map(|s| s.network_id())
     }
 
     fn has_been_executed(&self) -> bool {

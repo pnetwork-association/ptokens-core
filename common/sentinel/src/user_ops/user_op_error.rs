@@ -3,10 +3,16 @@ use ethabi::Token as EthAbiToken;
 use ethereum_types::{H256 as EthHash, U256};
 use thiserror::Error;
 
-use super::{UserOp, UserOpState};
+use super::{UserOp, UserOpState, UserOpStateInfos};
 
 #[derive(Error, Debug)]
 pub enum UserOpError {
+    #[error("user op with id {uid} queued on multiple chains: {state_infos:?}")]
+    EnqueuedOnMultipleChains {
+        uid: EthHash,
+        state_infos: UserOpStateInfos,
+    },
+
     #[error("no block timestamp in user op state (it must be an old user op)")]
     NoBlockTimestampInUserOpState,
 

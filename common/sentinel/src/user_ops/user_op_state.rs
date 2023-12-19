@@ -2,6 +2,7 @@ use std::{cmp, fmt};
 
 use common_eth::EthLog;
 use derive_getters::Getters;
+use derive_more::{Constructor, Deref};
 use ethereum_types::{Address as EthAddress, H256 as EthHash};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
@@ -22,6 +23,10 @@ lazy_static! {
     // of it's own cancellation tx which will contain the correct address.
     static ref SENTINEL_ACTOR: Actor = Actor::new(ActorType::Sentinel, EthAddress::zero());
 }
+
+#[serde_as]
+#[derive(Debug, Default, Clone, Eq, PartialEq, Constructor, Deref, Serialize, Deserialize)]
+pub struct UserOpStateInfos(Vec<UserOpStateInfo>);
 
 #[serde_as]
 #[derive(Debug, Default, Copy, Clone, Eq, Getters, Serialize, Deserialize)]
@@ -141,6 +146,12 @@ impl Default for UserOpState {
     }
 }
 
+impl From<Vec<UserOpState>> for UserOpStateInfos {
+    fn from(ss: Vec<UserOpState>) -> Self {
+        UserOpStateInfos::new(ss.iter().map(|s| s.user_op_state_info()).collect::<Vec<_>>())
+    }
+}
+
 impl UserOpState {
     pub fn block_timestamp(&self) -> Result<u64, UserOpError> {
         match self {
@@ -148,6 +159,15 @@ impl UserOpState {
             Self::Executed(state, ..) => state.block_timestamp(),
             Self::Witnessed(state, ..) => state.block_timestamp(),
             Self::Cancelled(state, ..) => state.block_timestamp(),
+        }
+    }
+
+    pub fn network_id(&self) -> NetworkId {
+        match self {
+            Self::Enqueued(state, ..) => *state.network_id(),
+            Self::Executed(state, ..) => *state.network_id(),
+            Self::Witnessed(state, ..) => *state.network_id(),
+            Self::Cancelled(state, ..) => *state.network_id(),
         }
     }
 
@@ -165,6 +185,10 @@ impl UserOpState {
             Self::Executed(ref state) => *state,
             Self::Cancelled(ref state, _) => *state,
         }
+    }
+
+    fn user_op_state_info(&self) -> UserOpStateInfo {
+        self.state()
     }
 
     #[allow(unused)]
