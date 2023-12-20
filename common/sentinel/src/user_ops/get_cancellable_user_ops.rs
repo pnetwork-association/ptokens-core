@@ -31,7 +31,10 @@ impl UserOpList {
 
     fn op_is_cancellable(latest_block_infos: &LatestBlockInfos, origin_network_id: &NetworkId, e_t: u64) -> bool {
         info!("checking if user op is cancellable...");
-        const LEEWAY: u64 = 10; // NOTE: To account for block timestamps not being entirely reliable
+
+        // NOTE: To account for block timestamps not being entirely reliable & help during race conditions
+        // between the cancellation thread and related syncer threads
+        const LEEWAY: u64 = 90; // NOTE: 1m 30s
 
         let o_t = match latest_block_infos.get_for(origin_network_id) {
             Ok(info) => *info.block_timestamp(),
@@ -41,6 +44,7 @@ impl UserOpList {
             },
         };
 
+        debug!("          leeway: {LEEWAY}");
         debug!("     origin time: {o_t}");
         debug!("   enqueued time: {e_t}");
 
