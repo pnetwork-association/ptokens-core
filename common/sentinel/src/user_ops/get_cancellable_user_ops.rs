@@ -1,7 +1,7 @@
 use common::DatabaseInterface;
 
 use super::{UserOp, UserOpList, UserOps};
-use crate::{get_utc_timestamp, DbUtilsT, LatestBlockInfos, NetworkId, SentinelDbUtils, SentinelError};
+use crate::{DbUtilsT, LatestBlockInfos, NetworkId, SentinelDbUtils, SentinelError};
 
 const NUM_PAST_OPS_TO_CHECK_FOR_CANCELLABILITY: usize = 20; // TODO make configurable?
 
@@ -32,7 +32,6 @@ impl UserOpList {
     fn op_is_cancellable(latest_block_infos: &LatestBlockInfos, origin_network_id: &NetworkId, e_t: u64) -> bool {
         info!("checking if user op is cancellable...");
         const LEEWAY: u64 = 10; // NOTE: To account for block timestamps not being entirely reliable
-        let c_t = get_utc_timestamp().unwrap_or_default();
 
         let o_t = match latest_block_infos.get_for(origin_network_id) {
             Ok(info) => *info.block_timestamp(),
@@ -43,23 +42,15 @@ impl UserOpList {
         };
 
         debug!("     origin time: {o_t}");
-        debug!("    current time: {c_t}");
         debug!("   enqueued time: {e_t}");
 
         let origin_chain_is_beyond_enqueued_time = o_t > LEEWAY && o_t - LEEWAY >= e_t;
+
         if origin_chain_is_beyond_enqueued_time {
             info!("origin chain is beyond enqueued time and we've not seen a user send so op is cancellable");
-            return true;
-        }
+        };
 
-        let origin_chain_is_in_sync = c_t != 0 && o_t + LEEWAY <= c_t;
-        if origin_chain_is_in_sync {
-            info!("origin chain is in sync and we've not seen a user send so op is cancellable");
-            true
-        } else {
-            info!("origin chain is not in sync so we don't know if there was a user send or not, so op is not cancellable");
-            false
-        }
+        origin_chain_is_beyond_enqueued_time
     }
 
     pub fn get_cancellable_ops<D: DatabaseInterface>(
