@@ -213,13 +213,24 @@ impl UserOp {
     }
 
     pub fn has_been_cancelled(&self) -> bool {
-        // NOTE: For a user op to have been cancelled, it needs to have had a call to cancel the
-        // user op from at least two different actor types in the pnetwork protocol.
-        let mut cancelled_states = vec![];
-        if self.state.is_cancelled() {
-            cancelled_states.push(self.state);
+        // NOTE: The chain(s) on which a user op is/are enqueued on is the only chain on which we would
+        // attempt to cancel it.
+        let enqueued_network_id = match self.enqueued_network_id() {
+            Ok(nid) => nid,
+            _ => {
+                debug!("user op has not been enqueued anywwhere so is not cancellable");
+                return false;
+            },
         };
-        cancelled_states.append(
+
+        // NOTE: For a user op to have been cancelled on a given chain, it needs to have had a
+        // call to cancel the user op from at least two different actor types in the pnetwork
+        // protocol on that chain.
+        let mut all_cancelled_states = vec![];
+        if self.state.is_cancelled() && self.state.network_id() == enqueued_network_id {
+            all_cancelled_states.push(self.state);
+        };
+        all_cancelled_states.append(
             &mut self
                 .previous_states
                 .iter()
@@ -227,16 +238,25 @@ impl UserOp {
                 .cloned()
                 .collect::<Vec<_>>(),
         );
-        let mut n = cancelled_states.len();
 
-        debug!("user op has {n} cancelled states {:?}", cancelled_states);
+        let chain_specific_cancelled_states = all_cancelled_states
+            .iter()
+            .filter(|s| s.network_id() == enqueued_network_id)
+            .collect::<Vec<_>>();
+
+        let mut n = chain_specific_cancelled_states.len();
+
+        debug!(
+            "on network: {enqueued_network_id}, user op has {n} cancelled states {:?}",
+            chain_specific_cancelled_states
+        );
         if n < 2 {
             // NOTE In this case there can never have been two different actor types who've called for a
             // cancellation.
             return false;
         };
 
-        let mut actor_types = cancelled_states
+        let mut actor_types = chain_specific_cancelled_states
             .iter()
             .filter_map(|s| s.actor_type())
             .collect::<Vec<ActorType>>();
@@ -244,13 +264,13 @@ impl UserOp {
         actor_types.sort_unstable();
         actor_types.dedup();
         n = actor_types.len();
-        debug!("{n} different actors types have called to cancel this user op");
+        debug!("{n} different actors types have called to cancel this user op on chain {enqueued_network_id}");
 
         let has_been_cancelled = n >= 2;
         if has_been_cancelled {
-            debug!("this user op is ineligible for cancellation");
+            debug!("this user op is ineligible for cancellation on chain {enqueued_network_id}");
         } else {
-            debug!("this user op is eligible for cancellation");
+            debug!("this user op is eligible for cancellation on chain {enqueued_network_id}");
         }
         has_been_cancelled
     }
