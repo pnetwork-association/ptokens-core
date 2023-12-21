@@ -19,15 +19,7 @@ pub struct Endpoints {
 impl Endpoints {
     pub fn use_quicknode(&self) -> bool {
         let ce = self.current_endpoint();
-        if ce.contains("goerli") || ce.contains("sepolia") {
-            // NOTE: The xdai one is a temporary restriction because their `qn_` endpoints are
-            // currently not working correctly.
-            // NOTE: Quicknode does not offer their single flight endpoints for testnet chains.
-            // https://marketplace.quicknode.com/add-on/single-flight-rpc
-            false
-        } else {
-            ce.contains("quiknode") || ce.contains("quicknode")
-        }
+        ce.contains("quiknode") || ce.contains("quicknode")
     }
 
     pub fn new(sleep_time: u64, network_id: NetworkId, endpoints: Vec<String>) -> Self {
