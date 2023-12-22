@@ -251,7 +251,7 @@ mod tests {
     use ethereum_types::H256 as EthHash;
 
     use super::{UserOp, UserOpList, *};
-    use crate::{get_utc_timestamp, LatestBlockInfo, SentinelDbUtils};
+    use crate::{get_utc_timestamp, ActorType, LatestBlockInfo, SentinelDbUtils};
 
     #[test]
     fn should_get_cancellable_user_ops() {
@@ -269,10 +269,9 @@ mod tests {
         let enqueued_network_id = NetworkId::try_from("eth").unwrap();
         op.origin_network_id = origin_network_id;
         op.state = UserOpState::enqueued(enqueued_network_id, enqueued_tx_hash, enqueued_timestamp);
-        let uid = op.uid().unwrap();
         let mut list = UserOpList::default();
         list.process_op(op.clone(), &db_utils).unwrap();
-        let mut latest_block_infos = LatestBlockInfos::default();
+        let latest_block_infos = LatestBlockInfos::default();
         let r1 = CancellableUserOps::get(&db_utils, latest_block_infos).unwrap();
         assert!(r1.is_empty());
 
@@ -304,7 +303,7 @@ mod tests {
         let cancelled_tx_hash = EthHash::random();
         let cancelled_timestamp = get_utc_timestamp().unwrap();
         let cancelled_network_id = NetworkId::try_from("polygon").unwrap();
-        let mut wrong_chain_cancelled_state =
+        let wrong_chain_cancelled_state =
             UserOpState::cancelled(cancelled_network_id, cancelled_tx_hash, cancelled_timestamp);
         assert!(matches!(
             wrong_chain_cancelled_state.actor_type(),
@@ -328,11 +327,37 @@ mod tests {
 
     #[test]
     fn should_get_multiple_cancellabe_ops_for_single_user_op_queued_on_multiple_chains() {
-        assert!(false)
-    }
-
-    #[test]
-    fn should_not_get_cancellable_user_op_if_op_has_already_been_cancelled() {
-        assert!(false)
+        let db = get_test_database();
+        let db_utils = SentinelDbUtils::new(&db);
+        let mut op = UserOp::default();
+        let uid = op.uid().unwrap();
+        let eth_network_id = NetworkId::try_from("eth").unwrap();
+        let polygon_network_id = NetworkId::try_from("polygon").unwrap();
+        let origin_network_id = NetworkId::try_from("bsc").unwrap();
+        let enqueued_timestamp = get_utc_timestamp().unwrap();
+        op.origin_network_id = origin_network_id;
+        op.state = UserOpState::enqueued(eth_network_id, EthHash::random(), enqueued_timestamp);
+        let mut list = UserOpList::default();
+        list.process_op(op.clone(), &db_utils).unwrap();
+        op.state = UserOpState::enqueued(polygon_network_id, EthHash::random(), enqueued_timestamp);
+        list.process_op(op.clone(), &db_utils).unwrap();
+        let latest_block_infos = LatestBlockInfos::default();
+        let r1 = CancellableUserOps::get(&db_utils, latest_block_infos).unwrap();
+        assert!(r1.is_empty());
+        let mut bsc_latest_block_info = LatestBlockInfo::default();
+        bsc_latest_block_info.network_id = origin_network_id;
+        bsc_latest_block_info.block_timestamp =
+            enqueued_timestamp + (60 * 60/* NOTE: an hour _beyond_ the enqueued time */);
+        let bsc_latest_block_infos = LatestBlockInfos::new(vec![bsc_latest_block_info.clone()]);
+        let r2 = CancellableUserOps::get(&db_utils, bsc_latest_block_infos).unwrap();
+        assert_eq!(r2.len(), 2);
+        assert_eq!(r2[0].op().uid().unwrap(), uid);
+        assert_eq!(r2[1].op().uid().unwrap(), uid);
+        let cancellation_network_ids = r2
+            .iter()
+            .map(|x| x.state().network_id().clone())
+            .collect::<Vec<NetworkId>>();
+        assert!(cancellation_network_ids.contains(&eth_network_id));
+        assert!(cancellation_network_ids.contains(&polygon_network_id));
     }
 }
