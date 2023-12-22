@@ -1,13 +1,13 @@
 use common_eth::{Chain, ChainDbUtils, ChainError};
 use common_metadata::MetadataChainId;
 use common_sentinel::{
+    CancellableUserOps,
     LatestBlockInfo,
     LatestBlockInfos,
     NetworkId,
     NetworkIdError,
     SentinelDbUtils,
     SentinelError,
-    UserOpList,
     WebSocketMessagesEncodable,
 };
 use serde_json::json;
@@ -15,7 +15,7 @@ use serde_json::json;
 use crate::android::State;
 
 pub fn get_cancellable_user_ops(network_ids: Vec<NetworkId>, state: State) -> Result<State, SentinelError> {
-    debug!("handling cancellable user ops in core...");
+    debug!("handling get cancellable user ops in core...");
 
     let mcids = network_ids
         .iter()
@@ -46,12 +46,7 @@ pub fn get_cancellable_user_ops(network_ids: Vec<NetworkId>, state: State) -> Re
             .collect::<Vec<LatestBlockInfo>>(),
     );
 
-    let list = UserOpList::get(&s_db_utils);
-    debug!("user op list: {list}");
-
-    let cancellable_ops = list.get_cancellable_ops(&s_db_utils, infos)?;
-    debug!("cancellable ops: {cancellable_ops}");
-
+    let cancellable_ops = CancellableUserOps::get(&s_db_utils, infos)?;
     let response = WebSocketMessagesEncodable::Success(json!(cancellable_ops));
 
     Ok(state.add_response(response))
