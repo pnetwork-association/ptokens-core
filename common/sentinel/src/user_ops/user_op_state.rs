@@ -2,7 +2,7 @@ use std::{cmp, fmt};
 
 use common_eth::EthLog;
 use derive_getters::Getters;
-use derive_more::{Constructor, Deref};
+use derive_more::{Constructor, Deref, DerefMut};
 use ethereum_types::{Address as EthAddress, H256 as EthHash};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
@@ -58,6 +58,32 @@ impl PartialEq for UserOpStateInfo {
     fn eq(&self, other: &Self) -> bool {
         // NOTE: We don't care about the timestamps when comparing these...
         self.tx_hash == other.tx_hash && self.network_id == other.network_id
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Constructor, Deref, DerefMut)]
+pub struct UserOpStates(Vec<UserOpState>);
+
+impl UserOpStates {
+    pub fn empty() -> Self {
+        Self::default()
+    }
+
+    fn has_cancellation_by_sentinel(&self) -> bool {
+        self.iter().any(|s| match s {
+            UserOpState::Cancelled(_, actor) => actor.is_sentinel(),
+            _ => false,
+        })
+    }
+
+    pub fn has_no_cancellation_by_sentinel(&self) -> bool {
+        !self.has_cancellation_by_sentinel()
+    }
+}
+
+impl Default for UserOpStates {
+    fn default() -> Self {
+        Self::new(vec![])
     }
 }
 
@@ -171,13 +197,6 @@ impl UserOpState {
         }
     }
 
-    pub(crate) fn actor_type(&self) -> Option<ActorType> {
-        match self {
-            Self::Cancelled(_, actor) => Some(*actor.actor_type()),
-            _ => None,
-        }
-    }
-
     fn state(&self) -> UserOpStateInfo {
         match self {
             Self::Witnessed(ref state) => *state,
@@ -189,16 +208,6 @@ impl UserOpState {
 
     fn user_op_state_info(&self) -> UserOpStateInfo {
         self.state()
-    }
-
-    #[allow(unused)]
-    pub(super) fn sentinel_timestamp(&self) -> u64 {
-        match self {
-            Self::Witnessed(UserOpStateInfo { sentinel_timestamp, .. }) => *sentinel_timestamp,
-            Self::Enqueued(UserOpStateInfo { sentinel_timestamp, .. }) => *sentinel_timestamp,
-            Self::Executed(UserOpStateInfo { sentinel_timestamp, .. }) => *sentinel_timestamp,
-            Self::Cancelled(UserOpStateInfo { sentinel_timestamp, .. }, _) => *sentinel_timestamp,
-        }
     }
 
     pub fn try_from_log(
