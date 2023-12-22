@@ -104,6 +104,7 @@ pub use self::{
     status::{SentinelStatus, SentinelStatusError},
     sync_state::SyncState,
     user_ops::{
+        CancellableUserOps,
         UserOp,
         UserOpCancellationSignature,
         UserOpError,

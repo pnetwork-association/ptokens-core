@@ -68,17 +68,6 @@ impl UserOpStates {
     pub fn empty() -> Self {
         Self::default()
     }
-
-    fn has_cancellation_by_sentinel(&self) -> bool {
-        self.iter().any(|s| match s {
-            UserOpState::Cancelled(_, actor) => actor.is_sentinel(),
-            _ => false,
-        })
-    }
-
-    pub fn has_no_cancellation_by_sentinel(&self) -> bool {
-        !self.has_cancellation_by_sentinel()
-    }
 }
 
 impl Default for UserOpStates {

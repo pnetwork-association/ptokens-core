@@ -10,7 +10,7 @@ use serde_with::{serde_as, DisplayFromStr};
 use sha2::{Digest, Sha256};
 
 use super::{UserOpError, UserOpFlag, UserOpLog, UserOpState, UserOpVersion};
-use crate::{ActorType, DbKey, DbUtilsT, NetworkId, SentinelError};
+use crate::{DbKey, DbUtilsT, NetworkId, SentinelError};
 
 impl DbUtilsT for UserOp {
     fn key(&self) -> Result<DbKey, SentinelError> {
@@ -105,42 +105,6 @@ impl UserOp {
         Ok("".to_string())
     }
 
-    fn get_enqueued_state(&self) -> Result<UserOpState, UserOpError> {
-        let e = UserOpError::HasNotBeenEnqueued;
-
-        if self.has_not_been_enqueued() {
-            return Err(e);
-        };
-
-        if self.state.is_enqueued() {
-            return Ok(self.state);
-        };
-
-        let enqueued_states = self
-            .previous_states
-            .iter()
-            .filter(|state| state.is_enqueued())
-            .cloned()
-            .collect::<Vec<UserOpState>>();
-
-        match enqueued_states.len() {
-            0 => Err(e),
-            1 => Ok(enqueued_states[0]),
-            _ => Err(UserOpError::EnqueuedOnMultipleChains {
-                uid: self.uid()?,
-                state_infos: enqueued_states.into(),
-            }),
-        }
-    }
-
-    pub fn enqueued_block_timestamp(&self) -> Result<u64, UserOpError> {
-        self.get_enqueued_state().and_then(|s| s.block_timestamp())
-    }
-
-    pub fn enqueued_network_id(&self) -> Result<NetworkId, UserOpError> {
-        self.get_enqueued_state().map(|s| s.network_id())
-    }
-
     fn has_been_executed(&self) -> bool {
         if self.state.is_executed() {
             true
@@ -210,93 +174,6 @@ impl UserOp {
         } else {
             Ok(())
         }
-    }
-
-    pub fn has_been_cancelled(&self) -> bool {
-        // NOTE: The chain(s) on which a user op is/are enqueued on is the only chain on which we would
-        // attempt to cancel it.
-        let enqueued_network_id = match self.enqueued_network_id() {
-            Ok(nid) => nid,
-            _ => {
-                debug!("user op has not been enqueued anywwhere so is not cancellable");
-                return false;
-            },
-        };
-
-        // NOTE: For a user op to have been cancelled on a given chain, it needs to have had a
-        // call to cancel the user op from at least two different actor types in the pnetwork
-        // protocol on that chain.
-        let mut all_cancelled_states = vec![];
-        if self.state.is_cancelled() && self.state.network_id() == enqueued_network_id {
-            all_cancelled_states.push(self.state);
-        };
-        all_cancelled_states.append(
-            &mut self
-                .previous_states
-                .iter()
-                .filter(|s| s.is_cancelled())
-                .cloned()
-                .collect::<Vec<_>>(),
-        );
-
-        let chain_specific_cancelled_states = all_cancelled_states
-            .iter()
-            .filter(|s| s.network_id() == enqueued_network_id)
-            .collect::<Vec<_>>();
-
-        let mut n = chain_specific_cancelled_states.len();
-
-        debug!(
-            "on network: {enqueued_network_id}, user op has {n} cancelled states {:?}",
-            chain_specific_cancelled_states
-        );
-        if n < 2 {
-            // NOTE In this case there can never have been two different actor types who've called for a
-            // cancellation.
-            return false;
-        };
-
-        let mut actor_types = chain_specific_cancelled_states
-            .iter()
-            .filter_map(|s| s.actor_type())
-            .collect::<Vec<ActorType>>();
-        debug!("actor types before sorting & deduplicating: {:?}", actor_types);
-        actor_types.sort_unstable();
-        actor_types.dedup();
-        n = actor_types.len();
-        debug!("{n} different actors types have called to cancel this user op on chain {enqueued_network_id}");
-
-        let has_been_cancelled = n >= 2;
-        if has_been_cancelled {
-            debug!("this user op is ineligible for cancellation on chain {enqueued_network_id}");
-        } else {
-            debug!("this user op is eligible for cancellation on chain {enqueued_network_id}");
-        }
-        has_been_cancelled
-    }
-
-    pub fn has_not_been_cancelled(&self) -> bool {
-        !self.has_been_cancelled()
-    }
-
-    pub fn has_been_enqueued(&self) -> bool {
-        self.state.is_enqueued() || self.previous_states.iter().any(|state| state.is_enqueued())
-    }
-
-    pub fn has_not_been_enqueued(&self) -> bool {
-        !self.has_been_enqueued()
-    }
-
-    pub fn has_been_witnessed(&self) -> bool {
-        self.state.is_witnessed() || self.previous_states.iter().any(|state| state.is_witnessed())
-    }
-
-    pub fn has_not_been_witnessed(&self) -> bool {
-        !self.has_been_witnessed()
-    }
-
-    pub fn is_enqueued(&self) -> bool {
-        self.state.is_enqueued()
     }
 
     pub fn maybe_update_state(&mut self, other: Self) -> Result<(), UserOpError> {

@@ -7,6 +7,9 @@ use super::{UserOp, UserOpState, UserOpStateInfos};
 
 #[derive(Error, Debug)]
 pub enum UserOpError {
+    #[error("cancellable user op with id {0} is not enqueued")]
+    CancellableUserOpIsNotEnqueued(EthHash),
+
     #[error("user op with id {uid} queued on multiple chains: {state_infos:?}")]
     EnqueuedOnMultipleChains {
         uid: EthHash,
