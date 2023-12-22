@@ -181,7 +181,7 @@ impl UserOpList {
         debug!("user op found in db");
         let mut op_from_db = UserOp::get_from_db(db_utils, &op.key()?)?;
 
-        op_from_db.maybe_update_state(op)?;
+        op_from_db.update_state(op)?;
         op_from_db.update_in_db(db_utils)?;
 
         // NOTE: We can safely call this with no checks since the above state will only have
@@ -193,7 +193,8 @@ impl UserOpList {
         Ok(())
     }
 
-    fn process_op<D: DatabaseInterface>(
+    // NOTE: Public to the crate for use in tests
+    pub(crate) fn process_op<D: DatabaseInterface>(
         &mut self,
         op: UserOp,
         db_utils: &SentinelDbUtils<D>,

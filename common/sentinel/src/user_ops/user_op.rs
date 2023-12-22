@@ -36,6 +36,7 @@ impl UserOp {
 #[serde_as]
 #[derive(Clone, Debug, Default, Eq, Serialize, Deserialize, Getters)]
 pub struct UserOp {
+    // NOTE: Fields are public only to the crate so tests can modify them on the fly
     #[getter(skip)]
     pub(super) uid: EthHash,
     pub(super) tx_hash: EthHash,
@@ -176,7 +177,7 @@ impl UserOp {
         }
     }
 
-    pub fn maybe_update_state(&mut self, other: Self) -> Result<(), UserOpError> {
+    pub fn update_state(&mut self, other: Self) -> Result<(), UserOpError> {
         let self_state = self.state();
         let other_state = other.state();
 
@@ -187,19 +188,8 @@ impl UserOp {
             });
         };
 
-        if self_state >= other_state {
-            if !self.previous_states.contains(other_state) {
-                info!("previous state ({other_state}) not seen before, saving it but not updating self");
-                self.previous_states.push(*other_state);
-            } else {
-                info!("previous state ({other_state}) seen before, doing nothing");
-            }
-        } else {
-            info!("state more advanced, updating self from {self_state} to {other_state}");
-            self.previous_states.push(*self_state);
-            self.state = *other_state;
-        };
-
+        self.previous_states.push(*self_state);
+        self.state = *other_state;
         Ok(())
     }
 

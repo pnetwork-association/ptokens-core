@@ -112,21 +112,28 @@ impl Ord for UserOpState {
 
 #[cfg(test)]
 impl UserOpState {
-    pub fn witnessed(nid: NetworkId, h: EthHash, block_timestamp: u64) -> Self {
+    pub(crate) fn witnessed(nid: NetworkId, h: EthHash, block_timestamp: u64) -> Self {
         Self::Witnessed(UserOpStateInfo::new(h, nid, block_timestamp))
     }
 
-    pub fn enqueued(nid: NetworkId, h: EthHash, block_timestamp: u64) -> Self {
+    pub(crate) fn enqueued(nid: NetworkId, h: EthHash, block_timestamp: u64) -> Self {
         Self::Enqueued(UserOpStateInfo::new(h, nid, block_timestamp))
     }
 
-    pub fn executed(nid: NetworkId, h: EthHash, block_timestamp: u64) -> Self {
+    pub(crate) fn executed(nid: NetworkId, h: EthHash, block_timestamp: u64) -> Self {
         Self::Executed(UserOpStateInfo::new(h, nid, block_timestamp))
     }
 
-    pub fn cancelled(nid: NetworkId, h: EthHash, block_timestamp: u64) -> Self {
+    pub(crate) fn cancelled(nid: NetworkId, h: EthHash, block_timestamp: u64) -> Self {
         let actor = Actor::new(ActorType::Sentinel, EthAddress::zero());
         Self::Cancelled(UserOpStateInfo::new(h, nid, block_timestamp), actor)
+    }
+
+    pub(crate) fn actor_type(&self) -> Option<ActorType> {
+        match self {
+            Self::Cancelled(_, actor) => Some(*actor.actor_type()),
+            _ => None,
+        }
     }
 }
 

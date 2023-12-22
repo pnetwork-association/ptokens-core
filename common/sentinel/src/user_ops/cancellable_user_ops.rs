@@ -57,7 +57,6 @@ impl CancellableUserOp {
         // NOTE: To account for block timestamps not being entirely reliable & help during race conditions
         // between the cancellation thread and related syncer threads
         const LEEWAY: u64 = 90; // NOTE: 1m 30s
-                                //
         let origin_network_id = self.op().origin_network_id();
         let enqueued_timestamp = match self.enqueued_block_timestamp() {
             Ok(t) => t,
@@ -75,6 +74,10 @@ impl CancellableUserOp {
             },
         };
 
+        debug!(
+            "             uid: 0x{}",
+            hex::encode(self.op().uid().unwrap_or_default().as_bytes())
+        );
         debug!("          leeway: {LEEWAY}");
         debug!("     origin time: {origin_chain_timestamp}");
         debug!("   enqueued time: {enqueued_timestamp}");
@@ -84,7 +87,9 @@ impl CancellableUserOp {
 
         if origin_chain_is_beyond_enqueued_time {
             info!("origin chain is beyond enqueued time and we've not seen a user send so op is cancellable");
-        };
+        } else {
+            info!("origin chain is not beyond the enqueud time so we cannot determine if it is cancellable");
+        }
 
         origin_chain_is_beyond_enqueued_time
     }
@@ -116,15 +121,10 @@ impl CancellableUserOps {
         Self::default()
     }
 
-    fn get_enqueued_but_neither_witnessed_nor_cancelled_nor_executed_ops(ops: &UserOps) -> UserOps {
+    fn get_enqueued_but_not_witnessed_nor_executed(ops: &UserOps) -> UserOps {
         UserOps::new(
             ops.iter()
-                .filter(|op| {
-                    op.has_been_enqueued()
-                        && op.has_not_been_witnessed()
-                        && op.has_not_been_cancelled()
-                        && op.has_not_been_executed()
-                })
+                .filter(|op| op.has_been_enqueued() && op.has_not_been_witnessed() && op.has_not_been_executed())
                 .cloned()
                 .collect::<Vec<_>>(),
         )
@@ -132,14 +132,20 @@ impl CancellableUserOps {
 }
 
 impl From<Vec<CancellableUserOps>> for CancellableUserOps {
-    fn from(v: Vec<CancellableUserOps>) -> Self {
-        CancellableUserOps::new(v.into_iter().map(|x| x[0].clone()).collect())
+    fn from(vec_of_vec_of_cancellable_ops: Vec<CancellableUserOps>) -> Self {
+        let mut r = vec![];
+        for vec_of_cancellable_ops in vec_of_vec_of_cancellable_ops.iter() {
+            for cancellable_op in vec_of_cancellable_ops.iter() {
+                r.push(cancellable_op.clone());
+            }
+        }
+        Self::new(r)
     }
 }
 
 impl From<UserOps> for CancellableUserOps {
     fn from(ops: UserOps) -> Self {
-        Self::get_enqueued_but_neither_witnessed_nor_cancelled_nor_executed_ops(&ops)
+        Self::get_enqueued_but_not_witnessed_nor_executed(&ops)
             .iter()
             .map(CancellableUserOps::from)
             .collect::<Vec<_>>()
@@ -153,14 +159,7 @@ impl From<&UserOp> for CancellableUserOps {
 
         // NOTE: A single user op can result in > 1 cancellable user ops, since it could have been
         // spuriously enqueued on multiple chains.
-        let enqueued_states = match op.get_enqueued_states() {
-            Ok(states) => states,
-            _ => {
-                debug!("user op has not been enqueued anywwhere so is not cancellable");
-                return cancellable_ops;
-            },
-        };
-
+        let enqueued_states = op.get_enqueued_states();
         let enqueued_network_ids = enqueued_states.iter().map(|s| s.network_id()).collect::<Vec<_>>();
 
         // NOTE: A user op with the same uid _cannot_ be enqueued > 1 on the same chain, regardless
@@ -171,7 +170,7 @@ impl From<&UserOp> for CancellableUserOps {
         }
 
         for i in 0..cancelled_states.len() {
-            if cancelled_states[i].has_no_cancellation_by_sentinel() {
+            if cancelled_states[i].has_no_cancellation_by_sentinel(&enqueued_network_ids[i]) {
                 cancellable_ops.push(CancellableUserOp::new(op.clone(), enqueued_states[i]));
             }
         }
@@ -182,6 +181,8 @@ impl From<&UserOp> for CancellableUserOps {
 
 impl UserOp {
     fn cancelled_states_for_network(&self, network_id: &NetworkId) -> UserOpStates {
+        debug!("getting cancelled states for network: {network_id}");
+
         let mut r = vec![];
         if self.state.is_cancelled() && self.state().network_id() == *network_id {
             r.push(self.state);
@@ -194,22 +195,9 @@ impl UserOp {
         UserOpStates::new(r)
     }
 
-    fn has_been_cancelled(&self) -> bool {
-        todo!("this");
-    }
-
-    fn has_not_been_cancelled(&self) -> bool {
-        !self.has_been_cancelled()
-    }
-
-    fn get_enqueued_states(&self) -> Result<UserOpStates, UserOpError> {
-        let e = UserOpError::HasNotBeenEnqueued;
-
+    fn get_enqueued_states(&self) -> UserOpStates {
+        info!("getting all enqueued states of user op");
         let mut enqueued_states: Vec<UserOpState> = vec![];
-
-        if self.has_not_been_enqueued() {
-            return Err(e);
-        };
 
         if self.state.is_enqueued() {
             enqueued_states.push(self.state);
@@ -226,15 +214,11 @@ impl UserOp {
         enqueued_states.dedup();
         debug!("enqueued states after deduplicating: {enqueued_states:?}");
 
-        Ok(UserOpStates::new(enqueued_states))
+        UserOpStates::new(enqueued_states)
     }
 
     fn has_been_enqueued(&self) -> bool {
         self.state.is_enqueued() || self.previous_states.iter().any(|state| state.is_enqueued())
-    }
-
-    fn has_not_been_enqueued(&self) -> bool {
-        !self.has_been_enqueued()
     }
 
     fn has_been_witnessed(&self) -> bool {
@@ -247,14 +231,108 @@ impl UserOp {
 }
 
 impl UserOpStates {
-    fn has_cancellation_by_sentinel(&self) -> bool {
-        self.iter().any(|s| match s {
-            UserOpState::Cancelled(_, actor) => actor.is_sentinel(),
+    fn has_cancellation_by_sentinel(&self, network_id: &NetworkId) -> bool {
+        let r = self.iter().any(|s| match s {
+            UserOpState::Cancelled(state, actor) => state.network_id() == network_id && actor.is_sentinel(),
             _ => false,
-        })
+        });
+        debug!("has cancellation by sentinel on network {network_id}: {r}");
+        r
     }
 
-    fn has_no_cancellation_by_sentinel(&self) -> bool {
-        !self.has_cancellation_by_sentinel()
+    fn has_no_cancellation_by_sentinel(&self, network_id: &NetworkId) -> bool {
+        !self.has_cancellation_by_sentinel(network_id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use common::get_test_database;
+    use ethereum_types::H256 as EthHash;
+
+    use super::{UserOp, UserOpList, *};
+    use crate::{get_utc_timestamp, LatestBlockInfo, SentinelDbUtils};
+
+    #[test]
+    fn should_get_cancellable_user_ops() {
+        let db = get_test_database();
+        let db_utils = SentinelDbUtils::new(&db);
+        let mut op = UserOp::default();
+
+        // NOTE: We're going to manually create an op that would be a candidate for cancellation,
+        // by changing it's state to `Enqueued`. There will be no previous states, therefore no
+        // `Witnessed` state, making it elegible for cancellation based on state. We'll need to
+        // make more edits to make it cancellable temporally, however, so we'll do that later.
+        let origin_network_id = NetworkId::try_from("bsc").unwrap();
+        let enqueued_tx_hash = EthHash::random();
+        let enqueued_timestamp = get_utc_timestamp().unwrap();
+        let enqueued_network_id = NetworkId::try_from("eth").unwrap();
+        op.origin_network_id = origin_network_id;
+        op.state = UserOpState::enqueued(enqueued_network_id, enqueued_tx_hash, enqueued_timestamp);
+        let uid = op.uid().unwrap();
+        let mut list = UserOpList::default();
+        list.process_op(op.clone(), &db_utils).unwrap();
+        let mut latest_block_infos = LatestBlockInfos::default();
+        let r1 = CancellableUserOps::get(&db_utils, latest_block_infos).unwrap();
+        assert!(r1.is_empty());
+
+        // NOTE: Now, if we add some latest block info for the origin chain, but make it appear out
+        // of sync, we should still get no cancellable ops;
+        let mut bsc_latest_block_info = LatestBlockInfo::default();
+        bsc_latest_block_info.network_id = origin_network_id;
+        bsc_latest_block_info.block_timestamp =
+            enqueued_timestamp - (60 * 60/* NOTE: an hour _behind_ the enqueued time */);
+        let mut bsc_latest_block_infos = LatestBlockInfos::new(vec![bsc_latest_block_info.clone()]);
+        let r2 = CancellableUserOps::get(&db_utils, bsc_latest_block_infos).unwrap();
+        assert!(r2.is_empty());
+
+        //NOTE Now let's set the origin chain to be in sync w/r/t the user op, meaning
+        //the op becomes cancellable.
+        bsc_latest_block_info.block_timestamp =
+            enqueued_timestamp + (60 * 60/* NOTE: an hour _beyond_ the enqueued time */);
+        bsc_latest_block_infos = LatestBlockInfos::new(vec![bsc_latest_block_info]);
+        let r3 = CancellableUserOps::get(&db_utils, bsc_latest_block_infos.clone()).unwrap();
+        assert!(!r3.is_empty());
+
+        // NOTE: Let's assert its the expected op
+        let expected_cancellable_op = CancellableUserOp::new(op.clone(), *op.state());
+        assert_eq!(r3[0], expected_cancellable_op);
+
+        // NOTE: Now lets add a cancellation state from a sentinel, but for a _different_ chain to
+        // the where the op is enqueued. This should result in returning the same cancellable op as
+        // before.
+        let cancelled_tx_hash = EthHash::random();
+        let cancelled_timestamp = get_utc_timestamp().unwrap();
+        let cancelled_network_id = NetworkId::try_from("polygon").unwrap();
+        let mut wrong_chain_cancelled_state =
+            UserOpState::cancelled(cancelled_network_id, cancelled_tx_hash, cancelled_timestamp);
+        assert!(matches!(
+            wrong_chain_cancelled_state.actor_type(),
+            Some(ActorType::Sentinel)
+        ));
+        op.state = wrong_chain_cancelled_state;
+        list.process_op(op.clone(), &db_utils).unwrap(); //NOTE: Update the op in the db
+        let r4 = CancellableUserOps::get(&db_utils, bsc_latest_block_infos.clone()).unwrap();
+        assert!(!r4.is_empty());
+        assert_eq!(r4[0], expected_cancellable_op);
+
+        // NOTE: Now let's add a cancellation from a sentinel on the enqueued chain. This should
+        // result in no cancellable user ops being returned.
+        let enqueued_chain_cancelled_state =
+            UserOpState::cancelled(enqueued_network_id, cancelled_tx_hash, cancelled_timestamp);
+        op.state = enqueued_chain_cancelled_state;
+        list.process_op(op.clone(), &db_utils).unwrap(); // NOTE Update the op in db
+        let r5 = CancellableUserOps::get(&db_utils, bsc_latest_block_infos.clone()).unwrap();
+        assert!(r5.is_empty());
+    }
+
+    #[test]
+    fn should_get_multiple_cancellabe_ops_for_single_user_op_queued_on_multiple_chains() {
+        assert!(false)
+    }
+
+    #[test]
+    fn should_not_get_cancellable_user_op_if_op_has_already_been_cancelled() {
+        assert!(false)
     }
 }

@@ -6,17 +6,18 @@ use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{get_utc_timestamp, NetworkId, SentinelError, WebSocketMessagesEncodable};
 
-#[derive(Clone, Debug, Deref, Constructor, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Deref, Constructor, Serialize, Deserialize)]
 pub struct LatestBlockInfos(Vec<LatestBlockInfo>);
 
 #[serde_as]
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Getters)]
+#[derive(Clone, Debug, Eq, PartialEq, Default, Serialize, Deserialize, Getters)]
 pub struct LatestBlockInfo {
-    block_number: u64,
-    delta_from_now: u64,
-    block_timestamp: u64,
+    // NOTE: Fields are public only to the crate so tests can modify them on the fly
+    pub(crate) block_number: u64,
+    pub(crate) delta_from_now: u64,
+    pub(crate) block_timestamp: u64,
     #[serde_as(as = "DisplayFromStr")]
-    network_id: NetworkId,
+    pub(crate) network_id: NetworkId,
 }
 
 impl LatestBlockInfo {
