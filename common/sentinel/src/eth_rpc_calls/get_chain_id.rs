@@ -1,4 +1,3 @@
-#![allow(unused)] // TODO rm once used!
 use std::result::Result;
 
 use common::strip_hex_prefix;
