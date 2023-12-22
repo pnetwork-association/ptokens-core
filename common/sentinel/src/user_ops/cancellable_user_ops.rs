@@ -5,10 +5,32 @@ use derive_more::{Constructor, Deref, DerefMut};
 use serde::{Deserialize, Serialize};
 
 use super::{UserOp, UserOpError, UserOpList, UserOpState, UserOpStates, UserOps, USER_OP_CANCEL_TX_GAS_LIMIT};
-use crate::{LatestBlockInfos, NetworkId, SentinelDbUtils, SentinelError};
+use crate::{
+    LatestBlockInfos,
+    NetworkId,
+    SentinelDbUtils,
+    SentinelError,
+    WebSocketMessagesEncodable,
+    WebSocketMessagesError,
+};
 
 #[derive(Clone, Debug, Eq, Default, PartialEq, Serialize, Deserialize, Constructor, Deref, DerefMut)]
 pub struct CancellableUserOps(Vec<CancellableUserOp>);
+
+impl TryFrom<WebSocketMessagesEncodable> for CancellableUserOps {
+    type Error = SentinelError;
+
+    fn try_from(m: WebSocketMessagesEncodable) -> Result<Self, Self::Error> {
+        match m {
+            WebSocketMessagesEncodable::Success(json) => Ok(serde_json::from_value(json)?),
+            other => Err(WebSocketMessagesError::CannotConvert {
+                from: format!("{other}"),
+                to: "UserOps".to_string(),
+            }
+            .into()),
+        }
+    }
+}
 
 #[derive(Clone, Debug, Eq, Default, PartialEq, Serialize, Deserialize, Constructor, Getters)]
 pub struct CancellableUserOp {
