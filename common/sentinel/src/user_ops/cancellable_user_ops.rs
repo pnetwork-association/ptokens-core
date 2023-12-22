@@ -2,6 +2,7 @@ use common::DatabaseInterface;
 use common_chain_ids::EthChainId;
 use derive_getters::Getters;
 use derive_more::{Constructor, Deref, DerefMut};
+use ethereum_types::H256 as EthHash;
 use serde::{Deserialize, Serialize};
 
 use super::{UserOp, UserOpError, UserOpList, UserOpState, UserOpStates, UserOps, USER_OP_CANCEL_TX_GAS_LIMIT};
@@ -45,7 +46,12 @@ impl From<Vec<CancellableUserOp>> for CancellableUserOps {
 }
 
 impl CancellableUserOp {
-    pub fn cancellation_gas_limit(&self) -> Result<usize, UserOpError> {
+    pub fn uid(&self) -> Result<EthHash, UserOpError> {
+        self.op.uid()
+    }
+
+    #[allow(unused)] // NOTE: This is currently a configurable
+    fn cancellation_gas_limit(&self) -> Result<usize, UserOpError> {
         let nid = self.enqueued_network_id()?;
         let ecid = EthChainId::try_from(nid)?;
         match ecid {
@@ -68,6 +74,10 @@ impl CancellableUserOp {
 
     fn enqueued_network_id(&self) -> Result<NetworkId, UserOpError> {
         self.enqueued_state().map(|s| s.network_id())
+    }
+
+    pub fn network_id_to_cancel_on(&self) -> Result<NetworkId, UserOpError> {
+        self.enqueued_network_id()
     }
 
     fn enqueued_block_timestamp(&self) -> Result<u64, UserOpError> {
