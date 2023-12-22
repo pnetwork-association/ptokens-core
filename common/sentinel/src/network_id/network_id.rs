@@ -3,10 +3,11 @@ use std::{fmt, str::FromStr};
 use common::{Byte, Bytes};
 use common_chain_ids::EthChainId;
 use common_metadata::{MetadataChainId, MetadataChainIdError};
-use derive_more::Deref;
+use derive_more::{Constructor, Deref};
 use ethabi::{encode as ethabi_encode, Token};
 use ethereum_types::U256;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use sha2::{Digest, Sha256};
 
 use super::{NetworkIdError, NetworkIdVersion, ProtocolId};
@@ -59,6 +60,15 @@ use std::hash::{Hash, Hasher};
 impl Hash for NetworkId {
     fn hash<H: Hasher>(&self, _state: &mut H) {
         self.to_bytes();
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Constructor, Deref)]
+pub struct NetworkIds(Vec<NetworkId>);
+
+impl fmt::Display for NetworkIds {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", json!(self))
     }
 }
 
