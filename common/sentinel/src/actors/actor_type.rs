@@ -26,6 +26,10 @@ impl ActorType {
             Self::Sentinel => &[2],
         }
     }
+
+    pub fn is_sentinel(&self) -> bool {
+        matches!(self, Self::Sentinel)
+    }
 }
 
 impl From<ActorType> for u8 {

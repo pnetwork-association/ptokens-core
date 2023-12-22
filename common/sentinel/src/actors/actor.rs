@@ -25,6 +25,10 @@ impl Actor {
     pub(super) fn to_leaf(self) -> Hash {
         keccak_hash_bytes(&[self.actor_address.as_bytes(), self.actor_type.as_bytes()].concat()).into()
     }
+
+    pub fn is_sentinel(&self) -> bool {
+        self.actor_type().is_sentinel()
+    }
 }
 
 impl From<EthAddress> for Actor {
