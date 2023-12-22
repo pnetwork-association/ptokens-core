@@ -85,6 +85,29 @@ impl DbUtilsT for UserOpList {
 }
 
 impl UserOpList {
+    pub(super) fn get_up_to_last_x_ops<D: DatabaseInterface>(
+        &self,
+        db_utils: &SentinelDbUtils<D>,
+        x: usize,
+    ) -> Result<UserOps, SentinelError> {
+        if self.is_empty() || x == 0 {
+            return Ok(UserOps::empty());
+        };
+
+        let num_ops = self.len();
+        let num_ops_to_get = if x > num_ops { num_ops } else { x };
+        let start_idx = num_ops - num_ops_to_get;
+
+        debug!("getting {num_ops_to_get} user ops (from idx {start_idx} to {num_ops}");
+
+        Ok(UserOps::new(
+            self[start_idx..]
+                .iter()
+                .map(|entry| UserOp::get_from_db(db_utils, &entry.uid().into()))
+                .collect::<Result<Vec<UserOp>, SentinelError>>()?,
+        ))
+    }
+
     pub fn includes(&self, uid: &EthHash) -> bool {
         for entry in self.iter() {
             if &entry.uid == uid {
