@@ -1,22 +1,10 @@
 use std::str::FromStr;
 
-use common_sentinel::{EthRpcMessages, EthRpcSenders, NetworkId, SentinelConfig, SentinelError};
-use derive_more::{Constructor, Deref, DerefMut};
-use ethereum_types::{Address as EthAddress, U256};
-use serde::{Deserialize, Serialize};
+use common_sentinel::{Balance, Balances, EthRpcMessages, EthRpcSenders, SentinelConfig, SentinelError};
+use ethereum_types::Address as EthAddress;
 use serde_json::{json, Value as Json};
 
 use crate::rpc_server::{RpcCalls, RpcParams};
-
-#[derive(Clone, Debug, Serialize, Deserialize, Deref, DerefMut, Constructor)]
-struct Balances(Vec<Balance>);
-
-#[derive(Clone, Debug, Serialize, Deserialize, Constructor)]
-#[serde(rename_all = "camelCase")]
-struct Balance {
-    balance: U256,
-    network_id: NetworkId,
-}
 
 impl RpcCalls {
     pub(crate) async fn handle_get_balances(

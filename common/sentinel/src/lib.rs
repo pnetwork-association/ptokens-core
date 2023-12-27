@@ -1,4 +1,5 @@
 mod actors;
+mod balances;
 mod batching;
 mod bpm;
 mod call_core;
@@ -30,6 +31,7 @@ mod utils;
 
 pub use self::{
     actors::{Actor, ActorInclusionProof, ActorType, Actors, ActorsError},
+    balances::{Balance, Balances},
     batching::Batch,
     bpm::{Bpm, BpmInfo, Bpms},
     call_core::call_core,
