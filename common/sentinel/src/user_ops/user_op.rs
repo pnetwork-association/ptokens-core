@@ -60,6 +60,10 @@ impl PartialEq for UserOp {
 }
 
 impl UserOp {
+    pub(crate) fn includes_tx_hash(&self, h: &EthHash) -> bool {
+        self.state.tx_hash() == *h || self.previous_states.iter().any(|s| s.tx_hash() == *h)
+    }
+
     #[cfg(test)]
     #[allow(unused)]
     pub fn to_tuple_string(&self) -> Result<String, SentinelError> {

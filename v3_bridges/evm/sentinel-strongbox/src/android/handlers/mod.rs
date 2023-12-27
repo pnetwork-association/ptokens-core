@@ -13,6 +13,7 @@ mod get_registration_signature;
 mod get_status;
 mod get_unsolved_challenges;
 mod get_user_op;
+mod get_user_op_by_tx_hash;
 mod get_user_op_cancellation_signature;
 mod get_user_op_list;
 mod get_user_ops;
@@ -42,6 +43,7 @@ pub(crate) use self::{
     get_status::get_status,
     get_unsolved_challenges::get_unsolved_challenges,
     get_user_op::get_user_op,
+    get_user_op_by_tx_hash::get_user_op_by_tx_hash,
     get_user_op_cancellation_signature::get_user_op_cancellation_signature,
     get_user_op_list::get_user_op_list,
     get_user_ops::get_user_ops,

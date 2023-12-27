@@ -74,6 +74,7 @@ pub(crate) enum RpcCalls {
     ChallengeResponderStartStop(RpcId, BroadcastChannelTx, bool),
     AddDebugSigners(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     RemoveChallenge(RpcId, WebSocketTx, RpcParams, CoreCxnStatus),
+    GetUserOpByTxHash(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     StopSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
     RemoveDebugSigner(RpcId, RpcParams, WebSocketTx, CoreCxnStatus),
     StartSyncer(RpcId, BroadcastChannelTx, RpcParams, CoreCxnStatus),
@@ -154,6 +155,7 @@ impl RpcCalls {
             "startSyncer" => Self::StartSyncer(*r.id(), broadcast_channel_tx, r.params(), core_cxn),
             "getChallangeResponses" => Self::GetUnsolvedChallenges(*r.id(), websocket_tx, core_cxn),
             "getBalances" => Self::GetBalances(*r.id(), Box::new(config), r.params(), eth_rpc_senders),
+            "getUserOpByTxHash" => Self::GetUserOpByTxHash(*r.id(), r.params(), websocket_tx, core_cxn),
             "removeDebugSigner" => Self::RemoveDebugSigner(*r.id(), r.params(), websocket_tx, core_cxn),
             "getAttestationCertificate" => Self::GetAttestionCertificate(*r.id(), websocket_tx, core_cxn),
             "cancel" | "cancelUserOps" => Self::CancelUserOps(*r.id(), user_op_canceller_tx.clone(), core_cxn),
@@ -438,6 +440,10 @@ impl RpcCalls {
             Self::RemoveChallenge(id, websocket_tx, params, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_remove_challenge(websocket_tx, params, core_cxn).await)
             },
+            Self::GetUserOpByTxHash(id, params, websocket_tx, core_cxn) => Self::handle_ws_result(
+                id,
+                Self::handle_get_user_op_by_tx_hash(params, websocket_tx, core_cxn).await,
+            ),
             Self::GetInclusionProof(id, websocket_tx, core_cxn) => {
                 Self::handle_ws_result(id, Self::handle_get_inclusion_proof(websocket_tx, core_cxn).await)
             },

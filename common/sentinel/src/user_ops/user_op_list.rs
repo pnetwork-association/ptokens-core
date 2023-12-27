@@ -252,6 +252,29 @@ impl UserOpList {
         info!("purged {} user ops", uids.len());
         Ok(())
     }
+
+    pub fn get_user_op_by_tx_hash<D: DatabaseInterface>(
+        tx_hash: &EthHash,
+        db_utils: &SentinelDbUtils<D>,
+    ) -> Result<UserOps, SentinelError> {
+        info!("attempting to get user op by tx hash: {tx_hash}");
+        const NUM_PAST_OPS_TO_GET: usize = 100;
+        Self::get(db_utils)
+            .get_up_to_last_x_ops(db_utils, NUM_PAST_OPS_TO_GET)
+            .map(|ops| {
+                ops.iter()
+                    .filter(|op| op.includes_tx_hash(tx_hash))
+                    .cloned()
+                    .collect::<Vec<_>>()
+            })
+            .and_then(|filtered_ops| {
+                if filtered_ops.len() > 1 {
+                    Err(UserOpError::MoreThanOneOpWithTxHash(*tx_hash).into())
+                } else {
+                    Ok(UserOps::new(filtered_ops))
+                }
+            })
+    }
 }
 
 #[cfg(test)]

@@ -48,6 +48,7 @@ pub fn handle_websocket_message(state: State) -> Result<State, SentinelError> {
         Msg::GetCoreState(nids) => super::handlers::get_core_state(nids.clone(), state),
         Msg::HardReset(debug_sig) => super::handlers::hard_reset(debug_sig.clone(), state),
         Msg::GetAttestationCertificate => super::handlers::get_attestation_certificate(state),
+        Msg::GetUserOpByTxHash(tx_hash) => super::handlers::get_user_op_by_tx_hash(*tx_hash, state),
         Msg::PurgeUserOps(epoch, sig) => super::handlers::purge_user_ops(*epoch, sig.clone(), state),
         Msg::GetLatestBlockInfos(nids) => super::handlers::get_latest_block_infos(nids.clone(), state),
         Msg::RemoveUserOp(uid, sig) => super::handlers::remove_user_op(uid.clone(), sig.clone(), state),

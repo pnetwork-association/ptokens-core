@@ -7,6 +7,9 @@ use super::{UserOp, UserOpState, UserOpStateInfos};
 
 #[derive(Error, Debug)]
 pub enum UserOpError {
+    #[error("found more than one user op with tx hash: {0}")]
+    MoreThanOneOpWithTxHash(EthHash),
+
     #[error("cancellable user op with id {0} is not enqueued")]
     CancellableUserOpIsNotEnqueued(EthHash),
 

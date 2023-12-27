@@ -16,6 +16,7 @@ mod handle_get_registration_signature;
 mod handle_get_status;
 mod handle_get_unsolved_challenges;
 mod handle_get_user_op;
+mod handle_get_user_op_by_tx_hash;
 mod handle_get_user_op_list;
 mod handle_get_user_op_state;
 mod handle_get_user_ops;

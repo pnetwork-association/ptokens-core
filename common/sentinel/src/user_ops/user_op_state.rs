@@ -202,6 +202,10 @@ impl UserOpState {
         }
     }
 
+    pub(crate) fn tx_hash(&self) -> EthHash {
+        *self.state().tx_hash()
+    }
+
     fn user_op_state_info(&self) -> UserOpStateInfo {
         self.state()
     }
