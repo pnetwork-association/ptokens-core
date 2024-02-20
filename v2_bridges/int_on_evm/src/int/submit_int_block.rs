@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use common::{core_type::CoreType, traits::DatabaseInterface, types::Result};
+use common::{core_type::CoreType, traits::DatabaseInterface, types::Result, AppError};
 use common_eth::{
     check_for_parent_of_eth_block_in_state,
     maybe_add_eth_block_and_receipts_to_db_and_return_state,
@@ -34,6 +34,7 @@ use crate::int::{
     parse_tx_infos::maybe_parse_tx_info_from_canon_block_and_add_to_state,
     sign_txs::maybe_sign_evm_txs_and_add_to_eth_state,
 };
+
 fn submit_int_block<D: DatabaseInterface>(db: &D, json: &EthSubmissionMaterialJson) -> Result<IntOutput> {
     parse_eth_submission_material_json_and_put_in_state(json, EthState::init(db))
         .and_then(validate_eth_block_in_state)
@@ -84,15 +85,29 @@ pub fn submit_int_block_to_core<D: DatabaseInterface>(db: &D, block: &str) -> Re
 ///
 /// Submit multiple INT blocks to the core. See `submit_evm_block_to_core` for more information.
 pub fn submit_int_blocks_to_core<D: DatabaseInterface>(db: &D, blocks: &str) -> Result<String> {
-    info!("✔ Batch submitting INT blocks to core...");
+    info!("batch submitting INT blocks to core...");
     CoreType::check_is_initialized(db)
         .and_then(|_| db.start_transaction())
         .and_then(|_| EthSubmissionMaterialJsons::from_str(blocks))
         .and_then(|jsons| {
-            jsons
-                .iter()
-                .map(|block| submit_int_block(db, block))
-                .collect::<Result<Vec<_>>>()
+            let mut outputs = vec![];
+
+            for json in jsons.iter() {
+                match submit_int_block(db, json) {
+                    Ok(o) => {
+                        outputs.push(o);
+                        continue;
+                    },
+                    Err(AppError::BlockAlreadyInDbError(e)) => {
+                        warn!("block already in db error: {e}");
+                        info!("moving on to next block in batch!");
+                        continue;
+                    },
+                    Err(e) => return Err(e),
+                }
+            }
+
+            Ok(outputs)
         })
         .map(IntOutputs::new)
         .and_then(|outputs| {
@@ -129,6 +144,7 @@ mod tests {
             get_sample_vault_address,
         },
     };
+
     #[test]
     fn should_submit_int_block_successfully() {
         let db = get_test_database();
@@ -209,5 +225,63 @@ mod tests {
         let expected_result = IntOutput::from_str(&expected_result_json.to_string()).unwrap();
         let result = IntOutput::from_str(&output).unwrap();
         assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    fn should_batch_submit_int_blocks_successfully_even_if_one_already_in_db() {
+        let db = get_test_database();
+        let router_address = get_sample_router_address();
+        let vault_address = get_sample_vault_address();
+        let confirmations = 0;
+        let gas_price = 20_000_000_000;
+
+        // NOTE: Initialize the INT side of the core...
+        initialize_eth_core_with_vault_and_router_contracts_and_return_state(
+            &get_sample_int_init_block_json_string(),
+            &EthChainId::Ropsten,
+            gas_price,
+            confirmations,
+            EthState::init(&db),
+            &vault_address,
+            &router_address,
+            &VaultUsingCores::IntOnEvm,
+            true, // NOTE: is_native
+        )
+        .unwrap();
+
+        // NOTE: Initialize the EVM side of the core...
+        initialize_evm_core_with_no_contract_tx(
+            &get_sample_evm_init_block_json_string(),
+            &EthChainId::Ropsten,
+            gas_price,
+            confirmations,
+            EthState::init(&db),
+            false, // NOTE: is_native
+        )
+        .unwrap();
+
+        // NOTE Save the token dictionary into the db...
+        EthEvmTokenDictionary::new(vec![])
+            .add_and_update_in_db(get_sample_token_dictionary_entry(), &db)
+            .unwrap();
+
+        let submission_string = read_to_string("src/test_utils/peg-in-block-1.json").unwrap();
+        let block_num = 11544952;
+
+        // NOTE: This totally normal submission should succeed
+        submit_int_block_to_core(&db, &submission_string).unwrap();
+
+        // NOTE: However it will fail a second time due to the block already being in the db...
+        match submit_int_block_to_core(&db, &submission_string) {
+            Ok(_) => panic!("should not have succeeded!"),
+            Err(AppError::BlockAlreadyInDbError(e)) => assert_eq!(e.block_num, block_num),
+            Err(e) => panic!("wrong error received: {e}"),
+        };
+
+        // NOTE: However if the same block forms part of a _batch_ of blocks, the
+        // `BlockAlreadyInDbError` should be swallowed, and thus no errors.
+        let batch = format!("[{submission_string},{submission_string},{submission_string}]");
+        let result = submit_int_blocks_to_core(&db, &batch);
+        assert!(result.is_ok());
     }
 }

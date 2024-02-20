@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use common::{core_type::CoreType, traits::DatabaseInterface, types::Result};
+use common::{core_type::CoreType, traits::DatabaseInterface, types::Result, AppError};
 use common_eth::{
     check_for_parent_of_eth_block_in_state,
     maybe_add_eth_block_and_receipts_to_db_and_return_state,
@@ -80,10 +80,24 @@ pub fn submit_int_blocks_to_core<D: DatabaseInterface>(db: &D, blocks: &str) -> 
         .and_then(|_| db.start_transaction())
         .and_then(|_| EthSubmissionMaterialJsons::from_str(blocks))
         .and_then(|jsons| {
-            jsons
-                .iter()
-                .map(|block| submit_int_block(db, block))
-                .collect::<Result<Vec<_>>>()
+            let mut outputs = vec![];
+
+            for json in jsons.iter() {
+                match submit_int_block(db, json) {
+                    Ok(o) => {
+                        outputs.push(o);
+                        continue;
+                    },
+                    Err(AppError::BlockAlreadyInDbError(e)) => {
+                        warn!("block already in db error: {e}");
+                        info!("moving on to next block in batch!");
+                        continue;
+                    },
+                    Err(e) => return Err(e),
+                }
+            }
+
+            Ok(outputs)
         })
         .map(IntOutputs::new)
         .and_then(|outputs| {
@@ -216,5 +230,74 @@ mod tests {
         let result = output.eos_signed_transactions[0].clone();
         let expected_result = expected_output.eos_signed_transactions[0].clone();
         assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    fn should_batch_submit_int_blocks_successfully_even_if_one_already_in_db() {
+        let db = get_test_database();
+        let vault_address = get_sample_vault_address();
+        let router_address = get_sample_router_address();
+
+        // NOTE: Initialize the EOS core...
+        let eos_chain_id = "4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11";
+        let maybe_eos_account_name = None;
+        let maybe_eos_token_symbol = None;
+        let eos_init_block = get_sample_eos_init_block_1();
+        let is_native = false;
+        initialize_eos_core_inner(
+            &db,
+            eos_chain_id,
+            maybe_eos_account_name,
+            maybe_eos_token_symbol,
+            &eos_init_block,
+            is_native,
+        )
+        .unwrap();
+
+        // NOTE: Overwrite the EOS private key since it's generated randomly above...
+        let eos_pk = get_sample_eos_private_key();
+        eos_pk.write_to_db(&db).unwrap();
+        assert_eq!(EosPrivateKey::get_from_db(&db).unwrap(), eos_pk);
+
+        // NOTE: Initialize the INT side of the core...
+        let int_confirmations = 0;
+        let int_gas_price = 20_000_000_000;
+        let contiguous_int_block_json_strs = get_contiguous_int_block_json_strs();
+        let int_init_block = contiguous_int_block_json_strs[0].clone();
+        let is_native = true;
+        initialize_eth_core_with_vault_and_router_contracts_and_return_state(
+            &int_init_block,
+            &EthChainId::Ropsten,
+            int_gas_price,
+            int_confirmations,
+            IntState::init(&db),
+            &vault_address,
+            &router_address,
+            &VaultUsingCores::IntOnEos,
+            is_native,
+        )
+        .unwrap();
+
+        // NOTE: Add the token dictionary to the db...
+        let dictionary = get_sample_dictionary_1();
+        dictionary.save_to_db(&db).unwrap();
+
+        let submission_string = contiguous_int_block_json_strs[1].clone();
+        let block_num = 12236006;
+        // NOTE: This totally normal submission should succeed
+        submit_int_block_to_core(&db, &submission_string).unwrap();
+
+        // NOTE: However it will fail a second time due to the block already being in the db...
+        match submit_int_block_to_core(&db, &submission_string) {
+            Ok(_) => panic!("should not have succeeded!"),
+            Err(AppError::BlockAlreadyInDbError(e)) => assert_eq!(e.block_num, block_num),
+            Err(e) => panic!("wrong error received: {e}"),
+        };
+
+        // NOTE: However if the same block forms part of a _batch_ of blocks, the
+        // `BlockAlreadyInDbError` should be swallowed, and thus no errors.
+        let batch = format!("[{submission_string},{submission_string},{submission_string}]");
+        let result = submit_int_blocks_to_core(&db, &batch);
+        assert!(result.is_ok());
     }
 }

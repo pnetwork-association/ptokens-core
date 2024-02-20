@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use common::{core_type::CoreType, traits::DatabaseInterface, types::Result};
+use common::{core_type::CoreType, traits::DatabaseInterface, types::Result, AppError};
 use common_eth::{
     check_for_parent_of_eth_block_in_state,
     maybe_add_eth_block_and_receipts_to_db_and_return_state,
@@ -78,10 +78,24 @@ pub fn submit_int_blocks_to_core<D: DatabaseInterface>(db: &D, blocks: &str) -> 
         .and_then(|_| db.start_transaction())
         .and_then(|_| EthSubmissionMaterialJsons::from_str(blocks))
         .and_then(|jsons| {
-            jsons
-                .iter()
-                .map(|block| submit_int_block(db, block))
-                .collect::<Result<Vec<_>>>()
+            let mut outputs = vec![];
+
+            for json in jsons.iter() {
+                match submit_int_block(db, json) {
+                    Ok(o) => {
+                        outputs.push(o);
+                        continue;
+                    },
+                    Err(AppError::BlockAlreadyInDbError(e)) => {
+                        warn!("block already in db error: {e}");
+                        info!("moving on to next block in batch!");
+                        continue;
+                    },
+                    Err(e) => return Err(e),
+                }
+            }
+
+            Ok(outputs)
         })
         .map(IntOutputs::new)
         .and_then(|outputs| {
@@ -466,5 +480,111 @@ mod tests {
         let expected_result = IntOutput::from_str(&expected_result_json.to_string()).unwrap();
         let result = IntOutput::from_str(&output).unwrap();
         assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    #[serial]
+    fn should_batch_submit_int_blocks_successfully_even_if_one_already_in_db() {
+        let db = get_test_database();
+        let int_submission_material =
+            get_sample_contiguous_int_submission_json_strings_for_msg_pack_encoded_user_data();
+        let int_init_block = int_submission_material[0].clone();
+        let int_peg_in_block = int_submission_material[1].clone();
+        let algo_submission_material =
+            get_sample_contiguous_algo_submission_json_strings_for_asset_transfer_peg_out_1();
+        let router_address = get_sample_router_address();
+        let vault_address = get_sample_vault_address();
+        let int_confirmations = 0;
+        let algo_confirmations = 1;
+        let gas_price = 20_000_000_000;
+        let algo_fee = 1000;
+        let app_id = 1337;
+
+        // NOTE: Initialize the INT side of the core...
+        let is_native = true;
+        initialize_eth_core_with_vault_and_router_contracts_and_return_state(
+            &int_init_block,
+            &EthChainId::Ropsten,
+            gas_price,
+            int_confirmations,
+            EthState::init(&db),
+            &vault_address,
+            &router_address,
+            &VaultUsingCores::IntOnAlgo,
+            is_native,
+        )
+        .unwrap();
+
+        // NOTE: Initialize the ALGO side of the core...
+        maybe_initialize_algo_core(
+            &db,
+            &algo_submission_material[0],
+            &AlgorandGenesisId::Mainnet.to_string(),
+            algo_fee,
+            algo_confirmations,
+            app_id,
+        )
+        .unwrap();
+
+        // NOTE: Overwrite the INT address & private key since it's generated randomly above...
+        let int_address = convert_hex_to_eth_address("0x49B9d619E3402de8867A8113C7bc204653F5DB4c").unwrap();
+        let int_private_key = EthPrivateKey::from_slice(
+            &hex::decode("e87a3a4b16ffc44c78d53f633157f0c08dc085a33483c2cbae78aa5892247e4c").unwrap(),
+        )
+        .unwrap();
+        let int_db_utils = EvmDbUtils::new(&db);
+        int_db_utils
+            .put_eth_address_in_db(&int_db_utils.get_eth_address_key(), &int_address)
+            .unwrap();
+        int_db_utils.put_eth_private_key_in_db(&int_private_key).unwrap();
+        assert_eq!(int_db_utils.get_public_eth_address_from_db().unwrap(), int_address);
+        assert_eq!(int_db_utils.get_eth_private_key_from_db().unwrap(), int_private_key);
+
+        // NOTE: Overwrite the ALGO address and private key since it's generated randomly above...
+        let algo_db_utils = AlgoDbUtils::new(&db);
+        let algo_address =
+            AlgorandAddress::from_str("N4F4VB7GYZWL2RRTMQVMBKM5GKTKDTOHVB5PHGQYFB6XSXR3MRYIVOPTWE").unwrap();
+        let algo_private_key = AlgorandKeys::from_bytes(
+            &hex::decode("4c9a9699eedc1b7f62b679e375c32ed83159d22428892b7f4285dad2f550f558").unwrap(),
+        )
+        .unwrap();
+        db.put(
+            get_prefixed_db_key("algo_private_key_key").to_vec(),
+            algo_private_key.to_bytes(),
+            MAX_DATA_SENSITIVITY_LEVEL,
+        )
+        .unwrap();
+        db.put(
+            get_prefixed_db_key("algo_redeem_address_key").to_vec(),
+            algo_address.to_bytes(),
+            MIN_DATA_SENSITIVITY_LEVEL,
+        )
+        .unwrap();
+        assert_eq!(algo_db_utils.get_redeem_address().unwrap(), algo_address);
+        assert_eq!(algo_db_utils.get_algo_private_key().unwrap(), algo_private_key);
+
+        // NOTE Save the token dictionary into the db...
+        EvmAlgoTokenDictionary::new(vec![])
+            .add_and_update_in_db(get_sample_evm_algo_dictionary_entry_1(), &db)
+            .unwrap();
+
+        let submission_string = int_peg_in_block.clone();
+        let block_num = 12342414;
+
+        // NOTE: This totally normal submission should succeed
+        submit_int_block_to_core(&db, &submission_string).unwrap();
+
+        // NOTE: However it will fail a second time due to the block already being in the db...
+        match submit_int_block_to_core(&db, &submission_string) {
+            Ok(_) => panic!("should not have succeeded!"),
+            Err(AppError::BlockAlreadyInDbError(e)) => assert_eq!(e.block_num, block_num),
+            Err(e) => panic!("wrong error received: {e}"),
+        };
+
+        // NOTE: However if the same block forms part of a _batch_ of blocks, the
+        // `BlockAlreadyInDbError` should be swallowed, and thus no errors.
+        let batch = format!("[{submission_string},{submission_string},{submission_string}]");
+        let result = submit_int_blocks_to_core(&db, &batch);
+        assert!(result.is_ok());
     }
 }
