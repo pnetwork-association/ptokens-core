@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use common::{core_type::CoreType, traits::DatabaseInterface, types::Result};
+use common::{core_type::CoreType, traits::DatabaseInterface, types::Result, AppError};
 use common_eth::{
     check_for_parent_of_eth_block_in_state,
     maybe_add_eth_block_and_receipts_to_db_and_return_state,
@@ -90,10 +90,24 @@ pub fn submit_eth_blocks_to_core<D: DatabaseInterface>(db: &D, blocks: &str) -> 
         .and_then(|_| db.start_transaction())
         .and_then(|_| EthSubmissionMaterialJsons::from_str(blocks))
         .and_then(|jsons| {
-            jsons
-                .iter()
-                .map(|block| submit_eth_block(db, block))
-                .collect::<Result<Vec<_>>>()
+            let mut outputs = vec![];
+
+            for json in jsons.iter() {
+                match submit_eth_block(db, json) {
+                    Ok(o) => {
+                        outputs.push(o);
+                        continue;
+                    },
+                    Err(AppError::BlockAlreadyInDbError(e)) => {
+                        warn!("block already in db error: {e}");
+                        info!("moving on to next block in batch!");
+                        continue;
+                    },
+                    Err(e) => return Err(e),
+                }
+            }
+
+            Ok(outputs)
         })
         .map(EthOutputs::new)
         .and_then(|outputs| {
@@ -400,5 +414,76 @@ mod tests {
         let expected_result = EthOutput::from_str(&expected_result_json.to_string()).unwrap();
         let result = EthOutput::from_str(&output).unwrap();
         assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    fn should_batch_submit_evm_blocks_successfully_even_if_one_already_in_db() {
+        let db = get_test_database();
+        let router_address = convert_hex_to_eth_address("0x0e1c8524b1D1891B201ffC7BB58a82c96f8Fc4F6").unwrap();
+        let vault_address = convert_hex_to_eth_address("0x97B8CAA7aCe2daA7995bF679f5dA30aF187897DE").unwrap();
+        let confirmations = 0;
+        let gas_price = 20_000_000_000;
+        let int_init_block = get_sample_int_init_block_json_string();
+        // NOTE: Initialize the ETH side of the core...
+        initialize_eth_core_with_vault_and_router_contracts_and_return_state(
+            &get_sample_sepolia_init_block_json_string(),
+            &EthChainId::Sepolia,
+            gas_price,
+            confirmations,
+            EthState::init(&db),
+            &vault_address,
+            &router_address,
+            &VaultUsingCores::Erc20OnInt,
+            true, // NOTE is_native
+        )
+        .unwrap();
+        // NOTE: Initialize the INT side of the core...
+        initialize_evm_core_with_no_contract_tx(
+            &int_init_block,
+            &EthChainId::Ropsten,
+            gas_price,
+            confirmations,
+            EthState::init(&db),
+            false, // NOTE is_native
+        )
+        .unwrap();
+        // NOTE: Overwrite the INT address & private key since it's generated randomly above...
+        let address = convert_hex_to_eth_address("8549cf9b30276305de31fa7533938e7ce366d12a").unwrap();
+        let private_key = EthPrivateKey::from_slice(
+            &hex::decode("d22ecd05f55019604c5484bdb55d6c78c631cd7a05cc31781900ce356186617e").unwrap(),
+        )
+        .unwrap();
+        let db_utils = EvmDbUtils::new(&db);
+
+        db_utils
+            .put_eth_address_in_db(&db_utils.get_eth_address_key(), &address)
+            .unwrap();
+        db_utils.put_eth_private_key_in_db(&private_key).unwrap();
+        assert_eq!(db_utils.get_public_eth_address_from_db().unwrap(), address,);
+        assert_eq!(db_utils.get_eth_private_key_from_db().unwrap(), private_key,);
+
+        // NOTE Save the token dictionary into the db...
+        EthEvmTokenDictionary::new(vec![])
+            .add_and_update_in_db(get_sample_sepolia_token_dictionary_entry(), &db)
+            .unwrap();
+
+        let submission_string = get_sample_sepolia_peg_in_submission_string();
+        let block_num = 1756230;
+
+        // NOTE: This totally normal submission should succeed
+        submit_eth_block_to_core(&db, &submission_string).unwrap();
+
+        // NOTE: However it will fail a second time due to the block already being in the db...
+        match submit_eth_block_to_core(&db, &submission_string) {
+            Ok(_) => panic!("should not have succeeded!"),
+            Err(AppError::BlockAlreadyInDbError(e)) => assert_eq!(e.block_num, block_num),
+            Err(e) => panic!("wrong error received: {e}"),
+        };
+
+        // NOTE: However if the same block forms part of a _batch_ of blocks, the
+        // `BlockAlreadyInDbError` should be swallowed, and thus no errors.
+        let batch = format!("[{submission_string},{submission_string},{submission_string}]");
+        let result = submit_eth_blocks_to_core(&db, &batch);
+        assert!(result.is_ok());
     }
 }
