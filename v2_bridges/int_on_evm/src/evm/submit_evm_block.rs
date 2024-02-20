@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use common::{core_type::CoreType, traits::DatabaseInterface, types::Result};
+use common::{core_type::CoreType, traits::DatabaseInterface, types::Result, AppError};
 use common_eth::{
     check_for_parent_of_evm_block_in_state,
     maybe_add_evm_block_and_receipts_to_db_and_return_state,
@@ -90,10 +90,24 @@ pub fn submit_evm_blocks_to_core<D: DatabaseInterface>(db: &D, blocks: &str) -> 
         .and_then(|_| db.start_transaction())
         .and_then(|_| EthSubmissionMaterialJsons::from_str(blocks))
         .and_then(|jsons| {
-            jsons
-                .iter()
-                .map(|json| submit_evm_block(db, json))
-                .collect::<Result<Vec<EvmOutput>>>()
+            let mut outputs = vec![];
+
+            for json in jsons.iter() {
+                match submit_evm_block(db, json) {
+                    Ok(o) => {
+                        outputs.push(o);
+                        continue;
+                    },
+                    Err(AppError::BlockAlreadyInDbError(e)) => {
+                        warn!("block already in db error: {e}");
+                        info!("moving on to next block in batch!");
+                        continue;
+                    },
+                    Err(e) => return Err(e),
+                }
+            }
+
+            Ok(outputs)
         })
         .map(EvmOutputs::new)
         .and_then(|outputs| {
@@ -310,5 +324,62 @@ mod tests {
         let expected_result = EvmOutput::from_str(&expected_result_json.to_string()).unwrap();
         let result = EvmOutput::from_str(&output).unwrap();
         assert_eq!(result, expected_result);
+    }
+
+    #[test]
+    fn should_batch_submit_evm_blocks_successfully_even_if_one_already_in_db() {
+        let db = get_test_database();
+        let router_address = get_sample_router_address();
+        let vault_address = convert_hex_to_eth_address("0x010e1e6f6c360da7e3d62479b6b9d717b3e114ca").unwrap();
+        let confirmations = 0;
+        let gas_price = 20_000_000_000;
+
+        // NOTE: Initialize the INT side of the core...
+        initialize_eth_core_with_vault_and_router_contracts_and_return_state(
+            &get_sample_int_init_block_json_string(),
+            &EthChainId::Ropsten,
+            gas_price,
+            confirmations,
+            EthState::init(&db),
+            &vault_address,
+            &router_address,
+            &VaultUsingCores::IntOnEvm,
+            true, // NOTE: is_native
+        )
+        .unwrap();
+
+        // NOTE: Initialize the EVM side of the core...
+        initialize_evm_core_with_no_contract_tx(
+            &get_sample_evm_goerli_init_block_json_string(),
+            &EthChainId::Goerli,
+            gas_price,
+            confirmations,
+            EthState::init(&db),
+            false, // NOTE: is_native
+        )
+        .unwrap();
+
+        // NOTE Save the token dictionary into the db...
+        EthEvmTokenDictionary::new(vec![])
+            .add_and_update_in_db(get_sample_token_dictionary_entry_1(), &db)
+            .unwrap();
+
+        // NOTE: Submit a block normally, which should be successful
+        let submission_string = read_to_string("src/test_utils/goerli-core-peg-out-block.json").unwrap();
+        let block_num = 7464238;
+        submit_evm_block_to_core(&db, &submission_string).unwrap();
+
+        // NOTE: However it will fail a second time due to the block already being in the db...
+        match submit_evm_block_to_core(&db, &submission_string) {
+            Ok(_) => panic!("should not have succeeded!"),
+            Err(AppError::BlockAlreadyInDbError(e)) => assert_eq!(e.block_num, block_num),
+            Err(e) => panic!("wrong error received: {e}"),
+        };
+
+        // NOTE: However if the same block forms part of a _batch_ of blocks, the
+        // `BlockAlreadyInDbError` should be swallowed, and thus no errors.
+        let batch = format!("[{submission_string},{submission_string},{submission_string}]");
+        let result = submit_evm_blocks_to_core(&db, &batch);
+        assert!(result.is_ok());
     }
 }
