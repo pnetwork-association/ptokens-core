@@ -2546,7 +2546,7 @@ dependencies = [
 
 [[package]]
 name = "int_on_evm"
-version = "1.6.0"
+version = "1.7.0"
 dependencies = [
  "chain_ids",
  "common",
