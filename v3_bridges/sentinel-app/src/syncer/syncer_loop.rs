@@ -26,6 +26,7 @@ pub(super) async fn syncer_loop(
     core_time_limit: &u64,
 ) -> Result<(), SentinelError> {
     let network_id = *batch.network_id();
+    let network_config = config.networks().get(&network_id).unwrap();
     let log_prefix = format!("{network_id} syncer");
     let validate = matches!(config.validate(&network_id), Ok(true));
     let pnetwork_hub = config.pnetwork_hub(&network_id)?;
@@ -76,7 +77,7 @@ pub(super) async fn syncer_loop(
                 info!("{log_prefix} batch is ready to submit!");
                 let args = WebSocketMessagesProcessBatchArgs::new_for_syncer(
                     validate,
-                    network_id,
+                    network_config.clone(),
                     pnetwork_hub,
                     batch.to_submission_material(),
                     *batch.governance_address(),

@@ -11,7 +11,7 @@ use serde_json::json;
 use crate::android::State;
 
 pub fn process_batch(args: WebSocketMessagesProcessBatchArgs, state: State) -> Result<State, SentinelError> {
-    let network_id = args.network_id();
+    let network_config = args.network_config();
     let sentinel_address = ChainDbUtils::new(state.db()).get_signing_address()?;
 
     let result = process_batch_of_blocks(
@@ -19,7 +19,7 @@ pub fn process_batch(args: WebSocketMessagesProcessBatchArgs, state: State) -> R
         args.pnetwork_hub(),
         args.sub_mat_batch(),
         *args.validate(),
-        network_id,
+        network_config,
         *args.reprocess(),
         *args.dry_run(),
         *args.governance_address(),

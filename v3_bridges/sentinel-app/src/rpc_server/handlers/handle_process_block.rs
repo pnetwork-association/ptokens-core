@@ -45,11 +45,13 @@ impl RpcCalls {
                 // NOTE: The processor always works on batches
                 let batch = EthSubmissionMaterials::new(vec![sub_mat]);
 
+                let network_config = config.networks().get(&network_id).unwrap();
+
                 let submit_args = WebSocketMessagesProcessBatchArgs::new(
                     config.validate(&network_id)?,
                     dry_run,
                     reprocess,
-                    network_id,
+                    network_config.clone(),
                     config.pnetwork_hub(&network_id)?,
                     batch,
                     config.governance_address(&network_id),

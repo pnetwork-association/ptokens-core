@@ -12,3 +12,4 @@ target/
 *.gz
 *.env
 /server
+sentinel-app
