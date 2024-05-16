@@ -1,5 +1,4 @@
 mod handle_add_debug_signers;
-mod handle_cancel_user_ops;
 mod handle_challenge_responder_start_stop;
 mod handle_db_ops;
 mod handle_get_attestation_certificate;
@@ -31,7 +30,6 @@ mod handle_remove_user_op;
 mod handle_reset_chain;
 mod handle_set_challenge_responder_frequency;
 mod handle_set_status_publishing_frequency;
-mod handle_set_user_op_canceller_frequency;
 mod handle_sign_message;
 mod handle_status_publisher_start_stop;
 mod handle_sync_state;

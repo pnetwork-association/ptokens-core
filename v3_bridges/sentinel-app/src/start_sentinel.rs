@@ -9,7 +9,6 @@ use common_sentinel::{
     SentinelConfig,
     SentinelError,
     StatusPublisherMessages,
-    UserOpCancellerMessages,
     WebSocketMessages,
 };
 use futures::future::try_join_all;
@@ -26,7 +25,6 @@ use crate::{
     rpc_server::rpc_server_loop,
     status_publisher::status_publisher_loop,
     syncer::syncer,
-    user_op_canceller::user_op_canceller_loop,
     ws_server::ws_server_loop,
 };
 
@@ -49,11 +47,6 @@ pub async fn start_sentinel(config: &SentinelConfig, disable: bool) -> Result<St
     let (websocket_tx, websocket_rx): (MpscTx<WebSocketMessages>, MpscRx<WebSocketMessages>) =
         mpsc::channel(MAX_CHANNEL_CAPACITY);
 
-    let (user_op_canceller_tx, user_op_canceller_rx): (
-        MpscTx<UserOpCancellerMessages>,
-        MpscRx<UserOpCancellerMessages>,
-    ) = mpsc::channel(MAX_CHANNEL_CAPACITY);
-
     let status_thread = tokio::spawn(status_publisher_loop(
         config.clone(),
         status_rx,
@@ -73,22 +66,11 @@ pub async fn start_sentinel(config: &SentinelConfig, disable: bool) -> Result<St
         disable,
     ));
 
-    let user_op_canceller_thread = tokio::spawn(user_op_canceller_loop(
-        user_op_canceller_rx,
-        EthRpcSenders::from(&eth_rpc_channels),
-        config.clone(),
-        broadcast_channel_tx.clone(),
-        websocket_tx.clone(),
-        user_op_canceller_tx.clone(),
-        disable,
-    ));
-
     let rpc_server_thread = tokio::spawn(rpc_server_loop(
         EthRpcSenders::from(&eth_rpc_channels),
         websocket_tx.clone(),
         config.clone(),
         broadcast_channel_tx.clone(),
-        user_op_canceller_tx.clone(),
         status_tx.clone(),
         challenge_responder_tx.clone(),
     ));
@@ -140,7 +122,6 @@ pub async fn start_sentinel(config: &SentinelConfig, disable: bool) -> Result<St
     let mut other_threads = vec![
         ws_server_thread,
         rpc_server_thread,
-        user_op_canceller_thread,
         status_thread,
         challenge_responder_thread,
     ];

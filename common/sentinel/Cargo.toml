@@ -65,6 +65,7 @@ common_debug_signers = { workspace = true }
 
 # NOTE: Rev is my PR to get a long commit hash. If merged we can update this import.
 rbtag = { git = "https://github.com/LivingInSyn/rbtag.git", rev = "feee7c0" }
+eth_trie = "0.4.0"
 
 [dev-dependencies]
 simple_logger = { workspace = true }

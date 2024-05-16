@@ -3,6 +3,7 @@ use common_sentinel::{
     Batch,
     EthRpcMessages,
     LatestBlockInfos,
+    ProcessorOutput,
     SentinelConfig,
     SentinelError,
     WebSocketMessages,
@@ -93,8 +94,13 @@ pub(super) async fn syncer_loop(
                 };
                 match websocket_response {
                     Ok(WebSocketMessagesEncodable::Success(output)) => {
+                        // FIXME Handle below result more explicitly if you don't want a crash on
+                        // the error variant
+                        let processor_output = ProcessorOutput::try_from(output)?;
+                        todo!("now you have `processor_output.signed_events()` and you can do with them what you wish/put in mongo/whatever");
+
                         debug!("{log_prefix} websocket channel returned success output: {output}");
-                        batch.update_bpm_from_json(output);
+                        batch.update_bpm(&processor_output);
                         batch.increment_block_num();
                     },
                     Ok(WebSocketMessagesEncodable::Error(WebSocketMessagesError::NoParent(e))) => {

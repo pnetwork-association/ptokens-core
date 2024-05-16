@@ -5,32 +5,32 @@ use derive_getters::Getters;
 use serde::{Deserialize, Serialize};
 use serde_json::Value as Json;
 
-use crate::{get_utc_timestamp, SentinelError, UserOps};
+use crate::{get_utc_timestamp, SentinelError, SignedEvents};
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, Getters)]
 pub struct ProcessorOutput {
     timestamp: u64,
     network_id: NetworkId,
     latest_block_num: u64,
-    processed_user_ops: UserOps,
+    signed_events: SignedEvents,
 }
 
 impl ProcessorOutput {
     pub fn new(
         network_id: NetworkId,
         latest_block_num: u64,
-        processed_user_ops: UserOps,
+        signed_events: SignedEvents,
     ) -> Result<Self, SentinelError> {
         Ok(Self {
             network_id,
+            signed_events,
             latest_block_num,
-            processed_user_ops,
             timestamp: get_utc_timestamp()?,
         })
     }
 
     pub fn has_user_ops(&self) -> bool {
-        !self.processed_user_ops.is_empty()
+        !self.signed_events.is_empty()
     }
 }
 

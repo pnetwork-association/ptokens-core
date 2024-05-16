@@ -5,7 +5,6 @@ use common_network_ids::NetworkId;
 use derive_getters::Getters;
 use ethereum_types::{Address as EthAddress, U256};
 use jsonrpsee::ws_client::WsClient;
-use serde_json::Value as Json;
 use thiserror::Error;
 
 use crate::{endpoints::Endpoints, Bpm, ProcessorOutput, SentinelConfig, SentinelError};
@@ -76,17 +75,6 @@ impl Batch {
 
     pub fn get_block_num(&self) -> u64 {
         self.block_num
-    }
-
-    pub fn update_bpm_from_json(&mut self, j: Json) {
-        let err_msg = format!("error converting json: '{j}' to processor output:");
-        match ProcessorOutput::try_from(j) {
-            Ok(ref o) => self.update_bpm(o),
-            Err(e) => {
-                warn!("{err_msg}: {e}");
-                warn!("not updating syncer bpm for network {}", self.bpm.network_id());
-            },
-        }
     }
 
     pub fn update_bpm(&mut self, o: &ProcessorOutput) {

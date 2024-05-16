@@ -3,7 +3,6 @@ use common_sentinel::{
     ChallengeResponderMessages,
     EthRpcMessages,
     StatusPublisherMessages,
-    UserOpCancellerMessages,
     WebSocketMessages,
 };
 use tokio::sync::{
@@ -15,8 +14,6 @@ pub(crate) type CoreCxnStatus = bool;
 pub(crate) type EthRpcTx = MpscTx<EthRpcMessages>;
 pub(crate) type WebSocketRx = MpscRx<WebSocketMessages>;
 pub(crate) type WebSocketTx = MpscTx<WebSocketMessages>;
-pub(crate) type UserOpCancellerTx = MpscTx<UserOpCancellerMessages>;
-pub(crate) type UserOpCancellerRx = MpscRx<UserOpCancellerMessages>;
 pub(crate) type StatusPublisherTx = MpscTx<StatusPublisherMessages>;
 pub(crate) type StatusPublisherRx = MpscRx<StatusPublisherMessages>;
 pub(crate) type BroadcastChannelTx = MpmcTx<BroadcastChannelMessages>;

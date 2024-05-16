@@ -3,6 +3,12 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum SentinelConfigError {
+    #[error("need an array of address and topic arguments in events in config")]
+    NotEnoughEventArgs,
+
+    #[error("common error: {0}")]
+    Common(#[from] common::CommonError),
+
     #[error("sentinel config network id error {0}")]
     NetworkId(#[from] common_network_ids::NetworkIdError),
 

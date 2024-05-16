@@ -163,6 +163,7 @@ mod tests {
     fn should_get_config() {
         let path = "src/config/test_utils/sample-config";
         let result = SentinelConfig::new(path);
-        assert!(result.is_ok());
+        result.unwrap();
+        //assert!(result.is_ok());
     }
 }

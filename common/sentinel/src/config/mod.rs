@@ -13,6 +13,6 @@ pub use self::{
     governance::GovernanceConfig,
     ipfs::IpfsConfig,
     log::LogConfig,
-    network::NetworkConfig,
+    network::{ConfiguredEvent, ConfiguredEvents, NetworkConfig},
 };
 use self::{governance::GovernanceToml, log::LogToml, network::NetworkToml};

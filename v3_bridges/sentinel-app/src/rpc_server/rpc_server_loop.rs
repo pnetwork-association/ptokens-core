@@ -13,7 +13,6 @@ use crate::type_aliases::{
     BroadcastChannelTx,
     ChallengeResponderTx,
     StatusPublisherTx,
-    UserOpCancellerTx,
     WebSocketTx,
 };
 
@@ -23,7 +22,6 @@ async fn start_rpc_server(
     config: SentinelConfig,
     broadcast_channel_tx: BroadcastChannelTx,
     core_cxn: bool,
-    user_op_canceller_tx: UserOpCancellerTx,
     status_tx: StatusPublisherTx,
     challenge_responder_tx: ChallengeResponderTx,
 ) -> Result<(), SentinelError> {
@@ -32,7 +30,6 @@ async fn start_rpc_server(
     let status_tx_filter = warp::any().map(move || status_tx.clone());
     let websocket_tx_filter = warp::any().map(move || websocket_tx.clone());
     let eth_rpc_senders_filter = warp::any().map(move || eth_rpc_senders.clone());
-    let broadcaster_tx_filter = warp::any().map(move || user_op_canceller_tx.clone());
     let broadcast_channel_tx_filter = warp::any().map(move || broadcast_channel_tx.clone());
     let challenge_responder_tx_filter = warp::any().map(move || challenge_responder_tx.clone());
 
@@ -45,7 +42,6 @@ async fn start_rpc_server(
         .and(warp::any().map(move || config.clone()))
         .and(websocket_tx_filter.clone())
         .and(eth_rpc_senders_filter.clone())
-        .and(broadcaster_tx_filter.clone())
         .and(broadcast_channel_tx_filter.clone())
         .and(status_tx_filter.clone())
         .and(challenge_responder_tx_filter.clone())
@@ -79,7 +75,6 @@ pub async fn rpc_server_loop(
     websocket_tx: WebSocketTx,
     config: SentinelConfig,
     broadcast_channel_tx: BroadcastChannelTx,
-    user_op_canceller_tx: UserOpCancellerTx,
     status_tx: StatusPublisherTx,
     challenge_responder_tx: ChallengeResponderTx,
 ) -> Result<(), SentinelError> {
@@ -109,7 +104,6 @@ pub async fn rpc_server_loop(
                 config.clone(),
                 broadcast_channel_tx.clone(),
                 core_connection_status,
-                user_op_canceller_tx.clone(),
                 status_tx.clone(),
                 challenge_responder_tx.clone(),
             ), if rpc_server_is_enabled => {
