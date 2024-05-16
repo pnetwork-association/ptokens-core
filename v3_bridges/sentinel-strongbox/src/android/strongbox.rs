@@ -88,7 +88,7 @@ impl<'a> Strongbox<'a> {
         }
     }
 
-    fn initialize_keystore(&self) -> Result<(), SentinelError> {
+    pub fn initialize_keystore(&self) -> Result<(), SentinelError> {
         if matches!(self.check_keystore_is_initialized(), Ok(true)) {
             debug!("keystore already initialized!");
             Ok(())

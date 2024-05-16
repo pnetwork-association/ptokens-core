@@ -44,6 +44,7 @@ impl<'a> State<'a> {
         let input_string: String = env.get_string(input)?.into();
         let msg = WebSocketMessagesEncodable::try_from(input_string)?;
         let strongbox = Strongbox::new(env, strongbox_java_class);
+        strongbox.initialize_keystore();
         Ok(State {
             env,
             msg,
