@@ -19,22 +19,10 @@ members = [
     "common/database_utils",
     "common/safe_addresses",
     "common/ethereum_debug",
-    "v2_bridges/btc_on_int",
-    "v2_bridges/int_on_eos",
-    "v2_bridges/int_on_evm",
-    "v2_bridges/eos_on_int",
-    "v2_bridges/int_on_algo",
     "common/jsonrpc_database",
     "common/rocksdb_database",
-    "v2_bridges/erc20_on_int",
     "v3_bridges/sentinel-app",
     "v3_bridges/sentinel-strongbox",
-    "v2_bridges/vanilla_apps/pint-on-evm",
-    "v2_bridges/vanilla_apps/pbtc-on-int",
-    "v2_bridges/vanilla_apps/peos-on-int",
-    "v2_bridges/vanilla_apps/pint-on-eos",
-    "v2_bridges/vanilla_apps/pint-on-algo",
-    "v2_bridges/vanilla_apps/perc20-on-int",
 ]
 
 # NOTE: These crates are all now deprecated, an no longer build. The latest release with which they still compile is:

@@ -538,34 +538,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "771fe0050b883fcc3ea2359b1a96bcfbc090b7116eae7c3c512c7a083fdf23d3"
 
 [[package]]
-name = "btc_on_int"
-version = "1.2.0"
-dependencies = [
- "bitcoin 0.29.0",
- "bitcoin 0.29.2",
- "bitcoin 6.14.1",
- "chain_ids",
- "common",
- "database_utils",
- "debug_signers",
- "derive_more",
- "enclave_info",
- "ethereum",
- "ethereum-types 0.12.1",
- "ethereum_debug",
- "function_name",
- "hex",
- "log",
- "metadata",
- "paste",
- "safe_addresses",
- "serde",
- "serde_json",
- "simple_logger",
- "tiny-keccak 2.0.2",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1283,33 +1255,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eos_on_int"
-version = "2.1.0"
-dependencies = [
- "chain_ids",
- "common",
- "database_utils",
- "debug_signers",
- "derive_more",
- "enclave_info",
- "eos",
- "eos-chain",
- "ethereum",
- "ethereum-types 0.12.1",
- "ethereum_debug",
- "function_name",
- "hex",
- "log",
- "metadata",
- "paste",
- "safe_addresses",
- "serde",
- "serde_json",
- "simple_logger",
- "tiny-keccak 2.0.2",
-]
-
-[[package]]
 name = "eosio-core-derive"
 version = "0.2.1"
 source = "git+https://github.com/bifrost-finance/rust-eos?rev=8e57843#8e57843f3ae5fd4b289f4c7841761ed3b6ce5c5e"
@@ -1324,32 +1269,6 @@ name = "equivalent"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
-
-[[package]]
-name = "erc20_on_int"
-version = "1.2.0"
-dependencies = [
- "chain_ids",
- "common",
- "database_utils",
- "debug_signers",
- "derive_more",
- "enclave_info",
- "ethereum",
- "ethereum-types 0.12.1",
- "ethereum_debug",
- "fees",
- "function_name",
- "hex",
- "log",
- "metadata",
- "paste",
- "safe_addresses",
- "serde",
- "serde_json",
- "simple_logger",
- "tiny-keccak 2.0.2",
-]
 
 [[package]]
 name = "errno"
@@ -2357,88 +2276,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "int_on_algo"
-version = "1.3.0"
-dependencies = [
- "algorand",
- "chain_ids",
- "common",
- "database_utils",
- "debug_signers",
- "derive_more",
- "enclave_info",
- "ethereum",
- "ethereum-types 0.12.1",
- "ethereum_debug",
- "function_name",
- "hex",
- "log",
- "metadata",
- "paste",
- "rust-algorand",
- "safe_addresses",
- "serde",
- "serde_json",
- "serial_test",
- "simple_logger",
- "tiny-keccak 2.0.2",
-]
-
-[[package]]
-name = "int_on_eos"
-version = "2.1.0"
-dependencies = [
- "chain_ids",
- "common",
- "database_utils",
- "debug_signers",
- "derive_more",
- "enclave_info",
- "eos",
- "eos-chain",
- "ethereum",
- "ethereum-types 0.12.1",
- "ethereum_debug",
- "function_name",
- "hex",
- "log",
- "metadata",
- "paste",
- "safe_addresses",
- "serde",
- "serde_json",
- "simple_logger",
- "tiny-keccak 2.0.2",
-]
-
-[[package]]
-name = "int_on_evm"
-version = "1.7.0"
-dependencies = [
- "chain_ids",
- "common",
- "database_utils",
- "debug_signers",
- "derive_more",
- "enclave_info",
- "ethereum",
- "ethereum-types 0.12.1",
- "ethereum_debug",
- "fees",
- "function_name",
- "hex",
- "lazy_static",
- "log",
- "metadata",
- "paste",
- "safe_addresses",
- "serde",
- "serde_json",
- "simple_logger",
- "tiny-keccak 2.0.2",
-]
-
-[[package]]
 name = "ipnet"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3150,62 +2987,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8835116a5c179084a830efb3adc117ab007512b535bc1a21c991d3b32a6b44dd"
 
 [[package]]
-name = "pbtc-on-int"
-version = "2.1.1"
-dependencies = [
- "anyhow",
- "btc_on_int",
- "common",
- "docopt_macros",
- "file_logger",
- "jsonrpc_database",
- "log",
- "paste",
- "rocksdb_database",
- "serde",
- "stderr_logger",
-]
-
-[[package]]
 name = "peeking_take_while"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
-
-[[package]]
-name = "peos-on-int"
-version = "2.0.3"
-dependencies = [
- "anyhow",
- "common",
- "docopt",
- "docopt_macros",
- "eos_on_int",
- "file_logger",
- "jsonrpc_database",
- "log",
- "paste",
- "rocksdb_database",
- "serde",
- "stderr_logger",
-]
-
-[[package]]
-name = "perc20-on-int"
-version = "2.0.3"
-dependencies = [
- "anyhow",
- "common",
- "docopt_macros",
- "erc20_on_int",
- "file_logger",
- "jsonrpc_database",
- "log",
- "paste",
- "rocksdb_database",
- "serde",
- "stderr_logger",
-]
 
 [[package]]
 name = "percent-encoding"
@@ -3295,57 +3080,6 @@ name = "pin-utils"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
-
-[[package]]
-name = "pint-on-algo"
-version = "2.1.0"
-dependencies = [
- "anyhow",
- "common",
- "docopt_macros",
- "file_logger",
- "int_on_algo",
- "jsonrpc_database",
- "log",
- "paste",
- "rocksdb_database",
- "serde",
- "stderr_logger",
-]
-
-[[package]]
-name = "pint-on-eos"
-version = "2.0.11"
-dependencies = [
- "anyhow",
- "common",
- "docopt_macros",
- "file_logger",
- "int_on_eos",
- "jsonrpc_database",
- "log",
- "paste",
- "rocksdb_database",
- "serde",
- "stderr_logger",
-]
-
-[[package]]
-name = "pint-on-evm"
-version = "2.1.2"
-dependencies = [
- "anyhow",
- "common",
- "docopt_macros",
- "file_logger",
- "int_on_evm",
- "jsonrpc_database",
- "log",
- "paste",
- "rocksdb_database",
- "serde",
- "stderr_logger",
-]
 
 [[package]]
 name = "pkcs8"
