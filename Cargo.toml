@@ -21,8 +21,8 @@ members = [
     "common/ethereum_debug",
     "common/jsonrpc_database",
     "common/rocksdb_database",
-    "v3_bridges/sentinel-app",
-    "v3_bridges/sentinel-strongbox",
+    "apps/sentinel-app",
+    "apps/sentinel-strongbox",
 ]
 
 # NOTE: These crates are all now deprecated, an no longer build. The latest release with which they still compile is:
