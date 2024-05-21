@@ -21,7 +21,7 @@ members = [
     "common/ethereum_debug",
     "common/jsonrpc_database",
     "common/rocksdb_database",
-    "apps/sentinel-app",
+    "apps/jsonrpc-app",
     "apps/sentinel-strongbox",
 ]
 
