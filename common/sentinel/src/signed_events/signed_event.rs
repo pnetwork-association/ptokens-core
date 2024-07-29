@@ -71,16 +71,17 @@ impl SignedEvent {
             .map(|t| t.as_bytes().to_vec())
             .collect::<Vec<_>>()
             .concat();
-        let event_bytes = eth_abi_decode(&[EthAbiParamType::Tuple(vec![EthAbiParamType::Bytes])], &self.log.data)?;
-        let event_bytes = match &event_bytes[0] {
-            EthAbiToken::Tuple(value) => match &value[0] {
-                EthAbiToken::Bytes(bytes) => Ok(bytes.to_vec()),
-                _ => Err(SignedEventError::LogDataError("bad log data format".to_string())),
-            },
-            _ => Err(SignedEventError::LogDataError("bad log data format".to_string())),
-        }?;
+        // let event_bytes = eth_abi_decode(&[EthAbiParamType::Tuple(vec![EthAbiParamType::Bytes])], &self.log.data)?;
+        // let event_bytes = match &event_bytes[0] {
+        //     EthAbiToken::Tuple(value) => match &value[0] {
+        //         EthAbiToken::Bytes(bytes) => Ok(bytes.to_vec()),
+        //         _ => Err(SignedEventError::LogDataError("bad log data format".to_string())),
+        //     },
+        //     _ => Err(SignedEventError::LogDataError("bad log data format".to_string())),
+        // }?;
+        
 
-        Ok([address, sha256_hash_bytes(&topics), event_bytes].concat())
+        Ok([address, sha256_hash_bytes(&topics), self.log.data.to_vec()].concat())
     }
 
     fn calculate_event_id(&self) -> Result<EventId, EventIdError> {
@@ -134,7 +135,7 @@ mod tests {
         let merkle_proof = MerkleProof::new(vec![vec![]]);
         let result = SignedEvent::new(metadata_chain_id, log, tx_id_hash, block_id_hash, &pk, merkle_proof).unwrap();
 
-        let expected_signature = "5f39735498e1b86e914aa1e297dc2fe33a828b68d3720884953a52bdb43d5ed03b08465279ca638cf671cb037b55eac9033b5f20c9cb7eeffc8475fa8ef35f291c".to_string();
+        let expected_signature = "d1820d529a376ed15395faa94a0d8d535620ebc63755a9e57c9cc6d25ac503fa6a14ffa06bc9257ddd3b335da620333fddec0ddf17b151154c3eaa6fe880ff481c".to_string();
 
         assert_eq!(result.signature.unwrap(), expected_signature);
     }
