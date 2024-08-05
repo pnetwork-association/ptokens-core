@@ -11,8 +11,8 @@ mod strongbox;
 mod type_aliases;
 
 pub use self::{
-    call_core::Java_com_ptokenssentinelandroidapp_RustBridge_callCore,
-    rust_java_log::Java_com_ptokenssentinelandroidapp_rustlogger_RustLogger_log,
+    call_core::Java_proofcastlabs_tee_MainActivity_callCore,
+    rust_java_log::Java_proofcastlabs_tee_logging_RustLogger_log,
 };
 use self::{
     constants::CORE_TYPE,

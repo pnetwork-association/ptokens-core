@@ -44,7 +44,7 @@ fn call_core_inner(
 
 #[allow(non_snake_case)]
 #[no_mangle]
-pub extern "C" fn Java_com_ptokenssentinelandroidapp_RustBridge_callCore(
+pub extern "C" fn Java_proofcastlabs_tee_MainActivity_callCore(
     env: JNIEnv,
     _class: JClass,
     strongbox_java_class: JObject,
