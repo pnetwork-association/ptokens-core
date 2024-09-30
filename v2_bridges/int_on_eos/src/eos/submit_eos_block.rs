@@ -39,6 +39,7 @@ use crate::eos::{
 /// incremerkle accordingly. Any proofs submitted with the block and transaction IDs will then be
 /// parsed and if found to pertain to peg outs made in the block in question, an ETH transaction
 /// will be signed and returned to the caller.
+#[cfg(not(feature = "spring_1-0"))]
 pub fn submit_eos_block_to_core<D: DatabaseInterface>(db: &D, block_json: &str) -> Result<String> {
     info!("✔ Submitting EOS block to core...");
     db.start_transaction()
@@ -116,75 +117,79 @@ mod tests {
         },
     };
 
-    #[test]
-    fn should_submit_eos_block_1() {
-        let db = get_test_database();
-        let vault_address = get_sample_vault_address();
-        let router_address = get_sample_router_address();
+    #[cfg(not(feature = "spring_1-0"))]
+    mod legacy_blocks {
+        use super::*;
 
-        // NOTE: Initialize the EOS core...
-        let eos_chain_id = "4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11";
-        let maybe_eos_account_name = None;
-        let maybe_eos_token_symbol = None;
-        let eos_init_block = get_sample_eos_init_block_1();
-        initialize_eos_core_inner(
-            &db,
-            eos_chain_id,
-            maybe_eos_account_name,
-            maybe_eos_token_symbol,
-            &eos_init_block,
-            false,
-        )
-        .unwrap();
+        #[test]
+        fn should_submit_eos_block_1() {
+            let db = get_test_database();
+            let vault_address = get_sample_vault_address();
+            let router_address = get_sample_router_address();
 
-        // NOTE: Overwrite the EOS private key since it's generated randomly above...
-        let eos_pk = get_sample_eos_private_key();
-        eos_pk.write_to_db(&db).unwrap();
-        assert_eq!(EosPrivateKey::get_from_db(&db).unwrap(), eos_pk);
-
-        // NOTE: Initialize the INT side of the core...
-        let int_confirmations = 0;
-        let int_gas_price = 20_000_000_000;
-        let contiguous_int_block_json_strs = get_contiguous_int_block_json_strs();
-        let int_init_block = contiguous_int_block_json_strs[0].clone();
-        initialize_eth_core_with_vault_and_router_contracts_and_return_state(
-            &int_init_block,
-            &EthChainId::Ropsten,
-            int_gas_price,
-            int_confirmations,
-            IntState::init(&db),
-            &vault_address,
-            &router_address,
-            &VaultUsingCores::IntOnEos,
-            true,
-        )
-        .unwrap();
-
-        // NOTE: Overwrite the INT address & private key since it's generated randomly above...
-        let int_address = get_sample_int_address();
-        let int_private_key = get_sample_int_private_key();
-        let int_db_utils = EthDbUtils::new(&db);
-        int_db_utils
-            .put_eth_address_in_db(&int_db_utils.get_eth_address_key(), &int_address)
+            // NOTE: Initialize the EOS core...
+            let eos_chain_id = "4667b205c6838ef70ff7988f6e8257e8be0e1284a2f59699054a018f743b1d11";
+            let maybe_eos_account_name = None;
+            let maybe_eos_token_symbol = None;
+            let eos_init_block = get_sample_eos_init_block_1();
+            initialize_eos_core_inner(
+                &db,
+                eos_chain_id,
+                maybe_eos_account_name,
+                maybe_eos_token_symbol,
+                &eos_init_block,
+                false,
+            )
             .unwrap();
-        int_db_utils.put_eth_private_key_in_db(&int_private_key).unwrap();
-        assert_eq!(int_db_utils.get_public_eth_address_from_db().unwrap(), int_address);
-        assert_eq!(int_db_utils.get_eth_private_key_from_db().unwrap(), int_private_key);
 
-        // NOTE: Add the token dictionary to the db...
-        let dictionary = get_sample_dictionary_1();
-        dictionary.save_to_db(&db).unwrap();
+            // NOTE: Overwrite the EOS private key since it's generated randomly above...
+            let eos_pk = get_sample_eos_private_key();
+            eos_pk.write_to_db(&db).unwrap();
+            assert_eq!(EosPrivateKey::get_from_db(&db).unwrap(), eos_pk);
 
-        // NOTE: Assert that there are no processed global sequences in the db...
-        let processed_glob_sequences_before = ProcessedGlobalSequences::get_from_db(&db).unwrap();
-        assert!(processed_glob_sequences_before.is_empty());
+            // NOTE: Initialize the INT side of the core...
+            let int_confirmations = 0;
+            let int_gas_price = 20_000_000_000;
+            let contiguous_int_block_json_strs = get_contiguous_int_block_json_strs();
+            let int_init_block = contiguous_int_block_json_strs[0].clone();
+            initialize_eth_core_with_vault_and_router_contracts_and_return_state(
+                &int_init_block,
+                &EthChainId::Ropsten,
+                int_gas_price,
+                int_confirmations,
+                IntState::init(&db),
+                &vault_address,
+                &router_address,
+                &VaultUsingCores::IntOnEos,
+                true,
+            )
+            .unwrap();
 
-        // NOTE: Submit the block with the peg in in it...
-        let output = EosOutput::from_str(
-            &submit_eos_block_to_core(&db, &get_sample_eos_submission_material_string_1()).unwrap(),
-        )
-        .unwrap();
-        let expected_output = EosOutput::from_str(&json!({
+            // NOTE: Overwrite the INT address & private key since it's generated randomly above...
+            let int_address = get_sample_int_address();
+            let int_private_key = get_sample_int_private_key();
+            let int_db_utils = EthDbUtils::new(&db);
+            int_db_utils
+                .put_eth_address_in_db(&int_db_utils.get_eth_address_key(), &int_address)
+                .unwrap();
+            int_db_utils.put_eth_private_key_in_db(&int_private_key).unwrap();
+            assert_eq!(int_db_utils.get_public_eth_address_from_db().unwrap(), int_address);
+            assert_eq!(int_db_utils.get_eth_private_key_from_db().unwrap(), int_private_key);
+
+            // NOTE: Add the token dictionary to the db...
+            let dictionary = get_sample_dictionary_1();
+            dictionary.save_to_db(&db).unwrap();
+
+            // NOTE: Assert that there are no processed global sequences in the db...
+            let processed_glob_sequences_before = ProcessedGlobalSequences::get_from_db(&db).unwrap();
+            assert!(processed_glob_sequences_before.is_empty());
+
+            // NOTE: Submit the block with the peg in in it...
+            let output = EosOutput::from_str(
+                &submit_eos_block_to_core(&db, &get_sample_eos_submission_material_string_1()).unwrap(),
+            )
+            .unwrap();
+            let expected_output = EosOutput::from_str(&json!({
             "eos_latest_block_number":213499122,
             "int_signed_transactions":[{
                 "_id":"pint-on-eos-int-0",
@@ -207,103 +212,103 @@ mod tests {
             }]
         }).to_string()).unwrap();
 
-        // NOTE: And finally, we assert the output...
-        let expected_num_txs = 1;
-        assert_eq!(output.int_signed_transactions.len(), expected_num_txs);
-        let result = output.int_signed_transactions[0].clone();
-        let expected_result = expected_output.int_signed_transactions[0].clone();
-        assert_eq!(result._id, expected_result._id);
-        assert_eq!(result.broadcast, expected_result.broadcast);
-        assert_eq!(result.int_tx_hash, expected_result.int_tx_hash);
-        assert_eq!(result.int_tx_amount, expected_result.int_tx_amount);
-        assert_eq!(result.eos_tx_amount, expected_result.eos_tx_amount);
-        assert_eq!(result.int_account_nonce, expected_result.int_account_nonce);
-        assert_eq!(result.int_tx_recipient, expected_result.int_tx_recipient);
-        assert_eq!(result.host_token_address, expected_result.host_token_address);
-        assert_eq!(result.originating_tx_hash, expected_result.originating_tx_hash);
-        assert_eq!(result.originating_address, expected_result.originating_address);
-        assert_eq!(result.native_token_address, expected_result.native_token_address);
-        assert_eq!(result.int_signed_tx, expected_result.int_signed_tx);
-        assert_eq!(result.int_latest_block_number, expected_result.int_latest_block_number);
-        assert_eq!(result.broadcast_tx_hash, expected_result.broadcast_tx_hash);
-        assert_eq!(result.broadcast_timestamp, expected_result.broadcast_timestamp);
-        assert_eq!(result.destination_chain_id, expected_result.destination_chain_id);
-        // NOTE: We don't assert the timestamp since it's not deterministic.
+            // NOTE: And finally, we assert the output...
+            let expected_num_txs = 1;
+            assert_eq!(output.int_signed_transactions.len(), expected_num_txs);
+            let result = output.int_signed_transactions[0].clone();
+            let expected_result = expected_output.int_signed_transactions[0].clone();
+            assert_eq!(result._id, expected_result._id);
+            assert_eq!(result.broadcast, expected_result.broadcast);
+            assert_eq!(result.int_tx_hash, expected_result.int_tx_hash);
+            assert_eq!(result.int_tx_amount, expected_result.int_tx_amount);
+            assert_eq!(result.eos_tx_amount, expected_result.eos_tx_amount);
+            assert_eq!(result.int_account_nonce, expected_result.int_account_nonce);
+            assert_eq!(result.int_tx_recipient, expected_result.int_tx_recipient);
+            assert_eq!(result.host_token_address, expected_result.host_token_address);
+            assert_eq!(result.originating_tx_hash, expected_result.originating_tx_hash);
+            assert_eq!(result.originating_address, expected_result.originating_address);
+            assert_eq!(result.native_token_address, expected_result.native_token_address);
+            assert_eq!(result.int_signed_tx, expected_result.int_signed_tx);
+            assert_eq!(result.int_latest_block_number, expected_result.int_latest_block_number);
+            assert_eq!(result.broadcast_tx_hash, expected_result.broadcast_tx_hash);
+            assert_eq!(result.broadcast_timestamp, expected_result.broadcast_timestamp);
+            assert_eq!(result.destination_chain_id, expected_result.destination_chain_id);
+            // NOTE: We don't assert the timestamp since it's not deterministic.
 
-        // NOTE: Assert that we processed the expected global sequence...
-        let processed_glob_sequences_after = ProcessedGlobalSequences::get_from_db(&db).unwrap();
-        assert!(processed_glob_sequences_after.contains(&9837463233));
-    }
+            // NOTE: Assert that we processed the expected global sequence...
+            let processed_glob_sequences_after = ProcessedGlobalSequences::get_from_db(&db).unwrap();
+            assert!(processed_glob_sequences_after.contains(&9837463233));
+        }
 
-    #[test]
-    fn should_submit_eos_block_2() {
-        let db = get_test_database();
-        let vault_address = get_sample_vault_address();
-        let router_address = get_sample_router_address();
+        #[test]
+        fn should_submit_eos_block_2() {
+            let db = get_test_database();
+            let vault_address = get_sample_vault_address();
+            let router_address = get_sample_router_address();
 
-        // NOTE: Initialize the EOS core...
-        let eos_chain_id = EosChainId::UltraMainnet.to_hex();
-        let maybe_eos_account_name = None;
-        let maybe_eos_token_symbol = None;
-        let eos_init_block = get_sample_eos_init_block_2();
-        initialize_eos_core_inner(
-            &db,
-            &eos_chain_id,
-            maybe_eos_account_name,
-            maybe_eos_token_symbol,
-            &eos_init_block,
-            false,
-        )
-        .unwrap();
-
-        // NOTE: Overwrite the EOS private key since it's generated randomly above...
-        let eos_pk = get_sample_eos_private_key();
-        eos_pk.write_to_db(&db).unwrap();
-        assert_eq!(EosPrivateKey::get_from_db(&db).unwrap(), eos_pk);
-
-        // NOTE: Initialize the INT side of the core...
-        let int_confirmations = 0;
-        let int_gas_price = 20_000_000_000;
-        let contiguous_int_block_json_strs = get_contiguous_int_block_json_strs();
-        let int_init_block = contiguous_int_block_json_strs[0].clone();
-        initialize_eth_core_with_vault_and_router_contracts_and_return_state(
-            &int_init_block,
-            &EthChainId::Ropsten,
-            int_gas_price,
-            int_confirmations,
-            IntState::init(&db),
-            &vault_address,
-            &router_address,
-            &VaultUsingCores::IntOnEos,
-            true,
-        )
-        .unwrap();
-
-        // NOTE: Overwrite the INT address & private key since it's generated randomly above...
-        let int_address = get_sample_int_address();
-        let int_private_key = get_sample_int_private_key();
-        let int_db_utils = EthDbUtils::new(&db);
-        int_db_utils
-            .put_eth_address_in_db(&int_db_utils.get_eth_address_key(), &int_address)
+            // NOTE: Initialize the EOS core...
+            let eos_chain_id = EosChainId::UltraMainnet.to_hex();
+            let maybe_eos_account_name = None;
+            let maybe_eos_token_symbol = None;
+            let eos_init_block = get_sample_eos_init_block_2();
+            initialize_eos_core_inner(
+                &db,
+                &eos_chain_id,
+                maybe_eos_account_name,
+                maybe_eos_token_symbol,
+                &eos_init_block,
+                false,
+            )
             .unwrap();
-        int_db_utils.put_eth_private_key_in_db(&int_private_key).unwrap();
-        assert_eq!(int_db_utils.get_public_eth_address_from_db().unwrap(), int_address);
-        assert_eq!(int_db_utils.get_eth_private_key_from_db().unwrap(), int_private_key);
 
-        // NOTE: Add the token dictionary to the db...
-        let dictionary = get_sample_dictionary_2();
-        dictionary.save_to_db(&db).unwrap();
+            // NOTE: Overwrite the EOS private key since it's generated randomly above...
+            let eos_pk = get_sample_eos_private_key();
+            eos_pk.write_to_db(&db).unwrap();
+            assert_eq!(EosPrivateKey::get_from_db(&db).unwrap(), eos_pk);
 
-        // NOTE: Assert that there are no processed global sequences in the db...
-        let processed_glob_sequences_before = ProcessedGlobalSequences::get_from_db(&db).unwrap();
-        assert!(processed_glob_sequences_before.is_empty());
+            // NOTE: Initialize the INT side of the core...
+            let int_confirmations = 0;
+            let int_gas_price = 20_000_000_000;
+            let contiguous_int_block_json_strs = get_contiguous_int_block_json_strs();
+            let int_init_block = contiguous_int_block_json_strs[0].clone();
+            initialize_eth_core_with_vault_and_router_contracts_and_return_state(
+                &int_init_block,
+                &EthChainId::Ropsten,
+                int_gas_price,
+                int_confirmations,
+                IntState::init(&db),
+                &vault_address,
+                &router_address,
+                &VaultUsingCores::IntOnEos,
+                true,
+            )
+            .unwrap();
 
-        // NOTE: Submit the block with the peg in in it...
-        let output = EosOutput::from_str(
-            &submit_eos_block_to_core(&db, &get_sample_eos_submission_material_string_2()).unwrap(),
-        )
-        .unwrap();
-        let expected_output = EosOutput::from_str(&json!({
+            // NOTE: Overwrite the INT address & private key since it's generated randomly above...
+            let int_address = get_sample_int_address();
+            let int_private_key = get_sample_int_private_key();
+            let int_db_utils = EthDbUtils::new(&db);
+            int_db_utils
+                .put_eth_address_in_db(&int_db_utils.get_eth_address_key(), &int_address)
+                .unwrap();
+            int_db_utils.put_eth_private_key_in_db(&int_private_key).unwrap();
+            assert_eq!(int_db_utils.get_public_eth_address_from_db().unwrap(), int_address);
+            assert_eq!(int_db_utils.get_eth_private_key_from_db().unwrap(), int_private_key);
+
+            // NOTE: Add the token dictionary to the db...
+            let dictionary = get_sample_dictionary_2();
+            dictionary.save_to_db(&db).unwrap();
+
+            // NOTE: Assert that there are no processed global sequences in the db...
+            let processed_glob_sequences_before = ProcessedGlobalSequences::get_from_db(&db).unwrap();
+            assert!(processed_glob_sequences_before.is_empty());
+
+            // NOTE: Submit the block with the peg in in it...
+            let output = EosOutput::from_str(
+                &submit_eos_block_to_core(&db, &get_sample_eos_submission_material_string_2()).unwrap(),
+            )
+            .unwrap();
+            let expected_output = EosOutput::from_str(&json!({
             "eos_latest_block_number":213499122,
             "int_signed_transactions":[{
                 "_id":"pint-on-eos-int-0",
@@ -326,135 +331,137 @@ mod tests {
             }]
         }).to_string()).unwrap();
 
-        // NOTE: And finally, we assert the output...
-        let expected_num_txs = 1;
-        assert_eq!(output.int_signed_transactions.len(), expected_num_txs);
-        let result = output.int_signed_transactions[0].clone();
-        let expected_result = expected_output.int_signed_transactions[0].clone();
-        assert_eq!(result._id, expected_result._id);
-        assert_eq!(result.broadcast, expected_result.broadcast);
-        assert_eq!(result.int_tx_hash, expected_result.int_tx_hash);
-        assert_eq!(result.int_tx_amount, expected_result.int_tx_amount);
-        assert_eq!(result.eos_tx_amount, expected_result.eos_tx_amount);
-        assert_eq!(result.int_account_nonce, expected_result.int_account_nonce);
-        assert_eq!(result.int_tx_recipient, expected_result.int_tx_recipient);
-        assert_eq!(result.host_token_address, expected_result.host_token_address);
-        assert_eq!(result.originating_tx_hash, expected_result.originating_tx_hash);
-        assert_eq!(result.originating_address, expected_result.originating_address);
-        assert_eq!(result.native_token_address, expected_result.native_token_address);
-        assert_eq!(result.int_signed_tx, expected_result.int_signed_tx);
-        assert_eq!(result.int_latest_block_number, expected_result.int_latest_block_number);
-        assert_eq!(result.broadcast_tx_hash, expected_result.broadcast_tx_hash);
-        assert_eq!(result.broadcast_timestamp, expected_result.broadcast_timestamp);
-        assert_eq!(result.destination_chain_id, expected_result.destination_chain_id);
-        // NOTE: We don't assert the timestamp since it's not deterministic.
+            // NOTE: And finally, we assert the output...
+            let expected_num_txs = 1;
+            assert_eq!(output.int_signed_transactions.len(), expected_num_txs);
+            let result = output.int_signed_transactions[0].clone();
+            let expected_result = expected_output.int_signed_transactions[0].clone();
+            assert_eq!(result._id, expected_result._id);
+            assert_eq!(result.broadcast, expected_result.broadcast);
+            assert_eq!(result.int_tx_hash, expected_result.int_tx_hash);
+            assert_eq!(result.int_tx_amount, expected_result.int_tx_amount);
+            assert_eq!(result.eos_tx_amount, expected_result.eos_tx_amount);
+            assert_eq!(result.int_account_nonce, expected_result.int_account_nonce);
+            assert_eq!(result.int_tx_recipient, expected_result.int_tx_recipient);
+            assert_eq!(result.host_token_address, expected_result.host_token_address);
+            assert_eq!(result.originating_tx_hash, expected_result.originating_tx_hash);
+            assert_eq!(result.originating_address, expected_result.originating_address);
+            assert_eq!(result.native_token_address, expected_result.native_token_address);
+            assert_eq!(result.int_signed_tx, expected_result.int_signed_tx);
+            assert_eq!(result.int_latest_block_number, expected_result.int_latest_block_number);
+            assert_eq!(result.broadcast_tx_hash, expected_result.broadcast_tx_hash);
+            assert_eq!(result.broadcast_timestamp, expected_result.broadcast_timestamp);
+            assert_eq!(result.destination_chain_id, expected_result.destination_chain_id);
+            // NOTE: We don't assert the timestamp since it's not deterministic.
 
-        // NOTE: Assert that we processed the expected global sequence...
-        let processed_glob_sequences_after = ProcessedGlobalSequences::get_from_db(&db).unwrap();
-        assert!(processed_glob_sequences_after.contains(&294821926));
-    }
+            // NOTE: Assert that we processed the expected global sequence...
+            let processed_glob_sequences_after = ProcessedGlobalSequences::get_from_db(&db).unwrap();
+            assert!(processed_glob_sequences_after.contains(&294821926));
+        }
 
-    #[test]
-    fn should_submit_eos_material_with_proof_tied_to_block_behind_chain_tip() {
-        let db = get_test_database();
-        let router_address = get_sample_router_address();
+        #[test]
+        fn should_submit_eos_material_with_proof_tied_to_block_behind_chain_tip() {
+            let db = get_test_database();
+            let router_address = get_sample_router_address();
 
-        // NOTE: Initialize the EOS mainnet core...
-        let eos_chain_id = "aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906";
-        let maybe_eos_account_name = Some("effecttokens");
-        let maybe_eos_token_symbol = None;
-        let eos_init_block = get_init_block();
-        let eos_init_block_num = 351736970;
-        initialize_eos_core_inner(
-            &db,
-            eos_chain_id,
-            maybe_eos_account_name,
-            maybe_eos_token_symbol,
-            &eos_init_block,
-            true,
-        )
-        .unwrap();
-
-        // NOTE: Overwrite the EOS private key since it's generated randomly above...
-        let eos_pk = get_sample_eos_private_key();
-        eos_pk.write_to_db(&db).unwrap();
-        assert_eq!(EosPrivateKey::get_from_db(&db).unwrap(), eos_pk);
-
-        // NOTE: Initialize the INT side of the core...
-        let int_confirmations = 0;
-        let int_gas_price = 20_000_000_000;
-        let contiguous_int_block_json_strs = get_contiguous_int_block_json_strs();
-        let int_init_block = contiguous_int_block_json_strs[0].clone();
-        initialize_eth_core_with_router_contract_and_return_state(
-            &int_init_block,
-            &EthChainId::Ropsten,
-            int_gas_price,
-            int_confirmations,
-            IntState::init(&db),
-            &router_address,
-            false,
-        )
-        .unwrap();
-
-        // NOTE: Overwrite the INT address & private key since it's generated randomly above...
-        let int_address = get_sample_int_address();
-        let int_private_key = get_sample_int_private_key();
-        let int_db_utils = EthDbUtils::new(&db);
-        int_db_utils
-            .put_eth_address_in_db(&int_db_utils.get_eth_address_key(), &int_address)
-            .unwrap();
-        int_db_utils.put_eth_private_key_in_db(&int_private_key).unwrap();
-        assert_eq!(int_db_utils.get_public_eth_address_from_db().unwrap(), int_address);
-        assert_eq!(int_db_utils.get_eth_private_key_from_db().unwrap(), int_private_key);
-
-        // NOTE: Add a vault address for ETH required for tx signing output
-        int_db_utils
-            .put_int_on_eos_smart_contract_address_in_db(&EthAddress::random())
+            // NOTE: Initialize the EOS mainnet core...
+            let eos_chain_id = "aca376f206b8fc25a6ed44dbdc66547c36c6c33e3a119ffbeaef943642f0e906";
+            let maybe_eos_account_name = Some("effecttokens");
+            let maybe_eos_token_symbol = None;
+            let eos_init_block = get_init_block();
+            let eos_init_block_num = 351736970;
+            initialize_eos_core_inner(
+                &db,
+                eos_chain_id,
+                maybe_eos_account_name,
+                maybe_eos_token_symbol,
+                &eos_init_block,
+                true,
+            )
             .unwrap();
 
-        // NOTE: Add the token dictionary to the db...
-        let dictionary = get_sample_dictionary_for_incremerkle_test();
-        dictionary.save_to_db(&db).unwrap();
+            // NOTE: Overwrite the EOS private key since it's generated randomly above...
+            let eos_pk = get_sample_eos_private_key();
+            eos_pk.write_to_db(&db).unwrap();
+            assert_eq!(EosPrivateKey::get_from_db(&db).unwrap(), eos_pk);
 
-        // NOTE: Assert that there are no processed global sequences in the db...
-        let processed_glob_sequences_before = ProcessedGlobalSequences::get_from_db(&db).unwrap();
-        assert!(processed_glob_sequences_before.is_empty());
+            // NOTE: Initialize the INT side of the core...
+            let int_confirmations = 0;
+            let int_gas_price = 20_000_000_000;
+            let contiguous_int_block_json_strs = get_contiguous_int_block_json_strs();
+            let int_init_block = contiguous_int_block_json_strs[0].clone();
+            initialize_eth_core_with_router_contract_and_return_state(
+                &int_init_block,
+                &EthChainId::Ropsten,
+                int_gas_price,
+                int_confirmations,
+                IntState::init(&db),
+                &router_address,
+                false,
+            )
+            .unwrap();
 
-        let mut incremerkles = Incremerkles::get_from_db(&common_eos::EosDbUtils::new(&db)).unwrap();
-        assert_eq!(incremerkles.len(), 1);
-        assert_eq!(incremerkles.latest_block_num(), eos_init_block_num);
+            // NOTE: Overwrite the INT address & private key since it's generated randomly above...
+            let int_address = get_sample_int_address();
+            let int_private_key = get_sample_int_private_key();
+            let int_db_utils = EthDbUtils::new(&db);
+            int_db_utils
+                .put_eth_address_in_db(&int_db_utils.get_eth_address_key(), &int_address)
+                .unwrap();
+            int_db_utils.put_eth_private_key_in_db(&int_private_key).unwrap();
+            assert_eq!(int_db_utils.get_public_eth_address_from_db().unwrap(), int_address);
+            assert_eq!(int_db_utils.get_eth_private_key_from_db().unwrap(), int_private_key);
 
-        // NOTE: Now lets update the incremerkle...
-        let incremerkle_update_block = get_incremekle_update_block();
-        let incremerkle_update_block_num = EosSubmissionMaterial::from_str(&incremerkle_update_block)
-            .unwrap()
-            .block_num;
-        submit_eos_block_to_core(&db, &incremerkle_update_block).unwrap();
+            // NOTE: Add a vault address for ETH required for tx signing output
+            int_db_utils
+                .put_int_on_eos_smart_contract_address_in_db(&EthAddress::random())
+                .unwrap();
 
-        incremerkles = Incremerkles::get_from_db(&common_eos::EosDbUtils::new(&db)).unwrap();
-        assert_eq!(incremerkles.len(), 2);
-        assert_eq!(incremerkles.latest_block_num(), incremerkle_update_block_num);
+            // NOTE: Add the token dictionary to the db...
+            let dictionary = get_sample_dictionary_for_incremerkle_test();
+            dictionary.save_to_db(&db).unwrap();
 
-        let submission_block_json = get_submission_block();
-        let submission_block_num = EosSubmissionMaterial::from_str(&submission_block_json)
-            .unwrap()
-            .block_num;
-        assert_eq!(submission_block_num, 351737739);
+            // NOTE: Assert that there are no processed global sequences in the db...
+            let processed_glob_sequences_before = ProcessedGlobalSequences::get_from_db(&db).unwrap();
+            assert!(processed_glob_sequences_before.is_empty());
 
-        // NOTE: Let's assert that the core's latest block number is indeed _past_ the submission
-        // material block num
-        let latest_block_num = incremerkles.latest_block_num();
-        assert_eq!(latest_block_num, 351738099);
-        assert!(latest_block_num > submission_block_num);
+            let mut incremerkles = Incremerkles::get_from_db(&common_eos::EosDbUtils::new(&db)).unwrap();
+            assert_eq!(incremerkles.len(), 1);
+            assert_eq!(incremerkles.latest_block_num(), eos_init_block_num);
 
-        // NOTE: Now we can submit the block with the peg in in it...
-        let mut output = EosOutput::from_str(&submit_eos_block_to_core(&db, &submission_block_json).unwrap()).unwrap();
-        // NOTE: Asserting a tx is outputted successfully is sufficient for this test.
-        assert_eq!(output.int_signed_transactions.len(), 1);
+            // NOTE: Now lets update the incremerkle...
+            let incremerkle_update_block = get_incremekle_update_block();
+            let incremerkle_update_block_num = EosSubmissionMaterial::from_str(&incremerkle_update_block)
+                .unwrap()
+                .block_num;
+            submit_eos_block_to_core(&db, &incremerkle_update_block).unwrap();
 
-        // NOTE: If we submit the _same_ material again, we should get no signed transactions since
-        // the core has already seen this global sequence.
-        output = EosOutput::from_str(&submit_eos_block_to_core(&db, &submission_block_json).unwrap()).unwrap();
-        assert_eq!(output.int_signed_transactions.len(), 0);
+            incremerkles = Incremerkles::get_from_db(&common_eos::EosDbUtils::new(&db)).unwrap();
+            assert_eq!(incremerkles.len(), 2);
+            assert_eq!(incremerkles.latest_block_num(), incremerkle_update_block_num);
+
+            let submission_block_json = get_submission_block();
+            let submission_block_num = EosSubmissionMaterial::from_str(&submission_block_json)
+                .unwrap()
+                .block_num;
+            assert_eq!(submission_block_num, 351737739);
+
+            // NOTE: Let's assert that the core's latest block number is indeed _past_ the submission
+            // material block num
+            let latest_block_num = incremerkles.latest_block_num();
+            assert_eq!(latest_block_num, 351738099);
+            assert!(latest_block_num > submission_block_num);
+
+            // NOTE: Now we can submit the block with the peg in in it...
+            let mut output =
+                EosOutput::from_str(&submit_eos_block_to_core(&db, &submission_block_json).unwrap()).unwrap();
+            // NOTE: Asserting a tx is outputted successfully is sufficient for this test.
+            assert_eq!(output.int_signed_transactions.len(), 1);
+
+            // NOTE: If we submit the _same_ material again, we should get no signed transactions since
+            // the core has already seen this global sequence.
+            output = EosOutput::from_str(&submit_eos_block_to_core(&db, &submission_block_json).unwrap()).unwrap();
+            assert_eq!(output.int_signed_transactions.len(), 0);
+        }
     }
 }

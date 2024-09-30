@@ -12,6 +12,7 @@ authors = ["Greg Kapka <gregkapka@gmail.com>"]
 [features]
 # NOTE: Turns off block header & chain validation.
 non-validating = ["common_eos/non-validating","common_eth/non-validating"]
+spring_1-0 = ["common_eos/non-validating"]
 
 [dependencies]
 hex = { workspace = true }
