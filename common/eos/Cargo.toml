@@ -13,6 +13,7 @@ authors = ["Greg Kapka <gregkapka@gmail.com>"]
 ltc = ["litecoin"]
 non-validating = []
 default = ["bitcoin"]
+spring_1-0 = []
 
 [dependencies]
 hex = { workspace = true }
