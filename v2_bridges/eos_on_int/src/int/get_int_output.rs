@@ -97,7 +97,11 @@ pub fn get_int_output<D: DatabaseInterface>(state: EthState<D>) -> Result<IntOut
                         eos_tx,
                         &tx_infos[i],
                         start_nonce + i as u64,
-                        Incremerkles::get_from_db(&EosDbUtils::new(state.db))?.latest_block_num(),
+                        if cfg!(feature = "spring_1-0") {
+                            eos_db_utils.get_latest_eos_block_number()?
+                        } else {
+                            Incremerkles::get_from_db(&EosDbUtils::new(state.db))?.latest_block_num()
+                        },
                         &eos_db_utils.get_eos_chain_id_from_db()?,
                     )
                 })
