@@ -58,6 +58,7 @@ impl Incremerkles {
         )
     }
 
+    #[cfg(not(feature = "spring_1-0"))]
     pub fn add_block_ids_and_return_state<D: DatabaseInterface>(state: EosState<D>) -> Result<EosState<D>> {
         state
             .incremerkles
@@ -161,11 +162,13 @@ impl Incremerkles {
         }
     }
 
+    #[cfg(not(feature = "spring_1-0"))]
     pub fn get_from_db_and_add_to_state<D: DatabaseInterface>(state: EosState<D>) -> Result<EosState<D>> {
         info!("getting eos incremerkle from db...");
         Self::get_from_db(&state.eos_db_utils).map(|i| state.add_incremerkles(i))
     }
 
+    #[cfg(not(feature = "spring_1-0"))]
     pub fn save_from_state_to_db<D: DatabaseInterface>(state: EosState<D>) -> Result<EosState<D>> {
         info!("saving incremerkles from state to db...");
         state.incremerkles.put_in_db(&state.eos_db_utils).and(Ok(state))

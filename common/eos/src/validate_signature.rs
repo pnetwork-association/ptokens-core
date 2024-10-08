@@ -167,6 +167,12 @@ pub fn check_block_signature_is_valid(
     }
 }
 
+#[cfg(feature = "spring_1-0")]
+pub fn validate_block_header_signature<D: DatabaseInterface>(state: EosState<D>) -> Result<EosState<D>> {
+    Ok(state)
+}
+
+#[cfg(not(feature = "spring_1-0"))]
 pub fn validate_block_header_signature<D: DatabaseInterface>(state: EosState<D>) -> Result<EosState<D>> {
     if cfg!(feature = "non-validating") {
         info!("skipping EOS block header signature validation");
