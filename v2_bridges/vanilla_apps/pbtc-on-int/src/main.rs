@@ -47,11 +47,11 @@ use btc_on_int::{
 use common::AppError;
 #[cfg(feature = "file-logger")]
 use common_file_logger::init_logger;
-#[cfg(feature = "json-rpc")]
+#[cfg(feature = "json-rpc-db")]
 use common_jsonrpc_db::get_db;
 #[cfg(feature = "rocks-db")]
 use common_rocksdb_database::get_db;
-#[cfg(feature = "stderr-logger")]
+#[cfg(feature = "std-err-logger")]
 use common_stderr_logger::init_logger;
 
 use crate::{

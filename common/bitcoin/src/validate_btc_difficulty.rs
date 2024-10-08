@@ -82,7 +82,7 @@ mod tests {
     #[test]
     fn should_err_if_difficulty_is_below_threshold() {
         let block_header = get_sample_btc_block_and_id().unwrap().block.header;
-        let threshold = u64::max_value();
+        let threshold = u64::MAX;
         assert!(check_difficulty_is_above_threshold(threshold, &block_header, BtcNetwork::Bitcoin).is_err());
     }
 

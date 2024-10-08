@@ -1,5 +1,7 @@
 use common::{core_type::CoreType, traits::DatabaseInterface, types::Result};
-use common_eos::{EosDbUtils, Incremerkles};
+use common_eos::EosDbUtils;
+#[cfg(not(feature = "spring_1-0"))]
+use common_eos::Incremerkles;
 use common_eth::{EthDbUtils, EthDbUtilsExt};
 use serde::{Deserialize, Serialize};
 

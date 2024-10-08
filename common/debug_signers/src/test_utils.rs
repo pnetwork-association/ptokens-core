@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use common_eth::{convert_hex_to_eth_address, EthPrivateKey};
 use ethereum_types::{Address as EthAddress, H256};
 

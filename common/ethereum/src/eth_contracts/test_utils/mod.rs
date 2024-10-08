@@ -1,4 +1,3 @@
-#![cfg(test)]
 use std::{fs::read_to_string, path::Path, str::FromStr};
 
 use common::{dictionaries::eth_evm::EthEvmTokenDictionary, types::Result};

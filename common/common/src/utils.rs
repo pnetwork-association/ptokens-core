@@ -174,7 +174,7 @@ mod tests {
 
     #[test]
     fn should_convert_u64_to_bytes() {
-        let u_64 = u64::max_value();
+        let u_64 = u64::MAX;
         let expected_result = [255, 255, 255, 255, 255, 255, 255, 255];
         let result = convert_u64_to_bytes(u_64);
         assert_eq!(result, expected_result);
@@ -183,7 +183,7 @@ mod tests {
     #[test]
     fn should_convert_bytes_to_u64() {
         let bytes = vec![255, 255, 255, 255, 255, 255, 255, 255];
-        let expected_result = u64::max_value();
+        let expected_result = u64::MAX;
         let result = convert_bytes_to_u64(&bytes).unwrap();
         assert_eq!(result, expected_result);
     }

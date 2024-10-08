@@ -7,12 +7,13 @@ use common::{
 use common_safe_addresses::SAFE_EOS_ADDRESS_STR;
 use serde::{Deserialize, Serialize};
 
+#[cfg(not(feature = "spring_1-0"))]
+use crate::Incremerkles;
 use crate::{
     eos_database_utils::EosDbUtils,
     eos_global_sequences::ProcessedGlobalSequences,
     eos_types::EosKnownSchedulesJsons,
     protocol_features::EnabledFeatures,
-    Incremerkles,
 };
 
 #[derive(Serialize, Deserialize)]

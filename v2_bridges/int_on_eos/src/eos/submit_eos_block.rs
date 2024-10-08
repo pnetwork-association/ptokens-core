@@ -1,4 +1,6 @@
 use common::{traits::DatabaseInterface, types::Result, CoreType};
+#[cfg(not(feature = "spring_1-0"))]
+use common_eos::Incremerkles;
 use common_eos::{
     end_eos_db_transaction_and_return_state,
     get_active_schedule_from_db_and_add_to_state,
@@ -16,7 +18,6 @@ use common_eos::{
     validate_block_header_signature,
     validate_producer_slot_of_block_in_state,
     EosState,
-    Incremerkles,
 };
 
 use crate::eos::{
@@ -113,16 +114,14 @@ mod tests {
 
     use common::test_utils::get_test_database;
     use common_chain_ids::{EosChainId, EthChainId};
-    use common_eos::{initialize_eos_core_inner, EosPrivateKey, EosSubmissionMaterial, ProcessedGlobalSequences};
+    use common_eos::{initialize_eos_core_inner, EosPrivateKey, ProcessedGlobalSequences};
     use common_eth::{
-        initialize_eth_core_with_router_contract_and_return_state,
         initialize_eth_core_with_vault_and_router_contracts_and_return_state,
         EthDbUtils,
         EthDbUtilsExt,
         EthState as IntState,
         VaultUsingCores,
     };
-    use ethereum_types::Address as EthAddress;
     use serde_json::json;
 
     use super::*;
@@ -141,12 +140,6 @@ mod tests {
             get_sample_int_private_key,
             get_sample_router_address,
             get_sample_vault_address,
-            multi_incremerkle_submission::{
-                get_incremekle_update_block,
-                get_init_block,
-                get_sample_dictionary as get_sample_dictionary_for_incremerkle_test,
-                get_submission_block,
-            },
         },
     };
 
@@ -395,7 +388,17 @@ mod tests {
 
     #[cfg(not(feature = "spring_1-0"))]
     mod legacy_blocks {
+        use common_eos::EosSubmissionMaterial;
+        use common_eth::initialize_eth_core_with_router_contract_and_return_state;
+        use ethereum_types::Address as EthAddress;
+
         use super::*;
+        use crate::test_utils::multi_incremerkle_submission::{
+            get_incremekle_update_block,
+            get_init_block,
+            get_sample_dictionary as get_sample_dictionary_for_incremerkle_test,
+            get_submission_block,
+        };
 
         #[test]
         fn should_submit_eos_block_1() {

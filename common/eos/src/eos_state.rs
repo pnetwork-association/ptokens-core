@@ -6,12 +6,13 @@ use common::{
 };
 
 pub use crate::bitcoin_crate_alias::blockdata::transaction::Transaction as BtcTransaction;
+#[cfg(not(feature = "spring_1-0"))]
+use crate::eos_incremerkle::Incremerkles;
 use crate::{
     eos_action_proofs::EosActionProofs,
     eos_block_header::EosBlockHeaderV2,
     eos_database_utils::EosDbUtils,
     eos_global_sequences::{GlobalSequences, ProcessedGlobalSequences},
-    eos_incremerkle::Incremerkles,
     eos_producer_schedule::EosProducerScheduleV2,
     eos_submission_material::EosSubmissionMaterial,
     eos_types::Checksum256s,

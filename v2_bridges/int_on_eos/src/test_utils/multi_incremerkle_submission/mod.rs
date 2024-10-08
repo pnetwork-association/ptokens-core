@@ -1,4 +1,4 @@
-#![cfg(test)]
+#![cfg(all(test, not(feature = "spring_1-0")))]
 use std::fs::read_to_string;
 
 use common::dictionaries::eos_eth::{
