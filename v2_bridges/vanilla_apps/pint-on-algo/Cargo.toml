@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-version = "2.1.0"
+version = "2.1.1"
 name = "pint-on-algo"
 rust-version = "1.56"
 authors = ["Greg Kapka <gregkapka@gmail.com>"]

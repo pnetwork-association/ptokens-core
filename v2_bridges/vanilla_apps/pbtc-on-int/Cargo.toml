@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-version = "2.1.1"
+version = "2.1.2"
 name = "pbtc-on-int"
 rust-version = "1.56"
 authors = ["gregkapka <gregkapka@gmail.com>"]
