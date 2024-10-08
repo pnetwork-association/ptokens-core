@@ -139,7 +139,7 @@ mod tests {
             data: hex::decode("c0a6c36c3adc90bb8d6e0d0000000000085042544300000022314e393348584a687848754732444e59356b786a51373147347463726b5278354341")
                 .unwrap(),
         };
-        let results = vec![
+        let results = [
             hex::encode(get_action_digest(&action, true).unwrap()), // Assum the action HAS return value...
             hex::encode(get_action_digest(&action, false).unwrap()), // Assume the action has NO return value...
         ];

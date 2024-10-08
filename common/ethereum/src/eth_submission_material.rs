@@ -561,15 +561,10 @@ mod tests {
             .unwrap();
         let num_receipts_after = result.receipts.len();
         assert!(num_receipts_before > num_receipts_after);
-        result
-            .receipts
-            .0
-            .iter()
-            .map(|receipt| {
-                assert!(receipt.logs.contain_topic(&topics[0]));
-                receipt
-            })
-            .for_each(|receipt| assert!(receipt.logs.contain_address(&address)));
+        result.receipts.0.iter().for_each(|receipt| {
+            assert!(receipt.logs.contain_topic(&topics[0]));
+            assert!(receipt.logs.contain_address(&address))
+        });
     }
 
     #[test]
@@ -585,15 +580,10 @@ mod tests {
         let num_receipts_after = result.receipts.len();
         assert!(num_receipts_before > num_receipts_after);
         assert_eq!(num_receipts_after, expected_num_receipts_after);
-        result
-            .receipts
-            .0
-            .iter()
-            .map(|receipt| {
-                assert!(receipt.logs.contain_topic(&topics[0]));
-                receipt
-            })
-            .for_each(|receipt| assert!(receipt.logs.contain_address(&address)));
+        result.receipts.0.iter().for_each(|receipt| {
+            assert!(receipt.logs.contain_topic(&topics[0]));
+            assert!(receipt.logs.contain_address(&address))
+        });
     }
 
     #[test]

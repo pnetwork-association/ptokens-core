@@ -77,7 +77,12 @@ pub fn get_output_json<D: DatabaseInterface>(state: EthState<D>) -> Result<IntOu
             let eos_txs = EosSignedTransactions::from_bytes(&state.signed_txs)?;
             let num_txs = eos_txs.len() as u64;
             let tx_infos = IntOnEosEosTxInfos::from_bytes(&state.tx_infos)?;
-            let eos_latest_block_num = Incremerkles::get_from_db(&eos_db_utils)?.latest_block_num();
+
+            let eos_latest_block_num = if cfg!(feature = "spring_1-0") {
+                eos_db_utils.get_latest_eos_block_number()?
+            } else {
+                Incremerkles::get_from_db(&eos_db_utils)?.latest_block_num()
+            };
             let eos_account_nonce = eos_db_utils.get_eos_account_nonce_from_db()?;
             let start_nonce = if num_txs > eos_account_nonce {
                 return Err("EOS account nonce has not been incremented correctly!".into());

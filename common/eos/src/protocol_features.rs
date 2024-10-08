@@ -231,7 +231,7 @@ mod tests {
     #[test]
     fn should_multi_add_available_features() {
         let existing_feature_hash = hex::decode(WTMSIG_BLOCK_SIGNATURE_FEATURE_HASH).unwrap();
-        let existing_feature_hashes = vec![existing_feature_hash.clone(), existing_feature_hash];
+        let existing_feature_hashes = [existing_feature_hash.clone(), existing_feature_hash];
         existing_feature_hashes
             .iter()
             .for_each(|hash| assert!(AVAILABLE_FEATURES.contains(hash)));
@@ -245,7 +245,7 @@ mod tests {
     fn should_fail_when_multi_addiing_non_available_features() {
         let unavailable_feature_hash = vec![0u8; 32];
         let existing_feature_hash = hex::decode(WTMSIG_BLOCK_SIGNATURE_FEATURE_HASH).unwrap();
-        let feature_hashes = vec![existing_feature_hash, unavailable_feature_hash.clone()];
+        let feature_hashes = [existing_feature_hash, unavailable_feature_hash.clone()];
         assert!(feature_hashes
             .iter()
             .map(|hash| AVAILABLE_FEATURES.contains(hash))

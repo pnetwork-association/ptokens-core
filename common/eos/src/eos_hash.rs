@@ -125,8 +125,7 @@ macro_rules! impl_hash {
             where
                 H: Hasher,
             {
-                state.write(&self.0);
-                state.finish();
+                self.0.hash(state);
             }
         }
 

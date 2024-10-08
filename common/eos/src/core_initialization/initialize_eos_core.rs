@@ -12,6 +12,7 @@ use crate::{
         put_eos_account_name_in_db_and_return_state,
         put_eos_chain_id_in_db_and_return_state,
         put_eos_known_schedule_in_db_and_return_state,
+        put_eos_latest_block_info_in_db_and_return_state,
         put_eos_schedule_in_db_and_return_state,
         put_eos_token_symbol_in_db_and_return_state,
         test_block_validation_and_return_state,
@@ -45,7 +46,13 @@ pub fn initialize_eos_core_inner<D: DatabaseInterface>(
         })
         .and_then(|state| put_eos_known_schedule_in_db_and_return_state(&init_json.active_schedule, state))
         .and_then(|state| put_eos_schedule_in_db_and_return_state(&init_json.active_schedule, state))
-        .and_then(|state| generate_and_put_incremerkle_in_db_and_return_state(&init_json, state))
+        .and_then(|state| {
+            if cfg!(feature = "spring_1-0") {
+                put_eos_latest_block_info_in_db_and_return_state(&init_json.block, state)
+            } else {
+                generate_and_put_incremerkle_in_db_and_return_state(&init_json, state)
+            }
+        })
         .and_then(|state| {
             maybe_enable_protocol_features_and_return_state(&init_json.maybe_protocol_features_to_enable, state)
         })

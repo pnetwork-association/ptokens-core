@@ -7,6 +7,8 @@ use common::{
 use eos_chain::{AccountName as EosAccountName, PublicKey as EosProducerKey};
 use secp256k1::Message;
 
+#[cfg(not(feature = "spring_1-0"))]
+use crate::protocol_features::WTMSIG_BLOCK_SIGNATURE_FEATURE_HASH;
 use crate::{
     bitcoin_crate_alias::hashes::{sha256, Hash},
     eos_block_header::{EosBlockHeaderV1, EosBlockHeaderV2},
@@ -14,7 +16,6 @@ use crate::{
     eos_crypto::{eos_public_key::EosPublicKey, eos_signature::EosSignature},
     eos_producer_key::EosProducerKeyV1,
     eos_producer_schedule::{EosProducerScheduleV1, EosProducerScheduleV2},
-    protocol_features::WTMSIG_BLOCK_SIGNATURE_FEATURE_HASH,
     EosState,
 };
 
@@ -167,6 +168,12 @@ pub fn check_block_signature_is_valid(
     }
 }
 
+#[cfg(feature = "spring_1-0")]
+pub fn validate_block_header_signature<D: DatabaseInterface>(state: EosState<D>) -> Result<EosState<D>> {
+    Ok(state)
+}
+
+#[cfg(not(feature = "spring_1-0"))]
 pub fn validate_block_header_signature<D: DatabaseInterface>(state: EosState<D>) -> Result<EosState<D>> {
     if cfg!(feature = "non-validating") {
         info!("skipping EOS block header signature validation");

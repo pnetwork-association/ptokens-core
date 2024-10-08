@@ -1229,7 +1229,7 @@ dependencies = [
 
 [[package]]
 name = "eos"
-version = "6.11.4"
+version = "6.12.0"
 dependencies = [
  "bitcoin 0.29.0",
  "bitcoin 0.29.2",
@@ -1284,7 +1284,7 @@ dependencies = [
 
 [[package]]
 name = "eos_on_int"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "chain_ids",
  "common",
@@ -2386,7 +2386,7 @@ dependencies = [
 
 [[package]]
 name = "int_on_eos"
-version = "2.1.0"
+version = "2.2.0"
 dependencies = [
  "chain_ids",
  "common",
@@ -3151,7 +3151,7 @@ checksum = "8835116a5c179084a830efb3adc117ab007512b535bc1a21c991d3b32a6b44dd"
 
 [[package]]
 name = "pbtc-on-int"
-version = "2.1.1"
+version = "2.1.2"
 dependencies = [
  "anyhow",
  "btc_on_int",
@@ -3174,7 +3174,7 @@ checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
 
 [[package]]
 name = "peos-on-int"
-version = "2.0.3"
+version = "2.0.4"
 dependencies = [
  "anyhow",
  "common",
@@ -3192,7 +3192,7 @@ dependencies = [
 
 [[package]]
 name = "perc20-on-int"
-version = "2.0.3"
+version = "2.0.4"
 dependencies = [
  "anyhow",
  "common",
@@ -3298,7 +3298,7 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
 name = "pint-on-algo"
-version = "2.1.0"
+version = "2.1.1"
 dependencies = [
  "anyhow",
  "common",
@@ -3315,7 +3315,7 @@ dependencies = [
 
 [[package]]
 name = "pint-on-eos"
-version = "2.0.11"
+version = "2.0.12"
 dependencies = [
  "anyhow",
  "common",
@@ -3332,7 +3332,7 @@ dependencies = [
 
 [[package]]
 name = "pint-on-evm"
-version = "2.1.2"
+version = "2.1.3"
 dependencies = [
  "anyhow",
  "common",
@@ -4920,9 +4920,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.32"
+version = "0.3.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe80ced77cbfb4cb91a94bf72b378b4b6791a0d9b7f09d0be747d1bdff4e68bd"
+checksum = "5dfd88e563464686c916c7e46e623e520ddc6d79fa6641390f2e3fa86e83e885"
 dependencies = [
  "deranged",
  "itoa",
@@ -4943,9 +4943,9 @@ checksum = "ef927ca75afb808a4d64dd374f00a2adf8d0fcff8e7b184af886c3c87ec4a3f3"
 
 [[package]]
 name = "time-macros"
-version = "0.2.17"
+version = "0.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ba3a3ef41e6672a2f0f001392bb5dcd3ff0a9992d618ca761a11c3121547774"
+checksum = "3f252a68540fde3a3877aeea552b832b40ab9a69e318efd078774a01ddee1ccf"
 dependencies = [
  "num-conv",
  "time-core",

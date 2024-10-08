@@ -3,7 +3,7 @@ name = "eos"
 license = "MIT"
 publish = false
 edition = "2021"
-version = "6.11.4"
+version = "6.12.0"
 readme = "README.md"
 rust-version = "1.56"
 keywords = ["provable", "defi", "crypto"]
@@ -13,6 +13,7 @@ authors = ["Greg Kapka <gregkapka@gmail.com>"]
 ltc = ["litecoin"]
 non-validating = []
 default = ["bitcoin"]
+spring_1-0 = []
 
 [dependencies]
 hex = { workspace = true }

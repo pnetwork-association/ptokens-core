@@ -7,12 +7,13 @@ use common::{
 use common_safe_addresses::SAFE_EOS_ADDRESS_STR;
 use serde::{Deserialize, Serialize};
 
+#[cfg(not(feature = "spring_1-0"))]
+use crate::Incremerkles;
 use crate::{
     eos_database_utils::EosDbUtils,
     eos_global_sequences::ProcessedGlobalSequences,
     eos_types::EosKnownSchedulesJsons,
     protocol_features::EnabledFeatures,
-    Incremerkles,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -45,13 +46,18 @@ impl EosEnclaveState {
         include_account_name: bool,
     ) -> Result<Self> {
         info!("✔ Getting EOS enclave state...");
+        #[cfg(not(feature = "spring_1-0"))]
         let incremerkles = Incremerkles::get_from_db(eos_db_utils)?;
-        let eos_last_seen_block_num = incremerkles.latest_block_num();
-        let eos_last_seen_block_id = incremerkles.latest_block_id()?.to_string();
 
         Ok(EosEnclaveState {
-            eos_last_seen_block_id,
-            eos_last_seen_block_num,
+            #[cfg(feature = "spring_1-0")]
+            eos_last_seen_block_id: eos_db_utils.get_eos_last_seen_block_id_from_db()?.to_string(),
+            #[cfg(not(feature = "spring_1-0"))]
+            eos_last_seen_block_id: incremerkles.latest_block_id()?.to_string(),
+            #[cfg(feature = "spring_1-0")]
+            eos_last_seen_block_num: eos_db_utils.get_latest_eos_block_number()?,
+            #[cfg(not(feature = "spring_1-0"))]
+            eos_last_seen_block_num: incremerkles.latest_block_num(),
             eos_safe_address: SAFE_EOS_ADDRESS_STR.to_string(),
             eos_core_is_validating: !cfg!(feature = "non-validating"),
             eos_chain_id: eos_db_utils.get_eos_chain_id_from_db()?.to_hex(),

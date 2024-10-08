@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-version = "2.0.3"
+version = "2.0.4"
 name = "peos-on-int"
 rust-version = "1.56"
 authors = ["gregkapka <gregkapka@gmail.com>"]

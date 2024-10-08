@@ -2,7 +2,7 @@
 license = "MIT"
 publish = false
 edition = "2021"
-version = "2.1.0"
+version = "2.2.0"
 name = "eos_on_int"
 readme = "README.md"
 rust-version = "1.56"
@@ -12,6 +12,7 @@ authors = ["Greg Kapka <gregkapka@gmail.com>"]
 [features]
 # NOTE: Turns off block header & chain validation.
 non-validating = ["common_eos/non-validating","common_eth/non-validating"]
+spring_1-0 = ["common_eos/non-validating", "common_eos/spring_1-0"]
 
 [dependencies]
 hex = { workspace = true }

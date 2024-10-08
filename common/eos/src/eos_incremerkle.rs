@@ -9,7 +9,9 @@ use derive_more::{Constructor, Deref, DerefMut};
 use eos_chain::Checksum256;
 use serde::{Deserialize, Serialize};
 
-use crate::{EosDbUtils, EosState};
+use crate::EosDbUtils;
+#[cfg(not(feature = "spring_1-0"))]
+use crate::EosState;
 
 // NOTE: The light client for EOS doesn't keep blocks - they are too frequent and too numerous
 // for efficient use in TEEs.
@@ -29,6 +31,7 @@ use crate::{EosDbUtils, EosState};
 // keep up to some X incremerkles around. This means we have a choice of incremerkle from which we can
 // verifiy a new submission.
 
+#[cfg(not(feature = "spring_1-0"))]
 const MAX_NUM_INCREMERKLES: usize = 10;
 
 #[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize, Constructor, Deref, DerefMut)]
@@ -58,6 +61,7 @@ impl Incremerkles {
         )
     }
 
+    #[cfg(not(feature = "spring_1-0"))]
     pub fn add_block_ids_and_return_state<D: DatabaseInterface>(state: EosState<D>) -> Result<EosState<D>> {
         state
             .incremerkles
@@ -92,6 +96,7 @@ impl Incremerkles {
 
     // TODO Make more efficient my taking &mut self, however that makes using the above
     // state-version of this more difficult to manage for the caller.
+    #[cfg(not(feature = "spring_1-0"))]
     fn add_block_ids<D: DatabaseInterface>(
         &self,
         eos_db_utils: &EosDbUtils<D>,
@@ -133,6 +138,7 @@ impl Incremerkles {
         Ok(mutable_self)
     }
 
+    #[cfg(not(feature = "spring_1-0"))]
     fn add(&mut self, incremerkle: Incremerkle) {
         if incremerkle.block_num() > self.latest_block_num() || self.is_empty() {
             info!("adding new incremerkle to list");
@@ -161,11 +167,13 @@ impl Incremerkles {
         }
     }
 
+    #[cfg(not(feature = "spring_1-0"))]
     pub fn get_from_db_and_add_to_state<D: DatabaseInterface>(state: EosState<D>) -> Result<EosState<D>> {
         info!("getting eos incremerkle from db...");
         Self::get_from_db(&state.eos_db_utils).map(|i| state.add_incremerkles(i))
     }
 
+    #[cfg(not(feature = "spring_1-0"))]
     pub fn save_from_state_to_db<D: DatabaseInterface>(state: EosState<D>) -> Result<EosState<D>> {
         info!("saving incremerkles from state to db...");
         state.incremerkles.put_in_db(&state.eos_db_utils).and(Ok(state))
@@ -385,10 +393,9 @@ mod tests {
     #![allow(clippy::needless_range_loop)]
     use std::str::FromStr;
 
-    use common::{
-        test_utils::get_test_database,
-        types::{Byte, Bytes},
-    };
+    #[cfg(not(feature = "spring_1-0"))]
+    use common::test_utils::get_test_database;
+    use common::types::{Byte, Bytes};
     use eos_chain::{AccountName, Action, ActionName, PermissionLevel, PermissionName, SerializeData};
 
     use super::*;
@@ -437,8 +444,8 @@ mod tests {
             }
             for i in 0..(leaves.len() / 2) {
                 leaves[i] = MerkleProof::hash_canonical_pair(Incremerkle::make_canonical_pair(
-                    &convert_hex_to_checksum256(&hex::encode(&leaves[2 * i])).unwrap(),
-                    &convert_hex_to_checksum256(&hex::encode(&leaves[(2 * i) + 1])).unwrap(),
+                    &convert_hex_to_checksum256(hex::encode(&leaves[2 * i])).unwrap(),
+                    &convert_hex_to_checksum256(hex::encode(&leaves[(2 * i) + 1])).unwrap(),
                 ))
                 .unwrap()
                 .as_bytes()
@@ -682,6 +689,7 @@ mod tests {
             .for_each(|(result, expected_result)| assert_eq!(result, expected_result))
     }
 
+    #[cfg(not(feature = "spring_1-0"))]
     #[test]
     fn should_only_allow_max_num_incremerkles() {
         let mut incremerkles = Incremerkles::default();
@@ -696,6 +704,7 @@ mod tests {
         }
     }
 
+    #[cfg(not(feature = "spring_1-0"))]
     #[test]
     fn should_put_and_get_incremerkles_in_db() {
         let mut incremerkles = Incremerkles::default();
@@ -710,6 +719,7 @@ mod tests {
         assert_eq!(incremerkles.block_nums(), incremerkles_from_db.block_nums());
     }
 
+    #[cfg(not(feature = "spring_1-0"))]
     #[test]
     fn should_only_add_subsequent_incremerkles() {
         let mut incremerkles = Incremerkles::default();

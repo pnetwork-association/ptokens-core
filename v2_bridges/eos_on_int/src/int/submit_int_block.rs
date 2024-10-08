@@ -110,7 +110,6 @@ pub fn submit_int_blocks_to_core<D: DatabaseInterface>(db: &D, blocks: &str) -> 
 }
 
 #[cfg(all(test, feature = "non-validating"))] // NOTE: The test uses TELOS blocks, whose headers fail validation.
-#[cfg(test)]
 mod tests {
     use common::test_utils::get_test_database;
     use common_chain_ids::EthChainId;

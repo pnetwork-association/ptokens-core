@@ -197,6 +197,13 @@ pub fn put_eos_latest_block_info_in_db<D: DatabaseInterface>(
         })
 }
 
+pub fn put_eos_latest_block_info_in_db_and_return_state<'a, D: DatabaseInterface>(
+    block_json: &EosBlockHeaderJson,
+    state: EosState<'a, D>,
+) -> Result<EosState<'a, D>> {
+    put_eos_latest_block_info_in_db(&state.eos_db_utils, block_json).and(Ok(state))
+}
+
 pub fn put_eos_known_schedule_in_db_and_return_state<'a, D: DatabaseInterface>(
     schedule: &EosProducerScheduleV2,
     state: EosState<'a, D>,

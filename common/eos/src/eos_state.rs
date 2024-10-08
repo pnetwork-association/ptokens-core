@@ -6,12 +6,13 @@ use common::{
 };
 
 pub use crate::bitcoin_crate_alias::blockdata::transaction::Transaction as BtcTransaction;
+#[cfg(not(feature = "spring_1-0"))]
+use crate::eos_incremerkle::Incremerkles;
 use crate::{
     eos_action_proofs::EosActionProofs,
     eos_block_header::EosBlockHeaderV2,
     eos_database_utils::EosDbUtils,
     eos_global_sequences::{GlobalSequences, ProcessedGlobalSequences},
-    eos_incremerkle::Incremerkles,
     eos_producer_schedule::EosProducerScheduleV2,
     eos_submission_material::EosSubmissionMaterial,
     eos_types::Checksum256s,
@@ -30,6 +31,7 @@ pub struct EosState<'a, D: DatabaseInterface> {
     pub tx_infos: Bytes,
     pub eth_signed_txs: Bytes,
     pub block_num: Option<u64>,
+    #[cfg(not(feature = "spring_1-0"))]
     pub incremerkles: Incremerkles,
     pub producer_signature: String,
     pub btc_utxos_and_values: Bytes,
@@ -61,6 +63,7 @@ impl<'a, D: DatabaseInterface> EosState<'a, D> {
             eos_eth_token_dictionary: None,
             eos_db_utils: EosDbUtils::new(db),
             producer_signature: String::new(),
+            #[cfg(not(feature = "spring_1-0"))]
             incremerkles: Incremerkles::default(),
             global_sequences: GlobalSequences::default(),
             enabled_protocol_features: EnabledFeatures::init(),
@@ -102,6 +105,7 @@ impl<'a, D: DatabaseInterface> EosState<'a, D> {
         self
     }
 
+    #[cfg(not(feature = "spring_1-0"))]
     pub fn add_incremerkles(mut self, incremerkles: Incremerkles) -> EosState<'a, D> {
         self.incremerkles = incremerkles;
         self

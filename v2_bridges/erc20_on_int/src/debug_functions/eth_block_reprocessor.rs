@@ -161,12 +161,12 @@ fn reprocess_eth_block<D: DatabaseInterface>(
 /// submission pipeline, signing any signatures for pegouts it may find in the block
 ///
 /// ### NOTES:
-///  - This function will increment the core's ETH nonce, meaning the outputted reports will have a
-/// gap in their report IDs!
+///  - This function will increment the core's ETH nonce, meaning the outputted reports will have a gap in their report
+///    IDs!
 ///
-///  - This version of the ETH block reprocessor __will__ deduct fees from any transaction info(s) it
-///  parses from the submitted block, but it will __not__ accrue those fees on to the total in the
-///  dictionary. This is to avoid accounting for fees twice.
+///  - This version of the ETH block reprocessor __will__ deduct fees from any transaction info(s) it parses from the
+///    submitted block, but it will __not__ accrue those fees on to the total in the dictionary. This is to avoid
+///    accounting for fees twice.
 ///
 /// ### BEWARE:
 /// If you don't broadcast the transaction outputted from this function, ALL future ETH transactions will
@@ -185,9 +185,9 @@ pub fn debug_reprocess_eth_block<D: DatabaseInterface>(db: &D, block_json: &str,
 ///
 ///  - This function will NOT increment the core's ETH nonce if one is passed in!
 ///
-///  - This version of the ETH block reprocessor __will__ deduct fees from any transaction info(s) it
-///  parses from the submitted block, but it will __not__ accrue those fees on to the total in the
-///  dictionary. This is to avoid accounting for fees twice.
+///  - This version of the ETH block reprocessor __will__ deduct fees from any transaction info(s) it parses from the
+///    submitted block, but it will __not__ accrue those fees on to the total in the dictionary. This is to avoid
+///    accounting for fees twice.
 ///
 /// ### BEWARE:
 ///
@@ -209,14 +209,13 @@ pub fn debug_reprocess_eth_block_with_nonce<D: DatabaseInterface>(
 ///
 /// ### NOTES:
 ///
-///  - This function will increment the core's ETH nonce, meaning the outputted reports will have a
-/// gap in their report IDs!
+///  - This function will increment the core's ETH nonce, meaning the outputted reports will have a gap in their report
+///    IDs!
 ///
-///  - This version of the ETH block reprocessor __will__ deduct fees from any transaction info(s) it
-///  parses from the submitted block, and __will__ accrue those fees on to the total in the
-///  dictionary. Only use this is you know what you're doing and why, and make sure you're avoiding
-///  accruing the fees twice if the block has already been processed through the non-debug ETH
-///  block submission pipeline.
+///  - This version of the ETH block reprocessor __will__ deduct fees from any transaction info(s) it parses from the
+///    submitted block, and __will__ accrue those fees on to the total in the dictionary. Only use this is you know what
+///    you're doing and why, and make sure you're avoiding accruing the fees twice if the block has already been
+///    processed through the non-debug ETH block submission pipeline.
 ///
 /// ### BEWARE:
 /// If you don't broadcast the transaction outputted from this function, ALL future ETH transactions will

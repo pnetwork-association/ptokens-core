@@ -85,8 +85,8 @@ fn reprocess_int_block<D: DatabaseInterface>(db: &D, block_json: &str, signature
 ///
 /// ### NOTE:
 ///
-///  - This function will increment the core's INT nonce, meaning the outputted reports will have a
-/// gap in their report IDs!
+///  - This function will increment the core's INT nonce, meaning the outputted reports will have a gap in their report
+///    IDs!
 ///
 /// ### BEWARE:
 /// If you don't broadcast the transaction outputted from this function, ALL future BTC transactions will
